@@ -46,6 +46,8 @@ export interface FertilizerPoolItem {
   fertilizerCode: string;
   fertilizerType: string;
   brandName: string;
+  /** 2026-10-11：补产品批次 —— 新增施肥记录时要把它快照到 fertilizer_records.spec_batch_number */
+  batchNumber: string;
   specContent: string;
   manufacturer: string;
   dosage: string;
@@ -100,7 +102,7 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
     const items = libStore.items.filter((s: any) => s.status === 'active' || !s.status);
     let result = items;
     if (selectedTypes.length > 0) {
-      result = result.filter((s) => selectedTypes.includes(s.fertilizerType));
+      result = result.filter((s) => s.fertilizerType != null && selectedTypes.includes(s.fertilizerType));
     }
     const kw = searchKeyword.trim().toLowerCase();
     if (kw) {
@@ -127,6 +129,7 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
         fertilizerCode: spec.fertilizerCode,
         fertilizerType: spec.fertilizerType || '',
         brandName: spec.brandName || '主品牌',
+        batchNumber: spec.batchNumber || '',
         specContent: spec.specContent || '',
         manufacturer: spec.manufacturer || '',
         dosage: spec.suggestedDosage || '',

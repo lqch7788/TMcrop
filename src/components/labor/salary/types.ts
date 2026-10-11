@@ -30,8 +30,9 @@ export interface SalaryRecord {
 export interface SalaryFilters {
   month?: string;
   staffName?: string;
-  calcType?: SalaryCalcType;
-  status?: SalaryStatus;
+  // '' 表示"全部"（Select 的 __all__ 选项写入空串，消费方用真值判断跳过筛选）
+  calcType?: SalaryCalcType | '';
+  status?: SalaryStatus | '';
 }
 
 /**

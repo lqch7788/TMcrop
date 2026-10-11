@@ -483,9 +483,6 @@ export default function MaterialFlowPage() {
     if (activeTab === 'logs') {
       headers = { createdAt: '时间', flowType: '流转类型', cropName: '作物', sourceCode: '起点', sourceQuantity: '消耗量', targetCode: '去向', targetQuantity: '产出量', sourceCategory: '来源' };
       title = '物料流转记录';
-    } else if (activeTab === 'trace') {
-      headers = { createdAt: '时间', flowType: '流转', sourceCode: '起点', sourceQuantity: '消耗', targetCode: '去向', sourceCategory: '来源' };
-      title = '批次追溯';
     } else {
       const tk = activeTab as Exclude<TabKey, 'logs'>;
       const H: Record<typeof tk, Record<string, string>> = {
@@ -546,7 +543,8 @@ export default function MaterialFlowPage() {
   };
 
 
-  const renderToolbar = (title: string, canDelete: boolean) => (
+  // title 放宽为 ReactNode —— 统计类 Tab 会传入带「年度」选择器的 JSX 标题（ActionToolbar.title 同为 ReactNode）
+  const renderToolbar = (title: React.ReactNode, canDelete: boolean) => (
     <ActionToolbar
       title={title}
       batchEditMode={false}
@@ -614,7 +612,8 @@ export default function MaterialFlowPage() {
       <StdTableShell colSpan={totalCols} colGroup={colGroup}>
         <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
           <tr>
-            {effectiveHasActiveMode && <StdTh width="3rem"><Checkbox checked={allSelected} ref={(el) => { if (el) el.indeterminate = someSelected; }} onCheckedChange={toggleAll} className="border-white rounded" /></StdTh>}
+            {/* 2026-10-11：删除 ref 里的 indeterminate 赋值——ui/Checkbox 渲染的是 button，没有该属性（原代码为恒不生效的死代码） */}
+            {effectiveHasActiveMode && <StdTh width="3rem"><Checkbox checked={allSelected} onCheckedChange={toggleAll} className="border-white rounded" /></StdTh>}
             <StdTh>时间</StdTh>
             <StdTh>流转类型</StdTh>
             <StdTh>作物</StdTh>

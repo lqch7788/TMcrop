@@ -237,7 +237,8 @@ export function ScheduleAddModal({
         apiMode = 'weekday';
       }
 
-      const params: Parameters<typeof useScheduleStore.getState>[0] extends never ? never : {
+      // 生成参数（原写法误用 Parameters<getState>[0]，恒为越界索引，这里直接声明结构）
+      const params: {
         mode: typeof apiMode;
         shift: ShiftType;
         staffId?: string;
@@ -716,7 +717,7 @@ export function ScheduleAddModal({
             <div className="max-h-40 overflow-y-auto space-y-1">
               {previewResult.willSkip.map((s, idx) => (
                 <div key={idx} className="text-amber-700">
-                  • {s.date} {s.shift ? '' : ''}员工 {s.workerId}（{s.reason}）
+                  • {s.date} 员工 {s.workerId}（{s.reason}）
                 </div>
               ))}
             </div>

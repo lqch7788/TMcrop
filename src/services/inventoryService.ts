@@ -144,7 +144,8 @@ export async function freezeInventory(request: FreezeRequest): Promise<FreezeRes
       operatorName: request.operatorName,
       remarks: request.remarks,
     });
-    return { success: true, ...response };
+    // 2026-10-11：spread 放末尾会被后写的 success 覆盖（TS2783），改为显式取值——服务端未返回时兜底 true
+    return { ...response, success: response.success ?? true };
   } catch (error) {
     return {
       success: false,

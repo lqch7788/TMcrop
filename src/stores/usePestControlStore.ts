@@ -1,12 +1,11 @@
 /**
  * 病虫害防治记录 Store (V12.0)
  * 遵循 V2.1 Store 标准模板
- * 2026-07-18 P1-H7 修复：写后 notifyChange 跨页刷新（库存/肥料库）
+ * 2026-07-18 P1-H7 修复：写后 notifyChange 跨页刷新（库存）
  */
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 import { useInventoryStore } from './useInventoryStore';
-import { useFertilizerStore } from './useFertilizerStore';
 
 export interface PestControlData {
   id: string;
@@ -31,6 +30,11 @@ export interface PestControlData {
   pesticideName?: string;
   // 药剂类型 JSON 数组（如 ['insecticide','fungicide_fungi']）
   pesticideTypes?: string[];
+  /**
+   * 2026-10-11：旧版单数字段（pesticide_records.pesticide_type 列仍存历史数据）。
+   * 编辑/详情弹窗按 `record.pesticideTypes || (record.pesticideType ? [record.pesticideType] : [])` 做老数据兜底，不能删
+   */
+  pesticideType?: string;
   specId?: string;
   specContent?: string;
   dosage?: number;
@@ -226,7 +230,6 @@ export const usePestControlStore = create<PestControlState>()(
         set((state) => ({ items: [newItem as unknown as PestControlData, ...state.items] }));
         // 2026-07-18 P1-H7 修复：跨页刷新（库存/肥料库订阅了 version 变化）
         useInventoryStore.getState().notifyChange();
-        useFertilizerStore.getState().notifyChange?.();
         return newItem as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -245,7 +248,6 @@ export const usePestControlStore = create<PestControlState>()(
         }));
         // 2026-07-18 P1-H7 修复：跨页刷新
         useInventoryStore.getState().notifyChange();
-        useFertilizerStore.getState().notifyChange?.();
         return updated as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -259,7 +261,6 @@ export const usePestControlStore = create<PestControlState>()(
         set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
         // 2026-07-18 P1-H7 修复：跨页刷新
         useInventoryStore.getState().notifyChange();
-        useFertilizerStore.getState().notifyChange?.();
         return true;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -276,7 +277,6 @@ export const usePestControlStore = create<PestControlState>()(
         }
         // 2026-07-18 P1-H7 修复：跨页刷新
         useInventoryStore.getState().notifyChange();
-        useFertilizerStore.getState().notifyChange?.();
         return { deleted };
       } catch (err) {
         set({ error: (err as Error).message });

@@ -175,7 +175,8 @@ export function StaffManagementPage() {
   const handleDoExport = async () => {
     const selectedData = filteredWorkers.filter((_, index) => selectedRows.includes(index));
     const headers = ['工号', '姓名', '部门', '班组', '岗位', '技能等级', '联系方式', '合同状态', '入职日期', '状态'];
-    const exportData = selectedData.map(w => ({
+    // 显式声明索引类型：下方按表头（string）动态取值
+    const exportData = selectedData.map((w): Record<string, string> => ({
       '工号': w.workerId,
       '姓名': w.name,
       '部门': w.department,

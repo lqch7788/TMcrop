@@ -11,6 +11,7 @@ import type {
   AddSubVariety1State,
 } from '../types/produceCodeRule.types';
 import { DEFAULT_CATEGORIES, deepCloneCategories } from '../types/produceCodeRule.types';
+import type { ProduceCategoryCode } from '../../../../data/produceCodeRule';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export function useProduceCodeRule() {

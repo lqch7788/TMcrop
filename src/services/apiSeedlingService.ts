@@ -67,6 +67,11 @@ interface BackendSeedling {
   theoreticalYield?: number;
   targetSurvivalRate?: number;
   targetSurvivalCount?: number;
+  // 2026-10-11：结束标记字段（transformSingleSeedling 映射到 Seedling.endTime/endType；此前未声明 → 落到索引签名 unknown）
+  endTime?: string;
+  endType?: 'normal' | 'abnormal';
+  // 2026-10-11：单位（后端 seedling.ts 白名单列，写入时默认 '株'）——此前未声明，transform 也漏映射
+  unit?: string;
   [key: string]: unknown;
 }
 
@@ -140,6 +145,8 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     survivalCount: item.survivalQuantity || 0,
     // 2026-06-28：移除 plantedCount 映射（业务上已停止使用）
     survivalRate: survivalRate,
+    // 2026-10-11：Seedling.unit 为必填，补齐映射（与后端写入默认值 '株' 一致）
+    unit: item.unit || '株',
     lossCount: item.lossCount || 0,
     lossRate: item.lossRate || 0,
     isFinished: item.isFinished === 1,

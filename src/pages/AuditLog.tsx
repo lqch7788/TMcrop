@@ -147,8 +147,8 @@ export default function AuditLog() {
       if (filterDate) params.set('start_date', filterDate);
 
       const [logsResult, statsResult] = await Promise.allSettled([
-        enhancedApiClient.get<any>(`/operation-logs?${params.toString()}`, { useCache: false }),
-        enhancedApiClient.get<any>('/operation-logs/stats/summary', { useCache: true }),
+        enhancedApiClient.get<any>(`/operation-logs?${params.toString()}`),
+        enhancedApiClient.get<any>('/operation-logs/stats/summary'),
       ]);
 
       // 处理日志列表

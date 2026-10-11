@@ -229,11 +229,13 @@ export function InventoryTable({
                 // 2026-07-14：适配新状态枚举（frozen_full/frozen_partial/empty/outbound/transferred）
                 // 可出库：库存中 + 低库存 + 部分冻结（剩余可用部分可出）+ 全部冻结（不允许）
                 const status = stock.status;
+                // 2026-10-11：DB 实测存在 InventoryStatus 未收录的历史值（frozen_full/frozen_partial/pending），
+                //   故历史值比较走 string 视图；下面前两项已等价覆盖 'in_stock'/'low_stock' 字符串写法
+                const statusValue: string = status;
                 const canOutbound = status === InventoryStatus.IN_STOCK
                   || status === InventoryStatus.LOW_STOCK
-                  || status === 'in_stock' || status === 'low_stock'
-                  || status === 'frozen_partial'
-                  || (status as any) === 'frozen' /* 兼容历史 */;
+                  || statusValue === 'frozen_partial'
+                  || statusValue === 'frozen' /* 兼容历史 */;
                 const isSelected = selectedRows.includes(stock.instanceId);
                 return (
                   <tr key={stock.instanceId} className={`hover:bg-emerald-50 transition-colors ${isSelected ? 'bg-emerald-50/50' : ''}`}>

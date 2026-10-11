@@ -482,6 +482,8 @@ export function Input({ error, className = '', type = 'text', ...props }: InputP
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
   options: { value: string; label: string; disabled?: boolean }[];
+  /** 占位文案（原生 select 无此属性，透传给内部 SelectValue） */
+  placeholder?: string;
 }
 
 export function Select({ error, options, className = '', value, onChange, placeholder, disabled, ...props }: SelectProps) {

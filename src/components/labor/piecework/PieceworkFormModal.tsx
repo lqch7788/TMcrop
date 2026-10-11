@@ -156,7 +156,6 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
             value={formData.quantity || 0}
             onChange={(value) => setFormData({ ...formData, quantity: parseFloat(value) || 0 })}
             placeholder="0"
-            min={0}
             className="w-full"
           />
         </div>
@@ -172,7 +171,6 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
           onChange={(value) => setFormData({ ...formData, unitPrice: parseFloat(value) || 0 })}
           placeholder="0.00"
           decimals={2}
-          min={0}
           className="w-full"
         />
       </div>

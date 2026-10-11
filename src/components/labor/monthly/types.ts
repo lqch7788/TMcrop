@@ -22,7 +22,8 @@ export interface MonthlyReport {
   publisher: string;
   publishDate: string;
   status: string;
-  statusClass: 'normal' | 'warning';
+  // 与 store 的 MonthlyReport.statusClass 对齐（'normal' | 'draft'），并保留 UI 的 'warning'
+  statusClass: 'normal' | 'warning' | 'draft';
 }
 
 export interface ExportFormat {

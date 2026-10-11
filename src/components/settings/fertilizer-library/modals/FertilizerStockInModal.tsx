@@ -76,9 +76,9 @@ export function FertilizerStockInModal({ isOpen, record, onClose, onSaved }: Fer
     setSubmitting(true);
     try {
       // 2026-07-27：从 auth store 取当前操作人 + 弹窗里可编辑的单价，写入入库审计记录
-      const user = useAuthStore.getState().user as { oid?: string; realName?: string } | null;
+      const user = useAuthStore.getState().currentUser;
       const newStock = await stockIn(record.id, qty, remark || undefined, {
-        unitPrice: price,
+        unitPrice: price ?? undefined,
         operatorId: user?.oid,
         operatorName: user?.realName || user?.oid,
       });

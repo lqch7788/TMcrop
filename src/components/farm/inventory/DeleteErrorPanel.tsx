@@ -89,7 +89,7 @@ export const DeleteErrorPanel: React.FC<Props> = ({
                   <div className="border-t border-amber-200 bg-red-50 p-3">
                     <div className="text-xs font-medium text-red-700 mb-2 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      以下出库/调拨记录正在使用此库存（共 {rec.transactions.length} 笔）：
+                      以下出库/调拨记录正在使用此库存（共 {(rec.transactions || []).length} 笔）：
                     </div>
                     <table className="w-full text-xs bg-white rounded border border-red-200">
                       <thead className="bg-red-100 text-red-900">

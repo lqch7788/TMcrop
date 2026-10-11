@@ -10,7 +10,8 @@ export type EmptyStateType = 'default' | 'search' | 'data' | 'file' | 'product' 
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode
-  title: string
+  /** 标题：仅需图标+描述的空状态可省略 */
+  title?: string
   description?: string
   action?: React.ReactNode
   image?: string

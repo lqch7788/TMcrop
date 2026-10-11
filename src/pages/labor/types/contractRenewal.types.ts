@@ -1,6 +1,7 @@
 /**
  * 合同续签类型定义
  */
+import type { ContractRenewalData } from '../../../stores/useContractRenewalStore';
 
 /** 合同期限选项 */
 export const CONTRACT_PERIOD_OPTIONS = [
@@ -15,24 +16,11 @@ export type ContractRenewalStatus = '待审批' | '已通过' | '已拒绝' | '�
 
 /**
  * 合同续签记录
+ *
+ * 2026-10-11 类型清理：统一使用 Store 侧类型（后端数据模型为唯一真相源），
+ * 不再重复定义，避免同义类型互不兼容
  */
-export interface ContractRenewalRecord {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  position: string;
-  currentContractEnd: string;
-  newContractStart: string;
-  newContractEnd: string;
-  renewalPeriod: number;
-  newSalary?: number;
-  termsChange?: string;
-  status: ContractRenewalStatus;
-  approver?: string;
-  approveTime?: string;
-  remarks?: string;
-}
+export type ContractRenewalRecord = ContractRenewalData;
 
 /**
  * 筛选条件

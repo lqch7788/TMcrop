@@ -56,7 +56,8 @@ interface BaseOperationsStore {
   stats: BaseStats;
 
   // Actions - 数据加载
-  loadAllData: () => Promise<void>;
+  // 2026-10-11：实现（:206）与页面 9 处调用均为 `loadAllData(baseOid?)`，接口声明过期导致 TS2554
+  loadAllData: (baseOid?: string) => Promise<void>;
   refreshData: () => Promise<void>;
 
   // Actions - 树形操作
@@ -219,10 +220,11 @@ export const useBaseOperationsStore = create<BaseOperationsStore>()((set, get) =
       ]);
 
       // 安全提取数组数据
-      const bases = Array.isArray(basesData) ? basesData : (basesData?.data || []);
-      const greenhouses = Array.isArray(greenhousesData) ? greenhousesData : (greenhousesData?.data || []);
-      const zones = Array.isArray(zonesData) ? zonesData : (zonesData?.data || []);
-      const blocks = Array.isArray(blocksData) ? blocksData : (blocksData?.data || []);
+      // 2026-10-11：service 已解包并保证返回数组，这里保留对历史 {success,data} 包裹格式的兜底
+      const bases = Array.isArray(basesData) ? basesData : ((basesData as { data?: Base[] })?.data || []);
+      const greenhouses = Array.isArray(greenhousesData) ? greenhousesData : ((greenhousesData as { data?: Greenhouse[] })?.data || []);
+      const zones = Array.isArray(zonesData) ? zonesData : ((zonesData as { data?: Zone[] })?.data || []);
+      const blocks = Array.isArray(blocksData) ? blocksData : ((blocksData as { data?: Block[] })?.data || []);
 
       const treeData = buildTreeData(bases, greenhouses, zones, blocks);
       const stats = computeStats(bases, greenhouses, zones, blocks);

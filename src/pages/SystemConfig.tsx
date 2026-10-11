@@ -617,7 +617,7 @@ export default function SystemConfig() {
                     onChange={(e) => setNewConfig({ ...newConfig, category: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    {CATEGORY_TABS.filter(t => t.value !== 'all').map(t => (
+                    {CATEGORY_TABS.map(t => (
                       <option key={t.value} value={t.value}>{t.label}</option>
                     ))}
                   </select>

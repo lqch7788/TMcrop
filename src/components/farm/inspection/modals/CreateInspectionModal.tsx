@@ -65,7 +65,8 @@ interface CreateInspectionModalProps {
   onClose: () => void;
   onSubmit: () => void;
   newRecord: InspectionRecordFormData;
-  onNewRecordChange: (record: InspectionRecordFormData) => void;
+  // 调用方传入的是 useState 派发函数，需支持函数式更新（prev => ...）
+  onNewRecordChange: React.Dispatch<React.SetStateAction<InspectionRecordFormData>>;
   errors: Record<string, string>;
   generateRecordCode: () => string;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;

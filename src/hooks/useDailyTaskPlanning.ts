@@ -28,14 +28,10 @@ import type { WorkerRecommendation } from './useComprehensiveDispatch';
  * 判断任务是否超期
  */
 function isTaskOverdue(task: Task | TempTask, targetDate: string): boolean {
-  if ('status' in task) {
-    if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
-      return false;
-    }
-  } else {
-    if (['completed', 'cancelled'].includes(task.status)) {
-      return false;
-    }
+  // 2026-10-11：status 在 Task/TempTask 上均存在，原 `'status' in task` 的 else 分支恒不可达（收窄为 never），
+  //   且运行时同样恒走 if 分支，故直接合并为一条判断
+  if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
+    return false;
   }
 
   if (!task.dueDate) return false;
@@ -66,14 +62,16 @@ function calculateOverdueDays(dueDate: string, targetDate: string): number {
  * 获取任务名称
  */
 function getTaskName(task: Task | TempTask): string {
-  return 'title' in task ? task.title : task.title;
+  // 2026-10-11：title 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
+  return task.title;
 }
 
 /**
  * 获取执行人名称
  */
 function getAssigneeName(task: Task | TempTask): string {
-  return 'assigneeName' in task ? task.assigneeName : task.assigneeName;
+  // 2026-10-11：assigneeName 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
+  return task.assigneeName;
 }
 
 // ============================================
@@ -81,8 +79,8 @@ function getAssigneeName(task: Task | TempTask): string {
 // ============================================
 
 export interface UseDailyTaskPlanningReturn {
-  // 生成每日派工计划
-  generateDailyPlan: (date: string) => DailyPlan;
+  // 生成每日派工计划（2026-10-11：实现为 async，返回类型对齐 Promise）
+  generateDailyPlan: (date: string) => Promise<DailyPlan>;
 
   // 确认并派发计划
   confirmAndDispatch: (plan: DailyPlan) => Promise<{ success: boolean; dispatchedTasks: number }>;
@@ -279,8 +277,9 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
             plantingArea: batch.plantingArea,
             stage: batch.stage,
             stageName: batch.stageName,
-            taskType: (task as Task).taskType || (task as unknown as Record<string, unknown>).taskType as string || 'irrigation',
-            taskTypeName: (task as Task).taskTypeName || (task as unknown as Record<string, unknown>).taskTypeName as string || '灌溉',
+            // 2026-10-11：Task 无 taskType/taskTypeName（原 `(task as Task).xxx` 断言非法），改走宽松读取
+            taskType: (task as unknown as Record<string, unknown>).taskType as string || 'irrigation',
+            taskTypeName: (task as unknown as Record<string, unknown>).taskTypeName as string || '灌溉',
             suggestedDate: targetDate,
             estimatedHours: (task as Task).estimatedHours || (task as unknown as Record<string, unknown>).estimatedHours as number || 2,
             estimatedWorkers: 1,
@@ -388,7 +387,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
               assigneeId: suggestion.workerId,
               assigneeName: suggestion.workerName,
               dueDate: task.suggestedDate,
-              priority: task.priority,
+              // 2026-10-11：PredictedTask.priority 为 high/medium/low，Task 只接受 urgent/high/normal —— 非 high 一律归一为 normal
+              priority: task.priority === 'high' ? 'high' : 'normal',
               estimatedHours: task.estimatedHours,
               status: 'pending',
               sourceType: 'dispatch',

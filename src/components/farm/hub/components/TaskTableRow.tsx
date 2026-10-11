@@ -9,6 +9,7 @@ import { Input } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours, BATCH_ASSIGNABLE_STATUSES } from '../constants_taskDispatch';
 import { getReminderConfig } from '@/config/taskConfig';
 import { OvertimeBadge } from './OvertimeBadge';
+import type { TaskTimeout } from '../../../../types/task';
 import { showAlert } from '@/lib/dialogService';
 
 /**
@@ -35,10 +36,8 @@ interface TaskTableRowTask {
   teamName?: string;      // 关联班组名称
   progress?: number;
   priority?: string;
-  timeout?: {
-    severity?: string;
-    [key: string]: unknown;
-  };
+  // 超时信息：与 Task.timeout 保持一致（OvertimeBadge 需要 type/startedAt/deadline）
+  timeout?: TaskTimeout;
   remarks?: string;
   sopContent?: string;
   planStart?: string;
@@ -75,7 +74,9 @@ interface TaskTableRowTask {
   inspectorId?: string;
   inspectorName?: string;
   createdAt?: string;
-  [key: string]: unknown;  // 允许额外属性
+  // 2026-10-11：移除 [key: string]: unknown 索引签名 ——
+  //   接口型来源（TaskTable 的本地 Task 接口）没有隐式索引签名，索引签名会让其无法赋值
+  //   给本类型（TaskTable:453 报错）；组件内只读取上方已声明的字段，索引签名无实际用途。
 }
 
 interface TaskTableRowProps {
@@ -471,7 +472,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                     task.id,
                     task.taskCode || task.id,
                     task.assigneeId || '',
-                    task.assigneeName || task.assignee,
+                    task.assigneeName || task.assignee || '',
                     'admin',
                     '管理员'
                   );

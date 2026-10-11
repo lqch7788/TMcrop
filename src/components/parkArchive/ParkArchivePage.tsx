@@ -177,7 +177,7 @@ export function ParkArchivePage() {
       setLoading(true);
       const result = await loadCompanyGroupsFromAPI();
       setCompanyGroups(result.companyGroups);
-      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8)) || 0 })));
+      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8) || '') || 0 })));
       setLoading(false);
     };
     loadData();
@@ -188,7 +188,7 @@ export function ParkArchivePage() {
     const handleUpdate = async () => {
       const result = await loadCompanyGroupsFromAPI();
       setCompanyGroups(result.companyGroups);
-      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8)) || 0 })));
+      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8) || '') || 0 })));
     };
     window.addEventListener('farmStructureUpdated', handleUpdate);
     return () => window.removeEventListener('farmStructureUpdated', handleUpdate);
@@ -196,21 +196,24 @@ export function ParkArchivePage() {
 
   // 处理详情弹窗显示
   useEffect(() => {
-    if (pendingDetailBase) {
-      if (isFullscreen) {
-        setIsFullscreen(false);
-        const timer = setTimeout(() => {
-          setSelectedField(pendingDetailBase);
-          setShowDetailModal(true);
-          setPendingDetailBase(null);
-        }, 100);
-        return () => clearTimeout(timer);
-      } else {
+    if (!pendingDetailBase) return;
+
+    if (isFullscreen) {
+      setIsFullscreen(false);
+      const timer = setTimeout(() => {
         setSelectedField(pendingDetailBase);
         setShowDetailModal(true);
         setPendingDetailBase(null);
-      }
+      }, 100);
+      return () => clearTimeout(timer);
     }
+
+    setSelectedField(pendingDetailBase);
+    setShowDetailModal(true);
+    setPendingDetailBase(null);
+    // 2026-10-11：补显式 return —— noImplicitReturns 要求所有路径都有 return 语句
+    // （上面的 isFullscreen 分支返回 cleanup，此路径若落到函数末尾会报 TS7030）
+    return;
   }, [pendingDetailBase, isFullscreen]);
 
   const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);

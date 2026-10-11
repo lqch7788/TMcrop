@@ -17,12 +17,13 @@ import { useInboundStore } from '@/stores/useInboundStore';
 import { useMaterialCodeRuleStore } from '@/stores/useMaterialCodeRuleStore';
 import type {
   Material,
-  InboundRecord,
   CategoryConfig,
   NewInboundForm,
   CodeGenState,
   MaterialsTab,
 } from '../types/materials.types';
+// 2026-10-11 类型清理：入库单统一使用权威类型定义（types/warehouseInbound.types），与 useInboundStore 保持一致
+import type { InboundRecord } from '@/types/warehouseInbound.types';
 
 // 把 useMaterialCodeRuleStore 的 BigCategory[] 转换成原页面依赖的 CategoryConfig 树
 function bigCategoriesToConfig(
@@ -475,9 +476,7 @@ export function useMaterials() {
           code: newInbound.materialCode,
           name: newInbound.materialName,
           category: `${newInbound.bigCategory}-${newInbound.midCategory}-${newInbound.subCategory}`,
-          bigCategory: newInbound.bigCategory,
-          midCategory: newInbound.midCategory,
-          subCategory: newInbound.subCategory,
+          // 2026-10-11 类型清理：移除 bigCategory/midCategory/subCategory（权威类型已判定为死字段，无 UI 入口、后端不落库）
           specification: '',
           barcode: '',
           unit: newInbound.unit,

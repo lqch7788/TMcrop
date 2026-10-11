@@ -111,7 +111,8 @@ export interface TempTask {
   title: string;              // 任务标题
   type: string;               // 任务类型值
   typeName: string;           // 任务类型名称
-  urgency: 'urgent' | 'high' | 'normal';  // 紧急程度
+  // 2026-10-11：补 'critical' —— TempTaskFilters 的紧急程度筛选器与表单实际使用该值
+  urgency: 'critical' | 'urgent' | 'high' | 'normal';  // 紧急程度
 
   // 地点
   location: string;           // 工作地点
@@ -119,10 +120,17 @@ export interface TempTask {
   greenhouseName?: string;
 
   // 优先级
-  priority: 'urgent' | 'high' | 'normal';
+  // 2026-10-11：同上补 'critical'（与 types/index.TempTask 的 TempTaskUrgency 口径一致）
+  priority: 'critical' | 'urgent' | 'high' | 'normal';
 
   // 状态
   status: TempTaskStatus;
+
+  // 重新分派标记（仅作为 PUT 更新时的写入标志，后端 tempTask 路由按 `updates.reassign === true` 记录 reassign 操作）
+  reassign?: boolean;
+  // 操作人信息（重新分派时随 PUT 一并发送，后端 task_operation_records 记录用）
+  operator_id?: string;
+  operator_name?: string;
 
   // 执行信息
   assigneeId: string;         // 执行人ID
@@ -300,8 +308,8 @@ export interface UseTempTasksReturn {
   // 操作记录列表
   operationRecords: TempTaskOperationRecord[];
 
-  // 添加临时任务
-  addTempTask: (task: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>) => TempTask;
+  // 添加临时任务（2026-10-11：taskCode/id 均可选 —— 实现内部会按需生成，与实际入参对齐）
+  addTempTask: (task: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'> & { id?: string; taskCode?: string }) => TempTask;
 
   // 更新临时任务
   updateTempTask: (id: string, updates: Partial<TempTask>) => void;
@@ -365,7 +373,8 @@ export function useTempTasks(): UseTempTasksReturn {
   }, []);
 
   // 添加临时任务
-  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'createdAt' | 'updatedAt'> & { taskCode?: string }): TempTask => {
+  // 2026-10-11：id/taskCode 由调用方可选传入（下方 `taskData.id || 自动生成`、`taskData.taskCode || 自动生成` 依赖）
+  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'> & { id?: string; taskCode?: string }): TempTask => {
     const now = new Date().toISOString();
     // 优先使用用户生成的任务编号（前端 form 已经生成了正确的 TT+日期+序号 格式）
     // 如果前端传递了 taskCode 则使用，否则调用 generateTempTaskCode 生成
@@ -672,6 +681,5 @@ export function useTempTasks(): UseTempTasksReturn {
     getOperationRecordsByTaskId,
   };
 }
-
-// 导出类型
-export type { TempTask, TempTaskOperationRecord };
+// 2026-10-11：TempTask / TempTaskOperationRecord 已在文件内具名导出，
+// 原末尾 `export type { ... }`（无 from）构成重复导出（TS2484），已移除

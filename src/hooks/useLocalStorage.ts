@@ -9,7 +9,8 @@ import { useState, useCallback, useEffect } from 'react';
 const DATA_VERSION = 9; // 每次修改默认数据时递增（数字类型，与 useTasks 保持一致）
 
 interface StoredData<T> {
-  version: string;
+  // 2026-10-11：落库的就是 DATA_VERSION（number），原声明为 string 与写入/比较处不符
+  version: number;
   data: T;
 }
 
@@ -26,7 +27,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       // 检查是否是带版本控制的数据格式
       try {
         const parsed = JSON.parse(item) as StoredData<T>;
-        // 使用 == 进行松散比较（parsed.version 是字符串，DATA_VERSION 是数字）
+        // 版本号比较（历史数据可能存的是字符串版本号，沿用 == 以兼容）
         if (parsed.version == DATA_VERSION) {
           return parsed.data;
         } else {

@@ -247,8 +247,8 @@ export default function OrderPage() {
     // 导出表头
     const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '完成数量', '单位', '订单日期', '预计完成日期', '状态', '创建人', '创建时间', '备注'];
 
-    // 生成导出数据
-    const exportData = selectedData.map(record => ({
+    // 生成导出数据（显式声明索引签名，供下方 headers.map(h => row[h]) 按下标取值）
+    const exportData: Array<Record<string, string | number>> = selectedData.map(record => ({
       '订单编号': record.orderCode,
       '订单名称': record.orderName,
       '订单类型': record.orderType === 'breeding' ? '育种订单' : record.orderType === 'seedling' ? '育苗订单' : record.orderType === 'production' ? '生产订单' : record.orderType === 'research' ? '研发订单' : '其他',

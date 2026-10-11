@@ -182,9 +182,8 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     selfSeedToSourceUnit: String(item.selfSeedToSourceUnit || ''),
     // 2026-07-09：disposeQty / disposeUnit 已下线（dispose 功能移除）
     // 保留映射接收后端历史返回，新代码不要再读这 2 个字段
-    // @ts-expect-error - disposeQty 类型已 deprecated
+    // 2026-10-11：字段在 Planting 中仍声明为 @deprecated 可选字段，原 @ts-expect-error 已失效，移除
     disposeQty: Number(item.disposeQty) || 0,
-    // @ts-expect-error - disposeUnit 类型已 deprecated
     disposeUnit: String(item.disposeUnit || ''),
     // 2026-06-24: 育种实验 + 种植留种字段（种源管理吸收功能）
     isBreeding: Boolean(item.isBreeding),
@@ -385,6 +384,11 @@ export interface AddHarvestRecordInput {
   destination: 'harvest' | 'planting_self_kept'
   subType?: 'cutting' | 'seed_saving'
   seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他'
+  /**
+   * 2026-10-11：后端 planting_harvest_records.source_form 列（采收形态）。
+   * 行级采收入库弹窗会随提交一并写入，读取时由 normalizeHarvestRecord 映射为前端 seedForm
+   */
+  sourceForm?: string
   warehouseId?: string
   warehouseName?: string
   quantity: number
@@ -442,10 +446,15 @@ export async function endPlanting(id: string, input: EndPlantingInput): Promise<
 
 /** 获取种植的采收记录列表 */
 /**
- * 2026-06-29: 把后端 source_form 字段映射为前端的 seedForm（语义统一：果实/种子/枝条等）
- * 后端 planting_harvest_records 表里 source_form 列存采收形态（与 inventory_stock.source_form 复用）
+ * 后端 planting_harvest_records 行 = 前端类型 + 后端 source_form 列（表里存采收形态，与 inventory_stock.source_form 复用）
+ * 2026-10-11：类型收敛 —— 原先用泛型 T & { seedForm?: string } 导致 4 处不匹配（返回类型不是 PlantingHarvestRecord）
  */
-function normalizeHarvestRecord<T extends { sourceForm?: string }>(record: T): T & { seedForm?: string } {
+type BackendHarvestRecord = PlantingHarvestRecord & { sourceForm?: PlantingHarvestRecord['seedForm'] };
+
+/**
+ * 2026-06-29: 把后端 source_form 字段映射为前端的 seedForm（语义统一：果实/种子/枝条等）
+ */
+function normalizeHarvestRecord(record: BackendHarvestRecord): PlantingHarvestRecord {
   return { ...record, seedForm: record.sourceForm }
 }
 

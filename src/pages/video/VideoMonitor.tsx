@@ -212,8 +212,10 @@ export default function VideoMonitor() {
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [layout, setLayout] = useState(6);
-  const [closedIds, setClosedIds] = useState([]);
+  // 宫格布局取值与 VideoWall/LayoutPanel 的 1|4|6|9 联合类型对齐
+  const [layout, setLayout] = useState<1 | 4 | 6 | 9>(6);
+  // 已关闭视频窗的摄像头 ID 列表
+  const [closedIds, setClosedIds] = useState<string[]>([]);
 
   // 2026-08-29：从 Store 读 IoT 摄像头列表
   const cameras = useIotCameraStore((s) => s.cameras);
@@ -235,15 +237,15 @@ export default function VideoMonitor() {
   const paginatedDevices = filteredDevices.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const videoWallDevices = filteredDevices.slice(0, layout);
 
-  const handleCloseVideo = (id) => {
+  const handleCloseVideo = (id: string) => {
     setClosedIds(prev => [...prev, id]);
   };
 
   const stats = [
-    { icon: <Power className="w-5 h-5 text-green-600" />, bg: "bg-green-100", label: "运行中", value: visibleDevices.filter(d => d.status === "运行中").length },
-    { icon: <Wifi className='w-5 h-5 text-gray-600' />, bg: 'bg-gray-100', label: '待机', value: visibleDevices.filter(d => d.status === '待机').length },
-    { icon: <XCircle className='w-5 h-5 text-red-600' />, bg: 'bg-red-100', label: '离线', value: visibleDevices.filter(d => d.status === '离线').length },
-    { icon: <AlertCircle className='w-5 h-5 text-orange-600' />, bg: 'bg-orange-100', label: '告警', value: visibleDevices.filter(d => d.status === '告警').length },
+    { icon: <Power className="w-5 h-5 text-green-600" />, bg: "bg-green-100", label: "运行中", value: visibleDevices.filter(d => CAMERA_STATUS_LABEL[d.status] === '运行中').length },
+    { icon: <Wifi className='w-5 h-5 text-gray-600' />, bg: 'bg-gray-100', label: '待机', value: visibleDevices.filter(d => CAMERA_STATUS_LABEL[d.status] === '待机').length },
+    { icon: <XCircle className='w-5 h-5 text-red-600' />, bg: 'bg-red-100', label: '离线', value: visibleDevices.filter(d => CAMERA_STATUS_LABEL[d.status] === '离线').length },
+    { icon: <AlertCircle className='w-5 h-5 text-orange-600' />, bg: 'bg-orange-100', label: '告警', value: visibleDevices.filter(d => CAMERA_STATUS_LABEL[d.status] === '告警').length },
   ];
 
   return (
@@ -393,7 +395,7 @@ export default function VideoMonitor() {
                           {onlineBadge.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{device.lastUpdate}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{device.updateTime}</td>
                     </tr>
                   );
                 })}

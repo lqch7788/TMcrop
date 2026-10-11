@@ -7,35 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { getTechSolutionApprovals, type TechSolutionApproval } from '../../services/apiTechSolutionService';
 import { getDictItemName } from '../../stores';
-
-// 技术方案类型
-interface TechSolution {
-  id: string;
-  code: string;
-  title: string;
-  crop: string;
-  cropCode?: string;
-  plantingMode: string;
-  stage: string;
-  author: string;
-  authorId?: string;
-  createDate: string;
-  updateTime?: string;
-  status: string;
-  batchStatus?: string;
-  statusClass?: 'normal' | 'pending' | 'draft';
-  version: string;
-  approveStatus?: string;
-  content: string;
-  approvalDate?: string;
-  approver?: string;
-  relatedBatchCode?: string;
-  planDetailFileName?: string;
-  priority?: string;
-  remarks?: string;
-  lastSubmitTime?: string;
-  isValid?: string;
-}
+// 技术方案类型：复用全局共享定义（含 V9.0 的 scopes 数组）
+import type { TechSolution } from '../../types/techSolution';
 
 interface TechSolutionDetailModalProps {
   isOpen: boolean;

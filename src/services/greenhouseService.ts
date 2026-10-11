@@ -57,7 +57,8 @@ export function initGreenhouses(): Greenhouse[] {
  */
 export async function getGreenhouses(): Promise<Greenhouse[]> {
   try {
-    const data = await apiClient.get<Greenhouse[]>('/basic-data/greenhouses');
+    // 2026-10-11：统一使用 enhancedApiClient（V2.1 标准客户端，原 apiClient 未导入 → 运行时 ReferenceError）
+    const data = await enhancedApiClient.get<Greenhouse[]>('/basic-data/greenhouses');
     saveGreenhousesToStorage(data);
     return data;
   } catch (error) {
@@ -95,7 +96,7 @@ export async function getGreenhousesByType(type: string): Promise<Greenhouse[]> 
  */
 export async function saveGreenhouses(greenhouses: Greenhouse[]): Promise<void> {
   // API模式下通过后端保存
-  await apiClient.post('/basic-data/greenhouses', greenhouses);
+  await enhancedApiClient.post('/basic-data/greenhouses', greenhouses);
   saveGreenhousesToStorage(greenhouses);
 }
 

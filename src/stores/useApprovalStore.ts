@@ -376,7 +376,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           // 乐观更新本地状态
           set((state) => {
             const approvals = state.approvals.map((a) =>
-              a.id === id ? { ...a, status: ApprovalStatus.APPROVED as string, updatedAt: new Date().toISOString() } : a
+              a.id === id ? { ...a, status: ApprovalStatus.APPROVED, updatedAt: new Date().toISOString() } : a
             );
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });
@@ -405,7 +405,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           );
           set((state) => {
             const approvals = state.approvals.map((a) =>
-              a.id === id ? { ...a, status: ApprovalStatus.REJECTED as string, updatedAt: new Date().toISOString() } : a
+              a.id === id ? { ...a, status: ApprovalStatus.REJECTED, updatedAt: new Date().toISOString() } : a
             );
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });
@@ -432,7 +432,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           );
           set((state) => {
             const approvals = state.approvals.map((a) =>
-              a.id === id ? { ...a, status: ApprovalStatus.CANCELLED as string, updatedAt: new Date().toISOString() } : a
+              a.id === id ? { ...a, status: ApprovalStatus.CANCELLED, updatedAt: new Date().toISOString() } : a
             );
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });
@@ -455,7 +455,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           );
           set((state) => {
             const approvals = state.approvals.map((a) =>
-              a.id === id ? { ...a, status: ApprovalStatus.PARTIALLY_APPROVED as string, updatedAt: new Date().toISOString() } : a
+              a.id === id ? { ...a, status: ApprovalStatus.PARTIALLY_APPROVED, updatedAt: new Date().toISOString() } : a
             );
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });

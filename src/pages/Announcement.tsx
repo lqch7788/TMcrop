@@ -4,8 +4,9 @@
  * 数据流：useAnnouncementDataStore / useAnnouncementTemplateStore → 组件
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Download, Edit, Edit2, FileText, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
+import { Download, Edit, FileText, Megaphone, Play, Plus, Search, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import DeleteConfirmModal from '../components/ui/DeleteConfirmModal';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAnnouncementDataStore } from '../stores/useAnnouncementDataStore';
 import { useAnnouncementTemplateStore, type AnnouncementTemplate } from '../stores/useAnnouncementTemplateStore';
@@ -26,7 +27,7 @@ export default function Announcement() {
   const noticeStore = useAnnouncementDataStore();
   const templateStore = useAnnouncementTemplateStore();
   const { items, isLoading } = noticeStore;
-  const { templates, fetchTemplates, createTemplate, updateTemplate, deleteTemplate, isLoading: templateLoading } = templateStore;
+  const { templates, fetchTemplates, createTemplate, updateTemplate, deleteTemplate, recordTemplateUsage, isLoading: templateLoading } = templateStore;
 
   // TAB 状态
   const [activeTab, setActiveTab] = useState('list');
@@ -62,11 +63,14 @@ export default function Announcement() {
 
   // === 模板TAB状态 ===
   const [templateSearch, setTemplateSearch] = useState('');
-  const [templateTypeFilter, setTemplateTypeFilter] = useState('全部');
   const [templateCatFilter, setTemplateCatFilter] = useState('全部');
   const [showTemplateEdit, setShowTemplateEdit] = useState(false);
   const [templateEditMode, setTemplateEditMode] = useState<'add' | 'edit'>('add');
   const [selectedTemplate, setSelectedTemplate] = useState<AnnouncementTemplate | null>(null);
+  // "使用模板"时携带到发布公告弹窗的模板（用于预填表单）
+  const [templateToApply, setTemplateToApply] = useState<AnnouncementTemplate | null>(null);
+  // 待删除确认的模板
+  const [templateToDelete, setTemplateToDelete] = useState<AnnouncementTemplate | null>(null);
 
   // === 公告列表计算 ===
   const stats = useMemo(() => {
@@ -95,23 +99,15 @@ export default function Announcement() {
   );
 
   // === 模板TAB计算 ===
-  const typeOptions = getDictItems('announcement_type').filter(d => d.status === 'active');
+  // 2026-10-11：移除"类型"筛选——模板的 type 与 category 是同一值，双筛选属重复
   const categoryOptions = getDictItems('announcement_category').filter(d => d.status === 'active');
   const filteredTemplates = useMemo(() => {
     return templates.filter(t => {
-      const matchType = templateTypeFilter === '全部' || t.type === templateTypeFilter;
       const matchCat = templateCatFilter === '全部' || t.category === templateCatFilter;
       const matchSearch = !templateSearch || t.name.toLowerCase().includes(templateSearch.toLowerCase());
-      return matchType && matchCat && matchSearch;
+      return matchCat && matchSearch;
     });
-  }, [templates, templateTypeFilter, templateCatFilter, templateSearch]);
-
-  const allTypes = useMemo(() => {
-    const set = new Set<string>(['全部']);
-    typeOptions.forEach(opt => set.add(opt.dictLabel));
-    templates.forEach(t => { if (t.type) set.add(t.type); });
-    return Array.from(set);
-  }, [typeOptions, templates]);
+  }, [templates, templateCatFilter, templateSearch]);
 
   const allCategories = useMemo(() => {
     const set = new Set<string>(['全部']);
@@ -125,7 +121,7 @@ export default function Announcement() {
   const handleEdit = useCallback((item: any) => { setSelectedNotice(item); setModalType('edit'); setShowModal(true); }, []);
   const handleSend = useCallback((item: any) => { setSelectedNotice(item); setModalType('send'); setShowModal(true); }, []);
   const handleAdd = useCallback(() => { setSelectedNotice(null); setModalType('add'); setShowModal(true); }, []);
-  const handleCloseModal = useCallback(() => { setShowModal(false); setSelectedNotice(null); }, []);
+  const handleCloseModal = useCallback(() => { setShowModal(false); setSelectedNotice(null); setTemplateToApply(null); }, []);
 
   const handleSave = useCallback(async (noticeData: Partial<Notice>) => {
     try {
@@ -194,9 +190,27 @@ export default function Announcement() {
   // === 模板TAB操作 ===
   const handleTemplateAdd = () => { setSelectedTemplate(null); setTemplateEditMode('add'); setShowTemplateEdit(true); };
   const handleTemplateEdit = (t: AnnouncementTemplate) => { setSelectedTemplate(t); setTemplateEditMode('edit'); setShowTemplateEdit(true); };
-  const handleTemplateDelete = async (t: AnnouncementTemplate) => {
-    try { await deleteTemplate(t.id); toast.success('模板删除成功'); }
+
+  /**
+   * 使用模板：使用次数 +1，并切到公告列表打开"发布公告"弹窗，
+   * 模板的标题/正文/优先级由 FormModal 自动预填
+   */
+  const handleUseTemplate = (t: AnnouncementTemplate) => {
+    recordTemplateUsage(t.id);
+    setTemplateToApply(t);
+    setSelectedNotice(null);
+    setModalType('add');
+    setShowModal(true);
+    setActiveTab('list');
+  };
+
+  // 删除模板：先弹确认框（原来直接删除，无确认）
+  const handleTemplateDelete = (t: AnnouncementTemplate) => { setTemplateToDelete(t); };
+  const handleTemplateDeleteConfirm = async () => {
+    if (!templateToDelete) return;
+    try { await deleteTemplate(templateToDelete.id); toast.success('模板删除成功'); }
     catch { toast.error('删除失败'); }
+    finally { setTemplateToDelete(null); }
   };
   const handleTemplateSave = async (data: any) => {
     try {
@@ -287,13 +301,6 @@ export default function Announcement() {
           <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">类型：</span>
-                <select value={templateTypeFilter} onChange={e => setTemplateTypeFilter(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
-                  {allTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">分类：</span>
                 <select value={templateCatFilter} onChange={e => setTemplateCatFilter(e.target.value)}
                   className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
@@ -334,17 +341,20 @@ export default function Announcement() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600 border border-blue-100">{template.type}</span>
+                    {/* 2026-10-11：只保留分类徽章——模板的 type 与 category 是同一值，原来显示两个重复徽章 */}
                     {template.category && <span className="px-2 py-0.5 text-xs rounded-full bg-purple-50 text-purple-600 border border-purple-100">{template.category}</span>}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
                     <FileText className="w-3.5 h-3.5" /><span>使用次数：{template.usageCount || 0} 次</span>
                   </div>
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                    <Button variant="outline" size="sm" className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleTemplateEdit(template)}>
-                      <Edit className="w-3.5 h-3.5" /><Edit2 className="w-4 h-4" /> 编辑
+                    <Button size="sm" className="flex-1" onClick={() => handleUseTemplate(template)}>
+                      <Play className="w-3.5 h-3.5" /> 使用模板
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleTemplateDelete(template)}>
+                    <Button variant="outline" size="sm" className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleTemplateEdit(template)}>
+                      <Edit className="w-3.5 h-3.5" /> 编辑
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleTemplateDelete(template)}>
                       <Trash2 className="w-3.5 h-3.5" />删除
                     </Button>
                   </div>
@@ -357,12 +367,21 @@ export default function Announcement() {
 
       {/* 公告弹窗 */}
       <DetailModal isOpen={showModal && modalType === 'view'} notice={selectedNotice} onClose={handleCloseModal} />
-      <FormModal isOpen={showModal && (modalType === 'add' || modalType === 'edit' || modalType === 'send')} notice={selectedNotice} mode={modalType === 'add' ? 'add' : modalType === 'edit' ? 'edit' : 'send'} onClose={handleCloseModal} onSave={handleSave} />
+      <FormModal isOpen={showModal && (modalType === 'add' || modalType === 'edit' || modalType === 'send')} notice={selectedNotice} templateToApply={templateToApply} mode={modalType === 'add' ? 'add' : modalType === 'edit' ? 'edit' : 'send'} onClose={handleCloseModal} onSave={handleSave} />
       <DeleteModal isOpen={showDeleteModal} item={deleteItem} onClose={() => { setShowDeleteModal(false); setDeleteItem(null); }} onConfirm={handleDeleteConfirm} />
       <ExportModal isOpen={showExportModal} exportFormat={exportFormat} selectedCount={selectedIds.length} totalCount={filteredNotices.length} onClose={() => setShowExportModal(false)} onFormatChange={setExportFormat} onConfirm={handleDoExport} />
 
       {/* 模板编辑弹窗 */}
       <TemplateEditModal isOpen={showTemplateEdit} template={selectedTemplate} mode={templateEditMode} onClose={() => setShowTemplateEdit(false)} onSave={handleTemplateSave} />
+
+      {/* 模板删除确认弹窗 */}
+      <DeleteConfirmModal
+        isOpen={!!templateToDelete}
+        title="删除模板"
+        description={`确定要删除模板「${templateToDelete?.name || ''}」吗？删除后无法恢复。`}
+        onClose={() => setTemplateToDelete(null)}
+        onConfirm={handleTemplateDeleteConfirm}
+      />
     </div>
   );
 }

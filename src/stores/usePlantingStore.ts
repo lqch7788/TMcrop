@@ -3,7 +3,7 @@
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { Planting, PlantingHarvestRecord, PlantingDailyRecord } from '../types/crop';
+import { Planting, PlantingHarvestRecord, PlantingDailyRecord, PlantingStatus } from '../types/crop';
 import * as plantingService from '../services/apiPlantingService';
 import type { AddHarvestRecordInput } from '../services/apiPlantingService';
 import * as plantingDailyRecordService from '../services/apiPlantingDailyRecordService';
@@ -136,7 +136,8 @@ export const usePlantingStore = create<PlantingState>()(
           set((s) => ({
             items: s.items.map((i) =>
               i.id === id
-                ? { ...i, harvestDate, harvestQuantity: harvestCount, status: 'harvested' as const }
+                // 2026-10-11：status 是 enum 类型，必须用枚举成员（值仍是 'harvested'，运行时等价）
+                ? { ...i, harvestDate, harvestQuantity: harvestCount, status: PlantingStatus.HARVESTED }
                 : i
             ),
           }));
@@ -232,8 +233,12 @@ export const usePlantingStore = create<PlantingState>()(
         set((s) => ({
           items: s.items.map((i) =>
             i.id === id
-              // 2026-07-28 审核 LOW：options.status 与 Planting['status'] 本就字符串兼容，删除双重类型转换
-              ? { ...i, status: options.status, isHarvestLocked: true }
+              // 2026-10-11：Planting['status'] 是 enum，字符串字面量不可直接赋值；此处映射为枚举成员（枚举值同为 'ended'/'cancelled'）
+              ? {
+                  ...i,
+                  status: options.status === 'ended' ? PlantingStatus.ENDED : PlantingStatus.CANCELLED,
+                  isHarvestLocked: true,
+                }
               : i
           ),
         }));

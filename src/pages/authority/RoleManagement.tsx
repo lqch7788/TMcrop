@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Pagination } from '@/components/ui';
 import { useOrganizationStore } from '@/stores';
-import { Role } from '../types/authority';
+import { Role } from '../../types/authority';
 import { showConfirm } from '@/lib/dialogService';
 
 export default function RoleManagement() {
@@ -176,7 +176,7 @@ export default function RoleManagement() {
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{role.aid}</td>
                   <td className="px-4 py-3 text-sm text-gray-900">{role.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {getOrgName(role.orgOid)}
+                    {getOrgName(role.orgOid ?? '')}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">
                     {role.description || '-'}
@@ -203,7 +203,7 @@ export default function RoleManagement() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(role.oid)}
+                        onClick={() => handleDelete(role.oid ?? '')}
                         className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                         title="删除"
                       >

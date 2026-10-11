@@ -116,10 +116,12 @@ TabsTrigger.displayName = "TabsTrigger"
 export interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
   value: string
   selectedValue?: string
+  /** Radix 兼容字段：本地实现始终按 selectedValue 控制显隐，此参数仅用于兼容调用方 */
+  forceMount?: boolean
 }
 
 const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps & { onValueChange?: (value: string) => void }>(
-  ({ className, value, selectedValue, onValueChange, children, ...props }, ref) => {
+  ({ className, value, selectedValue, onValueChange, forceMount: _forceMount, children, ...props }, ref) => {
     const isSelected = selectedValue === value
 
     if (!isSelected) return null

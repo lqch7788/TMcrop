@@ -32,7 +32,7 @@ export default function ProcessingArchive() {
   const [pageSize, setPageSize] = useState(10);
 
   const filteredData = processingData.filter(item =>
-    !searchKeyword || item.processCode.includes(searchKeyword) || item.product.includes(searchKeyword) || item.batch?.includes(searchKeyword) || item.factory.includes(searchKeyword)
+    !searchKeyword || item.processCode.includes(searchKeyword) || item.product.includes(searchKeyword) || item.factory.includes(searchKeyword)
   );
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);

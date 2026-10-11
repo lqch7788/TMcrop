@@ -14,6 +14,7 @@ import { DetailModal } from './modals/DetailModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
+import { SOURCE_ORIGIN_MAP } from '@/constants/cropConstants';
 // 2026-07-10 P1-1：抽取公共导出函数（替代原内联 csv/xls 分支）
 import { exportCsv, exportXlsx } from '@/services/exporters';
 import { ExportFormatModal } from './modals/ExportFormatModal';
@@ -395,9 +396,10 @@ export default function SeedSourcePage() {
         // 使用 SheetJS 导出 xlsx（含图片列）
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
-        // 设置图片列宽约 240px (30字符) + 行高
-        ws['!cols'] = headers.map((h, i) => {
-          if (h === '种源图片（链接）') return { wch: 30 }; // 图片列宽
+        // 设置列宽（图片走下方 embed 嵌入，不占表头列）
+        // 2026-10-11：删除 h === '种源图片（链接）' 分支 —— SEED_SOURCE_EXPORT_HEADERS 无该列，
+        //   exportData 也不产出该键，分支恒不命中（图片由下方 pictureAnchor 直接嵌入）
+        ws['!cols'] = headers.map((h) => {
           if (h === '备注') return { wch: 25 };
           return { wch: 15 };
         });

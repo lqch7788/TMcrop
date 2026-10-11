@@ -243,7 +243,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
 
   // ---- 字典项 ----
   const unitOptions = useMemo(() => {
-    const items = getDictItems?.(dictionaries, 'unit') || []
+    // getDictItems 只接收类别码一个参数（内部自取 store），第二参传了也会被忽略
+    const items = getDictItems?.('unit') || []
     if (items.length > 0) {
       return items.map((it: any) => ({ value: it.dictCode, label: it.dictValue || it.dictCode }))
     }
@@ -399,9 +400,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       try {
         useInventoryStore.getState().notifyChange?.()
       } catch (e) { console.warn('[UnifiedRowHarvestInboundModal] 跨页库存通知失败:', e) }
-      showAlert(`入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`, {
-        title: '成功',
-      })
+      showAlert(`入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`)
       // 2026-07-01 修复：种植行入库成功后同步写 planting_harvest_records
       // 原因：submitUnifiedInbound 写的是 harvest_records/inventory_stock（4 表），
       //       但 HarvestRecordModal 历史区读的是 planting_harvest_records
@@ -568,7 +567,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       const success = await deleteRecord(recordId, sourceModule, sourceRecord.id || '')
       if (success) {
         setDeleteError(null)
-        showAlert('删除成功', { title: '成功' })
+        showAlert('删除成功')
       }
     } catch (e) {
       // 2026-07-10 P0-2 修复：catch(e) + 自定义属性 narrowing（API 错误对象）
@@ -824,7 +823,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                       <NumberInput
                         value={p.harvestQuantity}
                         onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
-                        min={0}
                         className={deepInputClass}
                       />
                     </div>
@@ -982,7 +980,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                           <td className="px-2 py-1.5" colSpan={6}><span className="text-gray-400">（无产品明细）</span></td>
                           <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
                           <td className="px-2 py-1.5 text-xs">{harvesterStr || '-'}</td>
-                          <td className="px-2 py-1.5">{(r as any).operator || r.operatorName || r.createBy || '-'}</td>
+                          {/* 2026-10-11：操作员只取 createBy —— harvest_records 无 operator/operator_name 列
+                              （原 (r as any).operator / r.operatorName 两段兜底恒为空） */}
+                          <td className="px-2 py-1.5">{r.createBy || '-'}</td>
                           <td className="px-2 py-1.5 text-xs">
                             {(r as any).isSupplementary
                               ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>
@@ -1015,7 +1015,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                         <td className="px-2 py-1.5">{gradeLabel(p.grade) || '-'}</td>
                         <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
                         <td className="px-2 py-1.5 text-xs">{harvesterStr || '-'}</td>
-                        <td className="px-2 py-1.5">{(r as any).operator || r.operatorName || r.createBy || '-'}</td>
+                        {/* 2026-10-11：同上方 —— 操作员只取 createBy（见 harvest_records 表结构） */}
+                        <td className="px-2 py-1.5">{r.createBy || '-'}</td>
                         <td className="px-2 py-1.5 text-xs">
                           {(r as any).isSupplementary
                             ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>

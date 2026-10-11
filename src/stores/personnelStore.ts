@@ -115,9 +115,6 @@ interface PersonnelState {
   // Actions - 筛选
   setFilters: (filters: Partial<PersonnelFilters>) => void;
 
-  // Actions - 同步
-  syncPendingChanges: () => Promise<void>;
-
   // 内部方法
   _initializeSeedData: () => void;
 }

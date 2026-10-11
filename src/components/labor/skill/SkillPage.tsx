@@ -384,7 +384,6 @@ export function SkillPage() {
 
       {/* 详情弹窗 */}
       <SkillDetailModal
-        isOpen={showDetailModal}
         onClose={handleCloseModals}
         skill={selectedSkill}
         trainingRecords={trainingRecords}

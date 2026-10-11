@@ -231,7 +231,10 @@ export async function getCustomers(): Promise<Customer[]> {
 export async function getPrices(): Promise<Price[]> {
   const response = await enhancedApiClient.get<{ data: Record<string, unknown>[]; total: number }>('/market/price');
   if (response && typeof response === 'object' && 'data' in response) {
-    return (response as { data: Record<string, unknown>[] }).data || [];
+    const list = (response as { data: Record<string, unknown>[] }).data || [];
+    // 2026-10-11：后端 /market/price 返回原始行（priceNo/product/basePrice…），与 Price 声明字段不完全一致。
+    // 此处保持既有"原样透传"行为，仅做类型边界断言；字段映射问题另行跟进（见修复报告）。
+    return list as unknown as Price[];
   }
   return [];
 }
@@ -244,7 +247,9 @@ export async function getPrices(): Promise<Price[]> {
 export async function getChannels(): Promise<Channel[]> {
   const response = await enhancedApiClient.get<{ data: Record<string, unknown>[]; total: number }>('/market/channel');
   if (response && typeof response === 'object' && 'data' in response) {
-    return (response as { data: Record<string, unknown>[] }).data || [];
+    const list = (response as { data: Record<string, unknown>[] }).data || [];
+    // 2026-10-11：后端返回原始行（channelNo/sales/createDate…），字段映射问题另行跟进；保持原样透传
+    return list as unknown as Channel[];
   }
   return [];
 }
@@ -257,7 +262,9 @@ export async function getChannels(): Promise<Channel[]> {
 export async function getTrends(): Promise<Trend[]> {
   const response = await enhancedApiClient.get<{ data: Record<string, unknown>[]; total: number }>('/market/trend');
   if (response && typeof response === 'object' && 'data' in response) {
-    return (response as { data: Record<string, unknown>[] }).data || [];
+    const list = (response as { data: Record<string, unknown>[] }).data || [];
+    // 2026-10-11：后端返回原始行（trendNo/product/period…），字段映射问题另行跟进；保持原样透传
+    return list as unknown as Trend[];
   }
   return [];
 }
@@ -270,7 +277,9 @@ export async function getTrends(): Promise<Trend[]> {
 export async function getStatistics(): Promise<Statistic[]> {
   const response = await enhancedApiClient.get<{ data: Record<string, unknown>[]; total: number }>('/market/statistics');
   if (response && typeof response === 'object' && 'data' in response) {
-    return (response as { data: Record<string, unknown>[] }).data || [];
+    const list = (response as { data: Record<string, unknown>[] }).data || [];
+    // 2026-10-11：后端返回原始行（productName/totalSales/…），字段映射问题另行跟进；保持原样透传
+    return list as unknown as Statistic[];
   }
   return [];
 }

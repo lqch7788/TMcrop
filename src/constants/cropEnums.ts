@@ -9,8 +9,6 @@
  * - 提供 lookup 函数 `lookupEnumLabel()` 兜底英文
  */
 
-import type { StockStatus, SourceType, InventoryStatus, SeedlingStatus } from '../types/crop';
-
 // ==================== 种源类型 (SOURCE_TYPE) ====================
 export interface EnumOption {
   value: string;

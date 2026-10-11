@@ -82,7 +82,7 @@ export function useContract(): UseContractReturn {
         const keyword = filters.keyword.toLowerCase();
         return (
           contract.staffName.toLowerCase().includes(keyword) ||
-          contract.idCard.includes(keyword) ||
+          contract.idCard?.includes(keyword) ||
           contract.contractCode.toLowerCase().includes(keyword)
         );
       }

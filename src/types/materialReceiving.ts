@@ -67,6 +67,26 @@ export interface MaterialReceivingRecord {
    * 但类型里缺该字段 —— 提交审批时取不到金额，导致金额分级/免审批阈值对该业务线失效（审计 P1-1）。
    */
   totalAmount?: number;
+  /**
+   * 申请单标题（后端 material_requests.request_title，NOT NULL）
+   * 2026-10-11 补：前端表单无 title 输入，Store 落库时用占位文本，类型缺该字段导致读不到
+   */
+  title?: string;
+  /**
+   * 关联生产计划批次号（后端 material_requests.production_batch_code）
+   * 2026-10-11 补：Store 已恢复写入该列（成本归集维度），类型缺失导致多处 TS2339
+   */
+  productionBatchCode?: string;
+  /** 附件列表（后端 material_requests.attachments，JSON 存储；2026-09-26 批次五统一传数组） */
+  attachments?: Array<{ name: string; dataUrl: string }>;
+  /**
+   * 2026-10-11：补 material_requests 既有列对应的展示字段
+   *   - applicantId / expectedDate / priority 由 Store addItem 写入（body.applicant_id / expected_date / priority），
+   *     领料列表页（useApplicationTab）也在读取，类型此前缺失
+   */
+  applicantId?: string;
+  expectedDate?: string;
+  priority?: string;
   materials: MaterialItem[];
 }
 

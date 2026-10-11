@@ -13,11 +13,15 @@ import { useEnvironmentData } from './useEnvironmentData';
 import { useWorkerStore } from '../stores/useWorkerStore';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { todayLocal } from '../lib/dateUtils';
-import type { Task, TempTask } from './useTasks';
+import type { Task } from './useTasks';
+// 2026-10-11：TempTask 类型定义在 useTempTasks（useTasks 只导出 Task/TaskStatus/TaskRecord/ReminderRecord）
+import type { TempTask } from './useTempTasks';
 import type { AttendanceEntry } from './usePersistentAttendance';
 import type { DispatchConfig, ConfidenceLevel, SuggestedAction, EnhancedRecommendation } from '../types/dispatch';
 import { DEFAULT_DISPATCH_CONFIG } from '../types/dispatch';
 import type { WeatherImpact } from '../types/environment';
+// 2026-10-11：巡查问题条目类型（normalizeInspectionTask 入参 / 与 useProblemDispatch 对齐）
+import type { ProblemData } from '../stores/useProblemStore';
 
 // ============================================
 // 类型定义
@@ -594,7 +598,8 @@ function normalizeFarmTask(task: Task): UnifiedDispatchTask {
     title: task.title,
     type: task.type,
     typeName: task.typeName,
-    priority: task.priority,
+    // 2026-10-11：Task.priority 可选（urgent/high/normal），统一格式要求必填，缺省按 normal
+    priority: task.priority ?? 'normal',
     workZone: task.greenhouseName || '',
     greenhouse: task.greenhouseName || '',
     cropName: task.cropName || '',
@@ -620,7 +625,8 @@ function normalizeTempTask(task: TempTask): UnifiedDispatchTask {
     title: task.title,
     type: task.tempTaskType || 'default',
     typeName: task.tempTaskType || '临时任务',
-    priority: task.priority,
+    // 2026-10-11：临时任务的 urgency 含 'critical'，统一派工模型的 priority 只到 urgent → critical 归一为 urgent
+    priority: task.priority === 'critical' ? 'urgent' : task.priority,
     workZone: task.workLocation || '',
     greenhouse: task.workLocation || '',
     cropName: '',
@@ -635,16 +641,8 @@ function normalizeTempTask(task: TempTask): UnifiedDispatchTask {
 }
 
 /** 标准化巡查问题为统一格式 */
-function normalizeInspectionTask(problem: {
-  id: number;
-  issueText: string;
-  greenhouseId: string;
-  greenhouseName: string;
-  cropName: string;
-  issueSeverity: string;
-  batchId?: string;
-  batchCode?: string;
-}): UnifiedDispatchTask {
+// 2026-10-11：入参对齐 useProblemDispatch 实际传入的 ProblemData（各字段为可选，读取处均已兜底）
+function normalizeInspectionTask(problem: ProblemData): UnifiedDispatchTask {
   // 严重程度转优先级
   const severityToPriority: Record<string, UnifiedDispatchTask['priority']> = {
     '严重': 'urgent',
@@ -672,7 +670,7 @@ function normalizeInspectionTask(problem: {
     title: `【问题处理】${(problem.issueText || '未知问题').slice(0, 30)}`,
     type: typeInfo.type,
     typeName: typeInfo.typeName,
-    priority: severityToPriority[problem.issueSeverity] || 'normal',
+    priority: severityToPriority[problem.issueSeverity || ''] || 'normal',
     workZone: problem.greenhouseName || '',
     greenhouse: problem.greenhouseName || '',
     cropName: problem.cropName || '',

@@ -6,7 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { RiskAlert, RiskFilters, AlertLevel } from '../types';
 import { useRiskStore } from '@/stores';
-import type { RiskStats } from '@/stores/useRiskStore';
+import type { RiskStats } from '../types';
 import type { CreateRiskAlertParams } from '@/services/apiRiskService';
 
 interface UseRiskOptions {
@@ -128,7 +128,8 @@ export function useRisk(options: UseRiskOptions = {}) {
   return {
     alerts: filteredAlerts,
     stats,
-    filters: { ...storeFilters, ...filters },
+    // 2026-10-11 类型清理：Store 侧筛选为宽 string 类型，按组件筛选器的联合类型收窄（运行时值不变）
+    filters: { ...storeFilters, ...filters } as RiskFilters,
     isLoading,
     error,
     updateFilters,

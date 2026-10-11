@@ -6,7 +6,8 @@ import * as React from "react"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export interface StatisticProps extends React.HTMLAttributes<HTMLDivElement> {
+// Omit 'prefix'：HTMLAttributes.prefix 为 string，此处需支持图标节点
+export interface StatisticProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'prefix'> {
   title?: string
   value: number | string
   prefix?: React.ReactNode

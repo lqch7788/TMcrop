@@ -135,6 +135,8 @@ export function useOvertimeDetection(
 
       return () => clearInterval(intervalId);
     }
+    // 2026-10-11：未启用自动检测时无清理函数，显式 return（noImplicitReturns 要求所有路径都有返回值）
+    return undefined;
   }, [tasks, enableAutoCheck, checkIntervalMs, detectAllOvertime]);
 
   return {

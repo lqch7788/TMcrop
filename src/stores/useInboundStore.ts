@@ -9,13 +9,20 @@ import type { InboundRecord } from '../services/apiWarehouseMaterialService';
 
 interface InboundState {
   items: InboundRecord[];
+  /**
+   * 2026-10-11：V2.1 命名别名（与 items 同步写入）。
+   * 物料页 useMaterials 按 records/loadRecords/createRecord 订阅，此前 store 未提供 → 页面取到 undefined 后调用即报错
+   */
+  records: InboundRecord[];
   isLoading: boolean;
   error: string | null;
 
   loadItems: () => Promise<void>;
   // 2026-07-18 P2-M4：fetchItems 别名
   fetchItems: () => Promise<void>;
+  loadRecords: () => Promise<void>;
   addItem: (item: Omit<InboundRecord, 'id'>) => Promise<InboundRecord | null>;
+  createRecord: (item: Omit<InboundRecord, 'id'>) => Promise<InboundRecord | null>;
   updateItem: (id: number, updates: Partial<InboundRecord>) => Promise<InboundRecord | null>;
   deleteItem: (id: number) => Promise<boolean>;
   deleteItems: (ids: number[]) => Promise<boolean>;
@@ -42,6 +49,7 @@ export const useInboundStore = create<InboundState>()(
   // 2026-09-27 修复：此前签名为 (set)，但 fetchItems 用了 get() → 调用即 ReferenceError
   (set, get) => ({
     items: [],
+    records: [],
     isLoading: false,
     error: null,
 
@@ -51,7 +59,8 @@ export const useInboundStore = create<InboundState>()(
         const data = await warehouseService.getInboundRecords();
         // 明细 id 归一化（防止"改一行=改全部行"）+ 非数组兜底
         const list = Array.isArray(data) ? data : [];
-        set({ items: list.map((r) => normalizeInboundRecord(r)), isLoading: false });
+        const normalized = list.map((r) => normalizeInboundRecord(r));
+        set({ items: normalized, records: normalized, isLoading: false });
       } catch (error) {
         // logger.error('[useInboundStore] 获取入库记录失败:', error);
         set({ error: (error as Error).message, isLoading: false });
@@ -60,11 +69,16 @@ export const useInboundStore = create<InboundState>()(
 
     // 2026-07-18 P2-M4：fetchItems 别名
     fetchItems: async () => { await get().loadItems(); },
+    // 2026-10-11：loadRecords 别名（同 fetchItems）
+    loadRecords: async () => { await get().loadItems(); },
 
     addItem: async (item) => {
       try {
         const result = await warehouseService.createInboundRecord(item);
-        if (result) set((s) => ({ items: [normalizeInboundRecord(result), ...s.items] }));
+        if (result) {
+          const created = normalizeInboundRecord(result);
+          set((s) => ({ items: [created, ...s.items], records: [created, ...s.records] }));
+        }
         return result;
       } catch (error) {
         // 2026-09-28 审计修复：fail-loud——此前只 `return null` 连错误都丢掉，
@@ -72,6 +86,11 @@ export const useInboundStore = create<InboundState>()(
         set({ error: error instanceof Error ? error.message : '创建入库记录失败' });
         return null;
       }
+    },
+
+    // 2026-10-11：createRecord 别名（物料页按该名调用）
+    createRecord: async (item) => {
+      return await get().addItem(item);
     },
 
     updateItem: async (id, updates) => {
@@ -90,7 +109,11 @@ export const useInboundStore = create<InboundState>()(
           materials: updates.materials,
         };
         const result = await warehouseService.updateInboundRecord(id, payload);
-        if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? normalizeInboundRecord({ ...i, ...result }) : i) }));
+        if (result) {
+          const patch = (list: InboundRecord[]) =>
+            list.map((i) => i.id === id ? normalizeInboundRecord({ ...i, ...result }) : i);
+          set((s) => ({ items: patch(s.items), records: patch(s.records) }));
+        }
         return result;
       } catch (error) {
         // 2026-09-27 fail-loud：错误写入 store.error，调用方据此提示用户（此前静默吞掉，
@@ -103,7 +126,7 @@ export const useInboundStore = create<InboundState>()(
     deleteItem: async (id) => {
       try {
         const result = await warehouseService.deleteInboundRecord(id);
-        if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+        if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id), records: s.records.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
         // 2026-09-27 fail-loud：同 updateItem
@@ -121,7 +144,10 @@ export const useInboundStore = create<InboundState>()(
         const failedIds = ids.filter((_, i) => results[i].status === 'rejected');
         const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
         if (deletedIds.length > 0) {
-          set((s) => ({ items: s.items.filter((i) => !deletedIds.includes(i.id)) }));
+          set((s) => ({
+            items: s.items.filter((i) => !deletedIds.includes(i.id)),
+            records: s.records.filter((i) => !deletedIds.includes(i.id)),
+          }));
         }
         if (failedIds.length > 0) {
           const firstRejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;

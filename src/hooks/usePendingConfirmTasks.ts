@@ -10,7 +10,9 @@ import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { useCropGrowthEngine } from './useCropGrowthEngine';
 import { useAIOptimization } from './useAIOptimization';
-import AIOptimizationSuggestion from './useAIOptimization';
+// 2026-10-11：原为 `import AIOptimizationSuggestion from './useAIOptimization'`（误把 hook 模块默认导出当建议对象类型），
+//   导致 aiOptimizationSuggestion 的类型是"hook 函数类型"，SmartDispatch 把 hook 当建议对象用。改为引用真正的建议类型。
+import type { AIOptimizationSuggestion } from '../types/dispatch';
 import type { WorkerRecommendation, UnifiedDispatchTask } from './useComprehensiveDispatch';
 
 // ============================================
@@ -31,7 +33,7 @@ export interface PendingConfirmTask extends UnifiedDispatchTask {
   /** 是否为预测任务 */
   isPredictedTask?: boolean;
   /** AI优化建议 */
-  aiOptimizationSuggestion?: typeof AIOptimizationSuggestion;
+  aiOptimizationSuggestion?: AIOptimizationSuggestion;
   /** AI推荐的执行人列表 */
   aiRecommendedWorkers?: WorkerRecommendation[];
   /** AI置信度评分 */
@@ -292,7 +294,7 @@ export function usePendingConfirmTasks(
         tasks[taskIndex] = {
           ...tasks[taskIndex],
           dispatchStatus: 'optimization',
-          aiOptimizationSuggestion: optimizationSuggestion as any,
+          aiOptimizationSuggestion: optimizationSuggestion,
         };
       }
     }

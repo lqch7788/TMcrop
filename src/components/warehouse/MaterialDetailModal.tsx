@@ -195,6 +195,7 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
 
   // 导出为 Excel（HTML 表格格式，浏览器兼容）
   const handleExportExcel = () => {
+    if (!material) return; // 与其他处理函数一致：material 未加载时不执行
     const selected = history.filter((_, i) => selectedIndices.has(i));
     if (selected.length === 0) {
       showAlert('请至少选择一条记录');

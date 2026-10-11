@@ -24,6 +24,8 @@ interface OperationLockInput {
   cancelledStatus?: string
   /** 种植侧用的 ENDED 状态常量 */
   endedStatus?: string
+  /** 2026-10-11：完成状态常量（下方规则"endTime 存在 + status=ended/completed → locked"依赖，此前类型缺失） */
+  completedStatus?: string
 }
 
 export interface OperationLockResult {

@@ -6,6 +6,8 @@ import { Modal, Button } from '@/components/ui';
 import { X } from 'lucide-react';
 
 import { getTypeColor, getTypeLabel } from './constants';
+import type { TaskDispatchTask } from './types';
+import type { Task } from '../../../hooks/useTasks';
 
 interface TaskSopModalProps {
   isOpen: boolean;

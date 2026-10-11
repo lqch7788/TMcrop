@@ -125,7 +125,9 @@ export function useDailyProblemSummary(filters?: DailyProblemFilters) {
       lowPriority: s.low_priority,
       // 扩展字段
       month_new: s.total,
-    })) as DailyProblemSummaryRow[];
+      // 2026-10-11：这里产出的是"按日/月汇总的透视行"，字段集合与 DailyProblemSummaryRow（明细行）不同；
+      //   仅用于长度统计与 date 过滤，保持既有数据形状，类型层面显式转型
+    })) as unknown as DailyProblemSummaryRow[];
   }, [summaries]);
 
   // 过滤后的汇总

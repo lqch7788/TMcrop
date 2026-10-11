@@ -22,7 +22,6 @@ import type {
   SortConfig,
   MonthStats,
   ExportTarget,
-  ExportFileType,
   MonthSummary,
 } from '../types/statisticsTab.types';
 import type { MonthDetailRow, MonthlyStatItem } from '@/stores/useStatisticsStore';
@@ -190,7 +189,8 @@ export function useStatisticsTab() {
   const [statExportMode, setStatExportMode] = useState(false);
   const [statSelectedRows, setStatSelectedRows] = useState<number[]>([]);
   const [statShowExportTypeModal, setStatShowExportTypeModal] = useState(false);
-  const [statExportFileType, setStatExportFileType] = useState<ExportFileType>('xlsx');
+  // 导出格式：ExportTypeModal 的回调签名为 (format: string)，与 useApplicationTab/useExecuteTab 保持一致用 string
+  const [statExportFileType, setStatExportFileType] = useState('xlsx');
   const [statExportTarget, setStatExportTarget] = useState<ExportTarget>('monthly');
 
   // ============================================

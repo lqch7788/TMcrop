@@ -60,6 +60,7 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
   categoryData,
   departmentData,
   batchData,
+  batchMaterialDetails,
   onViewDetail,
 }) => {
   const [dimension, setDimension] = useState<DimensionType>('category');
@@ -177,8 +178,8 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
               <td colSpan={7} className="px-4 py-3 bg-gray-50">
                 <div className="text-xs text-gray-500 mb-2">该批次物料领用明细：</div>
                 <div className="grid grid-cols-4 gap-2">
-                  {batchMaterialDetails?.[item.batchCode]?.length > 0 ? (
-                    batchMaterialDetails[item.batchCode].map((mat) => (
+                  {(batchMaterialDetails?.[item.batchCode]?.length ?? 0) > 0 ? (
+                    (batchMaterialDetails?.[item.batchCode] ?? []).map((mat) => (
                       <div key={mat.materialCode} className="bg-white rounded p-2 border border-gray-200">
                         <div className="text-xs text-gray-500">{mat.materialName}</div>
                         <div className="text-sm font-medium text-emerald-600">¥{mat.totalAmount.toLocaleString()}</div>

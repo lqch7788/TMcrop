@@ -45,7 +45,7 @@ export const monthlyCostTrendData: MonthlyCostTrend[] = [
   { month: '2025-09', totalCost: 12630, categoryCosts: { 生产投入: 3450, 设施装备: 1950, 作业支持: 1380, 采后流通: 1140, 数字管理: 495, 能源耗材: 234, 其他: 144 } },
   { month: '2025-10', totalCost: 11210, categoryCosts: { 生产投入: 3060, 设施装备: 1740, 作业支持: 1200, 采后流通: 1020, 数字管理: 450, 能源耗材: 210, 其他: 126 } },
   { month: '2025-11', totalCost: 10060, categoryCosts: { 生产投入: 2760, 设施装备: 1560, 作业支持: 1080, 采后流通: 900, 数字管理: 405, 能源耗材: 186, 其他: 114 } },
-  { month: '2025-12', totalCost: 9180, categoryCosts: { 生产投入: 2550, 设施装备: 1440, 作业支持: 960, 采后流通: 810, 数字交管理: 360, 能源耗材: 165, 其他: 105 } },
+  { month: '2025-12', totalCost: 9180, categoryCosts: { 生产投入: 2550, 设施装备: 1440, 作业支持: 960, 采后流通: 810, 数字管理: 360, 能源耗材: 165, 其他: 105 } },
 ];
 
 // 分类成本明细数据
@@ -136,7 +136,7 @@ export function filterCostRecords(data: MaterialReceivingRecord[], filters: Cost
       return false;
     }
     // 批次筛选
-    if (filters.batches.length > 0 && !filters.batches.includes(record.productionBatchCode)) {
+    if (filters.batches.length > 0 && !filters.batches.includes(record.productionBatchCode ?? '')) {
       return false;
     }
     // 分类筛选（检查物料明细）
@@ -276,15 +276,17 @@ export function aggregateByBatch(records: MaterialReceivingRecord[]): BatchAgg[]
     const amount = record.materials.reduce((sum, mat) => {
       return sum + mat.requestedQuantity * mat.unitPrice;
     }, 0);
-    const existing = batchMap.get(record.productionBatchCode);
+    // productionBatchCode 为可选字段（历史数据可能无批次号），统一兜底为空串归集
+    const batchCode = record.productionBatchCode ?? '';
+    const existing = batchMap.get(batchCode);
     if (existing) {
       existing.requisitionCount += 1;
       existing.totalAmount += amount;
       existing.materialTypes += record.materials.length;
     } else {
-      batchMap.set(record.productionBatchCode, {
-        batchCode: record.productionBatchCode,
-        cropName: record.plantArea.split('-')[0] || '未知',
+      batchMap.set(batchCode, {
+        batchCode,
+        cropName: record.plantArea?.split('-')[0] || '未知',
         area: '0m²',
         requisitionCount: 1,
         materialTypes: record.materials.length,
@@ -372,7 +374,8 @@ export function getBatchMaterialDetails(records: MaterialReceivingRecord[]): Rec
   const result: Record<string, BatchMaterialDetail[]> = {};
 
   records.forEach(record => {
-    const batchCode = record.productionBatchCode;
+    // productionBatchCode 为可选字段（历史数据可能无批次号），统一兜底为空串归集
+    const batchCode = record.productionBatchCode ?? '';
     if (!result[batchCode]) {
       result[batchCode] = [];
     }

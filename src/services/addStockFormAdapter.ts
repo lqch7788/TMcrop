@@ -67,8 +67,9 @@ export function toPayload(
     //                  改为 'manual' 标识 + 空 sourceId 后，后端 fetchSourceRow 短路返回 null
     // 2026-07-13 修复：补录入库（self_produced）的 sourceId/sourceModule 从 formData 读取（用户在下拉菜单中选中），
     //                  不再从 sourceRecord（页面级始终为 null）读取，否则 sourceId 始终为空、sourceModule 始终为 'manual'
+    // formData 是宽松表单态（Record<string, any>），此处按 sourceModule 联合类型断言（合法性由后端校验）
     sourceModule: (sourceType === 'self_produced' && str(formData.sourceModule))
-      ? str(formData.sourceModule)!
+      ? (str(formData.sourceModule) as InventoryInboundInput['sourceModule'])
       : (sourceRecord?.module ?? 'manual'),
     sourceId: (sourceType === 'self_produced' && str(formData.sourceId))
       ? str(formData.sourceId)!

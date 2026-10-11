@@ -26,7 +26,7 @@ const AnalysisModel = () => {
   ]
 
   const filteredModels = models.filter(m => {
-    const matchesType = modelFilter === '全部' || m.modelType === modelType
+    const matchesType = modelFilter === '全部' || m.modelType === modelFilter
     const matchesSearch = !searchKeyword ||
       m.modelName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       m.modelNo.toLowerCase().includes(searchKeyword.toLowerCase())

@@ -13,8 +13,8 @@ interface TaskTypeConfigPanelProps {
   taskTypes: string[];
   /** 当前配置值 */
   configValues: TaskConfigValues;
-  /** 配置变化回调 */
-  onConfigChange: (key: string, value: string | number | boolean | string[]) => void;
+  /** 配置变化回调（取值类型与 TaskConfigValues 保持一致，含多条目记录数组） */
+  onConfigChange: (key: string, value: TaskConfigValues[string]) => void;
   /** 验证错误 */
   errors?: Record<string, string>;
 }
@@ -68,7 +68,7 @@ export function TaskTypeConfigPanel({
 
   // 检测是否有"其他"选项被选中
   const hasOtherSelected = Object.values(configValues || {}).some(
-    v => v === 'other' || (Array.isArray(v) && v.includes('other'))
+    v => v === 'other' || (Array.isArray(v) && v.some(item => item === 'other'))
   );
 
   // 如果有"其他"被选中，给备注字段添加错误提示

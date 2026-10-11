@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { AlertTriangle, ArrowLeft, Bell, ChevronLeft, Edit2, Loader2, Mail, MessageSquare, Phone, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Modal } from '../components/ui/modal';
+import { Modal } from '../components/ui/Modal';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { useNotificationSettingsStore } from '../stores';
@@ -79,7 +79,7 @@ function ChannelModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={editItem ? '编辑通知渠道' : '新增通知渠道'}>
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title={editItem ? '编辑通知渠道' : '新增通知渠道'}>
       <div className="space-y-4">
         <div>
           <Label>渠道名称 *</Label>
@@ -151,7 +151,7 @@ function RuleModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={editItem ? '编辑通知规则' : '新增通知规则'} width="lg">
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title={editItem ? '编辑通知规则' : '新增通知规则'} size="lg">
       <div className="space-y-4">
         <div>
           <Label>规则名称 *</Label>

@@ -12,7 +12,7 @@ import { useApprovalLevelStore } from '../stores';
 import { getApprovalTypeName, ApprovalType } from '../types/approval';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Modal } from '../components/ui/modal';
+import { Modal } from '../components/ui/Modal';
 import { Label } from '../components/ui/label';
 import {
   NumberInput,
@@ -95,7 +95,7 @@ function ThresholdModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={editItem ? '编辑金额阈值' : '新增金额阈值'}>
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title={editItem ? '编辑金额阈值' : '新增金额阈值'}>
       <div className="space-y-4">
         <div>
           <Label>金额上限（元）*</Label>
@@ -189,7 +189,7 @@ function LevelConfigModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`编辑 - ${editItem?.levelName || ''}`}>
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title={`编辑 - ${editItem?.levelName || ''}`}>
       <div className="space-y-4">
         <div>
           <Label>级别名称 *</Label>
@@ -288,7 +288,7 @@ function TypeRuleModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`编辑规则 - ${editItem ? getApprovalTypeName(editItem.approvalType as ApprovalType) : ''}`}>
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title={`编辑规则 - ${editItem ? getApprovalTypeName(editItem.approvalType as ApprovalType) : ''}`}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
@@ -372,7 +372,7 @@ function DeleteConfirmModal({
   message: string;
 }) {
   return (
-    <Modal open={open} onClose={onClose} title="确认删除">
+    <Modal isOpen={open} showFooter={false} onClose={onClose} title="确认删除">
       <div className="space-y-4">
         <p className="text-gray-600">{message}</p>
         <div className="flex justify-end gap-3">

@@ -12,29 +12,13 @@ import { Modal } from '@/components/ui';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
-import type { ExecuteMaterialItem } from '@/types/materialReceiving';
+import type { ExecuteMaterialItem, ExecuteAddFormState } from '@/types/materialReceiving';
 
 interface ExecuteAddModalProps {
   isOpen: boolean;
-  // 基础表单
-  addForm: {
-    code: string;
-    date: string;
-    applicant: string;
-    warehouseLocation: string;
-    reviewer: string;
-    operator: string;
-    materials: ExecuteMaterialItem[];
-  };
-  onFormChange: React.Dispatch<React.SetStateAction<{
-    code: string;
-    date: string;
-    applicant: string;
-    warehouseLocation: string;
-    reviewer: string;
-    operator: string;
-    materials: ExecuteMaterialItem[];
-  }>>;
+  // 基础表单（与 useExecuteTab 的 ExecuteAddFormState 对齐）
+  addForm: ExecuteAddFormState;
+  onFormChange: React.Dispatch<React.SetStateAction<ExecuteAddFormState>>;
   // 物料池
   materialPool: ExecuteMaterialItem[];
   onAddToMaterialPool: () => void;

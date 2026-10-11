@@ -57,16 +57,18 @@ function renderPesticideTypeChips(types: string[] | undefined) {
   const topLevelCodes = new Set<string>();
   const childrenByParent = new Map<string, Set<string>>();
   for (const d of dictionaries) {
-    const cat = d.categoryCode || d.category_code || d.category;
-    if (cat !== 'pesticide_type') continue;
-    const code = d.dictCode || d.dict_code;
-    const parentId = d.parentId || d.parent_id;
+    // 后端 dictionaries 表含 parent_id（响应经 camelCase 中间件返回 parentId），
+    // 共享类型 Dictionary 未声明该字段，这里按实际响应补充局部类型
+    const row = d as typeof d & { parentId?: string };
+    if (d.categoryCode !== 'pesticide_type') continue;
+    const code = d.dictCode;
+    const parentId = row.parentId;
     if (!parentId) {
       topLevelCodes.add(code);
     } else {
-      const parent = dictionaries.find((x: any) => x.id === parentId);
+      const parent = dictionaries.find((x) => x.id === parentId);
       if (parent) {
-        const parentCode = parent.dictCode || parent.dict_code;
+        const parentCode = parent.dictCode;
         if (!childrenByParent.has(parentCode)) childrenByParent.set(parentCode, new Set());
         childrenByParent.get(parentCode)!.add(code);
       }
@@ -126,12 +128,12 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
 
   // 打开弹窗且切到"使用记录"tab 时拉取一次
   useEffect(() => {
-    if (!isOpen || !record || activeTab !== 'usage' || usageLoaded || !record.specId) return;
+    if (!isOpen || !record || activeTab !== 'usage' || usageLoaded || !record.id) return;
     setUsageLoading(true);
     (async () => {
       try {
         const res = await enhancedApiClient.get<any>(
-          `/pest-records/pesticide-usage-by-spec/${encodeURIComponent(String(record.specId))}`,
+          `/pest-records/pesticide-usage-by-spec/${encodeURIComponent(String(record.id))}`,
         );
         const list = Array.isArray(res) ? res : res?.data ?? [];
         setUsageRows(list as PesticideUsageRow[]);

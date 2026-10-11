@@ -17,7 +17,8 @@ interface BatchEditModalProps {
   editedProblemCodes: number[];
   editedProblems: Record<number, Partial<ProblemEntry>>;
   selectedProblemId: number | null;
-  onSelectedProblemIdChange: (id: number) => void;
+  /** 2026-10-11：允许 null —— 选「请选择问题编号」空项时回传 null（与 selectedProblemId 的可空语义一致） */
+  onSelectedProblemIdChange: (id: number | null) => void;
   onEditedProblemsChange: (problems: Record<number, Partial<ProblemEntry>>) => void;
   onEditedProblemCodesChange: (codes: number[]) => void;
   onClose: () => void;

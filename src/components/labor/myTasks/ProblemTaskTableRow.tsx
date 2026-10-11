@@ -5,6 +5,7 @@
 import { MapPin, CheckCircle, XCircle, Play, Eye, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
+import type { Task } from '../../../hooks/useTasks';
 
 interface ProblemTaskTableRowProps {
   task: TaskDispatchTask | Task;

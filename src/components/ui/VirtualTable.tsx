@@ -8,7 +8,7 @@
 
 import React, { useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 
 export interface VirtualTableColumn<T> {
   /** 列标识 */

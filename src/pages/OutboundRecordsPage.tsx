@@ -233,7 +233,28 @@ export default function OutboundRecordsPage() {
         toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'excel') {
         // Excel 走前端（按选中的行生成 XLSX 双 sheet）
-        exportOutboundXLSX(selectedData, summary);
+        // 2026-10-11：store 的 OutboundRow（多数字段可选、时间字段名为 createdAt）转成 exporter 期望的形状
+        // （instanceId/stockType/transactionType/operateDate/createTime 在 service 版是必填）
+        exportOutboundXLSX(
+          selectedData.map((r) => ({
+            ...r,
+            instanceId: r.instanceId ?? '',
+            stockType: r.stockType ?? '',
+            transactionType: r.transactionType ?? '',
+            operateDate: r.operateDate ?? r.operatorDate ?? r.outboundDate ?? '',
+            createTime: r.createdAt,
+          })),
+          // summary 同样是两套定义：store 版的可选字段与命名（count vs totalCount）转为 exporter 期望形状
+          summary
+            ? {
+                totalCount: summary.totalCount ?? summary.count,
+                totalQuantity: summary.totalQuantity,
+                todayCount: summary.todayCount ?? 0,
+                byStockType: summary.byStockType ?? {},
+                byBusinessType: summary.byBusinessType ?? {},
+              }
+            : null
+        );
         toast.success(`Excel 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'word') {
         // 2026-07-19 P2：Word 格式出库暂不支持（与种源对齐，但出库业务无需 docx）

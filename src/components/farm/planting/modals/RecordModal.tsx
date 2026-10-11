@@ -40,7 +40,7 @@ import { BreedingHistoryTable } from './BreedingHistoryTable'
 import { SeedSavingFields } from './SeedSavingFields'
 import { SeedSavingHistoryTable } from './SeedSavingHistoryTable'
 import { PropagationFields } from './PropagationFields'
-import { PropagationHistoryTable } from './PropagationHistoryTable'
+import { PropagationHistoryTable, SEEDLING_STATUS_LABELS } from './PropagationHistoryTable'
 import * as XLSX from 'xlsx';
 
 export type RecordType = 'breeding' | 'seed_saving' | 'propagation';

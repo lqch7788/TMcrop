@@ -288,7 +288,10 @@ export function ConfigFieldRenderer({
   // ========== 渲染多条目输入（混合配比） ==========
   const renderMultiEntry = () => {
     // 防御性检查：确保 entries 是有效数组
-    const entries: MultiEntryRecord[] = Array.isArray(value) ? value : [];
+    // 仅 multiEntry 字段走本分支（取值类型为 MultiEntryRecord[]）；string[] 是父级联合类型的兜底分支
+    const entries: MultiEntryRecord[] = Array.isArray(value)
+      ? value.filter((v): v is MultiEntryRecord => typeof v === 'object' && v !== null)
+      : [];
     const maxEntries = field.multiEntryDef?.maxEntries || 5;
     const multiEntryFields = field.multiEntryDef?.fields || [];
 

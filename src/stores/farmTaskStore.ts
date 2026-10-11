@@ -114,7 +114,8 @@ interface FarmTaskState {
   fetchTasksByDate: (date: string) => Promise<Task[]>;
 
   // Actions - 增删改
-  addTask: (task: Omit<Task, 'id' | 'taskCode' | 'version' | 'createdAt' | 'updatedAt'>) => Promise<Task | null>;
+  // 2026-10-11：id/taskCode 由调用方按需传入（前端 form 已生成 NS+日期+序号 编号），此处放开为可选
+  addTask: (task: Omit<Task, 'id' | 'taskCode' | 'version' | 'createdAt' | 'updatedAt'> & { id?: string; taskCode?: string }) => Promise<Task | null>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
@@ -124,9 +125,6 @@ interface FarmTaskState {
 
   // Actions - 筛选
   setFilters: (filters: Partial<FarmTaskFilters>) => void;
-
-  // Actions - 同步
-  syncPendingChanges: () => Promise<void>;
 
   // 内部方法
   _initializeSeedData: () => void;

@@ -10,8 +10,7 @@ export { LaborModal, LaborConfirmModal, type LaborModalProps, type LaborConfirmM
 // 筛选器组件
 export { LaborFilters, type LaborFiltersProps, type DateRange, type StatusOption, type FilterConfig } from './LaborFilters'
 
-// 分页组件
-export { LaborPagination, type LaborPaginationProps } from './LaborPagination'
+// 分页组件（LaborPagination 已不存在，移除失效导出）
 
 // 导出组件
 export { LaborExport, LaborExportButton, type ExportConfig, type ExportStatus, type LaborExportProps } from './LaborExport'

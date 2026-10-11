@@ -4,27 +4,9 @@ export type ContractType = '劳动合同' | '实习协议' | '劳务合同';
 export type ContractStatus = '生效中' | '即将到期' | '已到期' | '已终止';
 
 /**
- * 合同记录
+ * 合同记录：直接复用 service 的 ContractData（数据源唯一，避免两套字段名/必填性漂移）
  */
-export interface Contract {
-  id: string;
-  contractCode: string;      // 合同编号 HT-YYYYMMDD-XXX
-  staffId: string;          // 员工ID
-  staffName: string;        // 员工姓名
-  idCard: string;          // 身份证号
-  contractType: ContractType; // 合同类型
-  startDate: string;        // 合同开始日期
-  endDate: string;         // 合同结束日期
-  status: ContractStatus;
-  monthlySalary?: number;   // 月薪（劳动合同）
-  dailyWage?: number;      // 日工资（劳务合同）
-  hourlyWage?: number;     // 时工资（实习协议）
-  signingDate?: string;    // 签订日期
-  attachments?: string[];   // 附件列表
-  remarks?: string;        // 备注
-  createdAt: string;
-  updatedAt: string;
-}
+export type { ContractData as Contract } from '../../../services/apiContractService';
 
 /**
  * 合同表单数据

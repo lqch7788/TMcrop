@@ -139,51 +139,57 @@ describe('InventoryInboundInput 新增字段', () => {
   })
 })
 
+/**
+ * 最小合法记录工厂：所有必需字段齐备，新增字段（recordType/returnedQuantity/harvestForm）保持缺省，
+ * 用于验证这些新字段确实为可选
+ * （2026-10-11：原测试对象缺 19 个必需字段导致 TS2740）
+ */
+function makeMinimalRecord(): InventoryInboundRecord {
+  return {
+    id: 'rec1',
+    recordDate: '2026-07-08',
+    sourceModule: 'manual',
+    sourceId: 's1',
+    sourceCode: null,
+    stockType: 'product',
+    sourceType: 'self_produced',
+    warehouseId: 'w1',
+    warehouseName: null,
+    cropId: null,
+    cropCode: null,
+    cropName: null,
+    varietyName: null,
+    quantity: 10,
+    unit: '克',
+    unitPrice: 0,
+    totalAmount: 0,
+    qualityGrade: null,
+    supplierId: null,
+    supplierName: null,
+    productionPlanId: null,
+    productionPlanCode: null,
+    businessId: null,
+    notes: null,
+    operatorName: null,
+    createBy: null,
+    createTime: '2026-07-08T00:00:00Z',
+    updateTime: '2026-07-08T00:00:00Z',
+  }
+}
+
 describe('InventoryInboundRecord 新增字段', () => {
   it('入库记录应能包含 returnedQuantity', () => {
-    const rec: InventoryInboundRecord = {
-      id: 'rec1',
-      recordDate: '2026-07-08',
-      sourceModule: 'manual',
-      sourceId: 's1',
-      stockType: 'product',
-      sourceType: 'self_produced',
-      warehouseId: 'w1',
-      quantity: 10,
-      unit: '克',
-      returnedQuantity: 2,
-    }
+    const rec: InventoryInboundRecord = { ...makeMinimalRecord(), returnedQuantity: 2 }
     expect(rec.returnedQuantity).toBe(2)
   })
 
   it('入库记录应能包含 recordType', () => {
-    const rec: InventoryInboundRecord = {
-      id: 'rec1',
-      recordDate: '2026-07-08',
-      sourceModule: 'manual',
-      sourceId: 's1',
-      stockType: 'product',
-      sourceType: 'self_produced',
-      warehouseId: 'w1',
-      quantity: 10,
-      unit: '克',
-      recordType: 'inbound',
-    }
+    const rec: InventoryInboundRecord = { ...makeMinimalRecord(), recordType: 'inbound' }
     expect(rec.recordType).toBe('inbound')
   })
 
   it('向后兼容：所有新字段均为可选，最小记录仍合法', () => {
-    const rec: InventoryInboundRecord = {
-      id: 'rec1',
-      recordDate: '2026-07-08',
-      sourceModule: 'manual',
-      sourceId: 's1',
-      stockType: 'product',
-      sourceType: 'self_produced',
-      warehouseId: 'w1',
-      quantity: 10,
-      unit: '克',
-    }
+    const rec: InventoryInboundRecord = makeMinimalRecord()
     expect(rec.recordType).toBeUndefined()
     expect(rec.returnedQuantity).toBeUndefined()
   })

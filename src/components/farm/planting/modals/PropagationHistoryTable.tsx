@@ -5,9 +5,10 @@
 
 import { Edit2, Trash2 } from 'lucide-react'
 import { Button, Badge } from '@/components/ui'
-import type { SeedlingSeedlingPropagationRecord } from '@/services/apiSeedlingPropagationService'
+import type { SeedlingPropagationRecord } from '@/services/apiSeedlingPropagationService'
 
-const SEEDLING_STATUS_LABELS: Record<string, string> = {
+/** 子苗状态中文标签（繁殖记录的 seedlingStatus，取值 healthy/weak/diseased） */
+export const SEEDLING_STATUS_LABELS: Record<string, string> = {
   healthy: '健康',
   weak: '弱苗',
   diseased: '病害',

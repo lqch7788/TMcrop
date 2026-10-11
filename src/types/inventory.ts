@@ -3,6 +3,9 @@
  * 基于架构设计：双核心驱动 + 循环闭环 + instance_id 追溯
  */
 
+// 2026-10-11：出库业务类型（出库用途）与入库 BusinessType 语义独立，OutboundRequest 使用前者
+import { OutboundBusinessType } from '../constants/outboundConstants';
+
 // ============================================
 // 枚举定义
 // ============================================
@@ -21,6 +24,13 @@ export enum InventoryStatus {
   EMPTY = 'empty',
   /** 2026-06-24: 已调拨到种源管理（源行从作物库存列表中隐藏） */
   TRANSFERRED = 'transferred',
+  // ========== 2026-10-11：补 DB 实测存在的取值（只读查库 GROUP BY status 的结果）==========
+  /** 整行冻结（inventory_stock.status 实测值，1 行） */
+  FROZEN_FULL = 'frozen_full',
+  /** 部分冻结（实测值，6 行） */
+  FROZEN_PARTIAL = 'frozen_partial',
+  /** 待处理/占位（补录审批等场景写入，实测值，2 行） */
+  PENDING = 'pending',
 }
 
 /** 库存类型（种源/种苗/成品） */
@@ -63,6 +73,15 @@ export enum TransactionType {
   UNFREEZE = 'unfreeze',
   /** 调整 */
   ADJUST = 'adjust',
+  /**
+   * 2026-10-11：补调拨出入两侧 —— 后端 inventoryTransfer.service / approvalLinkage
+   * 直接以 transfer_in / transfer_out 写入 inventory_transaction.transaction_type
+   * （历史数据 42+36 条），枚举此前缺这两项，前端比对被 TS 判定为"永不相等"。
+   */
+  /** 调拨调入 */
+  TRANSFER_IN = 'transfer_in',
+  /** 调拨调出 */
+  TRANSFER_OUT = 'transfer_out',
 }
 
 /** 业务类型（关联的业务模块） */
@@ -151,6 +170,13 @@ export interface InventoryStock {
   /** 关联的生产计划 */
   productionPlanId?: string;
   productionPlanCode?: string;
+
+  /**
+   * 2026-10-11：仓库字段（inventory_stock 实有 warehouse_id / warehouse_name 列；
+   *   出库记录页与库存详情都要展示"仓库"，此前前端类型缺失）
+   */
+  warehouseId?: string;
+  warehouseName?: string;
 
   /** 溯源信息（上游来源） */
   sourceInstanceId?: string;      // 来源库存实例ID
@@ -263,6 +289,9 @@ export interface InventoryTransaction {
   /** 备注 */
   remarks?: string;
 
+  /** 2026-10-11：流水创建时间（inventory_transaction.create_time 列），列表按时间展示/排序用 */
+  createTime?: string;
+
   /** 扩展字段 */
   extensions?: Record<string, unknown>;
 }
@@ -350,7 +379,11 @@ export interface TraceResult {
 /** 下游追溯结果 */
 export interface DownstreamTraceResult {
   instanceId: string;
-  stockType: StockType;
+  /**
+   * 2026-10-11：正常节点是库存类型；叶子「出库流水」节点后端固定回 'outbound'
+   * （inventory.service.traceDownstream 的 TX-xxx 节点），故类型需含该哨兵值。
+   */
+  stockType: StockType | 'outbound';
   businessType: BusinessType;
   businessId: string;
   businessCode?: string;    // 2026-07-04：批次号/来源描述
@@ -467,6 +500,9 @@ export interface InboundRequest {
   stockType: StockType;
   businessId: string;
   businessType: BusinessType;
+  // 2026-10-11：后端 inventory.controller 会读取 body.businessCode 写入 business_code，
+  //   inbound() 也一直在透传该字段，类型此前缺失
+  businessCode?: string;
   cropId: string;
   cropName: string;
   varietyId?: string;
@@ -502,7 +538,8 @@ export interface InboundRequest {
 export interface OutboundRequest {
   instanceId: string;
   businessId: string;
-  businessType: BusinessType;
+  // 2026-10-11：出库用途枚举（后端 inventoryTransactions VALID_OUTBOUND_TYPES 校验的即为该组值）
+  businessType: OutboundBusinessType;
   businessCode?: string;
   quantity: number;
   operatorId: string;

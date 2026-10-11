@@ -75,10 +75,15 @@ export function AgricultureRecordFilterToolbar({
   );
 
   // 操作人员选项
-  const operatorOptions = useMemo(() =>
-    workers.filter(w => w.status === 'active').map(w => ({ value: w.id, label: w.name })),
-    [workers]
-  );
+  // 2026-10-11：Worker.status 的联合类型与实际值是 '在职'|'离职'|'退休'，
+  //   原与 'active' 比较恒为 false → 操作人员下拉恒为空。按「在职」过滤，
+  //   并保留历史英文枚举兜底（同 useWorkerPersonnel 的 legacyActive 口径）。
+  const operatorOptions = useMemo(() => {
+    const legacyActive = 'active' as string;
+    return workers
+      .filter(w => w.status === '在职' || w.status === legacyActive)
+      .map(w => ({ value: w.id, label: w.name }));
+  }, [workers]);
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">

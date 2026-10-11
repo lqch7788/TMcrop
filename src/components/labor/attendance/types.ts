@@ -2,30 +2,8 @@
  * 工人考勤数据类型定义
  */
 
-// 考勤记录
-export interface AttendanceRecord {
-  id: number;
-  workerId: string;
-  name: string;
-  dept: string;
-  date: string;
-  checkIn: string;
-  checkOut: string;
-  hours: number;
-  status: string;
-  statusClass: 'normal' | 'warning' | 'draft';
-  // 【新增】关联字段（可选，保持向后兼容）
-  taskId?: string;          // 关联任务ID
-  batchId?: string;         // 关联批次ID
-}
-
-// 筛选条件
-export interface AttendanceFilters {
-  startDate: string;
-  endDate: string;
-  dept: string;
-  keyword: string;
-}
+// 考勤记录 / 筛选条件：统一复用 store 的类型定义（避免本地重复定义 id:number 与后端 string id 冲突）
+export type { AttendanceRecord, AttendanceFilters } from '../../../stores/attendanceStore';
 
 // 导出格式
 export type ExportFormat = 'excel' | 'csv' | 'word';

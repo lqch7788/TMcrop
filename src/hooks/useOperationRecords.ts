@@ -837,6 +837,5 @@ export function useOperationRecords(): UseOperationRecordsReturn {
     getFilteredRecords,
   };
 }
-
-// 导出类型
-export type { FarmOperationRecord, FarmOperationRecordChild };
+// 2026-10-11：FarmOperationRecord / FarmOperationRecordChild 已在文件内具名导出，
+// 原末尾 `export type { ... }`（无 from）构成重复导出（TS2484），已移除

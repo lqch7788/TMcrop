@@ -722,7 +722,8 @@ export default function SummaryOverview() {
       ['总成本', overview?.totalCost ?? 0, '元'],
       ['任务完成率', overview?.task.completionRate ?? 0, '%'],
       ['任务总数', overview?.task.totalTasks ?? 0, '个'],
-      ['在育育苗', overview?.crop?.seedlings ?? 0, '个'],
+      // 2026-10-11 类型清理：overview 无 crop 字段（后端 /overview 不返回），与下方模块体检一致改用 moduleHealth
+      ['在育育苗', moduleHealth?.crop.seedlings ?? 0, '个'],
       ['活跃批次', overview?.batch?.activeCount ?? 0, '个'],
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), '核心 KPI');

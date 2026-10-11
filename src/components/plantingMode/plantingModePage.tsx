@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Leaf, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { ChevronLeft, Leaf, Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -30,7 +30,8 @@ export function PlantingModePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  // 修复：pageSize 原为硬编码常量，但分页控件调用 setPageSize 改每页条数 → 运行时 ReferenceError
+  const [pageSize, setPageSize] = useState(5);
 
   const filteredModes = plantModes.filter(mode => {
     const matchSearch = mode.name.toLowerCase().includes(searchTerm.toLowerCase()) || mode.code.includes(searchTerm);

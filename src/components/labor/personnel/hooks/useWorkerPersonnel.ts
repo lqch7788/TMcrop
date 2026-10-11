@@ -59,16 +59,26 @@ export function useWorkerPersonnel() {
   }, [workers, filters]);
 
   // 统计
-  const stats = useMemo(() => ({
-    total: workers.length,
-    inService: workers.filter(w => w.status === '在职' || w.status === 'active').length,
-    left: workers.filter(w => w.status === '离职' || w.status === 'inactive').length,
-    retired: workers.filter(w => w.status === '退休').length,
-  }), [workers]);
+  // Worker.status 联合为中文状态；历史数据可能仍是英文枚举，用 string 常量比较避免字面量无交集误报
+  const stats = useMemo(() => {
+    const legacyActive = 'active' as string;
+    const legacyInactive = 'inactive' as string;
+    return {
+      total: workers.length,
+      inService: workers.filter(w => w.status === '在职' || w.status === legacyActive).length,
+      left: workers.filter(w => w.status === '离职' || w.status === legacyInactive).length,
+      retired: workers.filter(w => w.status === '退休').length,
+    };
+  }, [workers]);
 
   // 获取部门列表
   const departments = useMemo(() => {
-    const depts = [...new Set(workers.map(w => w.department || w.departmentName).filter(Boolean))];
+    // 后端字段名两种写法（department / departmentName），运行时都兜底
+    const depts = [...new Set(
+      workers
+        .map(w => w.department || (w as { departmentName?: string }).departmentName)
+        .filter((d): d is string => !!d)
+    )];
     return ['全部', ...depts];
   }, [workers]);
 

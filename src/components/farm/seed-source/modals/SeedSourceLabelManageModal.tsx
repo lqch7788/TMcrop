@@ -624,7 +624,7 @@ export default function SeedSourceLabelManageModal({
               className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
             />
             <span className="text-xs text-gray-500">
-              新批号格式：原号 + -R{1..N}
+              新批号格式：原号 + -R&#123;1..N&#125;
             </span>
             <Button onClick={handleReprint} disabled={reprinting} size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
               {reprinting ? '补印中...' : '确认补印'}

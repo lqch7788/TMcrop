@@ -8,18 +8,8 @@ import { useDepartmentStore } from '../../../../stores';
 import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 
-interface Position {
-  id: number;
-  code: string;
-  name: string;
-  dept: string;
-  level: string;
-  salary: number;
-  staffCount: number;
-  description: string;
-  status: string;
-  statusClass: string;
-}
+// 2026-10-11 类型清理：沿用页面共享的职位视图模型（原先本地定义 id 为 number，与页面 string 不兼容）
+import type { PositionItem as Position } from '../types';
 
 interface PositionFormModalProps {
   record?: Position | null;

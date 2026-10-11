@@ -6,10 +6,12 @@ import { Pagination } from '@/components/ui';
 
 interface BudgetTableProps {
   data: MonthlyBudget[];
-  currentPage: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
+  // 2026-10-11：分页 props 改为可选——页面未传时组件内部自管（此前必填但调用方不传，
+  // slice(NaN, NaN) 恒为空数组导致表格永远显示"暂无月度预算数据"）
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   showCheckbox?: boolean;
   exportMode?: boolean;
   batchEditMode?: boolean;
@@ -49,8 +51,13 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
   onCancelBatch,
   onAddClick,
 }) => {
-  const totalPages = Math.ceil(data.length / pageSize) || 1;
-  const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // 分页双模式：调用方传入则为受控，未传则内部自管
+  const [internalPage, setInternalPage] = React.useState(1);
+  const [internalPageSize, setInternalPageSize] = React.useState(10);
+  const effectivePage = currentPage ?? internalPage;
+  const effectivePageSize = pageSize ?? internalPageSize;
+  const totalPages = Math.ceil(data.length / effectivePageSize) || 1;
+  const paginatedData = data.slice((effectivePage - 1) * effectivePageSize, effectivePage * effectivePageSize);
   const allSelected = selectedRows.length === data.length && data.length > 0;
 
   return (
@@ -296,11 +303,11 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
       {/* 分页 */}
       <div className="px-4 pb-4">
         <Pagination
-          currentPage={currentPage}
+          currentPage={effectivePage}
           totalPages={totalPages}
-          onPageChange={onPageChange}
-          pageSize={pageSize}
-          onPageSizeChange={onPageSizeChange}
+          onPageChange={onPageChange ?? setInternalPage}
+          pageSize={effectivePageSize}
+          onPageSizeChange={onPageSizeChange ?? setInternalPageSize}
           showPageSize={true}
         />
       </div>

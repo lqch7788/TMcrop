@@ -53,7 +53,8 @@ export interface CreateRecruitmentParams {
   employmentType: string;
   salaryMin: number;
   salaryMax: number;
-  priority: string;
+  // 2026-10-11：对齐 RecruitmentRecord.priority 的字面量联合（create 回显对象直接复用该字段）
+  priority: RecruitmentRecord['priority'];
   reason: string;
   remarks?: string;
   applicantId: string;

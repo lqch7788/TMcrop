@@ -4,6 +4,7 @@
 
 // 工作日志数据
 export interface WorkLog {
+  // 注：本模块页面仍以 usePersistentWorkLogs 的 number id 为准，与 store(string id) 的转换在 Hook 内处理
   id: number;
   code: string;
   date: string;

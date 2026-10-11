@@ -18,6 +18,12 @@ export interface CurrentUser {
   oid: string;
   username: string;
   realName: string;
+  /**
+   * 2026-10-11：物料页（useApplicationTab / useExecuteTab）按 `currentUser?.name` 读显示名。
+   * 登录链路目前只写入 realName，故该字段实际恒为 undefined —— 消费点已用 `|| ''` 兜底（筛选因此不生效），
+   * 若要启用「我的申请 / 待我审批」筛选，需在 login/restore 时同步写入 name。
+   */
+  name?: string;
   orgOid: string;
   email?: string;
   phone?: string;

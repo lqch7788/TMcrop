@@ -59,7 +59,8 @@ export function AddModal({
       return {
         id: authCurrentUser.oid,
         name: authCurrentUser.realName || authCurrentUser.username || '',
-        department: authCurrentUser.orgName || authCurrentUser.orgOid || '生产部',
+        // 2026-10-11：CurrentUser（useAuthStore）无 orgName 字段，移除恒 undefined 的兜底段
+        department: authCurrentUser.orgOid || '生产部',
       };
     }
     // auth 没拿到时按 storeUsers 第一个兜底（演示模式）
@@ -191,7 +192,7 @@ export function AddModal({
       typeName: variety.typeName,           // 类型名称（如：叶菜类）
       varietyName: variety.varietyName,     // 品种名称（如：菠菜）
       cropName: cropNameValue,              // 作物名称（最细化，如：圆叶菠菜）
-      cropVariety: variety.subVariety1Name  // 子品种名称（如：红颜）
+      cropVariety: variety.subVariety1Name || ''  // 子品种名称（如：红颜）；subVariety1Name 可选，补空串
     }));
   };
 
@@ -248,9 +249,9 @@ export function AddModal({
         // P0-2 修复：操作员信息完整透传（之前 store action 只接收 1 个参数，operator 被静默丢弃）
         const operator = currentUser?.name ? { id: String(currentUser.id || ''), name: currentUser.name } : undefined;
         const results = await useSeedSourceStore.getState().createFromTransfer(items, operator);
+        // 2026-10-11：showAlert 只接受 message 一个参数（原来多传的 '成功' 被忽略）
         await showAlert(
-          `调拨成功！共生成 ${results.length} 条新种源：\n${results.map((r) => r.newSeedSourceCode).join('\n')}`,
-          '成功'
+          `调拨成功！共生成 ${results.length} 条新种源：\n${results.map((r) => r.newSeedSourceCode).join('\n')}`
         );
         setTransferItems([]);
         // P1-4 修复：调拨成功后重置表单，避免重开 modal 见脏数据

@@ -46,7 +46,8 @@ export interface UpdateAttendanceRepairParams {
   checkInTime?: string;
   checkOutTime?: string;
   reason?: string;
-  status?: string;
+  // 2026-10-11：与 AttendanceRepairRecord['status'] 对齐（原为 string，写入记录时会破坏状态字面量联合类型）
+  status?: AttendanceRepairRecord['status'];
   remarks?: string;
 }
 
@@ -133,12 +134,11 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
 
         try {
           // 尝试从API获取
+          // 注：ApiOptions 只支持 retryCount，GET 过滤条件需拼进 URL（此处原样保留"不带条件"的既有行为）
           const response = await enhancedApiClient.get<{
             records: AttendanceRepairRecord[];
             pagination: { page: number; limit: number; total: number };
-          }>('/attendance-repair', {
-            params: { ...filters, ...pagination }
-          });
+          }>('/attendance-repair');
 
           if (response?.records && Array.isArray(response.records) && response.records.length > 0) {
             set({ items: response.records, isLoading: false });

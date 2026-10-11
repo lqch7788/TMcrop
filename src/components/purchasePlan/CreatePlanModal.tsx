@@ -136,6 +136,7 @@ export function CreatePlanModal({
         // 解析导入的数据
         const importedItems = jsonData.map((row: any, index: number) => ({
           id: `IMPORT-${Date.now()}-${index}`,
+          materialId: '', // Excel 导入无物料主数据 ID，与"新增物料"保持一致
           materialCode: row['物料编码'] || row['materialCode'] || '',
           materialName: row['物料名称'] || row['materialName'] || '',
           category: row['分类'] || row['category'] || '',
@@ -295,7 +296,7 @@ export function CreatePlanModal({
         orange: 'text-orange-700',
         red: 'text-red-700',
         gray: 'text-gray-700',
-      }[color];
+      }[color] ?? 'text-gray-700';
       // 优先使用字典里配置的 displayName，否则兜底为"需相应审批"
       const label = t.displayName && t.displayName.trim() && t.displayName !== String(t.maxAmount)
         ? t.displayName

@@ -5,6 +5,8 @@
  * 负责：保存草稿、提交审批、单条编辑/删除、批量删除确认、提交编辑审批、保存、作废
  */
 import { useCallback } from 'react';
+// 审批枚举：Approval.type / status 为字符串枚举，必须用枚举成员
+import { ApprovalStatus, ApprovalType } from '../../../types/approval';
 import { useApprovalStore } from '../../../stores';
 import { useApproval } from '../../../hooks/useApproval';
 import { USE_API } from '../../../services/apiClient';
@@ -28,8 +30,9 @@ interface UseProductionActionsParams {
   currentDepartment: string;
 
   // Store actions
-  addPlan: (data: unknown) => Promise<unknown>;
-  updatePlan: (id: string, data: unknown) => Promise<unknown>;
+  // 与 useProductionPlanStore 的 addPlan/updatePlan 签名对齐（此前声明为 unknown，导致传参不兼容）
+  addPlan: (data: Omit<CropBatch, 'id'>) => Promise<CropBatch>;
+  updatePlan: (id: string, data: Partial<CropBatch>) => Promise<CropBatch | null>;
   deletePlan: (id: string) => Promise<unknown>;
   deletePlans: (ids: string[]) => Promise<unknown>;
   fetchPlans: () => Promise<unknown>;
@@ -214,7 +217,7 @@ export function useProductionActions({
 
         const approvalData = {
           id: `AP${Date.now()}`,
-          type: 'production_plan',
+          type: ApprovalType.PRODUCTION_PLAN,
           typeName: '生产计划',
           title: `生产计划审批：${formData.batchCode}`,
           description: `作物：${formData.cropName} ${formData.variety}\n种植区域：${greenhouseNames || greenhouseIds}\n目标产量：${formData.targetYield}kg`,
@@ -222,7 +225,7 @@ export function useProductionActions({
           applicantName: formData.publisher || currentUsername,
           applicantDepartment: currentDepartment,
           applyDate: today,
-          status: 'pending',
+          status: ApprovalStatus.PENDING,
           priority: 'normal',
           businessLink: {
             type: 'production',
@@ -238,7 +241,7 @@ export function useProductionActions({
             plantingArea: parseFloat(formData.plantingArea) || 0,
             plantingMode: formData.plantingMode.join(','),
           },
-        };
+        } as const;
         // C5 修复：审批单走 useApprovalStore.addApproval（已包含 POST + 乐观更新 + 错误处理）
         await useApprovalStore.getState().addApproval(approvalData);
         await refreshApprovals();
@@ -326,6 +329,8 @@ export function useProductionActions({
     if (Object.keys(editedBatches).length > 0) {
       const submittedBatchIds: string[] = [];
       const failedBatchCodes: string[] = [];
+      // 失败原因收集：必须在 try 外声明（下方 toast 详情在 try/catch 之后使用）
+      const failedReasons: string[] = [];
 
       try {
         // P0-03: 串行 for+await 改为 Promise.allSettled 并行提交
@@ -384,7 +389,7 @@ export function useProductionActions({
 
             const approvalData = {
               id: changeId,
-              type: 'production_plan',
+              type: ApprovalType.PRODUCTION_PLAN,
               typeName: '生产计划',
               title: edited.isCompleted === true
                 ? `生产计划完成归档审批：${batch.batchCode}`
@@ -394,7 +399,7 @@ export function useProductionActions({
               applicantName: currentUsername,
               applicantDepartment: currentDepartment,
               applyDate: today,
-              status: 'pending',
+              status: ApprovalStatus.PENDING,
               priority: 'normal',
               businessLink: {
                 type: 'production',
@@ -411,7 +416,7 @@ export function useProductionActions({
                 plantingArea: edited.plantingArea || batch.plantingArea,
                 plantingMode: edited.plantingMode || batch.plantingMode,
               },
-            };
+            } as const;
 
             if (USE_API) {
               // C5 修复：审批单走 useApprovalStore.addApproval
@@ -423,7 +428,6 @@ export function useProductionActions({
         );
 
         // 收集成功 / 失败
-        const failedReasons: string[] = [];
         results.forEach((r, idx) => {
           if (r.status === 'fulfilled') {
             submittedBatchIds.push(r.value);
@@ -609,7 +613,7 @@ export function useProductionActions({
 
       const approvalData = {
         id: voidId,
-        type: 'production_plan',
+        type: ApprovalType.PRODUCTION_PLAN,
         typeName: '生产计划',
         title: `生产计划作废审批：${currentBatch.batchCode}`,
         description: `申请作废生产计划：${currentBatch.batchCode}\n作物：${currentBatch.cropName} ${currentBatch.variety}\n区域：${currentBatch.greenhouseName}`,
@@ -617,7 +621,7 @@ export function useProductionActions({
         applicantName: currentUsername,
         applicantDepartment: currentDepartment,
         applyDate: today,
-        status: 'pending',
+        status: ApprovalStatus.PENDING,
         priority: 'normal',
         businessLink: {
           type: 'production',
@@ -631,7 +635,7 @@ export function useProductionActions({
           expectedHarvestDate: currentBatch.expectedHarvestDate,
           responsiblePerson: currentBatch.responsiblePerson,
         },
-      };
+      } as const;
 
       void voidCode; // 业务编码保留
 

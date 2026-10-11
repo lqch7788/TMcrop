@@ -57,6 +57,9 @@ interface InspectionRecord {
   issueSeverity?: '轻微' | '中等' | '严重';
   images?: string[];
   feedbackUsers?: string[];
+  // 问题分类（多选，后端 issue_categories 列）与问题照片（后端 issue_photos 列）
+  issueCategories?: string[];
+  issuePhotos?: string[];
   status: string;
   issueStatus?: 'pending' | 'processing' | 'resolved';
   cropStatus?: string;
@@ -79,7 +82,8 @@ interface DetailInspectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: InspectionRecord | null;
-  onAcceptProblem?: (problemId: number) => void;
+  // problems.id 在 DB 中是 TEXT 主键，store 类型为 number | string，调用方统一 String() 处理
+  onAcceptProblem?: (problemId: number | string) => void;
 }
 
 // 获取状态标签组件
@@ -139,7 +143,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
   };
 
   // 获取问题状态标签
-  const getProblemStatusBadge = (status: string) => {
+  const getProblemStatusBadge = (status?: string) => {
     switch (status) {
       case '待处理':
       case 'pending':
@@ -355,13 +359,13 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                 '待验收': 'bg-amber-500',
                 '已处理': 'bg-green-500',
               };
-              const progress = progressMap[problem.status] ?? 0;
+              const progress = progressMap[problem.status ?? ''] ?? 0;
               return (
                 <div>
                   <label className="text-xs text-blue-600">处理进度</label>
                   <p className="font-semibold text-gray-900 flex items-center gap-2">
                     <span className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden inline-block">
-                      <span className={`block h-full ${statusColors[problem.status] || 'bg-gray-400'} rounded-full`} style={{ width: `${progress}%` }}></span>
+                      <span className={`block h-full ${statusColors[problem.status ?? ''] || 'bg-gray-400'} rounded-full`} style={{ width: `${progress}%` }}></span>
                     </span>
                     <span className="text-xs text-gray-500">{progress}%</span>
                   </p>
@@ -746,7 +750,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                                         <span>📷</span>
                                         <span>作业前照片：{feedback.photosBefore.length}张</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
-                                          {feedback.photosBefore.map((img, idx) => (
+                                          {feedback.photosBefore.map((img: string, idx: number) => (
                                             <img
                                               key={idx}
                                               src={img}
@@ -766,7 +770,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                                         <span>📷</span>
                                         <span>作业后照片：{feedback.photosAfter.length}张</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
-                                          {feedback.photosAfter.map((img, idx) => (
+                                          {feedback.photosAfter.map((img: string, idx: number) => (
                                             <img
                                               key={idx}
                                               src={img}

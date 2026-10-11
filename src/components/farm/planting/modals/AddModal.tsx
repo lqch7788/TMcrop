@@ -299,6 +299,9 @@ export function AddModal({
         // 2026-06-24: 种植留种字段
         isSeedSaving: formData.isSeedSaving,
         seedPlantMarker: formData.isSeedSaving ? formData.seedPlantMarker : undefined,
+        // 2026-10-11：补 attritionRate 初值 0（Planting 必填字段）——
+        //   表单无该输入项，采收时由 HarvestModal 按 (1 - 采收量/种植数) 重算写回
+        attritionRate: 0,
       });
 
       // 更新作物实例的定植数量（来源必为种源）

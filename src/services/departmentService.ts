@@ -57,7 +57,8 @@ export function initDepartments(): Department[] {
  */
 export async function getDepartments(): Promise<Department[]> {
   try {
-    const data = await apiClient.get<Department[]>('/basic-data/departments');
+    // 2026-10-11：统一使用 enhancedApiClient（V2.1 标准客户端，原 apiClient 未导入 → 运行时 ReferenceError）
+    const data = await enhancedApiClient.get<Department[]>('/basic-data/departments');
     saveDepartmentsToStorage(data);
     return data;
   } catch (error) {
@@ -87,7 +88,7 @@ export async function getDepartmentName(id: string): Promise<string> {
  */
 export async function saveDepartments(departments: Department[]): Promise<void> {
   // API模式下通过后端保存
-  await apiClient.post('/basic-data/departments', departments);
+  await enhancedApiClient.post('/basic-data/departments', departments);
   saveDepartmentsToStorage(departments);
 }
 

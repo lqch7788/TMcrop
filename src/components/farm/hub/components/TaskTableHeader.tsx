@@ -38,7 +38,7 @@ export function TaskTableHeader({
             type="checkbox"
             checked={isAllSelected}
             ref={(el) => {
-              if (el) el.indeterminate = isSomeSelected && !isAllSelected;
+              if (el) el.indeterminate = Boolean(isSomeSelected && !isAllSelected);
             }}
             onChange={onSelectAll}
             className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"

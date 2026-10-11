@@ -72,10 +72,14 @@ function ImageViewer({ images, selectedIndex, onClose, onPrev, onNext }: {
 function PlantingBasicInfo({ record }: { record: Planting }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
-  const statusMap = {
+  // 2026-10-11：补全 PlantingStatus 全部枚举值（原缺 harvesting/ended →
+  //   索引报 TS7053，且这两种状态会落回默认「生长期」显示错误文案）
+  const statusMap: Record<PlantingStatus, { label: string; color: string }> = {
     [PlantingStatus.PLANTED]: { label: '已定植', color: 'text-blue-600 bg-blue-50' },
     [PlantingStatus.GROWING]: { label: '生长期', color: 'text-amber-600 bg-amber-50' },
+    [PlantingStatus.HARVESTING]: { label: '采收中', color: 'text-emerald-600 bg-emerald-50' },
     [PlantingStatus.HARVESTED]: { label: '已采收', color: 'text-green-600 bg-green-50' },
+    [PlantingStatus.ENDED]: { label: '已结束', color: 'text-gray-600 bg-gray-50' },
     [PlantingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-50' },
   };
   const status = statusMap[record.status] || statusMap[PlantingStatus.GROWING];
@@ -268,7 +272,7 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
         <div>
           <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">图片信息</h4>
           <div className="grid grid-cols-4 gap-3">
-            {images.map((img, index) => (
+            {images.map((img: string, index: number) => (
               <div
                 key={index}
                 onClick={() => setSelectedImageIndex(index)}

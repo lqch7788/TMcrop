@@ -9,7 +9,8 @@ import { todayLocal } from '@/lib/dateUtils';
 
 interface BatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
+  // 记录 id 来自 store/后端，为 string（与页面/Store 保持一致）
+  selectedRows: string[];
   records: AttendanceRecord[];
   editedRecordIds: string[];
   editedRecords: Record<string, Partial<AttendanceRecord>>;

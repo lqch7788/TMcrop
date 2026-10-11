@@ -17,8 +17,8 @@ export interface StatItem {
   unit?: string;
   /** 图标组件 */
   icon: LucideIcon;
-  /** 图标背景色 */
-  color: 'bg-emerald-500' | 'bg-blue-500' | 'bg-amber-500' | 'bg-purple-500' | 'bg-red-500' | 'bg-gray-500';
+  /** 图标背景色（2026-10-11：补 bg-green-500 —— 种植统计「已采收」卡使用，与 emerald 区分） */
+  color: 'bg-emerald-500' | 'bg-green-500' | 'bg-blue-500' | 'bg-amber-500' | 'bg-purple-500' | 'bg-red-500' | 'bg-gray-500';
 }
 
 // StatsCard组件属性

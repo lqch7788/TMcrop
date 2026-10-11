@@ -249,7 +249,9 @@ export interface Task {
   };
 
   // 扩展字段（兼容旧版本）
-  priority?: 'urgent' | 'high' | 'normal';
+  // 2026-10-11：补 'low' —— 后端种子数据（server/src/db/seedData.ts）确实写入 low，
+  // dispatch 系列表单（FarmTaskForm/SmartTaskForm 等）也传该值
+  priority?: 'urgent' | 'high' | 'normal' | 'low';
   description?: string;
   remarks?: string;
   materials?: { name: string; qty: number; unit: string }[] | string[];
@@ -284,12 +286,14 @@ export interface Task {
   subTasks?: SubTask[];
   // 兼容字段（useTasks ts 错误）
   tools?: { name: string; qty: number; unit: string }[] | string[];
-  workDuration?: number;            // = estimatedHours 别名
-  abandonedReason?: string;
+  // 注：workDuration（第 265 行）、abandonedReason（第 209 行）已在上方定义，不重复声明
   isAuthCheck?: boolean;
   isOverdue?: boolean;
   location?: string;                 // = greenhouseName 别名（problem 子记录）
   inspectionLevel?: string;
+  // 2026-10-11：AI 训练样本标记（farm_tasks.synthetic，离线脚本写入；后端 farmTask 路由恒返回 0/1）
+  //   useFarmHub 用它过滤掉 AI 样本任务
+  synthetic?: number;
   batchOid?: string;
   checkDate?: string;                // = startDate 别名（problem 子记录）
   remark?: string;
@@ -331,7 +335,9 @@ export interface TaskFilters {
   assignerId?: string;
   greenhouseId?: string;
   batchId?: string;
-  priority?: 'urgent' | 'high' | 'normal';
+  // 2026-10-11：补 'low' —— 后端种子数据（server/src/db/seedData.ts）确实写入 low，
+  // dispatch 系列表单（FarmTaskForm/SmartTaskForm 等）也传该值
+  priority?: 'urgent' | 'high' | 'normal' | 'low';
   dateRange?: {
     start: string;
     end: string;

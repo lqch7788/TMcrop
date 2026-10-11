@@ -37,7 +37,8 @@ export function useProductionChainStats() {
   // 并行获取所有数据
   const { data: productionPlans = [], isLoading: isLoadingPlans } = useQuery({
     queryKey: ['production-plans'],
-    queryFn: getProductionPlans,
+    // 2026-10-11：getProductionPlans 首参是筛选对象，不能直接作为 QueryFunction（会被传入 QueryFunctionContext）
+    queryFn: () => getProductionPlans(),
   });
 
   const { data: seedlings = [], isLoading: isLoadingSeedlings } = useQuery({

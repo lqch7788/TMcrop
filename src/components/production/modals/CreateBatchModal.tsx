@@ -7,7 +7,10 @@ import { Button } from '@/components/ui';
 import { RefreshCw, ChevronDown, ChevronUp, FileText, Send, Upload, Leaf } from 'lucide-react';
 // M-07: 移除未使用的 RadixSelect import（之前定义了但实际未使用）
 import { Checkbox } from '@/components/ui';
-import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
+import { CropBatch, Greenhouse, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
+// CropOrder 未在 types/index.ts 重导出，直接从来源模块导入
+import type { CropOrder } from '../../../types/crop';
+import type { ProductionFormData } from '../hooks/types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState, useEffect, useRef } from 'react';
 import { CropVariety } from '../../../types/cropVariety';
@@ -19,30 +22,11 @@ interface CreateBatchModalProps {
   onClose: () => void;
   onSaveDraft: () => void;
   onSubmitForApproval: () => void;
-  formData: {
-    batchCode: string;
-    planType: PlanType;
-    planTypeName: string;
-    cropCode: string;
-    cropName: string;
-    variety: string;
-    greenhouseId: string[];
-    plantingArea: string;
-    plantingAreaUnit: string;
-    startDate: string;
-    expectedHarvestDate: string;
-    targetYield: string;
-    unit: string;
-    plantingMode: string[];
-    responsiblePerson: string;
-    publisher: string;
-    description: string;
-    planDetail: string;
-    orderId: string[];
-    orderCode: string[];
-  };
+  // 与 useProductionPage 的 formData 同源（ProductionFormData），避免字段漂移
+  formData: ProductionFormData;
   errors: Record<string, string>;
-  greenhouses: Greenhouse[];
+  /** 温室下拉数据（只需 id/name/status，兼容 store 与 types/index 两种 Greenhouse 定义） */
+  greenhouses: { id: string; name: string; status?: string }[];
   orders: CropOrder[];
   // M-08: 移除 any，value 限定为 string / string[] / number / null
   onFormChange: (field: string, value: string | string[] | number | null) => void;

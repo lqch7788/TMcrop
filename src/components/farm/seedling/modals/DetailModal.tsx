@@ -18,10 +18,14 @@ interface DetailModalProps {
 
 /** 基本信息面板 */
 function SeedlingBasicInfo({ record }: { record: Seedling }) {
-  const statusMap = {
+  // 2026-10-11：补全 SeedlingStatus 全部枚举值（原缺 sown/cancelled → 索引报 TS7053，
+  //   且这两种状态会落回默认「进行中」显示错误文案）
+  const statusMap: Record<SeedlingStatus, { label: string; color: string }> = {
+    [SeedlingStatus.SOWN]: { label: '已播种', color: 'text-gray-600 bg-gray-50' },
     [SeedlingStatus.IN_PROGRESS]: { label: '进行中', color: 'text-amber-600 bg-amber-50' },
     [SeedlingStatus.TRANSPLANT_READY]: { label: '待定植', color: 'text-blue-600 bg-blue-50' },
     [SeedlingStatus.COMPLETED]: { label: '已完成', color: 'text-green-600 bg-green-50' },
+    [SeedlingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-50' },
     [SeedlingStatus.ABNORMAL]: { label: '异常', color: 'text-red-600 bg-red-50' },
   };
   const status = statusMap[record.status] || statusMap[SeedlingStatus.IN_PROGRESS];

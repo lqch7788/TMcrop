@@ -645,6 +645,7 @@ export function FarmTaskHub() {
           taskId={detailTaskId}
           onClose={() => setDetailTaskId(null)}
           onVerify={handleTaskVerify}
+          onRefresh={hub.refresh}
           tasks={tasksHook.tasks}
           getTaskRecordsByTaskId={tasksHook.getTaskRecordsByTaskId}
         />

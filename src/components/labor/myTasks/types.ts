@@ -61,7 +61,8 @@ export interface TaskWithExtras {
   issueText?: string;
   photos?: string[];
   feedbackStatus?: string;
-  feedbackUsers?: Array<{ id: string; name: string }>;
+  // 已解析为姓名列表（MyTasksPage 映射时把用户 OID 转成姓名），直接渲染
+  feedbackUsers?: string[];
   processProgress?: number;
   inspectorId?: string;
   inspectorName?: string;
@@ -80,7 +81,7 @@ export interface TaskMaterial {
 
 // 反馈表单数据类型
 export interface FeedbackFormData {
-  resultStatus: '' | '全部完成' | '部分完成' | '延迟完成' | '其他';
+  resultStatus: '' | '全部完成' | '部分完成' | '延迟完成' | '无法继续' | '其他';
   resultText: string;
   progressText: string;
   progress: number;  // 执行进度 0-100

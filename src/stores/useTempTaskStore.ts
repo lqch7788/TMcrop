@@ -47,6 +47,11 @@ export interface TempTaskData {
   remarks?: string;
   dueDate?: string;
   estimatedHours?: number;
+  // 2026-10-11：mapStoreTaskToTempTask 会读取以下字段（camelCase 兼容写法），类型此前缺失
+  estimatedDays?: number;
+  tempTaskType?: string;
+  taskTitle?: string;
+  completedAt?: string;
   workerCount?: number;
   actualHours?: number;
   progress?: number;
@@ -142,7 +147,8 @@ function normalizeTask(db: Record<string, unknown>): TempTaskData {
     } catch { result.requiredFeedback = []; }
   }
   if (!Array.isArray(result.requiredFeedback)) result.requiredFeedback = [];
-  return result as TempTaskData;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return result as unknown as TempTaskData;
 }
 
 /** 前端 → 后端 字段映射 */

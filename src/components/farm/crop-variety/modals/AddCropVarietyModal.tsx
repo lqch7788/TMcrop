@@ -47,6 +47,37 @@ interface AddCropVarietyModalProps {
   };
 }
 
+/** 表单初始值（打开与关闭重置共用——此前 handleClose 只重置了前 8 个字段，其余字段类型不匹配报错） */
+const createInitialForm = () => ({
+  categoryCode: '',
+  categoryName: '',
+  typeCode: '',
+  typeName: '',
+  varietyCode: '',
+  varietyName: '',
+  subVariety1Code: '',   // 子品种1代码（3位）
+  subVariety1Name: '',   // 子品种1名称
+  alias: '',
+  image: '',            // 作物图片URL
+  description: '',     // 特性描述
+  // 2026-07-27：作物生长周期改为时间段（string 格式 "min-max" 天数）
+  germinationPeriod: undefined as string | undefined,
+  seedlingPeriod: undefined as string | undefined,
+  floweringPeriod: undefined as string | undefined,
+  fruitingPeriod: undefined as string | undefined,
+  harvestPeriod: undefined as string | undefined,
+  // 适宜环境参数（2026-07-27：改为阈值区间，string 格式 "min-max"）
+  airTemperature: undefined as string | undefined,
+  airHumidity: undefined as string | undefined,
+  co2Content: undefined as string | undefined,
+  lightIntensity: undefined as string | undefined,
+  soilTemperature: undefined as string | undefined,
+  soilHumidity: undefined as string | undefined,
+  soilPh: undefined as string | undefined,
+  soilEc: undefined as string | undefined,
+  remarks: ''
+});
+
 export function AddCropVarietyModal({
   isOpen,
   onClose,
@@ -62,36 +93,7 @@ const getNextSubVariety1Code = useCropVarietyStore((s) => s.getNextSubVariety1Co
 const loadItems = useCropVarietyStore((s) => s.loadItems);
 const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
-  const [formData, setFormData] = useState({
-    categoryCode: '',
-    categoryName: '',
-    typeCode: '',
-    typeName: '',
-    varietyCode: '',
-    varietyName: '',
-    subVariety1Code: '',   // 子品种1代码（3位）
-    subVariety1Name: '',   // 子品种1名称
-    // 2026-07-26：详细品种层级已删除
-    alias: '',
-    image: '',            // 作物图片URL
-    description: '',     // 特性描述
-    // 2026-07-27：作物生长周期改为时间段（string 格式 "min-max" 天数）
-    germinationPeriod: undefined as string | undefined,  // 发芽期(天)
-    seedlingPeriod: undefined as string | undefined,     // 育苗期(天)
-    floweringPeriod: undefined as string | undefined,    // 开花期(天)
-    fruitingPeriod: undefined as string | undefined,    // 结果期(天)
-    harvestPeriod: undefined as string | undefined,     // 摘收期(天)
-    // 适宜环境参数（2026-07-27：改为阈值区间，string 格式 "min-max"）
-    airTemperature: undefined as string | undefined,    // 空气温度(℃)
-    airHumidity: undefined as string | undefined,      // 空气湿度(%)
-    co2Content: undefined as string | undefined,       // CO₂含量(ppm)
-    lightIntensity: undefined as string | undefined,    // 光照度(lx)
-    soilTemperature: undefined as string | undefined,   // 土壤温度(℃)
-    soilHumidity: undefined as string | undefined,      // 土壤湿度(%)
-    soilPh: undefined as string | undefined,           // 土壤PH值
-    soilEc: undefined as string | undefined,            // 土壤EC值
-    remarks: ''
-  });
+  const [formData, setFormData] = useState(createInitialForm());
 
   // 作物编码（可编辑）
   const [cropCode, setCropCode] = useState('');
@@ -429,26 +431,7 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
   // 关闭时重置表单
   const handleClose = () => {
-    setFormData({
-      categoryCode: '',
-      categoryName: '',
-      typeCode: '',
-      typeName: '',
-      varietyCode: '',
-      varietyName: '',
-      subVariety1Code: '',
-      subVariety1Name: '',
-      // detailVarietyName removed
-      alias: '',
-      image: '',
-      description: '',
-      germinationPeriod: undefined,
-      seedlingPeriod: undefined,
-      floweringPeriod: undefined,
-      fruitingPeriod: undefined,
-      harvestPeriod: undefined,
-      remarks: ''
-    });
+    setFormData(createInitialForm());
     setCropCode('');
     // setDetailVarietyCode removed
     setCodeGenerated(false);

@@ -57,7 +57,8 @@ export interface TempWorkerFiltersProps {
   filters: TempWorkerFilters;
   onFiltersChange: (filters: TempWorkerFilters) => void;
   onSearch: () => void;
-  onAdd: () => void;
+  /** 新增按钮回调：筛选栏内部未使用，保留兼容（可选） */
+  onAdd?: () => void;
 }
 
 export interface TempWorkerTableProps {

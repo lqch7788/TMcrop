@@ -478,7 +478,7 @@ export function EditModal({
           <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
             {formData.pictures.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {formData.pictures.map((pic, index) => (
+                {formData.pictures.map((pic: string, index: number) => (
                   <div key={index} className="relative group">
                     <img
                       src={pic}
@@ -489,7 +489,7 @@ export function EditModal({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => setFormData({ ...formData, pictures: formData.pictures.filter((_, i) => i !== index) })}
+                      onClick={() => setFormData({ ...formData, pictures: formData.pictures.filter((_: string, i: number) => i !== index) })}
                       className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="w-3 h-3" />

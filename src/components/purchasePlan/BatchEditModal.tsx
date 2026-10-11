@@ -50,7 +50,8 @@ interface BatchEditModalProps {
   onBatchSelectOpenChange: (open: boolean) => void;
   onSelectedPlanCodeChange: (code: string) => void;
   onBatchEditDataChange: (field: string, value: string) => void;
-  onBatchEditItemsChange: (items: PurchasePlanItem[]) => void;
+  // 明细变更：支持数组直传或函数式更新（与 MaterialItemsTable.onItemsChange 对齐）
+  onBatchEditItemsChange: (items: PurchasePlanItem[] | ((prev: PurchasePlanItem[]) => PurchasePlanItem[])) => void;
   onShowEditItemsExpandedChange: (expanded: boolean) => void;
   onCurrentEditingPlanChange: (plan: PurchasePlan | null) => void;
   onEditedPlansChange: (plans: Record<string, Partial<PurchasePlan>>) => void;
@@ -169,7 +170,7 @@ export function BatchEditModal({
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
   // 用户列表（用于获取申请人姓名）
-  const users = safeArray(useUserStore((state: any) => state.users));
+  const users = safeArray(useUserStore((state) => state.users));
   const loadUsers = useUserStore((state: any) => state.loadUsers);
 
   // 部门和种植批次从字典加载
@@ -324,7 +325,8 @@ export function BatchEditModal({
                   if (currentEditingPlan) {
                     // 根据选择的用户ID获取用户姓名
                     const selectedUser = users.find(u => u.id === value);
-                    const applicantName = selectedUser?.realName || selectedUser?.name || '';
+                    // User 类型（types/authority）声明为 real_name，但 API 响应经 camelCase 中间件返回 realName，两种都兜底
+                    const applicantName = (selectedUser as { realName?: string } | undefined)?.realName || selectedUser?.name || '';
                     onCurrentEditingPlanChange({
                       ...currentEditingPlan,
                       applicantId: value,

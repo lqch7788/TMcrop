@@ -1,27 +1,16 @@
 /**
  * 工资预算类型定义
  */
-import { ApprovalStatus } from '../../types/approval';
+import { ApprovalStatus } from '../../../types/approval';
+import type { SalaryBudgetData } from '../../../stores/useSalaryBudgetStore';
 
 /**
  * 工资预算记录
+ *
+ * 2026-10-11 类型清理：统一使用 Store 侧类型（后端数据模型为唯一真相源），
+ * 不再重复定义，避免同义类型互不兼容
  */
-export interface SalaryBudgetRecord {
-  id: string;
-  budgetCode: string;        // 预算编号
-  deptId: string;           // 部门ID
-  deptName: string;         // 部门名称
-  budgetMonth: string;       // 预算月份 (YYYY-MM)
-  totalBaseSalary: number;  // 基本工资总额
-  totalOvertimePay: number; // 加班费总额
-  totalBonus: number;       // 奖金总额
-  grandTotal: number;       // 总计
-  status: ApprovalStatus;   // 审批状态
-  applicantId: string;      // 申请人ID
-  applicantName: string;    // 申请人姓名
-  applyDate: string;        // 申请日期
-  remark?: string;          // 备注
-}
+export type SalaryBudgetRecord = SalaryBudgetData;
 
 /**
  * 预算汇总数据

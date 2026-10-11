@@ -61,10 +61,15 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
   );
 
   // 操作人员选项（从Store获取）
-  const operatorOptions = useMemo(() =>
-    workers.filter(w => w.status === 'active').map(w => ({ value: w.id, label: w.name })),
-    [workers]
-  );
+  // 2026-10-11：Worker.status 的联合类型与实际值是 '在职'|'离职'|'退休'，
+  //   原与 'active' 比较恒为 false → 操作人员下拉恒为空。按「在职」过滤，
+  //   并保留历史英文枚举兜底（同 useWorkerPersonnel 的 legacyActive 口径）。
+  const operatorOptions = useMemo(() => {
+    const legacyActive = 'active' as string;
+    return workers
+      .filter(w => w.status === '在职' || w.status === legacyActive)
+      .map(w => ({ value: w.id, label: w.name }));
+  }, [workers]);
 
   // 动态物料多选选项：来自仓库物料主数据，保留"其他"作为兜底
   const materialOptions = useMemo(() => {
@@ -150,6 +155,8 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
 
     // 添加记录
     addRecord({
+      // 2026-10-11：补 sourceType —— FarmOperationRecord 的必填字段（addRecord 内部固定写入 'manual'，此处同为手动录入）
+      sourceType: 'manual',
       operationType: formData.operationType,
       operationTypeName: FARM_OPERATION_TYPES.find(t => t.value === formData.operationType)?.label || formData.operationType,
       status: formData.status,
@@ -173,9 +180,6 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     handleClose();
   };
 
-  // 检查必填
-  const canSave = formData.operationType && formData.greenhouseId && formData.operatorId && formData.operationDate;
-
   return (
     <Modal
       isOpen={isOpen}
@@ -185,7 +189,6 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
       onSubmit={handleSave}
       submitText="保存"
       cancelText="取消"
-      submitDisabled={!canSave}
     >
       <div className="space-y-4">
         {/* 第一行：操作类型、操作区域、操作人员 */}

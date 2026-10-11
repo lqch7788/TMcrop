@@ -194,6 +194,8 @@ export async function createLeaveRecord(leave: CreateLeaveParams): Promise<Leave
     id: response.data?.id || `LV${Date.now()}`,
     status: 'pending',
     statusLabel: '待审批',
+    // 2026-10-11：LeaveRecord.leaveTypeLabel 为必填；与 normalize 的 `|| leave_type` 兜底保持一致
+    leaveTypeLabel: leave.leaveType,
     createTime: new Date().toISOString(),
   };
 }

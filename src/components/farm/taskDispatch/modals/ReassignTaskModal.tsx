@@ -10,6 +10,7 @@ import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { AlertTriangle, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../types/task';
+import type { User } from '../../../../types/authority';
 import { useUserStore } from '../../../../stores';
 
 // 深度输入框样式
@@ -44,15 +45,18 @@ export function ReassignTaskModal({
   const mustChangeExecutor = (task.executorRejectCount || 0) >= 2;
 
   // 过滤可选的执行人（排除当前执行人，但如果必须更换则不过滤）
-  const availableAssignees = mustChangeExecutor
+  // 2026-10-11：User.id 为可选字段，无 id 的用户不能作为 SelectItem 的 value（Radix 不接受空串），先剔除
+  const availableAssignees = (mustChangeExecutor
     ? users  // 必须更换时，显示所有执行人
-    : users.filter(u => u.id !== task.assigneeId);  // 排除当前执行人
+    : users.filter(u => u.id !== task.assigneeId)  // 排除当前执行人
+  ).filter((u): u is User & { id: string } => Boolean(u.id));
 
   const handleSubmit = () => {
     if (selectedAssignee) {
       const user = users.find(u => u.id === selectedAssignee);
       if (user) {
-        onConfirm(selectedAssignee, user.name);
+        // User.name 可选，按项目通用兜底 realName/username
+        onConfirm(selectedAssignee, user.name || user.username || '');
         setSelectedAssignee('');
       }
     }

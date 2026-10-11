@@ -31,6 +31,7 @@ export function MonthlyReportPage() {
     exportMode,
     setExportMode,
     selectedRows,
+    setSelectedRows,
     handleSelectAll,
     handleSelectRow,
     handleConfirmExport,
@@ -218,7 +219,7 @@ export function MonthlyReportPage() {
       {/* 批量编辑弹窗 */}
       <MonthlyReportBatchEditModal
         isOpen={showBatchEditModal}
-        selectedRows={selectedRows}
+        selectedRows={selectedRows.map(String)}
         records={reports}
         editedRecordIds={editedRecordIds}
         editedRecords={editedRecords}

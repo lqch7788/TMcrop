@@ -40,7 +40,9 @@ export interface BusinessData {
   businessLink?: {
     type: string;
     requestId: string;
-    requestCode: string;
+    // 2026-10-11：批次/巡查/指标等类型只传各自的业务码（batchCode/inspectionCode/…），
+    //   与后端一致按可选处理（后端 approval.ts 读取处即为可选）
+    requestCode?: string;
     [key: string]: unknown;
   };
 }

@@ -7,7 +7,8 @@ interface UnifiedModalProps {
   title: React.ReactNode;
   children: React.ReactNode;
   headerAction?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';
+  /** 弹窗尺寸：与底层 Modal 对齐，'full' 为全屏（2026-10 补全） */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl' | 'full';
   showFooter?: boolean;
   footer?: React.ReactNode;
   onSubmit?: () => void;

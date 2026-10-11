@@ -23,7 +23,7 @@ const Breadcrumb = React.forwardRef<HTMLDivElement, BreadcrumbProps>(
 )
 Breadcrumb.displayName = "Breadcrumb"
 
-export interface BreadcrumbListProps extends React.HTMLAttributes<HTMLOlElement> {}
+export interface BreadcrumbListProps extends React.HTMLAttributes<HTMLOListElement> {}
 
 const BreadcrumbList = React.forwardRef<HTMLOListElement, BreadcrumbListProps>(
   ({ className, ...props }, ref) => (
@@ -36,7 +36,7 @@ const BreadcrumbList = React.forwardRef<HTMLOListElement, BreadcrumbListProps>(
 )
 BreadcrumbList.displayName = "BreadcrumbList"
 
-export interface BreadcrumbItemProps extends React.HTMLAttributes<HTMLLiElement> {}
+export interface BreadcrumbItemProps extends React.HTMLAttributes<HTMLLIElement> {}
 
 const BreadcrumbItem = React.forwardRef<HTMLLIElement, BreadcrumbItemProps>(
   ({ className, ...props }, ref) => (

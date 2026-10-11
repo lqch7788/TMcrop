@@ -37,6 +37,7 @@ import { showAlert } from '@/lib/dialogService';
 import {
   COMMON_FIELDS,
   FIELD_CONFIG,
+  isAddStockSourceType,
   validateBySourceType,
   fieldsToResetOnSourceTypeChange,
   type FieldConfig,
@@ -230,7 +231,7 @@ function renderFieldByType(
     unitOptions: Array<{ value: string; label: string }>;
     cropFormOptions: Array<{ value: string; label: string }>;
     // 2026-07-09 v5 阶段三（路径 B）：源 ID 下拉选项（自产兜底模式）
-    sourceIdOptions?: Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string }>;
+    sourceIdOptions?: Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string; raw?: { greenhouseName?: string; cropId?: string; cropVariety?: string; varietyName?: string } }>;
     // 2026-07-13 方案 B：sourceId 搜索框输入值 + 变化回调
     sourceIdSearch?: string;
     onSourceIdSearchChange?: (v: string) => void;
@@ -259,7 +260,6 @@ function renderFieldByType(
         <NumberInput
           value={value ?? 0}
           onChange={onChange}
-          min={field.min || 0}
           className={deepInputClass}
         />
       );
@@ -562,7 +562,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   const [unitOptions, setUnitOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [cropFormOptions, setCropFormOptions] = useState<Array<{ value: string; label: string }>>([]);
   // 2026-07-09 v5 阶段三（路径 B）：自产（兜底）模式 sourceId 下拉选项
-  const [sourceIdOptions, setSourceIdOptions] = useState<Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string }>>([]);
+  // raw = 源记录快照（2026-07-13 v8/v9：选中时联动读取 greenhouseName / cropId / cropVariety 等字段）
+  const [sourceIdOptions, setSourceIdOptions] = useState<Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string; raw?: { greenhouseName?: string; cropId?: string; cropVariety?: string; varietyName?: string } }>>([]);
   // 2026-10-09：调拨模式——调出仓库候选（只含"确实有该作物可用库存"的仓库 + 可用量/单位/形态）
   // 目的：从源头避免"调出仓库无该作物/数量超库存"的无效提交（此类提交会卡在审批页无法通过）
   const [cropWarehouses, setCropWarehouses] = useState<Array<{ warehouseId: string; warehouseName: string; available: number; unit: string; form?: string }>>([]);
@@ -907,7 +908,11 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   };
 
   // ---- 当前来源下要渲染的字段列表 ----
-  const fieldsToRender: FieldConfig[] = [...COMMON_FIELDS, ...FIELD_CONFIG[sourceType]];
+  // 2026-10-11：sourceType 可能是后端专属的 inventory_transfer（无字段矩阵），需守卫后再取
+  const fieldsToRender: FieldConfig[] = [
+    ...COMMON_FIELDS,
+    ...(isAddStockSourceType(sourceType) ? FIELD_CONFIG[sourceType] : []),
+  ];
 
   // 2026-10-09：作物相关字段抽为变量——调拨模式需重排布局
   //   transfer：作物选择|调出仓库 → 作物形态|品质等级 → 数量|单位 → 入库仓库
@@ -1160,7 +1165,6 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                   <NumberInput
                     value={formData.quantity ?? 0}
                     onChange={(v) => handleFieldChange('quantity', v)}
-                    min={0.01}
                     className={deepInputClass}
                   />
                   {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
@@ -1224,7 +1228,6 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                   <NumberInput
                     value={formData.quantity ?? 0}
                     onChange={(v) => handleFieldChange('quantity', v)}
-                    min={0.01}
                     className={deepInputClass}
                   />
                   {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
@@ -1270,7 +1273,6 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                     <NumberInput
                       value={formData.unitPrice ?? 0}
                       onChange={(v) => handleFieldChange('unitPrice', v)}
-                      min={0}
                       className={deepInputClass}
                     />
                     {errors.unitPrice && <div className="text-xs text-red-500 mt-1">{errors.unitPrice}</div>}
@@ -1379,9 +1381,11 @@ function buildInitialFormData(
   };
 
   // 来源专属字段空值（确保切换后不残留）
-  for (const field of FIELD_CONFIG[sourceType]) {
-    if (data[field.key] === undefined) {
-      data[field.key] = '';
+  if (isAddStockSourceType(sourceType)) {
+    for (const field of FIELD_CONFIG[sourceType]) {
+      if (data[field.key] === undefined) {
+        data[field.key] = '';
+      }
     }
   }
   return data;

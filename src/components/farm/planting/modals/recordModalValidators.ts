@@ -3,30 +3,16 @@
  * 无性繁殖（组培/扦插/嫁接/压条/分株）已迁移至育苗模块
  */
 
-import type { BreedingOperationType, PropagationMethod } from '@/services/apiPlantingSubRecordService'
+import type { BreedingRecordInput } from '@/services/apiPlantingSubRecordService'
 
-/** 扩展 form 状态（v5 缩简：仅含有性字段） */
-export type BreedingFormState = {
-  recordDate: string
-  operationType: BreedingOperationType
-  generation?: string | null
-  parentMaleCode?: string | null
-  parentFemaleCode?: string | null
-  parentMaleSource?: string | null
-  parentFemaleSource?: string | null
-  operator?: string | null
-  remarks?: string | null
-  targetTraits?: string[] | null
-  fruitCount?: number | null
-  seedCount?: number | null
-  pollinatedFlowerCount?: number | null
-  /** @deprecated v5：保留字段兼容历史数据，UI 不再使用 */
-  motherPlantCode?: string | null
-  propagationMethod?: PropagationMethod | null
-  inoculationCount?: number | null
-  survivalCount?: number | null
-  reproductionMode?: 'sexual' | 'asexual'
-}
+/**
+ * 育种表单状态（v5 缩简：仅含有性字段）
+ *
+ * 2026-10-11：改为直接复用 Service 的 BreedingRecordInput —— 两者原先各写一份同名结构，
+ *   parentMaleSource/parentFemaleSource（ParentSource vs string）、reproductionMode（含 null）
+ *   的差异导致 RecordModal ↔ BreedingFields 之间双向赋值全部报 TS2345/TS2322。
+ */
+export type BreedingFormState = BreedingRecordInput
 
 /**
  * 育种表单前端校验（仅有性繁殖）

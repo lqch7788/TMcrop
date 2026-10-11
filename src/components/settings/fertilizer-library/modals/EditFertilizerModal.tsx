@@ -46,11 +46,12 @@ type SpecForm = {
   suggestedRatio: string;
   dosageUnit: string;
   remark: string;
-  unitPrice: number;
+  // 单价/库存量绑定文本输入框，允许输入中间态（如 "12."），提交时统一 Number() 转换
+  unitPrice: number | string;
   batchNumber: string;
   productionDate: string;
   expirationDate: string;
-  stockQuantity: number;
+  stockQuantity: number | string;
   packageSpec: string;
   stockUnit: string;
 };

@@ -17,7 +17,8 @@ import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
  * 智能派工Tab组件
  */
 export const SmartDispatchTab: React.FC = () => {
-  const { unifiedTasks, publishTask, getTaskRecordsByTaskId } = useTasks();
+  // useTasks 返回的是 tasks，这里按本模块惯例重命名为 unifiedTasks（与 FarmDispatchTab 一致）
+  const { tasks: unifiedTasks, publishTask, getTaskRecordsByTaskId } = useTasks();
 
   // 搜索和筛选状态
   const [searchText, setSearchText] = useState('');

@@ -1,4 +1,5 @@
-import type { Position } from '@/types';
+// 2026-10-11 类型清理：改用页面共享的职位视图模型（原先引用 @/types 的 Position，与页面数据字段不一致）
+import type { PositionItem as Position } from '../types';
 import { Check, Edit2, X } from 'lucide-react';
 
 import { Button, UnifiedModal, NumberInput, Label } from '@/components/ui';

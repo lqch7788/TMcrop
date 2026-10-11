@@ -61,17 +61,17 @@ export interface UnassignedWorker {
   workerType: string;
 }
 
-// 后端班组成员记录字段（snake_case，teamMembers 路由未做 camelCase 转换）
+// 后端班组成员记录字段（2026-10-11 修正：全局 camelCaseResponse 中间件已把响应转 camelCase）
 interface ApiTeamMember {
   id: string;
-  team_id: string;
-  worker_id: string;
-  worker_name: string;
-  worker_code: string;
+  teamId: string;
+  workerId: string;
+  workerName: string;
+  workerCode: string;
   role: string;
-  joined_at: string;
-  created_at: string;
-  updated_at: string;
+  joinedAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 2026-09-15：班组分配完整性 - 新增类型
@@ -186,10 +186,12 @@ interface TeamManageState {
   error: string | null;
 
   fetchData: () => Promise<void>;
-  createTeam: (data: Partial<Team>) => Promise<void>;
+  // 2026-10-11：createTeam 实际返回新建班组（useTeam.ts 依赖 teamId 做后续技能同步），类型对齐实现
+  createTeam: (data: Partial<Team>) => Promise<Team | undefined>;
   updateTeam: (id: string, data: Partial<Team>) => Promise<void>;
   deleteTeam: (id: string) => Promise<void>;
-  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role?: string) => Promise<void>;
+  // roleOrWorkerRoles：string 时全员同角色；Record<workerId, role> 时逐人独立角色
+  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, roleOrWorkerRoles?: string | Record<string, string>) => Promise<void>;
   removeWorker: (teamId: string, workerId: string) => Promise<void>;
 
   // 2026-09-15：班组分配完整性 Phase 3 - 新增 actions
@@ -222,9 +224,11 @@ type WriteKey = 'create' | 'update' | 'delete' | 'assign' | 'remove';
 const inflightWrites: Record<WriteKey, Promise<unknown> | null> = {
   create: null, update: null, delete: null, assign: null, remove: null,
 };
-function dedupeWrite<K extends WriteKey>(key: K, fn: () => Promise<unknown>): Promise<unknown> {
+// 2026-10-11：返回类型改为泛型 T，让调用方拿到真实返回值（此前固定 Promise<unknown> 导致 5 个 action 类型不匹配）
+function dedupeWrite<K extends WriteKey, T>(key: K, fn: () => Promise<T>): Promise<T> {
   const existing = inflightWrites[key];
-  if (existing) return existing;
+  // 命中在途请求时复用它（此时返回值语义由发起方决定，与本次调用签名一致）
+  if (existing) return existing as Promise<T>;
   const p = (async () => fn())().finally(() => { inflightWrites[key] = null; });
   inflightWrites[key] = p;
   return p;

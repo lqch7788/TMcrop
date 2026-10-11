@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, ChevronRight, Clock, Download, Eye, FileText, Package, RefreshCw, Search, ShoppingCart, Sprout, Square, X, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
@@ -77,7 +78,8 @@ export default function ProductionApproval() {
   const [exportMode, setExportMode] = useState(false);
   // 导出弹窗状态（2026-10-10：JSON 直下 → ExportFormatModal 两步流程，与全站一致）
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+  // 导出格式：ExportFormatModal 的回调签名为 (format: string)，故此处用 string（取值仍为 excel/csv/word）
+  const [exportFormat, setExportFormat] = useState<string>('excel');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailModal, setDetailModal] = useState<{
     show: boolean;
@@ -171,11 +173,19 @@ export default function ProductionApproval() {
   };
 
   // Tab配置 - 生产类审批（2026-07-14：移除"采收申请审批"tab — 功能暂时不用）
-  const tabs = [
+  // 2026-10-11：显式声明 Tab 元素类型 —— 原 `as const` 会把 types 收窄为 readonly [单个枚举]，
+  // 使 currentTab.types.includes(a.type) 的参数类型收窄为 never（TS2345）
+  const tabs: Array<{
+    key: 'tech' | 'plan' | 'purchase';
+    label: string;
+    icon: LucideIcon;
+    path: string;
+    types: ApprovalType[];
+  }> = [
     { key: 'plan', label: '生产计划审批', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
     { key: 'tech', label: '技术方案审批', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
     { key: 'purchase', label: '采购计划审批', icon: ShoppingCart, path: '/purchase-plan', types: [ApprovalType.PURCHASE_REQUEST] },
-  ] as const;
+  ];
 
   // 根据Tab类型筛选数据
   const getCurrentData = useMemo(() => {

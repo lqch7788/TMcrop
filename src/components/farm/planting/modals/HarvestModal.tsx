@@ -88,7 +88,6 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="确认采收"
-      submitDisabled={isHarvest === 'no'}
       cancelText="取消"
     >
       <div className="space-y-6">

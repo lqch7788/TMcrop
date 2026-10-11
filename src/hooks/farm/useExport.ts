@@ -19,8 +19,8 @@ export interface ExportConfig {
   headers: string[];
   /** 导出数据生成函数 */
   getExportData: (record: Record<string, unknown>) => Record<string, unknown>;
-  /** 格式化回调（可选） */
-  formatRecord?: (record: Record<string, unknown>) => unknown;
+  /** 格式化回调（可选）——返回值需仍可被 getExportData 处理，故限定为对象（2026-10-11 由 unknown 收紧） */
+  formatRecord?: (record: Record<string, unknown>) => Record<string, unknown>;
 }
 
 // 使用导出功能的Hook

@@ -16,11 +16,12 @@ interface MonthlyReportTableProps {
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
-  selectedRows: string[];
+  // 记录主键为 number（MonthlyReport.id）
+  selectedRows: number[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSelectAll: () => void;
-  onSelectRow: (id: string) => void;
+  onSelectRow: (id: number) => void;
   onExportClick: () => void;
   onCancelExport: () => void;
   onShowExportModal: () => void;
@@ -170,11 +171,11 @@ export function MonthlyReportTable({
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedReports.map((report) => (
-              <TableRow key={report.id} className={`hover:bg-gray-50 ${selectedRows.includes(report.id.toString()) ? 'bg-emerald-50' : ''}`}>
+              <TableRow key={report.id} className={`hover:bg-gray-50 ${selectedRows.includes(report.id) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <Button variant="ghost" size="icon" onClick={() => onSelectRow(report.id.toString())} className="text-gray-500 hover:text-emerald-600">
-                      {selectedRows.includes(report.id.toString()) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
+                    <Button variant="ghost" size="icon" onClick={() => onSelectRow(report.id)} className="text-gray-500 hover:text-emerald-600">
+                      {selectedRows.includes(report.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                     </Button>
                   </TableCell>
                 )}

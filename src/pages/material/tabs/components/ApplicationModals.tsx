@@ -71,7 +71,8 @@ interface EditModalProps {
   onClose: () => void;
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
-  onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
+  // value 追加 boolean：MaterialItem.returnable 等开关字段直接透传 checkbox 值
+  onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number | boolean) => void;
   onSave: () => void;
   onVoidApply: () => void;
   /** 2026-09-26 批次二：提交锁（防双击） */
@@ -127,7 +128,7 @@ export function EditModal({
       {/* 领料单号 - 只读 */}
       <div className="bg-gray-100 rounded-lg p-3">
         <Label className="block text-xs font-medium text-gray-500 mb-1">领料单号</Label>
-        <div className="text-sm font-medium text-gray-900">{record.code}</div>
+        <div className="text-sm font-medium text-gray-900">{record?.code}</div>
       </div>
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">申请日期</Label>
@@ -450,7 +451,7 @@ export function EditModal({
       </Button>
       {/* 2026-09-26 修复：作废按钮改用 statusClass 判断（可编辑状态才显示作废），
           此前硬编码中文状态且对"已审批"也显示作废（与后端禁止修改已审批矛盾） */}
-      {(record.statusClass === 'pending' || record.statusClass === 'rejected') && (
+      {(record?.statusClass === 'pending' || record?.statusClass === 'rejected') && (
         <Button variant="warning" onClick={onVoidApply}>
           <XCircle className="w-4 h-4" /> 作废申请
         </Button>
@@ -521,7 +522,8 @@ interface AddModalProps {
   onClose: () => void;
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
-  onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
+  // value 追加 boolean：MaterialItem.returnable 等开关字段直接透传 checkbox 值
+  onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number | boolean) => void;
   onGenerateCode: () => void;
   onSave: () => void;
   /** 2026-09-26 批次二：提交锁（防双击） */

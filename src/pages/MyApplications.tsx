@@ -28,7 +28,8 @@ export default function MyApplications() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  // 2026-10-11：原为硬编码常量 → 分页控件 onPageSizeChange 调 setPageSize 会 ReferenceError
+  const [pageSize, setPageSize] = useState(10);
 
   // 当前用户ID
   const currentUserId = localStorage.getItem('userId') || 'user_001';
@@ -258,7 +259,7 @@ export default function MyApplications() {
             <div className="space-y-4">
               <ApprovalDetail approval={detailApproval} />
               {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
-              {businessData && (
+              {!!businessData && (
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
                   <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>

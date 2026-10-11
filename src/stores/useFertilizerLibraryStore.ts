@@ -181,7 +181,13 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
       }
     },
 
-    stockIn: async (id, quantity, remark, extra) => {
+    // 2026-10-11：参数可选项与接口声明对齐，返回值收敛为 number | null（调用方均以 != null 判断）
+    stockIn: async (
+      id: string,
+      quantity: number,
+      remark?: string,
+      extra?: { unitPrice?: number; operatorId?: string; operatorName?: string },
+    ): Promise<number | null> => {
       try {
         const response = await enhancedApiClient.post<{ newStock?: number }>(`/fertilizer-specs/${id}/stock-in`, {
           quantity,
@@ -201,7 +207,7 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
             ),
           }));
         }
-        return newStock;
+        return newStock ?? null;
       } catch (err) {
         set({ error: (err as Error).message });
         return null;

@@ -74,13 +74,15 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
   //   - material_transfer：/warehouse-overview → /crop-inventory（作物库存页有"调拨入库"按钮）
   //   - supplementary：/crop/seed-source → /crop-inventory（作物库存页有"补录入库"按钮）
   // 2026-10-09：hint 悬停提示（告知对应业务页面）；"库存调拨"改名"作物调拨审批"（数据源是作物库存页，避免与物料库存混淆）
-  const tabs = [
+  // 2026-10-11：显式声明为 TabConfig[] —— 原 `as const` 会把 types 收窄为 readonly [单个枚举]，
+  // 使 currentTab.types.includes(a.type) 的参数类型收窄为 never（TS2345）
+  const tabs: TabConfig[] = [
     { key: 'material', label: '领料审批', icon: ClipboardList, path: '/material-receiving', types: [ApprovalType.MATERIAL_REQUEST], hint: '审批「生产领料」页面提交的领料单' },
     { key: 'return', label: '退料审批', icon: RotateCcw, path: '/material-return', types: [ApprovalType.RETURN_MATERIAL], hint: '审批「生产退料」页面提交的退料单（通过后自动恢复库存）' },
     { key: 'material_inbound', label: '物料入库', icon: Truck, path: '/warehouse-inbound', types: [ApprovalType.MATERIAL_INBOUND], hint: '审批「物料入库」页面提交的待审核入库单（通过后物料入账）' },
     { key: 'material_transfer', label: '作物调拨审批', icon: RotateCcw, path: '/crop-inventory', types: [ApprovalType.MATERIAL_TRANSFER], hint: '审批「作物库存」页面"新增→调拨入库"提交的调拨申请（通过后源仓扣减、目标仓入账）' },
     { key: 'supplementary', label: '补录审批', icon: FileText, path: '/crop-inventory', types: [ApprovalType.SEEDLING_SUPPLEMENTARY, ApprovalType.CROP_STORAGE_SUPPLEMENTARY], hint: '审批「作物库存」页面"补录入库"与「种植管理」页面"种植自留种"提交的补录申请' },
-  ] as const;
+  ];
 
   // 根据Tab类型筛选数据
   const getCurrentData = useMemo(() => {

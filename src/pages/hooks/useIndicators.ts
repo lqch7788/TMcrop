@@ -15,8 +15,7 @@ import type {
   AnalyzeItem,
   CategorySummary,
   IndicatorCategory,
-  ModalType,
-  ActiveTab
+  ModalType
 } from '../types/indicators.types';
 import { todayLocal } from '@/lib/dateUtils';
 
@@ -83,7 +82,8 @@ export function useIndicators() {
   const [categoryFilter, setCategoryFilter] = useState<IndicatorCategory>('全部');
 
   // 标签页状态
-  const [activeTab, setActiveTab] = useState<ActiveTab>('list');
+  // Tabs 组件的 onValueChange 签名为 (value: string) => void，与全站 Tabs 页签状态保持一致用 string
+  const [activeTab, setActiveTab] = useState('list');
 
   // 弹窗状态
   const [showModal, setShowModal] = useState(false);

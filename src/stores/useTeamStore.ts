@@ -22,7 +22,8 @@ interface TeamStore {
   loadTeams: () => Promise<void>;
 
   // CRUD
-  addTeam: (team: Partial<Team>) => Promise<Team>;
+  // 2026-10-11：createTeam 返回的是后端原始记录（不含前端拼装的 memberIds），返回类型对齐实现
+  addTeam: (team: Partial<Team>) => Promise<ApiTeam>;
   editTeam: (id: string, team: Partial<Team>) => Promise<void>;
   removeTeam: (teamId: string) => Promise<void>;
 

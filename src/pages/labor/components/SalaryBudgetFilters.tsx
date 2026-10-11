@@ -17,7 +17,7 @@ import { getMonthOptions } from '../hooks/useSalaryBudget';
 export interface SalaryBudgetFiltersProps {
   filters: SalaryBudgetFiltersType;
   departments: { id: string; name: string }[];
-  onFilterChange: (field: keyof SalaryBudgetFilters, value: string) => void;
+  onFilterChange: (field: keyof SalaryBudgetFiltersType, value: string) => void;
   onReset: () => void;
   onSearch: () => void;
 }

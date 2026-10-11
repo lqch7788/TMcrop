@@ -46,6 +46,9 @@ export interface PieceworkPagination {
  */
 export interface PieceworkFormData {
   workerId: string;
+  // 提交时一并带上展示用名称（表单弹窗回填，父组件按 id 反查姓名时兜底）
+  workerName?: string;
+  taskName?: string;
   taskId: string;
   unit: string;
   quantity: number;

@@ -3,6 +3,9 @@
  * 包含种源管理、育苗管理、种植管理相关类型和枚举
  */
 
+// 溯源链需要引用采收记录类型（定义在 types/index.ts）
+import type { HarvestRecord } from './index';
+
 // ========== 枚举定义 ==========
 
 /** 种源类型 - 基于繁殖方式分类 */
@@ -214,7 +217,10 @@ export interface SeedSource {
   cropName: string;           // 作物名称（最细化，如：圆叶菠菜）
   cropVariety: string;        // 作物品种（对应数据库字段，存储上一级品种名）
   // 2026-06-30: 种源入库时的采收形态（如"枝条"/"种子"/"果实"等），种植自留种回流时必填
-  seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他';
+  // 2026-10-11：放宽为 string —— 实际写入值来自 SEED_FORM_OPTIONS（constants/seedFormDict.ts，19 项，
+  //   含「实生苗/扦插苗/嫁接苗/种球…」），与原先的 12 值字面量联合不重合，
+  //   导致 EditModal 保存编辑后的形态被 TS 判为非法（AddModal 因 payload 用 any 而侥幸通过）
+  seedForm?: string;
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   supplierId: string;          // 供应商ID
   supplierName: string;        // 供应商名称
@@ -313,6 +319,12 @@ export interface SeedSource {
   lastReflowAt?: string;
   /** 被合并过来的种源 ID 列表（前端 JSON.parse 后） */
   mergedFromIds?: string[];
+
+  // ========== 2026-10-11: 展示用冗余字段 ==========
+  /** 类别名称（如"水果类"）——列表/追溯链展示读取 */
+  categoryName?: string;
+  /** 子品种名称（如"红颜"）——列表/追溯链展示读取 */
+  subVarietyName?: string;
 }
 
 // ========== 入库记录类型（2026-07-18 新增）==========
@@ -539,6 +551,13 @@ export interface Seedling {
   // 补充字段
   orgName?: string;           // 所属组织名称
   seedlingTaskTime?: number;  // 育苗工时(小时)
+  /**
+   * 2026-10-11：育苗工时的「更新侧」字段名别名 ——
+   * apiSeedlingService.updateSeedling 的 FIELD_TO_SNAKE 显式映射 workHours → work_hours，
+   * 详情/新增走 seedlingTaskTime（读取侧 work_hours → seedlingTaskTime），
+   * 故编辑弹窗提交时必须用 workHours。两字段语义相同，勿混用。
+   */
+  workHours?: number;
   // 新增字段
   planType?: SeedlingPlanType; // 计划类型（常规/加急/实验）
   targetSurvivalRate?: number; // 目标成苗率
@@ -675,7 +694,14 @@ export interface Planting {
   subVariety1Name?: string;   // 子品种名（红颜/章姬等）
   areaId: string;            // 区域ID
   areaName: string;           // 区域名称
+  /** 2026-10-11：区域 oid（plantings.area_oid 列；BaseOperationsCenterV2 按区域分组用） */
+  areaOid?: string;
   rootName: string;           // 大棚/根区名称
+  /**
+   * 2026-10-11：温室/大棚名称 —— 后端 GET /api/plantings 已别名输出（p.greenhouse_name AS greenhouseName），
+   * PUT 白名单也含 greenhouse_name，但前端类型此前漏声明导致 EditModal 保存时只能用 (formData as any) 兜底
+   */
+  greenhouseName?: string;
   plantingCount: number;      // 种植数量
   plantingDate: string;       // 种植日期
   soilPH?: number;            // 土壤PH值
@@ -719,6 +745,8 @@ export interface Planting {
   endTime?: string;                // 结束时间（ISO）
   // V2 改造 (2026-06-11): 补充表格展示字段
   originPath?: 'direct_from_seed' | 'via_seedling'; // 来源路径
+  // 2026-10-11：所属组织名称（useFilteredPlantings 的 orgName 筛选用；与 Seedling.orgName 对齐）
+  orgName?: string;
   harvestQuantity?: number;        // 已采收数量
   targetYield?: number;            // 目标产量（用于完成比例 = 采收入库量 / 目标产量）
   targetYieldUnit?: string;        // 目标产量单位（从数据词典 unit 选）
@@ -993,6 +1021,19 @@ export interface CropOrder {
   createBy: string;
   createTime: string;
   updateTime: string;
+}
+
+/**
+ * 作物订单列表筛选条件（OrderPage 使用，字段全部为字符串，空串表示不筛选）
+ */
+export interface CropOrderFilters {
+  orderCode: string;      // 订单编号（模糊匹配）
+  orderName: string;      // 订单名称（模糊匹配）
+  cropName: string;        // 作物品种（模糊匹配）
+  status: string;          // 订单状态（精确匹配，空串表示全部）
+  startDate: string;       // 订单日期起
+  endDate: string;         // 订单日期止
+  createBy: string;        // 创建人（模糊匹配）
 }
 
 // ========== 溯源链类型 ==========

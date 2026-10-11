@@ -22,20 +22,8 @@ import {
 import { cn } from '@/lib/utils';
 import { usePositionStore } from '@/stores/usePositionStore';
 import type { Position } from '@/services/apiBasicDataService';
-
-// 页面内部使用的职位类型（适配后端 API）
-interface PositionItem {
-  id: string;
-  code: string;
-  name: string;
-  dept: string;
-  level: string;
-  salary: number;
-  staffCount: number;
-  description: string;
-  status: string;
-  statusClass: string;
-}
+// 2026-10-11 类型清理：职位视图模型提取为共享类型，供页面与职位弹窗共用一份
+import type { PositionItem } from '../position/types';
 
 // 将后端 Position 转换为页面使用的格式
 function adaptPositionToPage(position: Position): PositionItem {

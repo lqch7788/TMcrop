@@ -120,7 +120,9 @@ export default function OrganizationManagement() {
   // 递归渲染树形节点
   const renderTreeNode = (org: Organization, level: number = 0): JSX.Element => {
     const hasChildren = org.children && org.children.length > 0;
-    const isExpanded = expandedOids.has(org.oid);
+    // oid 在类型上可选（2026-06-30 兼容改造），此处兜底为空串避免 undefined 传入 set/删除逻辑
+    const orgOid = org.oid ?? '';
+    const isExpanded = expandedOids.has(orgOid);
 
     return (
       <div key={org.oid}>
@@ -130,7 +132,7 @@ export default function OrganizationManagement() {
         >
           {/* 展开/折叠按钮 */}
           <button
-            onClick={() => toggleExpand(org.oid)}
+            onClick={() => toggleExpand(orgOid)}
             className={`p-1 rounded hover:bg-gray-200 transition-colors ${
               hasChildren ? 'visible' : 'invisible'
             }`}
@@ -176,7 +178,7 @@ export default function OrganizationManagement() {
               <Edit className="w-4 h-4" />
             </button>
             <button
-              onClick={() => handleDelete(org.oid)}
+              onClick={() => handleDelete(orgOid)}
               className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
               title="删除"
             >

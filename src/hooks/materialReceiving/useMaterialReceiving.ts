@@ -349,7 +349,8 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     return materialData.filter((item) => {
       if (searchCode && !item.code.toLowerCase().includes(searchCode.toLowerCase())) return false;
       if (searchApplicant && !item.applicant.toLowerCase().includes(searchApplicant.toLowerCase())) return false;
-      if (searchBatchCode && !item.productionBatchCode.toLowerCase().includes(searchBatchCode.toLowerCase())) return false;
+      // 2026-10-11：productionBatchCode 为可选字段，缺失时按空串参与匹配
+      if (searchBatchCode && !(item.productionBatchCode || '').toLowerCase().includes(searchBatchCode.toLowerCase())) return false;
       if (searchWarehouse && !item.warehouseLocation.toLowerCase().includes(searchWarehouse.toLowerCase())) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
@@ -431,9 +432,10 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
       applicant: item.applicant,
       department: item.department,
       warehouseLocation: item.warehouseLocation,
-      plantArea: item.plantArea,
+      // 2026-10-11：EditFormState 两个字段为必填 string，记录中为可选 → 兜底空串（表单空值语义一致）
+      plantArea: item.plantArea || '',
       reviewer: item.reviewer,
-      productionBatchCode: item.productionBatchCode,
+      productionBatchCode: item.productionBatchCode || '',
       status: item.status,
       materials: [...item.materials],
     });

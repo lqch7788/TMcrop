@@ -181,7 +181,7 @@ export function ContractTable() {
     setEditingContract(contract);
     setFormData({
       staffName: contract.staffName,
-      idCard: contract.idCard,
+      idCard: contract.idCard || '',
       contractType: contract.contractType,
       startDate: contract.startDate,
       endDate: contract.endDate,

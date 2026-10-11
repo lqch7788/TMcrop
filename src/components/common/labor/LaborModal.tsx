@@ -50,7 +50,6 @@ export function LaborModal({
           sizeClasses[size],
           className
         )}
-        showClose={showClose}
       >
         {showClose && (
           <Button

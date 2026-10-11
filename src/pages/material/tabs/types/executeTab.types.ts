@@ -1,7 +1,10 @@
 // ExecuteTab 类型定义
 // 领料出库页面的类型定义
 
-import { MaterialReceivingRecord, ExecuteMaterialItem } from '@/types/materialReceiving';
+import { MaterialReceivingRecord, ExecuteMaterialItem, MaterialExecuteRecord } from '@/types/materialReceiving';
+// 新增表单状态复用 @/types/materialReceiving 的同名类型
+// （本地曾另行定义一份且缺 productionBatchCode / sourceApplicationCodes / remarks，导致 hook 写入报错）
+import type { ExecuteAddFormState } from '@/types/materialReceiving';
 
 // Props接口定义
 export interface ExecuteTabProps {
@@ -38,16 +41,8 @@ export interface ExecuteEditFormState {
   materials: ExecuteMaterialItem[];
 }
 
-// 新增表单状态
-export interface ExecuteAddFormState {
-  code: string;
-  date: string;
-  applicant: string;
-  warehouseLocation: string;
-  reviewer: string;
-  operator: string;
-  materials: ExecuteMaterialItem[];
-}
+// 新增表单状态（定义见文件顶部 import 的 @/types/materialReceiving）
+export type { ExecuteAddFormState };
 
 // 物料池状态
 export interface ExecuteMaterialPoolState {
@@ -101,8 +96,8 @@ export interface UseExecuteTabReturn {
   setExecuteShowAddModal: (show: boolean) => void;
   executeSelectedRecord: any;
   setExecuteSelectedRecord: (record: any) => void;
-  executeDeletingId: number | null;
-  setExecuteDeletingId: (id: number | null) => void;
+  executeDeletingId: string | number | null;
+  setExecuteDeletingId: (id: string | number | null) => void;
 
   // 展开行状态
   executeExpandedRows: Set<number>;
@@ -124,13 +119,15 @@ export interface UseExecuteTabReturn {
   executeSelectedApplicationCode: string;
   setExecuteSelectedApplicationCode: (code: string) => void;
   executeSelectedMaterialIndices: Set<number>;
-  setExecuteSelectedMaterialIndices: (indices: Set<number>) => void;
+  setExecuteSelectedMaterialIndices: React.Dispatch<React.SetStateAction<Set<number>>>;
   executeMaterialActualQuantities: Record<number, number>;
-  setExecuteMaterialActualQuantities: (quantities: Record<number, number>) => void;
+  setExecuteMaterialActualQuantities: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   executeMaterialPool: ExecuteMaterialItem[];
   setExecuteMaterialPool: (pool: ExecuteMaterialItem[]) => void;
   // V14.0: FEFO 批次分配预览
   executeFefoMap: Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>;
+  // 2026-10-11 类型清理：补充 setter 声明（useExecuteTab 已用 useState 实现并返回，此前类型漏声明）
+  setExecuteFefoMap: React.Dispatch<React.SetStateAction<Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>>>;
 
   // 编辑表单状态
   executeEditForm: ExecuteEditFormState;
@@ -138,7 +135,8 @@ export interface UseExecuteTabReturn {
 
   // 新增表单状态
   executeAddForm: ExecuteAddFormState;
-  setExecuteAddForm: (form: ExecuteAddFormState) => void;
+  // 与 useExecuteTab 的真实 useState setter 对齐（页面用函数式更新透传给弹窗）
+  setExecuteAddForm: React.Dispatch<React.SetStateAction<ExecuteAddFormState>>;
 
   // 过滤后的数据
   executeFilteredData: any[];
@@ -158,7 +156,8 @@ export interface UseExecuteTabReturn {
   handleUpdateMaterialPoolQuantity: (index: number, actualQuantity: number) => void;
   handleExecuteEdit: (item: any) => void;
   handleExecuteDeleteClick: (id: string | number) => void;
-  confirmExecuteDelete: () => void;
+  // 2026-10-11：修正为与实现一致的签名（实现是 async (reason: string)，原声明漏参致调用方按 onClick 直接传入 MouseEvent）
+  confirmExecuteDelete: (reason: string) => Promise<void>;
   handleExecuteSaveEdit: () => void;
   // 2026-09-27 两步出库：确认发料
   handleConfirmIssue: (item: MaterialExecuteRecord) => Promise<void>;
@@ -174,6 +173,8 @@ export interface UseExecuteTabReturn {
   executeDetailSources: Record<string, unknown>[] | null;
   executeHasDraft: boolean;
   setExecuteHasDraft: (v: boolean) => void;
+  // 2026-10-11 类型清理：补充 checkExecDraft 声明（useExecuteTab 已实现并返回，此前类型漏声明）
+  checkExecDraft: () => boolean;
   restoreExecDraft: () => boolean;
   discardExecDraft: () => void;
   // 2026-09-27 能力对齐：快捷筛选

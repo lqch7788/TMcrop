@@ -32,25 +32,35 @@ export interface CropVariety {
   alias?: string[];             // 别名/俗名
   image?: string;              // 作物图片URL
   description?: string;         // 特性描述
+  // 2026-10-11：以下生长周期/环境字段改为 number | string —— DB 实测这些列存的是区间文本
+  // （air_temperature="20-25"、germination_period="5-7"、soil_ph="6.0-6.5"），
+  // 前端表单直接在输入框读写该文本，声明为纯 number 会拒绝合法数据
   // 生长周期各阶段（天）
-  germinationPeriod?: number;  // 发芽期(天)
-  seedlingPeriod?: number;      // 育苗期(天)
-  floweringPeriod?: number;     // 开花期(天)
-  fruitingPeriod?: number;      // 结果期(天)
-  harvestPeriod?: number;       // 摘收期(天)
+  germinationPeriod?: number | string;  // 发芽期(天)
+  seedlingPeriod?: number | string;      // 育苗期(天)
+  floweringPeriod?: number | string;     // 开花期(天)
+  fruitingPeriod?: number | string;      // 结果期(天)
+  harvestPeriod?: number | string;       // 摘收期(天)
   // 适宜环境参数
-  airTemperature?: number;      // 空气温度(℃)
-  airHumidity?: number;        // 空气湿度(%)
-  co2Content?: number;          // CO₂含量(ppm)
-  lightIntensity?: number;      // 光照度(lx)
-  soilTemperature?: number;     // 土壤温度(℃)
-  soilHumidity?: number;       // 土壤湿度(%)
-  soilPh?: number;             // 土壤PH值
-  soilEc?: number;             // 土壤EC值
+  airTemperature?: number | string;      // 空气温度(℃)
+  airHumidity?: number | string;        // 空气湿度(%)
+  co2Content?: number | string;          // CO₂含量(ppm)
+  lightIntensity?: number | string;      // 光照度(lx)
+  soilTemperature?: number | string;     // 土壤温度(℃)
+  soilHumidity?: number | string;       // 土壤湿度(%)
+  soilPh?: number | string;             // 土壤PH值
+  soilEc?: number | string;             // 土壤EC值
   status: CropVarietyStatus;    // 状态：启用/停用
   remarks?: string;             // 备注说明
   createTime: string;           // 创建时间
   updateTime: string;           // 更新时间
+  /**
+   * 2026-10-11：两个"展示用"冗余字段（非 DB 列）
+   * - cropName：与 varietyName 同义的旧称（种植 EditModal 的按名匹配会读 v.cropName）
+   * - fullPath：选择器回填时写入的完整路径快照（订单 EditModal 会构造带该字段的 CropVariety）
+   */
+  cropName?: string;
+  fullPath?: string;
 }
 
 /**
@@ -87,6 +97,14 @@ export interface CropVarietyOption {
  */
 export interface CropVarietySearchResult {
   variety: CropVariety;
-  matchField: 'cropCode' | 'varietyName' | 'alias';
+  // 2026-10-11：searchVarieties 也会按子品种1名称命中，联合类型补齐
+  matchField: 'cropCode' | 'varietyName' | 'subVariety1Name' | 'alias';
   matchText: string;
+  /**
+   * 2026-10-11：下拉/回填用的扁平字段（订单 EditModal 按 hit.value/hit.label/hit.fullPath 回填选择器）。
+   * 由 searchVarieties 一并产出，避免消费端拿到 undefined。
+   */
+  value: string;      // = variety.cropCode
+  label: string;      // = detailVarietyName || subVariety1Name || varietyName
+  fullPath: string;   // = 类别 > 类型 > 品种 > 子品种1 > 详细品种
 }

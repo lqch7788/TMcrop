@@ -7,12 +7,16 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 
+// 2026-10-11：useSettingsStore 有多个调用签名，ReturnType<typeof useSettingsStore> 会退化为 unknown；
+//   改用 getState 的返回类型取 Store 状态类型
+type SettingsState = ReturnType<typeof useSettingsStore.getState>;
+
 interface SettingsContextValue {
-  departments: ReturnType<typeof useSettingsStore>['departments'];
+  departments: SettingsState['departments'];
   loadDepartments: () => Promise<void>;
-  warehouses: ReturnType<typeof useSettingsStore>['warehouses'];
+  warehouses: SettingsState['warehouses'];
   loadWarehouses: () => Promise<void>;
-  greenhouses: ReturnType<typeof useSettingsStore>['greenhouses'];
+  greenhouses: SettingsState['greenhouses'];
   loadGreenhouses: () => Promise<void>;
   loading: boolean;
   error: string | null;

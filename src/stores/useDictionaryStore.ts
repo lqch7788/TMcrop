@@ -184,28 +184,24 @@ export const getDictItemName = (category: string, code: string): string => {
   const fallback = DICT_FALLBACK[category]?.[code];
   if (fallback) return fallback;
 
-  if (!item) {
-    // 如果找不到，尝试模糊匹配（处理空格/逗号分隔的多值情况）
-    const codeParts = code.split(/[,\s]+/).filter(Boolean);
-    if (codeParts.length > 1) {
-      // 多个值，用中文分隔符连接
-      const names = codeParts.map(part => {
-        const partItem = dicts.find(d => {
-          const cat = d.categoryCode || (d as any).category || (d as any).category_code;
-          const c = d.dictCode || (d as any).code || (d as any).dict_code;
-          return cat === category && c === part;
-        });
-        return partItem
-          ? (partItem.dictLabel || (partItem as any).name || partItem.dictCode || part)
-          : part;
+  // 未命中：尝试模糊匹配（处理空格/逗号分隔的多值情况）
+  // 2026-10-11：原 `if (!item) { ... }` 包裹恒为真（第 179 行已提前返回），原末尾不可达 return 一并移除
+  const codeParts = code.split(/[,\s]+/).filter(Boolean);
+  if (codeParts.length > 1) {
+    // 多个值，用中文分隔符连接
+    const names = codeParts.map(part => {
+      const partItem = dicts.find(d => {
+        const cat = d.categoryCode || (d as any).category || (d as any).category_code;
+        const c = d.dictCode || (d as any).code || (d as any).dict_code;
+        return cat === category && c === part;
       });
-      return names.join('、');
-    }
-    return code; // 找不到就返回原始 code
+      return partItem
+        ? (partItem.dictLabel || (partItem as any).name || partItem.dictCode || part)
+        : part;
+    });
+    return names.join('、');
   }
-
-  // 优先使用 name（兼容旧格式），其次 dictLabel（新格式），最后是 dictCode
-  return (item as any).name || item.dictLabel || item.dictCode || code;
+  return code; // 找不到就返回原始 code
 };
 
 // 2026-07-10：getDictLabel 别名（兼容其他组件 import 旧名）

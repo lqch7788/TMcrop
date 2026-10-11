@@ -105,7 +105,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   // 获取默认巡查人员（避免硬编码）
   const defaultInspector = useMemo(() => {
     // 优先使用 admin 用户，否则使用第一个用户
-    const adminUser = users.find(u => u.id === 'U001' || u.name.includes('管理员'));
+    const adminUser = users.find(u => u.id === 'U001' || u.name?.includes('管理员'));
     return adminUser || users[0] || null;
   }, [users]);
 
@@ -123,8 +123,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [batchDispatchMode, setBatchDispatchMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
+  // 2026-10-11：问题 ID 为 number | string（useProblemStore.Problem.id），选中集按真实类型声明
+  const [selectedRows, setSelectedRows] = useState<Array<number | string>>([]);
+  const [selectedProblems, setSelectedProblems] = useState<Array<number | string>>([]);
 
   // 2026-09-21：问题列表 + 关联任务分页（与农事任务表格一致：底部 Pagination 组件）
   const [problemsCurrentPage, setProblemsCurrentPage] = useState(1);
@@ -528,7 +529,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   //   checked 读的是 selectedRows，但 onChange 一直调这个函数、只写 selectedProblems，
   //   于是勾选后 checked 仍为 false（复选框不变勾）、"确认导出"的禁用态也不解除。
   //   这里按模式写入对应集合即可，ProblemTable 侧无需改动。
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number | string) => {
     if (exportMode || batchDeleteMode) {
       setSelectedRows(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]));
     } else {
@@ -548,7 +549,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     }
   };
 
-  const handleBatchSelectRow = (id: number) => {
+  const handleBatchSelectRow = (id: number | string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(prev => prev.filter(p => p !== id));
     } else {

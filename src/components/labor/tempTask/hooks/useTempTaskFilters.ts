@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
-import { TempTask, TempTaskUrgency } from '../../../../types';
+import { TempTaskUrgency } from '../../../../types';
+// TempTask 以 useTempTasks（页面数据源）为准，避免与 types/index 的同名类型冲突
 import { getTaskOverdueStatus } from '../../../../hooks/useTempTasks';
+import type { TempTask } from '../../../../hooks/useTempTasks';
 
 interface TempTaskFilters {
   searchTerm: string;
@@ -67,15 +69,19 @@ export function useTempTaskFilters({ tasks }: UseTempTaskFiltersProps) {
   }, [tasks, filters]);
 
   // 统计
-  const stats = useMemo(() => ({
-    total: tasks.length,
-    pending: tasks.filter(t => t.status === 'pending').length,
-    inProgress: tasks.filter(t => t.status === 'in_progress').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    critical: tasks.filter(t => t.urgency === 'critical').length,
-    overdue: tasks.filter(t => getTaskOverdueStatus(t) === 'overdue').length,
-    warning: tasks.filter(t => getTaskOverdueStatus(t) === 'warning').length,
-  }), [tasks]);
+  const stats = useMemo(() => {
+    // useTempTasks.TempTask 的 urgency 联合未包含 'critical'（筛选器/表单实际使用该值）
+    const criticalUrgency = 'critical' as string;
+    return {
+      total: tasks.length,
+      pending: tasks.filter(t => t.status === 'pending').length,
+      inProgress: tasks.filter(t => t.status === 'in_progress').length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      critical: tasks.filter(t => t.urgency === criticalUrgency).length,
+      overdue: tasks.filter(t => getTaskOverdueStatus(t) === 'overdue').length,
+      warning: tasks.filter(t => getTaskOverdueStatus(t) === 'warning').length,
+    };
+  }, [tasks]);
 
   return {
     filters,

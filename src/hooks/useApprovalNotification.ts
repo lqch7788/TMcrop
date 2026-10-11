@@ -13,7 +13,8 @@ import {
   getNotificationLevelColor,
   formatNotificationTime,
 } from '../types/approvalNotification';
-import type { ApprovalType } from '../types/approval';
+// 2026-10-11：ApprovalType 在本文件按枚举值使用（ApprovalType.XXX），须为值导入而非 import type
+import { ApprovalType } from '../types/approval';
 
 // ============================================================
 // 模拟通知数据
@@ -28,7 +29,8 @@ const mockNotifications: Notification[] = [
     content: '采购订单 P20260315001 需要您审批',
     approvalId: 'approval-001',
     approvalCode: 'P20260315001',
-    approvalType: ApprovalType.PURCHASE_ORDER,
+    // 2026-10-11：枚举成员名为 PURCHASE_REQUEST（原 PURCHASE_ORDER 不存在，运行时恒为 undefined）
+    approvalType: ApprovalType.PURCHASE_REQUEST,
     senderId: 'system',
     senderName: '系统',
     recipientId: 'current-user',
@@ -44,7 +46,8 @@ const mockNotifications: Notification[] = [
     content: '领料单 L20260314002 已审批通过',
     approvalId: 'approval-002',
     approvalCode: 'L20260314002',
-    approvalType: ApprovalType.MATERIAL_REQUISITION,
+    // 2026-10-11：枚举成员名为 MATERIAL_REQUEST（原 MATERIAL_REQUISITION 不存在，运行时恒为 undefined）
+    approvalType: ApprovalType.MATERIAL_REQUEST,
     senderId: 'approver-001',
     senderName: '张经理',
     recipientId: 'current-user',

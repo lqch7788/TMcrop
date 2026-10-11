@@ -193,7 +193,8 @@ describe('usePermission Hook - 核心权限逻辑', () => {
     });
 
     it('空角色列表不应该被识别为管理员', () => {
-      const isAdmin = [].some(roleOid => {
+      // 2026-10-11：显式标注元素类型（空数组字面量推断为 never[]，导致回调参数类型为 never）
+      const isAdmin = ([] as string[]).some(roleOid => {
         return roleOid === 'ROLE001' || roleOid === 'ROLE_ADMIN' || roleOid?.toLowerCase().includes('admin');
       });
       expect(isAdmin).toBe(false);

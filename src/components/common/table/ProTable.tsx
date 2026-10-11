@@ -23,7 +23,8 @@ export interface Column {
   sortable?: boolean;
   filterable?: boolean;
   filters?: { text: string; value: string }[];
-  render?: (value: unknown, record: any, index: number) => React.ReactNode;
+  // value 为 record 的字段值，与 record（any）保持一致的宽松签名，避免各调用方逐处断言
+  render?: (value: any, record: any, index: number) => React.ReactNode;
 }
 
 /**
@@ -82,8 +83,9 @@ const ProTable: React.FC<ProTableProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
   // 分页状态
-  const [currentPage, setCurrentPage] = useState(pagination?.current || 1);
-  const [pageSize, setPageSize] = useState(pagination?.pageSize || 20);
+  // pagination 允许为 false（关闭分页），需先判断再取配置项
+  const [currentPage, setCurrentPage] = useState(pagination ? pagination.current || 1 : 1);
+  const [pageSize, setPageSize] = useState(pagination ? pagination.pageSize || 20 : 20);
 
   // 处理排序点击
   const handleSort = (column: Column) => {

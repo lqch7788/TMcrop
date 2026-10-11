@@ -9,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui';
-import { SkillFilters, SKILL_TAGS } from './types';
+import { SKILL_TAGS } from './types';
+// SkillFilters 类型定义在 hooks/useSkill，与页面/筛选器共用同一份
+import type { SkillFilters } from './hooks/useSkill';
 import { cn } from '@/lib/utils';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 

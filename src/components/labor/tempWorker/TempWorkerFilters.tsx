@@ -1,6 +1,8 @@
 import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TempWorkerFiltersProps, WorkerType, StaffStatus } from './types';
+// 筛选条件类型（与组件同名，需别名导入）
+import type { TempWorkerFilters as TempWorkerFiltersValue } from './types';
 
 /**
  * 临时工筛选栏组件
@@ -13,7 +15,7 @@ export function TempWorkerFilters({
   const workerTypes: WorkerType[] = ['正式工', '临时工', '季节工'];
   const statuses: StaffStatus[] = ['在职', '离职', '停薪留职', '试用期'];
 
-  const handleChange = (field: keyof TempWorkerFilters, value: string) => {
+  const handleChange = (field: keyof TempWorkerFiltersValue, value: string) => {
     onFiltersChange({ ...filters, [field]: value });
   };
 

@@ -1,6 +1,7 @@
 /**
  * 调薪申请类型定义
  */
+import type { SalaryAdjustmentData } from '../../../stores/useSalaryAdjustmentStore';
 
 /** 调整类型选项 */
 export const ADJUSTMENT_TYPE_OPTIONS = [
@@ -17,25 +18,11 @@ export type SalaryAdjustmentStatus = '待审批' | '已通过' | '已拒绝' | '
 
 /**
  * 调薪记录
+ *
+ * 2026-10-11 类型清理：统一使用 Store 侧类型（后端数据模型为唯一真相源），
+ * 不再重复定义，避免同义类型互不兼容
  */
-export interface SalaryAdjustmentRecord {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  position: string;
-  currentSalary: number;
-  proposedSalary: number;
-  adjustmentAmount: number;
-  adjustmentRatio: number;
-  adjustmentType: string;
-  effectiveDate: string;
-  reason: string;
-  status: SalaryAdjustmentStatus;
-  approver?: string;
-  approveTime?: string;
-  remarks?: string;
-}
+export type SalaryAdjustmentRecord = SalaryAdjustmentData;
 
 /**
  * 筛选条件

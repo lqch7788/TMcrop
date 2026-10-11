@@ -3,7 +3,9 @@
  * 迁移自 SettingsDataProvider 的错误实现
  * Worker类型来自 apiWorkerService 而非 authorityService
  */
-import { create } from 'zustand';import { getWorkerList, type Worker } from '../services/apiWorkerService';
+import { create } from 'zustand';import { getWorkerList } from '../services/apiWorkerService';
+// 2026-10-11：Worker 类型定义在 types/index，apiWorkerService 未导出该类型
+import type { Worker } from '../types';
 
 interface WorkerStore {
   workers: Worker[];

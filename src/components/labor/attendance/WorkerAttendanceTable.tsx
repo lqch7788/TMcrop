@@ -15,13 +15,14 @@ interface WorkerAttendanceTableProps {
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
-  selectedRows: number[];
+  // 记录 id 来自 store/后端，为 string（与页面/Store 保持一致）
+  selectedRows: string[];
   currentPage: number;
   pageSize: number;
   totalCount: number;
   totalPages: number;
   onSelectAll: () => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onShowExportModal: () => void;

@@ -1,20 +1,29 @@
 import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import type { TaskStatus } from '../../../../types/task';
 
+/**
+ * 批量编辑用到的任务字段形状
+ *
+ * 2026-10-11：除 id 外全部改为可选，且 priority/status 与农事任务 Task 的联合类型对齐 ——
+ * 调用方（BatchEditAdapter）传入的是农事任务中心的任务（单 type 字段、字段可空），
+ * 原「全部必填 + priority/status 为宽 string」的形状与之不兼容，导致适配器 3 处类型错误。
+ */
 interface TaskData {
   id: string;
-  types: string[];
-  typeName: string;
-  field: string;
-  crop: string;
-  assignee: string;
-  planStart: string;
-  planEnd: string;
-  progress: number;
-  status: string;
-  priority: string;
-  estimatedDays: number;
-  estimatedHours: number;
+  types?: string[];
+  typeName?: string;
+  field?: string;
+  crop?: string;
+  assignee?: string;
+  planStart?: string;
+  planEnd?: string;
+  progress?: number;
+  status?: TaskStatus;
+  /** 与 types/task.ts 的 Task.priority 同域（含 low） */
+  priority?: 'urgent' | 'high' | 'normal' | 'low';
+  estimatedDays?: number;
+  estimatedHours?: number;
 }
 
 interface BatchEditModalProps {
@@ -30,7 +39,8 @@ interface BatchEditModalProps {
   onClose: () => void;
   onConfirm: () => void;
   fields: { id: number; name: string; type: string; crop: string; area: number }[];
-  staff: { id: number; name: string; status: string }[];
+  /** 执行人下拉只需姓名；id/status 保留为可选以兼容工人档案（string id）与旧调用方 */
+  staff: { id?: string | number; name: string; status?: string }[];
   taskTypes: { value: string; label: string }[];
 }
 

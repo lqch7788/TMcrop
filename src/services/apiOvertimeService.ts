@@ -242,6 +242,10 @@ export async function createOvertimeRecord(overtime: CreateOvertimeParams): Prom
     ...overtime,
     id: response.data?.id || `OT${Date.now()}`,
     overtimeTypeLabel: OVERTIME_TYPE_LABELS[overtime.overtimeType] || overtime.overtimeType,
+    // 2026-10-11：OvertimeRecord 要求金额字段为 number，入参可选 → 回显时兜底 0
+    baseSalary: overtime.baseSalary ?? 0,
+    hourlyRate: overtime.hourlyRate ?? 0,
+    overtimePay: overtime.overtimePay ?? 0,
     status: 'pending',
     statusLabel: '待审批',
     createTime: new Date().toISOString(),

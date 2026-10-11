@@ -37,6 +37,8 @@ interface BackupRecord {
   id?: string;
   filename?: string;
   size?: number;
+  /** 2026-10-11：备份耗时（本页 100 行读 result.data.duration 展示，后端 /backup/create 返回） */
+  duration?: number;
   type?: 'daily' | 'monthly';
   created_at?: string;
   path?: string;

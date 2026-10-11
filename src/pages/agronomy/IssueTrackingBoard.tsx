@@ -69,7 +69,8 @@ export default function IssueTrackingBoard() {
     setLoading(true);
     try {
       const result = await getIssueBoard();
-      setBoard(result.board);
+      // IssueBoard 是具名接口（无隐式索引签名），而 board 需按列 key 动态取值 → 展开为匿名对象类型后赋值
+      setBoard({ ...result.board });
       setCounts(result.counts);
     } catch (err: unknown) {
       const m = err instanceof Error ? err.message : String(err);
@@ -87,7 +88,8 @@ export default function IssueTrackingBoard() {
       try {
         const result = await getIssueBoard();
         if (cancelled) return;
-        setBoard(result.board);
+        // IssueBoard 是具名接口（无隐式索引签名），而 board 需按列 key 动态取值 → 展开为匿名对象类型后赋值
+        setBoard({ ...result.board });
         setCounts(result.counts);
       } catch (err: unknown) {
         if (cancelled) return;

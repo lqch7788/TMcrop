@@ -29,13 +29,15 @@ export interface UseMonthlyReportReturn {
   setExportMode: (mode: boolean) => void;
   selectedRows: number[];
   setSelectedRows: (rows: number[]) => void;
-  exportFormat: 'excel' | 'csv' | 'word';
-  setExportFormat: (format: 'excel' | 'csv' | 'word') => void;
+  // 导出格式：与共享 ExportFormatModal 的 (format: string) 回调对齐
+  exportFormat: string;
+  setExportFormat: (format: string) => void;
   showExportModal: boolean;
   setShowExportModal: (show: boolean) => void;
   // 导出相关方法
   handleSelectAll: () => void;
-  handleSelectRow: (id: string) => void;
+  // 行选择回调：id 即记录主键（number）
+  handleSelectRow: (id: number) => void;
   handleConfirmExport: () => void;
   handleCancelExport: () => void;
   // 计算属性
@@ -68,7 +70,7 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+  const [exportFormat, setExportFormat] = useState<string>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
   const reports = store.reports;
@@ -89,10 +91,9 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
   }, [selectedRows, currentPage, pageSize, reports]);
 
   // 选择/取消选择单行
-  const handleSelectRow = useCallback((id: string) => {
-    const numId = Number(id);
+  const handleSelectRow = useCallback((id: number) => {
     setSelectedRows((prev) =>
-      prev.includes(numId) ? prev.filter((rowId) => rowId !== numId) : [...prev, numId]
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
     );
   }, []);
 
@@ -114,7 +115,8 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
       '物料成本', '问题数', '已解决问题', '考勤率', '发布人', '发布日期', '状态',
     ];
 
-    const exportData = selectedData.map((row) => ({
+    // 显式声明索引类型：下方按表头（string）动态取值
+    const exportData = selectedData.map((row): Record<string, string | number> => ({
       '报表编号': row.code,
       '月份': row.month,
       '部门': row.dept,

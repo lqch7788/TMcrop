@@ -7,7 +7,9 @@ import { X } from 'lucide-react';
 
 import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
-import { FeedbackFormData } from './types';
+import { FeedbackFormData, TaskDispatchTask } from './types';
+import type { Task } from '../../../hooks/useTasks';
+import type { ProblemFlowRecord } from '../../../hooks/useProblemDispatch';
 import { STATUS_MAP, PRIORITY_MAP, getTypeLabel } from './constants';
 import { Label } from '@/components/ui';
 
@@ -20,7 +22,8 @@ interface TaskFeedbackModalProps {
   task: TaskDispatchTask | Task | null;
   feedbackForm: FeedbackFormData;
   setFeedbackForm: React.Dispatch<React.SetStateAction<FeedbackFormData>>;
-  problemFlowRecords: Array<Record<string, unknown>>;
+  // 与 TaskFlowTimeline 的 records 类型一致
+  problemFlowRecords: ProblemFlowRecord[];
   validateRequiredFeedback: () => { valid: boolean; message: string };
   onSubmit: () => void;
 }

@@ -9,7 +9,7 @@ import { Edit2, Trash2, Printer, Image, Download, Plus, Calendar, StopCircle, Ta
 import { Button } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
-import { CropVariety } from '../../../../types/crop';
+import { CropVariety } from '../../../../types/cropVariety';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
@@ -17,7 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Paginati
 import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型（用于批量操作）
-type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
+// 2026-10-11：与 SeedlingPage 的 operationMode state 联合对齐（原缺 detail/dailyRecord/image，
+//   页面类型是这些值的超集 → 传参报 TS2322）。与 PlantingTable 的同名联合保持一致口径。
+type SeedlingOperationMode = 'normal' | 'detail' | 'edit' | 'dailyRecord' | 'print' | 'image' | 'delete' | 'export';
 
 interface SeedlingTableProps {
   data: Seedling[];
@@ -720,8 +722,9 @@ export function SeedlingTable({
                               title={isEnded ? lockReason : '编辑'}
                             />
                           )}
-                          {/* 出圃入库（onInbound）：进行中+异常结束可用+已取消可查看 */}
-                          {onInbound && !record.isHarvestLocked && (
+                          {/* 出圃入库（onInbound）：进行中+异常结束可用+已取消可查看
+                              注：育苗表无 is_harvest_locked 列（该软锁仅种植有），原 !record.isHarvestLocked 恒为 true，故移除 */}
+                          {onInbound && (
                             <ActionIconButton
                               variant="harvest"
                               icon={<Package className="w-4 h-4" />}

@@ -7,7 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { useProductionPlanStore, useWorkerStore, useGreenhouseStore } from '../../../../stores';
+import { useWorkerStore, useGreenhouseStore } from '../../../../stores';
 
 // 任务类型选项
 const taskTypes = FARM_OPERATION_TYPES.map(t => ({
@@ -15,13 +15,8 @@ const taskTypes = FARM_OPERATION_TYPES.map(t => ({
   label: t.label,
 }));
 
-// 获取批次选项（从Store读取）
-function getBatchCodes() {
-  return useProductionPlanStore.getState().batches.map(b => ({
-    value: b.batchCode,
-    label: b.batchCode,
-  }));
-}
+// 2026-10-11：删除 getBatchCodes() 及 batchCodes prop —— BatchEditModal 既无此 prop 也无对应表单控件，
+//   传过去会被整段忽略（类型报错 TS2322）。若后续要做「批量改关联批次」，需先在弹窗内实现该字段。
 
 // 获取员工选项（从Store读取）
 function getStaff() {
@@ -51,8 +46,7 @@ export function BatchEditAdapter({
   const [editedTasks, setEditedTasks] = useState<Record<string, Partial<Task>>>({});
   const [editedTaskIds, setEditedTaskIds] = useState<string[]>([]);
 
-  // 从Store获取批次和员工选项（响应式）
-  const batchCodes = useMemo(() => getBatchCodes(), []);
+  // 从Store获取员工选项（响应式）
   const staff = useMemo(() => getStaff(), []);
 
   // 任务区域字段（从温室 Store 动态计算，替换硬编码 farmMockData.taskDispatchFields）
@@ -99,7 +93,6 @@ export function BatchEditAdapter({
       fields={fields}
       staff={staff}
       taskTypes={taskTypes}
-      batchCodes={batchCodes}
     />
   );
 }

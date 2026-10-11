@@ -64,7 +64,9 @@ export interface CropBatch {
   targetYield: number;
   actualYield: number;
   // 统一使用 batchStatus，删除原有的 status 字段（2026-06-05）
-  batchStatus: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected' | 'published';
+  // 2026-10-11：补齐后端 crop_batches.batch_status 的实际取值域（productionPlan 路由写入 planning / pending_execution），
+  //   避免调用点与这两个值比较时被判为"永不成立"
+  batchStatus: 'draft' | 'pending' | 'planning' | 'pending_execution' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected' | 'published';
   // 兼容字段（farmData.ts mock 数据使用 — 2026-06-30 tsc 兼容）
   status?: string;
   plantingMode: string;
@@ -81,6 +83,8 @@ export interface CropBatch {
   // ========== 三阶段通用字段（根据planType显示不同内容）==========
   // 场地/区域字段 - 种源=供应商, 育苗=育苗场地, 种植=种植区域
   locationName?: string;        // 通用场地名称
+  // 2026-10-11：apiProductionPlanService 的 normalize 会透传后端 areaName（列表/详情展示用）
+  areaName?: string;            // 区域名称（兼容后端 area_name 列）
   // 目标数量字段 - 种源=采购数量, 育苗=目标成苗数, 种植=目标产量
   targetQuantity?: number;      // 通用目标数量
   unit?: string;                // 单位（kg、株、m²等）
@@ -148,7 +152,8 @@ export interface TempTask {
   id: string;
   taskCode: string;
   title: string;
-  priority: 'high' | 'medium' | 'low';
+  // 2026-10-11：补 'normal' —— src/data/labor/laborData.ts 实际使用该值
+  priority: 'high' | 'medium' | 'low' | 'normal';
   status: 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'cancelled' | 'accepted' | 'failed' | 'abandoned' | 'rejected' | 'pending_reassign';
   assigneeId: string;
   assigneeName: string;
@@ -159,14 +164,24 @@ export interface TempTask {
   notes?: string;
   images?: string[];
   urgency: TempTaskUrgency;
-  tempTaskType: string;
-  workLocation: string;
+  // 2026-10-11：改为可选——消费方（TempTaskTab）对这两字段均有 `?? `/`|| ` 兜底
+  // （如 `task.tempTaskType || '其他'`），且 src/data/labor/laborData.ts 的 mock 记录不含这两字段
+  tempTaskType?: string;
+  workLocation?: string;
   estimatedHours: number;
+  /** 2026-10-11：实际工时（src/data/labor/laborData.ts 等读取；估算字段 estimatedHours 已有） */
+  actualHours?: number;
   estimatedDays?: number;
   greenhouseId?: string;
   workerCount?: number;
   rejectCount?: number;
   progress?: number;
+  // 2026-10-11：补临时任务生命周期字段（laborData 的 TempTask 样例数据、临时任务详情均在使用）
+  startDate?: string;
+  acceptedAt?: string;
+  completionRemarks?: string;
+  createdAt?: string;
+  updatedAt?: string;
   // 必填反馈要求
   requiredFeedback?: string[];
   // 兼容字段（TempTaskPage/旧数据使用）
@@ -421,6 +436,8 @@ export interface HarvestRecord {
   supplementaryApprover?: string;       // 审核人
   supplementaryDate?: string;         // 审核日期
   originalRecordDate?: string;         // 原入库日期（补录时填写）
+  /** 2026-10-11：创建人（harvest_records.create_by 列，采收列表/导出读取） */
+  createBy?: string;
 }
 
 // 采收产品明细
@@ -526,6 +543,12 @@ export interface Worker {
   id: string;
   workerId: string;           // 工号
   name: string;               // 姓名
+  /**
+   * 2026-10-11：账号体系字段（FarmActivityManagement 的 `w.oid || w.id`、`w.name || w.realName` 回退读取）。
+   * 工人档案本身无这两列，接口返回时才有值；调用点的 `||` 回退保证缺省时行为不变
+   */
+  oid?: string;
+  realName?: string;
   gender: '男' | '女';
   age: number;
   birthDate: string;          // 出生日期
@@ -661,10 +684,10 @@ export type {
   PurchasePlanStatus,
   PurchasePlanPriority,
   PurchasePlanType,
-  PurchasePlanSortField,
+  PurchaseSortField,
   SortDirection,
   SortConfig,
-  PurchasePlanFilters,
+  PurchaseFilters,
 } from './purchase';
 
 export {
@@ -675,15 +698,9 @@ export {
   PURCHASE_PLAN_PRIORITY_STYLE,
 } from './purchase';
 
-// 巡查管理模块类型导出
-export type {
-  Equipment,
-  Infrastructure,
-} from './index';
-
 // 农事任务类型导出
+// 注：Task 已在本文件顶部（第 110 行）声明并导出，此处不再从 './task' 重复导出，避免同名冲突
 export type {
-  Task,
   TaskStatus,
   TaskAction,
   TaskRecord,

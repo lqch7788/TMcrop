@@ -575,7 +575,8 @@ export function useProblemDispatch() {
   const storeWorkers = useWorkerStore((s) => s.workers);
   const workerList = useMemo(() => {
     const filtered = storeWorkers
-      .filter(w => w.status === 'active')
+      // 2026-10-11：Worker.status 取值为中文枚举（在职/离职/退休），原 'active' 恒不成立 → 候选执行人列表一直为空
+      .filter(w => w.status === '在职')
       .map(w => ({
         id: w.id,
         workerId: w.workerId,

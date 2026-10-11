@@ -1,7 +1,7 @@
 /**
  * 加班申请页面类型定义
  */
-import { OvertimeType } from '../../../../types/labor/overtime';
+import { OvertimeType } from '../../../../../types/labor/overtime';
 
 /** 加班类型选项 */
 export const OVERTIME_TYPE_OPTIONS = [

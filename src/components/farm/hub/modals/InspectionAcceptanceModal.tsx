@@ -13,10 +13,23 @@ import { problemStatusToCN } from '../../../../utils/problemStatus';
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
+/**
+ * 流转记录（含历史渲染兜底字段）
+ *
+ * 后端 problems.flow_records 实际只写入 id/problemId/operatorId/operatorName/action/
+ * fromStatus/toStatus/comment/actionTime/feedbackData；actionName/progress/reason 为
+ * 历史版本的渲染兜底，渲染处已做存在性判断，不影响现实数据。
+ */
+type FlowRecordCompat = ProblemFlowRecord & {
+  actionName?: string;
+  progress?: number;
+  reason?: string;
+};
+
 interface InspectionAcceptanceModalProps {
   isOpen: boolean;
   problem: any;  // 问题数据
-  records: ProblemFlowRecord[];  // 流转记录
+  records: FlowRecordCompat[];  // 流转记录
   isLoadingRecords?: boolean;
   onAccept: (comments?: string) => void;
   onReject: (reason: string) => void;

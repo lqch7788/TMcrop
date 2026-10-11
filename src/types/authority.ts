@@ -99,6 +99,13 @@ export interface User {
   hireDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * 2026-10-11：人员岗位/角色展示值（ReassignTaskModal 渲染 `{user.name} ({user.role})`）。
+   * 后端 authority 用户列表返回的是 `position` 列，由 useUserStore.loadUsers 归一化映射填入
+   */
+  role?: string;
+  /** 后端 users 表的岗位列（useUserStore 归一化时映射到 role） */
+  position?: string;
 }
 
 // 用户角色关联

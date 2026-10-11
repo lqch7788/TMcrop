@@ -1,23 +1,14 @@
 /**
  * 绩效考核数据类型定义
  */
+import type { PerformanceRecord as ApiPerformanceRecord } from '@/services/apiPerformanceService';
 
 // 绩效考核记录
-export interface PerformanceRecord {
-  id: string;
-  staffId: string;
-  staffName: string;
-  department: string;
-  month: string;  // YYYY-MM
-  taskCompletionRate: number;  // 任务完成率 0-100%
-  attendanceRate: number;       // 出勤率 0-100%
-  workQuality: number;          // 工作质量 0-100%
-  safetyCompliance: number;     // 安全规范 0-100%
-  teamworkAttitude: number;      // 协作态度 0-100%
-  totalScore: number;           // 综合得分
-  rank?: string;                // 排名
-  status: '待评估' | '已评估';
-}
+/**
+ * 2026-10-11 类型清理：统一使用 service 侧权威类型（apiPerformanceService.PerformanceRecord），
+ * 不再重复定义，避免与 Store 返回的数据类型互不兼容
+ */
+export type PerformanceRecord = ApiPerformanceRecord;
 
 // 考核维度配置
 export interface PerformanceDimension {

@@ -287,29 +287,46 @@ export function searchVarieties(keyword: string): CropVarietySearchResult[] {
   const lowerKeyword = keyword.toLowerCase().trim();
   const results: CropVarietySearchResult[] = [];
 
+  // 2026-10-11：统一产出下拉/回填用的扁平字段（value/label/fullPath）——
+  //   订单 EditModal 等消费端本来就在读 hit.value/hit.label/hit.fullPath，此前恒为 undefined
+  const toResult = (
+    variety: CropVariety,
+    matchField: CropVarietySearchResult['matchField'],
+    matchText: string,
+  ): CropVarietySearchResult => ({
+    variety,
+    matchField,
+    matchText,
+    value: variety.cropCode,
+    label: variety.detailVarietyName || variety.subVariety1Name || variety.varietyName,
+    fullPath: `${variety.categoryName} > ${variety.typeName} > ${variety.varietyName}`
+      + (variety.subVariety1Name ? ` > ${variety.subVariety1Name}` : '')
+      + (variety.detailVarietyName ? ` > ${variety.detailVarietyName}` : ''),
+  });
+
   for (const variety of varieties) {
     // 匹配编码
     if (variety.cropCode.toLowerCase().includes(lowerKeyword)) {
-      results.push({ variety, matchField: 'cropCode', matchText: variety.cropCode });
+      results.push(toResult(variety, 'cropCode', variety.cropCode));
       continue;
     }
 
     // 匹配品种名称（最细分作物品种）
     if (variety.varietyName.toLowerCase().includes(lowerKeyword)) {
-      results.push({ variety, matchField: 'varietyName', matchText: variety.varietyName });
+      results.push(toResult(variety, 'varietyName', variety.varietyName));
       continue;
     }
 
     // 匹配子品种名称（如"红颜"）
     if (variety.subVariety1Name && variety.subVariety1Name.toLowerCase().includes(lowerKeyword)) {
-      results.push({ variety, matchField: 'subVariety1Name', matchText: variety.subVariety1Name });
+      results.push(toResult(variety, 'subVariety1Name', variety.subVariety1Name));
       continue;
     }
 
     // 匹配别名
     if (variety.alias && variety.alias.some(a => a.toLowerCase().includes(lowerKeyword))) {
       const matchedAlias = variety.alias.find(a => a.toLowerCase().includes(lowerKeyword));
-      results.push({ variety, matchField: 'alias', matchText: matchedAlias! });
+      results.push(toResult(variety, 'alias', matchedAlias!));
     }
   }
 
@@ -639,7 +656,8 @@ export function checkDuplicateVariety(
         v.typeCode === typeCode &&
         v.varietyCode === varietyCode &&
         v.subVariety1Code === (subVariety1Code || '') &&
-        v.subVariety2Code === (subVariety2Code || '') &&
+        // 2026-10-11：字段名对齐 CropVariety（子品种2 即最细分的 detailVarietyCode）
+        v.detailVarietyCode === (subVariety2Code || '') &&
         v.varietyName === varietyName) {
       return { isDuplicate: true, existingVariety: v };
     }
@@ -671,7 +689,8 @@ export function getMaxSubVarietyCode(
         v.varietyCode === varietyCode &&
         v.subVariety1Code === (subVariety1Code || '')) {
       // 子品种2代码
-      const code = parseInt(v.subVariety2Code || '0', 10);
+      // 2026-10-11：CropVariety 无 subVariety2Code 字段，最细分层级字段名为 detailVarietyCode（与 getMaxDetailVarietyCode 一致）
+      const code = parseInt(v.detailVarietyCode || '0', 10);
       if (code > maxCode) {
         maxCode = code;
       }
@@ -698,7 +717,8 @@ export function getMaxSubVariety2Code(
         v.typeCode === typeCode &&
         v.varietyCode === varietyCode &&
         v.subVariety1Code === subVariety1Code) {
-      const code = parseInt(v.subVariety2Code || '0', 10);
+      // 2026-10-11：CropVariety 无 subVariety2Code 字段，最细分层级字段名为 detailVarietyCode（与 getMaxDetailVarietyCode 一致）
+      const code = parseInt(v.detailVarietyCode || '0', 10);
       if (code > maxCode) {
         maxCode = code;
       }
