@@ -2,9 +2,11 @@
 import { Eye, Edit, Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+// 2026-10-11：改用权威类型 —— 原本地 interface 是"单物料"旧模型，与数据源（一单多物料 materials[]）不匹配
+import type { InboundRecord } from '@/types/warehouseInbound.types';
 
-// 入库记录类型
-interface InboundRecord {
+/** 展开后的展示行（单头字段 + 单个物料明细） */
+interface InboundDisplayRow {
   id: number;
   code: string;
   materialCode: string;
@@ -14,7 +16,8 @@ interface InboundRecord {
   supplier: string;
   inboundDate: string;
   operator: string;
-  status: 'completed' | 'pending';
+  status: string;
+  rowKey: string;
 }
 
 interface InboundTableProps {
@@ -40,7 +43,30 @@ export default function InboundTable({
   onPageSizeChange,
   onAddClick,
 }: InboundTableProps) {
-  const totalPages = Math.ceil(records.length / pageSize) || 1;
+  // 2026-10-11：一单多物料展开成"一行一物料"（无明细时占位一行）
+  const rows: InboundDisplayRow[] = records.flatMap((r) => {
+    const mats = r.materials ?? [];
+    const head = {
+      id: r.id,
+      code: r.code,
+      supplier: r.supplier,
+      inboundDate: r.inboundDate,
+      operator: r.operator,
+      status: String(r.status),
+    };
+    if (mats.length === 0) {
+      return [{ ...head, materialCode: '-', materialName: '-', quantity: 0, unit: '-', rowKey: String(r.id) }];
+    }
+    return mats.map((m, idx) => ({
+      ...head,
+      materialCode: m.code,
+      materialName: m.name,
+      quantity: m.quantity,
+      unit: m.unit,
+      rowKey: `${r.id}-${m.id ?? idx}`,
+    }));
+  });
+  const totalPages = Math.ceil(rows.length / pageSize) || 1;
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -71,8 +97,8 @@ export default function InboundTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {records.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
+            {rows.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((record) => (
+              <tr key={record.rowKey} className="hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.code}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{record.materialCode}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{record.materialName}</td>
@@ -116,7 +142,7 @@ export default function InboundTable({
 
       {/* 分页 */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <div className="text-sm text-gray-500">共 {records.length} 条</div>
+        <div className="text-sm text-gray-500">共 {rows.length} 条</div>
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

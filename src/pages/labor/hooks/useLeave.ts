@@ -53,12 +53,12 @@ const LEAVE_STATUS_EN_TO_CN: Record<string, LeaveStatus> = {
   withdrawn: '已撤回',
 };
 
-/** 中文标签 → 英文枚举值 */
-const LEAVE_TYPE_CN_TO_EN: Record<string, string> = {};
+/** 中文标签 → 英文枚举值（2026-10-11：导出供批量编辑等场景复用） */
+export const LEAVE_TYPE_CN_TO_EN: Record<string, string> = {};
 for (const [en, cn] of Object.entries(LEAVE_TYPE_EN_TO_CN)) {
   LEAVE_TYPE_CN_TO_EN[cn] = en;
 }
-const LEAVE_STATUS_CN_TO_EN: Record<string, string> = {};
+export const LEAVE_STATUS_CN_TO_EN: Record<string, string> = {};
 for (const [en, cn] of Object.entries(LEAVE_STATUS_EN_TO_CN)) {
   LEAVE_STATUS_CN_TO_EN[cn] = en;
 }

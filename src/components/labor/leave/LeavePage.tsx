@@ -7,7 +7,9 @@ import { LeaveDetailModal } from './LeaveDetailModal';
 import { LeaveFormModal } from './LeaveFormModal';
 import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
-import { useLeaveStore } from '@/stores/leaveStore';
+import { useLeaveStore, type LeaveType, type LeaveStatus } from '@/stores/leaveStore';
+// 2026-10-11：批量编辑需要中文→英文枚举映射（与单条保存同口径，避免中文直接写入 DB）
+import { LEAVE_TYPE_CN_TO_EN, LEAVE_STATUS_CN_TO_EN } from '@/pages/labor/hooks/useLeave';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 
@@ -116,7 +118,21 @@ export function LeavePage() {
     editedRecordIds.forEach(id => {
       const editedData = editedRecords[id];
       if (editedData && Object.keys(editedData).length > 0) {
-        store.updateItem(id, editedData);
+        // 2026-10-11：组件视图模型（中文枚举）→ store 模型（英文枚举）映射，与单条保存同口径
+        // （可编辑字段仅这 7 个，其余与 store 同名直接透传；leaveType/status 需查 CN→EN 表）
+        store.updateItem(id, {
+          ...(editedData.days !== undefined ? { days: editedData.days } : {}),
+          ...(editedData.startDate ? { startDate: editedData.startDate } : {}),
+          ...(editedData.endDate ? { endDate: editedData.endDate } : {}),
+          ...(editedData.reason !== undefined ? { reason: editedData.reason } : {}),
+          ...(editedData.remarks !== undefined ? { remarks: editedData.remarks } : {}),
+          ...(editedData.leaveType
+            ? { leaveType: (LEAVE_TYPE_CN_TO_EN[editedData.leaveType] || editedData.leaveType) as LeaveType }
+            : {}),
+          ...(editedData.status
+            ? { status: (LEAVE_STATUS_CN_TO_EN[editedData.status] || editedData.status) as LeaveStatus }
+            : {}),
+        });
       }
     });
     store.fetchItems();

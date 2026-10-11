@@ -13,6 +13,14 @@ import { DetailModal } from './components/SalaryAdjustmentModals/DetailModal';
 
 export default function SalaryAdjustmentPage() {
   const workers = useUserStore((state) => state.users);
+  // 2026-10-11：hook 与弹窗下拉均期望 {workerId,name,department,position,...} 形状
+  //   （User 的 oid/name/department_name/position 映射；workerId 用 oid 作为唯一标识）
+  const workerOptions = workers.map((u) => ({
+    workerId: u.oid,
+    name: u.name || u.real_name || u.username || '',
+    department: u.department_name || '',
+    position: u.position || '',
+  }));
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {
@@ -47,7 +55,7 @@ export default function SalaryAdjustmentPage() {
     handleBatchReject,
     handleExport,
     setBatchMode,
-  } = useSalaryAdjustment(workers);
+  } = useSalaryAdjustment(workerOptions);
 
   return (
     <div className="space-y-4">
@@ -94,7 +102,7 @@ export default function SalaryAdjustmentPage() {
         onStaffChange={handleStaffChange}
         onProposedSalaryChange={handleProposedSalaryChange}
         onSubmit={handleSubmit}
-        workers={workers}
+        workers={workerOptions}
         displayAmount={displayAmount}
         displayRatio={displayRatio}
       />

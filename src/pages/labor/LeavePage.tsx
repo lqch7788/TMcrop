@@ -14,6 +14,13 @@ import { WithdrawModal } from './components/LeaveModals/WithdrawModal';
 
 export default function LeavePage() {
   const workers = useUserStore((state) => state.users);
+  // 2026-10-11：弹窗下拉需要 {workerId,name,department} 形状（User 的 oid/name/department_name 映射；
+  //   workerId 用 oid 作为唯一标识，与 useLeave 的 staffId ⇄ workerId 读写口径一致）
+  const workerOptions = workers.map((u) => ({
+    workerId: u.oid,
+    name: u.name || u.real_name || u.username || '',
+    department: u.department_name || '',
+  }));
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {
@@ -103,7 +110,7 @@ export default function LeavePage() {
         onDateChange={handleDateChange}
         onSubmit={handleSubmit}
         currentQuota={currentQuota}
-        workers={workers}
+        workers={workerOptions}
       />
 
       {/* 详情弹窗 */}
