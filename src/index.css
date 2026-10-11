@@ -171,8 +171,9 @@ img {
   transform: translateY(-1px);
 }
 
+/* 2026-10-11：卡片顶部"温室区域"标题条改蓝色底（用户要求）；表格首行标题行(.table-header)保持绿色 */
 .card-greenhouse .card-title {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 0.6rem 1rem;
   font-weight: 600;
@@ -183,6 +184,7 @@ img {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 2026-10-11：表格首行标题行保持绿色（顶部标题条 .card-title 改蓝，见上） */
 .card-greenhouse .table-header {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
@@ -219,8 +221,9 @@ img {
   transform: translateY(-1px);
 }
 
+/* 2026-10-11：卡片顶部"大田区域"标题条改蓝色底（用户要求）；表格首行标题行(.table-header)保持绿色 */
 .card-field .card-title {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 0.6rem 1rem;
   font-weight: 600;
@@ -231,6 +234,7 @@ img {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 2026-10-11：表格首行标题行保持绿色（顶部标题条 .card-title 改蓝，见上） */
 .card-field .table-header {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
