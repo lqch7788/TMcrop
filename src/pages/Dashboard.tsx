@@ -12,6 +12,8 @@ import { EnergyCard } from '../components/dashboard/cards/EnergyCard';
 import { TodayTasksCard } from '../components/dashboard/cards/TodayTasksCard';
 import { AlertsCard } from '../components/dashboard/cards/AlertsCard';
 import { WeatherWidget } from '../components/dashboard/widgets/WeatherWidget';
+import { ProblemsCard } from '../components/dashboard/widgets/ProblemsCard';
+import { AlertFeedCard } from '../components/dashboard/widgets/AlertFeedCard';
 
 // 导入子组件
 import { useDashboard } from './Dashboard/hooks/useDashboard';
@@ -212,6 +214,12 @@ export default function Dashboard() {
             filteredCostAnalysis={filteredCostAnalysis}
             onPeriodChange={setCostPeriod}
           />
+
+          {/* 待处理问题（2026-10-11 新增：填充右列底部，与左列列表底部对齐） */}
+          <ProblemsCard />
+
+          {/* 最新告警（2026-10-11 新增） */}
+          <AlertFeedCard />
         </div>
       </div>
 
