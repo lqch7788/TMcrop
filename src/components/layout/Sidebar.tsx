@@ -56,7 +56,7 @@ const cropSubItems = [
   { icon: Bug, label: '病虫害管理', path: '/pest-control' },
 ];
 
-// 人工管理4大模块（离职申请、招聘申请、工资预算已整合到人事管理）
+// 人工管理7大模块：考勤/人事/薪酬 3 大主子页（招聘/入职/离职/合同/技能 5 块归入人事管理 §7.2；计件/预算归入薪酬管理 §7.3）
 const laborSubItems = [
   { icon: Users, label: '考勤管理', path: '/labor/attendance' },
   { icon: UserPlus, label: '人事管理', path: '/labor/personnel' },
