@@ -3,8 +3,8 @@
  * 7 个专用系统（IoT/Smart/Traceability/BigData/AI/Management/Market）的 Layout 复用
  * 移除了 sticky 定位（由父级 Layout 控制）
  */
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell, ChevronDown, LogOut, User, Settings, Home, ClipboardList, ListTodo
 } from 'lucide-react';
@@ -23,9 +23,26 @@ const styles = `
 
 export function GlobalTopBar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isBellRinging, setIsBellRinging] = useState(false);
+  const lastNavTime = useRef<number>(Date.now());
+
+  // ★ IS-NEW-150 诊断：监听自动跳转到 /announcement（15-20s 后无操作触发）
+  // 源码全局未发现 navigate('/announcement') 调用，怀疑是某 Effect/订阅触发
+  // 此处记录可疑跳转的时间戳与前后路径，供复现时定位
+  useEffect(() => {
+    const now = Date.now();
+    const sinceLastNav = now - lastNavTime.current;
+    if (location.pathname === '/announcement' && sinceLastNav > 5000) {
+      console.warn(
+        '[IS-NEW-150 诊断] 检测到自动跳转到 /announcement：',
+        { from: document.referrer, sinceLastNavMs: sinceLastNav, ts: new Date(now).toISOString() }
+      );
+    }
+    lastNavTime.current = now;
+  }, [location.pathname]);
 
   // ★ V3.0 Phase 1: 系统名称从DB动态读取（兜底值保持原硬编码名称）
   const systemName = useSystemConfigValue('system.name', '弘讯智能种植云');
