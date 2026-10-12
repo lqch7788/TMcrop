@@ -86,13 +86,15 @@ export default function WarehouseManagement() {
         capacity: newWarehouse.capacity,
         managerId: newWarehouse.managerId,
         managerName: newWarehouse.managerName,
+        status: newWarehouse.status as WarehouseType['status'],
       });
       await refreshWarehouses();
       setShowModal(false);
       setNewWarehouse({ status: 'active' });
     } catch (err) {
-      // logger.error('创建仓库失败:', err);
-      await showAlert('创建仓库失败');
+      // IS-NEW-148：把后端 409 重复编码错误暴露给用户
+      const msg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || '创建仓库失败';
+      await showAlert(msg);
     }
   };
 
@@ -108,14 +110,16 @@ export default function WarehouseManagement() {
         capacity: newWarehouse.capacity,
         managerId: newWarehouse.managerId,
         managerName: newWarehouse.managerName,
+        status: newWarehouse.status as WarehouseType['status'],
       });
       await refreshWarehouses();
       setShowModal(false);
       setEditingWarehouse(null);
       setNewWarehouse({ status: 'active' });
     } catch (err) {
-      // logger.error('更新仓库失败:', err);
-      await showAlert('更新仓库失败');
+      // IS-NEW-148：把后端 409 重复编码错误暴露给用户
+      const msg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || '更新仓库失败';
+      await showAlert(msg);
     }
   };
 

@@ -852,12 +852,15 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         // （源头拦截无效提交；此类提交在审批时会被 fail-loud 拒绝而卡单）
         if (!srcWhName) {
           setTopError('请选择调出仓库（下拉只显示确实有该作物库存的仓库）');
+          setSubmitting(false);  // IS-NEW-161：防御性重置，避免 return 顺序错乱导致灰色加载态
           return;
         }
         const srcAvail = Number((formData as any).sourceAvailable);
         const submitQty = Number(formData.quantity) || 0;
-        if (Number.isFinite(srcAvail) && srcAvail >= 0 && submitQty > srcAvail) {
+        // IS-NEW-161：去掉 srcAvail >= 0 条件，避免 -1/NaN 时校验被跳过、用户看不到错误
+        if (Number.isFinite(srcAvail) && Number.isFinite(submitQty) && submitQty > srcAvail) {
           setTopError(`调拨数量 ${submitQty} 超出调出仓库「${srcWhName}」该作物可用库存 ${srcAvail}${(formData as any).sourceUnit || ''}，请调整数量`);
+          setSubmitting(false);
           return;
         }
         const matchedSourceWh = srcWhName

@@ -38,11 +38,21 @@ export function DetailModal({
 }: DetailModalProps) {
   const canApprove = item?.status === ApprovalStatus.PENDING;
 
+  // 5 TAB 标题映射（领料/退料/入库/调拨/补录）—— 修复 IS-NEW-144（之前调拨/补录 TAB 错显"领料单详情"）
+  const titleMap: Record<string, string> = {
+    material: '领料',
+    return: '退料',
+    purchase: '入库',
+    transfer: '调拨',
+    supplement: '补录',
+  };
+  const tabLabel = titleMap[activeTab || 'material'] || '单据';
+
   return (
     <UnifiedModal
       isOpen={show && !!item}
       onClose={onClose}
-      title={`${activeTab === 'return' ? '退料' : activeTab === 'purchase' ? '采购' : '领料'}单详情`}
+      title={`${tabLabel}单详情`}
       size="xl"
       showFooter={true}
       footer={

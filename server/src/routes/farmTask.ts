@@ -8,6 +8,8 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 // v0.3 前置 3 + 前置 5：租户上下文 + RBAC 权限守卫
 import { tenantContext } from '../middleware/tenantContext';
 import { permissionGuard } from '../middleware/permissionGuard';
+// 2026-10-12 P2 (IS-NEW-159) 修复：拒绝/撤回原因长度仅前端校验，绕过即 500；后端补 zod min(6)
+import { z } from 'zod';
 
 const router = Router();
 
@@ -32,6 +34,11 @@ function runInTransaction(db: any, work: () => void): void {
     throw err;
   }
 }
+
+// 2026-10-12 P2 (IS-NEW-159) 修复：reject/withdraw reason 长度校验 schema（min 6 字符）
+const ReasonSchema = z.object({
+  reason: z.string().min(6, '原因至少 6 个字符').max(500),
+});
 
 // 任务状态值标准化映射（中文 -> 英文）
 const TASK_STATUS_MAP: Record<string, string> = {
@@ -1101,6 +1108,11 @@ router.post('/:id/publish', (req: Request, res: Response) => {
 router.post('/:id/withdraw', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // 2026-10-12 (IS-NEW-159) P2 修复：reason 长度校验（min 6），与前端一致防止 500
+    const parsed = ReasonSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({ success: false, error: parsed.error.issues[0]?.message || '参数校验失败' });
+    }
     // 2026-09-21 修复：前端一直会发送 reason，但此前此处未接收、也没落库，
     //   导致"撤回原因"在任何地方都查不到。现接收并写入流转记录描述。
     const { operator_id, operator_name, reason } = req.body;
@@ -1382,6 +1394,11 @@ router.post('/:id/complete', (req: Request, res: Response) => {
 router.post('/:id/reject', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // 2026-10-12 (IS-NEW-159) P2 修复：reason 长度校验（min 6），防止绕过前端导致 500
+    const parsed = ReasonSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({ success: false, error: parsed.error.issues[0]?.message || '参数校验失败' });
+    }
     const { reason, operator_id, operator_name } = req.body;
 
     const db = getDatabase();

@@ -948,6 +948,8 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
 }
 
 // ---------- 上下游追溯 Tab（Phase 13.2.5-8: 树状 + 缩进 + 联动跳转） ----------
+// 2026-10-12 (IS-NEW-162) P3 修复：默认截断 5 层，避免深度 >5 + 节点 >200 时浏览器卡顿；点击"展开更多"展示全部
+const MAX_TRACE_DEPTH = 5;
 function TraceTab({
   upstream, downstream, loading, onSelectChild,
 }: {
@@ -956,11 +958,21 @@ function TraceTab({
   loading: boolean;
   onSelectChild?: (instanceId: string) => void;
 }) {
+  const [showAllUp, setShowAllUp] = useState(false);
+  const [showAllDown, setShowAllDown] = useState(false);
   if (loading) {
     return <div className="text-center py-8 text-gray-500">加载中...</div>;
   }
   // 跳过上游首项（=自己，depth=0），从 depth>=1 开始渲染
   const upstreamFiltered = upstream.filter((u) => (u.depth ?? 0) >= 1);
+  const upstreamDisplayed = showAllUp
+    ? upstreamFiltered
+    : upstreamFiltered.filter((u) => (u.depth ?? 0) <= MAX_TRACE_DEPTH);
+  const upstreamHiddenCount = upstreamFiltered.length - upstreamDisplayed.length;
+  const downstreamDisplayed = showAllDown
+    ? downstream
+    : downstream.filter((u) => (u.depth ?? 0) <= MAX_TRACE_DEPTH);
+  const downstreamHiddenCount = downstream.length - downstreamDisplayed.length;
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -973,7 +985,7 @@ function TraceTab({
           <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">无上游来源（最原始记录）</div>
         ) : (
           <div className="space-y-1">
-            {upstreamFiltered.map((item, idx) => {
+            {upstreamDisplayed.map((item, idx) => {
               const depth = item.depth ?? 1;
               const isCINode = item.instanceId?.startsWith('CI');
               return (
@@ -1003,6 +1015,25 @@ function TraceTab({
                 </div>
               );
             })}
+            {/* 2026-10-12 (IS-NEW-162) P3：默认截断 5 层，"展开更多"展示全部隐藏节点 */}
+            {upstreamHiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllUp(true)}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-2 px-2"
+              >
+                展开更多（隐藏 {upstreamHiddenCount} 个深层节点）
+              </button>
+            )}
+            {showAllUp && upstreamHiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllUp(false)}
+                className="text-xs text-gray-500 hover:text-gray-700 hover:underline px-2"
+              >
+                收起深层节点
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1016,7 +1047,7 @@ function TraceTab({
           <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">无下游去向（未被任何后续业务使用）</div>
         ) : (
           <div className="space-y-1">
-            {downstream.map((item, idx) => {
+            {downstreamDisplayed.map((item, idx) => {
               const depth = item.depth ?? 1;
               const isOutboundTx = item.stockType === 'outbound';
               return (
@@ -1044,6 +1075,24 @@ function TraceTab({
                 </div>
               );
             })}
+            {downstreamHiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllDown(true)}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-2 px-2"
+              >
+                展开更多（隐藏 {downstreamHiddenCount} 个深层节点）
+              </button>
+            )}
+            {showAllDown && downstreamHiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllDown(false)}
+                className="text-xs text-gray-500 hover:text-gray-700 hover:underline px-2"
+              >
+                收起深层节点
+              </button>
+            )}
           </div>
         )}
       </div>

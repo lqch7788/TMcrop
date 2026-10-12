@@ -138,7 +138,17 @@ export function MaterialApprovalFilters({
 
         {/* 按钮区域 */}
         <div className="flex gap-2">
-          <Button variant="default" className="h-8 px-4">
+          {/* 搜索按钮：保留为装饰性（筛选已 onChange 实时生效）；点击仅触发焦点回到第一个输入框，避免"点了没反应"—— IS-NEW-143 */}
+          <Button
+            type="button"
+            variant="default"
+            className="h-8 px-4"
+            onClick={() => {
+              const firstInput = document.querySelector<HTMLInputElement>('input[placeholder="单号..."]');
+              firstInput?.focus();
+            }}
+            title="筛选已实时生效；点击此按钮将焦点定位到单号输入框"
+          >
             <Search className="w-4 h-4" /> 搜索
           </Button>
           <Button

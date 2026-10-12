@@ -214,6 +214,22 @@ function insertAuditLog(req: Request, res: Response, ctx: ChangeContext): void {
 /**
  * Express 中间件：自动记录所有写请求的操作日志
  */
+// 2026-10-12 (IS-NEW-170) P3 修复：同用户同 action 5 分钟内去重（动作级，防止轮询/重复点击刷屏）
+const RECENT_ACTION_WINDOW_MS = 5 * 60 * 1000;
+const recentActions: Array<{ key: string; ts: number }> = [];
+function shouldSkipRecentAction(userId: string, action: string): boolean {
+  const key = `${userId}|${action}`;
+  const now = Date.now();
+  while (recentActions.length > 0 && now - recentActions[0].ts > RECENT_ACTION_WINDOW_MS) {
+    recentActions.shift();
+  }
+  const hit = recentActions.find((e) => e.key === key);
+  if (hit) return true;
+  recentActions.push({ key, ts: now });
+  if (recentActions.length > 200) recentActions.length = 0; // 防止内存膨胀
+  return false;
+}
+
 export function auditTrail(req: Request, res: Response, next: NextFunction): void {
   const pathname = req.originalUrl.split('?')[0];
 
@@ -250,6 +266,10 @@ export function auditTrail(req: Request, res: Response, next: NextFunction): voi
       // 本请求内已有业务语义化日志，避免重复
       return;
     }
+    // 2026-10-12 (IS-NEW-170) P3：同用户同 action 5 分钟内去重
+    const userId = req.user?.userId ?? '';
+    const action = ACTION_BY_METHOD[req.method] ?? req.method.toLowerCase();
+    if (shouldSkipRecentAction(userId, action)) return;
     insertAuditLog(req, res, changeContext);
   });
 
