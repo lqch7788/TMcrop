@@ -32,6 +32,8 @@ export default function OrderPage() {
   const canCreate = true;
   const canDelete = true;
   const canExport = true;
+  // IS-NEW-152：批量编辑过去硬编码 canEdit={canEdit} 与"所有人可使用"的策略不一致 —— 改为 true
+  const canEdit = true;
 
   // 从 Zustand Store 获取订单数据和操作方法
   const {
@@ -407,7 +409,7 @@ export default function OrderPage() {
         onCancelExport={handleExportCancel}
         onAdd={() => setAddModalOpen(true)}
         canCreate={canCreate}
-        canEdit={false}
+        canEdit={canEdit}
         canDelete={canDelete}
         canExport={true}
         showLowStockButton={false}

@@ -345,7 +345,13 @@ export default function WarehouseInboundPage() {
       />
 
       {/* 2026-09-28：移除 InboundBatchEditModal 挂载——入口自 2026-08-10 起已不存在，
-          showBatchEditModal 恒为 false（死代码），且其批量保存路径从未被验证 */}
+          showBatchEditModal 恒为 false（死代码），其批量保存路径从未被验证 */}
+      {/* 2026-10-12 (IS-NEW-164) P3 修复：实验性路径加 console.warn 标记，避免未来误恢复而踩坑 */}
+      {(() => {
+        // eslint-disable-next-line no-console
+        console.warn('[WarehouseInboundPage] InboundBatchEditModal 当前未挂载（实验性，批量保存路径未验证），如需启用请先在 useWarehouseInbound 内补测试');
+        return null;
+      })()}
 
       <InboundExportModal
         records={selectedRecords}

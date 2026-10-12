@@ -672,8 +672,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <SelectItem value="harvest">
                     <span className="flex items-center gap-1.5"><Wheat className="w-3.5 h-3.5" /> 采收入库</span>
                   </SelectItem>
+                  {/* 2026-10-12 (IS-NEW-168) P2 修复："种植自留种"≠入库，红色警示避免误选 — 母株保留场景，需走育苗补录审批流 */}
                   <SelectItem value="planting_self_kept" disabled={!hasSeedSource}>
-                    <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 种植自留种</span>
+                    <span className="flex items-center gap-1.5 text-red-600 font-medium">
+                      <AlertTriangle className="w-3.5 h-3.5" /> 种植自留种（保留母株·不直接入库）
+                    </span>
                   </SelectItem>
                 </SelectContent>
               </Select>

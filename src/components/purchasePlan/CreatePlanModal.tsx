@@ -84,8 +84,8 @@ export function CreatePlanModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 审批规则说明折叠状态（默认折叠）
-  const [showApprovalRules, setShowApprovalRules] = useState(false);
+  // 审批规则说明折叠状态（IS-NEW-155：默认折叠导致用户看不到金额阈值，默认展开）
+  const [showApprovalRules, setShowApprovalRules] = useState(true);
 
   // 字典：从 store 动态加载（字段名以实际 store 定义为准）
   // 修复：采购计划的"关联生成批次号"必须是生产计划批次号（CropBatch.batchCode）

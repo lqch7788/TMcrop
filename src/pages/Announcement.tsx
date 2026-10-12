@@ -283,6 +283,12 @@ export default function Announcement() {
               <>
                 <Button size="sm" onClick={handleExport}><Download className="w-4 h-4" />导出</Button>
                 <Button size="sm" onClick={handleAdd}><Plus className="w-4 h-4" />发布公告</Button>
+                {/* IS-NEW-151：批量删除入口缺失 — 仅当有选中行时才显示，调用已有 handleBatchDelete */}
+                {selectedIds.length > 0 && (
+                  <Button size="sm" variant="destructive" onClick={handleBatchDelete}>
+                    <Trash2 className="w-4 h-4" />批量删除 ({selectedIds.length})
+                  </Button>
+                )}
               </>
             )}
           </AnnouncementFilters>

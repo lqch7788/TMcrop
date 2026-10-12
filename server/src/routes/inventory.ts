@@ -732,6 +732,14 @@ router.post('/freeze', async (req: Request, res: Response) => {
     if (body.freezeType === 'order' && !body.orderId) {
       return res.status(400).json({ success: false, error: '关联订单冻结需要提供 orderId' });
     }
+    // 2026-10-12 (IS-NEW-160) P2 修复：purpose/remarks 枚举校验（前端是下拉，后端不应允许自由文本注入）
+    const FREEZE_PURPOSE_OPTIONS = ['订单预留', '样品留样', '内部留用', '其他'] as const;
+    if (body.purpose && !(FREEZE_PURPOSE_OPTIONS as readonly string[]).includes(body.purpose)) {
+      return res.status(422).json({ success: false, error: `purpose 非法，应为：${FREEZE_PURPOSE_OPTIONS.join('/')}` });
+    }
+    if (body.remarks && body.remarks.length > 200) {
+      return res.status(422).json({ success: false, error: 'remarks 长度不能超过 200' });
+    }
 
     const db = getDatabase();
     ensureFreezeColumns(db); // 确保 inventory_freeze 表有完整列

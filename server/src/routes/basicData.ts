@@ -205,6 +205,15 @@ router.post('/warehouses', (req, res) => {
       return res.status(400).json({ success: false, error: '仓库名称和编码不能为空' });
     }
 
+    // IS-NEW-148：仓库编码唯一校验（防止演示库已有重复仍允许写入）
+    const dup = db.prepare(`SELECT id FROM warehouses WHERE code = ? LIMIT 1`);
+    dup.bind([code]);
+    if (dup.step()) {
+      dup.free();
+      return res.status(409).json({ success: false, error: `仓库编码 ${code} 已存在，请使用其他编码` });
+    }
+    dup.free();
+
     const id = `WH${Date.now()}`;
     const oid = `WH${Date.now()}`;
     const now = new Date().toISOString();
@@ -232,6 +241,17 @@ router.put('/warehouses/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
     const { name, code, warehouseType, location, capacity, managerId, managerName, status } = req.body;
+
+    // IS-NEW-148：编辑时若编码变更也校验唯一
+    if (code) {
+      const dup = db.prepare(`SELECT id FROM warehouses WHERE code = ? AND id != ? LIMIT 1`);
+      dup.bind([code, id]);
+      if (dup.step()) {
+        dup.free();
+        return res.status(409).json({ success: false, error: `仓库编码 ${code} 已被其他仓库占用` });
+      }
+      dup.free();
+    }
 
     const now = new Date().toISOString();
 

@@ -468,9 +468,14 @@ export default function MaterialFlowPage() {
   };
 
   // 点击库存实例ID → 打开库存详情弹窗
+  // 2026-10-12 (IS-NEW-163) P2 修复：跳转时把 instance_id 同步到 URL search params，
+  //   刷新页面后仍能定位到该实例（避免"上下文丢失"，便于深链分享）
   const handleViewInventoryDetail = (instanceId: string) => {
     setDetailInstanceId(instanceId);
     setDetailOpen(true);
+    const params = new URLSearchParams(window.location.search);
+    params.set('instance_id', instanceId);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   };
 
   const handleDoExport = (format: 'excel' | 'csv' | 'pdf') => {

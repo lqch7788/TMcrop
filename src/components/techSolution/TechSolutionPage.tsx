@@ -692,13 +692,12 @@ export function TechSolutionPage() {
             setSelectedRows([]);
           },
           onDownloadDetail: (tech) => {
-            const fileName = tech.planDetailFileName!;
-            const isDocx = fileName.endsWith('.docx');
+            // IS-NEW-154：与 3.2 ProductionTable 一致 — planDetail 是 markdown，
+            //   把 .docx 替换为 .md（之前 .docx 但内容是 markdown，Word 打开报错）
+            const fileName = tech.planDetailFileName!.replace(/\.docx$/i, '.md');
             const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${getDictItemName('planting_mode', tech.plantingMode)}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
             const blob = new Blob([content], {
-              type: isDocx
-                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                : 'text/markdown',
+              type: 'text/markdown;charset=utf-8',
             });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');

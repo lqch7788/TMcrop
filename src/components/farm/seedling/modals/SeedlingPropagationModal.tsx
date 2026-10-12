@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { UnifiedModal, Button } from '@/components/ui';
-import { Download, Lock, GitBranch, X, Sprout, Pencil, Trash2 } from 'lucide-react';
+import { Download, Lock, GitBranch, X, Sprout, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { Seedling } from '../../../../types/crop';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -441,6 +441,12 @@ export function SeedlingPropagationModal({
                   placeholder="0"
                   title="接种的插穗/接芽/外植体/球茎等数量"
                   className={deepInputClass} />
+                {/* 2026-10-12 (IS-NEW-167) P2 修复：接种数前端 max 校验，防止超过母株库存触发服务端 422 */}
+                {form.inoculationCount != null && record.motherPlantCount != null && form.inoculationCount > record.motherPlantCount && (
+                  <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> 接种数 {form.inoculationCount} 超过母株库存 {record.motherPlantCount}
+                  </p>
+                )}
                 <div className="mt-1 text-xs text-gray-500 leading-relaxed">
                   接种的插穗 / 接芽 / 外植体 / 球茎等数量
                   <span className="ml-1 text-gray-400">（繁殖系数的基数）</span>

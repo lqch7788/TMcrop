@@ -34,7 +34,7 @@ const rolePermissions = {
     quickActions: [
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '基地总览', icon: LayoutDashboard, path: '/dashboard', desc: '查看基地概览' },
-      { label: '用户管理', icon: Users, path: '/settings/personnel', desc: '管理系统用户' },
+      { label: '用户管理', icon: Users, path: '/settings/user-permission', desc: '管理系统用户（§10.13 用户权限管理 6 TAB）' },
       { label: '系统设置', icon: Settings, path: '/settings', desc: '系统配置管理' },
     ]
   },
@@ -73,7 +73,7 @@ const rolePermissions = {
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '基地总览', icon: LayoutDashboard, path: '/dashboard', desc: '本基地概览' },
       { label: '任务派发', icon: ClipboardList, path: '/farm-hub', desc: '本部门任务分配' },
-      { label: '考勤审核', icon: Calendar, path: '/settings/personnel/attendance', desc: '审核员工考勤' },
+      { label: '考勤审核', icon: Calendar, path: '/labor/attendance', desc: '审核员工考勤（§7.1 考勤管理）' },
     ]
   },
   technician: {
