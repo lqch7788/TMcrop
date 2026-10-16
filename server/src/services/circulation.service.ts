@@ -188,7 +188,9 @@ function generateQuantityRefillSuffix(parentSourceCode: string, parentSourceId: 
  * 执行回流
  * @throws Error 参数校验失败或业务规则违反
  */
-export async function executeCirculation(rawInput: unknown): Promise<CirculationResult> {
+// 2026-10-16：去 async —— 全链路纯 sql.js 同步（executePropagation 内的 repo 查询亦已同步化），
+//   以便同步上下文（如审批联动 approvalLinkage.updateBusinessTable）直接调用。既有 await 调用方不受影响。
+export function executeCirculation(rawInput: unknown): CirculationResult {
   const input = CirculationInputSchema.parse(rawInput)
 
   // PROPAGATION 必须填 subType
@@ -232,7 +234,8 @@ export async function executeCirculation(rawInput: unknown): Promise<Circulation
   return executeDisposal(input, circId)
 }
 
-async function executePropagation(input: CirculationInput, circId: string): Promise<CirculationResult> {
+// 2026-10-16：去 async（内部唯一 await 的 repo 查询已同步化）
+function executePropagation(input: CirculationInput, circId: string): CirculationResult {
   const db = getDatabase()
   // 2026-06-19: 用完整 ISO 格式（new Date().toISOString()）作为 create_time/update_time
   const nowISO = new Date().toISOString()
@@ -299,7 +302,7 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
       // 2026-07-18: 合并键含 propagation_method → 扦插/留种/自交不同子类型绝不合并
       // 2026-07-18: 两段式优先 — 同种植批次（linked_planting_id）优先匹配
       const repo = new SeedSourceRepository()
-      mergeable = await repo.findMergeableSeedSource({
+      mergeable = repo.findMergeableSeedSource({
         cropCode, seedForm, unit, generation,
         propagationMethod,
         linkedPlantingId: input.sourceModule === 'planting' ? input.sourceId : null,

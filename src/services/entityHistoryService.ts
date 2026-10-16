@@ -123,13 +123,19 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
       // 2026-07-23 修复：refCode 优先用 targetCode（用户视角"这条记录关联的本订单"）
       // 之前 sourceCode || targetCode 对种植实体显示的是种源单号（如 ZZ20260723-002），
       // 用户期望的是种植单 ZZ20260723-003 自身
+      // 2026-10-16：quantityDelta 符号按实体在流转中的角色 —— 实体为 source（流出方）→ -|N|；
+      //   实体为 target（流入方）→ 保留原值（通常为正；correction 等已带负号）。
+      //   修复用户报告："种源 → 种植 +9" 在种源时间线应显示 -9（被使用是减少）。
+      const rawQty = r.targetQuantity ?? r.sourceQuantity ?? undefined;
+      const isSourceEntity = !!code && r.sourceCode === code;
+      const qtyDelta = rawQty == null ? undefined : (isSourceEntity ? -Math.abs(rawQty) : rawQty);
       return {
         id: r.id,
         occurredAt: r.createdAt,
         source: 'flow' as const,
         category: 'flow' as const,
         action: FLOW_TYPE_CN[r.flowType] || r.flowType || '流转',
-        quantityDelta: r.targetQuantity || r.sourceQuantity || undefined,
+        quantityDelta: qtyDelta,
         unit: r.targetUnit || r.sourceUnit,
         refCode: r.targetCode || r.sourceCode,
         refModule: undefined,
@@ -170,29 +176,9 @@ export async function fetchFullHistory(
     merged.push(item);
   }
 
-  // 2026-10-16：同事件去重 —— 一次业务操作会同时写 transaction/inbound 行（账务视角，备注含来源明细）
-  //   和 flow 行（流转视角，如「库存 → 种源」），两条在时间线中并列显示造成重复感
-  //   （用户报告：每次调拨显示「调拨入库 +N」+「库存→种源 +N」两条，信息高度重复）。
-  //   规则：flow 行若存在配对行（数量相同 + 时间差 ≤2 秒 的 transaction/inbound 行）则隐藏 ——
-  //   transaction 行的备注含更完整的来源信息（如"从库存 IPR-xxx 调拨入种源"），flow 行信息是其子集。
-  //   同时自然覆盖「数量修正(correction) vs 入库作废/冲销(reverse_inbound)」等同类重复。
-  //   未配对的历史 flow 行（如无对应流水的流转记录）照常显示，不丢信息。
-  const PAIR_WINDOW_MS = 2000;
-  const isPairedFlow = (f: HistoryItem): boolean => {
-    if (f.category !== 'flow' || f.quantityDelta == null) return false;
-    const ft = Date.parse(f.occurredAt);
-    if (Number.isNaN(ft)) return false;
-    return merged.some((t) => {
-      if (t.category !== 'transaction' && t.category !== 'inbound') return false;
-      if (t.quantityDelta == null) return false;
-      if (Math.abs(t.quantityDelta - f.quantityDelta!) > 1e-9) return false;
-      const tt = Date.parse(t.occurredAt);
-      return !Number.isNaN(tt) && Math.abs(tt - ft) <= PAIR_WINDOW_MS;
-    });
-  };
-  const deduped = merged.filter((item) => !isPairedFlow(item));
-
+  // 2026-10-16 v2：同事件配对去重不再在数据层做 —— 已移至 EntityHistoryTimeline 的 filtered：
+  //   「全部」视图去重（同事件只显示账务行），「流转」等分类视图保留完整台账（该分类的价值即完整流水）。
   // 按时间倒序
-  deduped.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-  return deduped;
+  merged.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  return merged;
 }

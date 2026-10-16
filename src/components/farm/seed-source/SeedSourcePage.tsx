@@ -11,6 +11,7 @@ import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
+import { useLocation } from 'react-router-dom';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
@@ -95,6 +96,9 @@ export default function SeedSourcePage() {
   // 2026-07-21：监听 URL ?seedCode=xxx 参数（扫码跳转场景）
   // 找到对应种源后自动打开详情弹窗，处理完后用 replaceState 清理 URL（避免刷新重复触发）
   const handledSeedCodeRef = useRef<string | null>(null);
+  // 2026-10-16：同页深链响应 —— 溯源链点击种源编码（navigate 到同路由新 query）时组件不重挂载，
+  // 需把 location.search 纳入依赖才能重新触发下面的 seedCode 处理
+  const location = useLocation();
   useEffect(() => {
     if (seedSources.length === 0) return; // 等种源列表加载完
     const params = new URLSearchParams(window.location.search);
@@ -110,7 +114,7 @@ export default function SeedSourcePage() {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [seedSources]);
+  }, [seedSources, location.search]);
 
   // 2026-06-06: R3 — 监听 store.loadItems 错误并弹 Toast（不修改 store 内部实现）
   // store 内部已在 catch 中 set({ error: msg })，此处仅做 UI 展示

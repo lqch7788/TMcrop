@@ -964,7 +964,10 @@ export class SeedSourceRepository {
    * 业务语义：同一茬种植多次采收 → 种子合并到同一种源（溯源清晰）
    *           不同批次但同作物同形态 → 兜底合并（避免重复建种源）
    */
-  async findMergeableSeedSource(q: {
+  // 2026-10-16：去 async（原为"假 async"，内部纯 sql.js 同步查询）——
+  //   为让 executePropagation 可在同步链路（审批联动）中调用，此方法连同 circulation.service 一并同步化。
+  //   所有既有调用方的 `await` 对非 Promise 值依然合法，无需改动。
+  findMergeableSeedSource(q: {
     cropCode: string;
     seedForm: string;
     unit: string;
@@ -974,7 +977,7 @@ export class SeedSourceRepository {
     linkedPlantingId?: string | null;
     /** 2026-07-19：可选排除 parent 种源（避免 PARENT 自身被命中回流自身） */
     excludeSourceId?: string | null;
-  }): Promise<MatchableStock | null> {
+  }): MatchableStock | null {
     const db = getDatabase();
     // 2026-07-19 P0-5：加 deleted_at IS NULL 过滤，避免软删种源被错误合并
     // 软删种源 status='active' 但 deleted_at 不为 NULL，仍会被命中导致脏数据
@@ -1092,27 +1095,69 @@ export class SeedSourceRepository {
   }
 
   /**
-   * 2026-10-16：种源出库流水（用于「出入库记录」Tab 的出库区）
-   * 当前出库业务仅「退库到作物库存」——take 退库主记录（transfer_in + business_type='inventory_transfer'，
-   * 由 seedSourceReturn.service 写入，remarks='种源 X 退库 N单位'）。
-   * 注：退库可能伴生一条 transfer_out（内部记账，扣减种源库存），此处只取主记录避免重复显示。
-   * quantity 返回原始正数（存储为原库存视角 +N），前端按种源视角显示为负。
+   * 2026-10-16：种源出库流水（「出入库记录」Tab 出库区）
+   * 2026-10-16 v2：合并"使用记录"——种源作为仓库的全部出库方向业务（用户决策：使用记录 100% 是出库方向）：
+   *   ① 退库到作物库存（inventory_transaction：transfer_in + business_type='inventory_transfer' 主记录）
+   *   ② 育苗使用（inventory_transaction：outbound + business_type='seedling'，instance_id='seed_source:<id>'）
+   *   ③ 种植移入（planting_move_records：source_type='seed' 且 operation_type='move_in'，种源 → 种植批次）
+   * 统一输出：quantity 恒为正数（扣减量，前端按种源视角显示 -N）；targetDesc = 去向文本。
    */
   async getOutboundRecords(seedSourceId: string): Promise<SeedSourceOutboundRecord[]> {
     const db = getDatabase();
     const stmt = db.prepare(`
-      SELECT tx.id, tx.quantity, tx.instance_id AS sourceInstanceId,
-             tx.operate_date AS recordDate, tx.operator_name AS operatorName,
-             tx.remarks, tx.create_time AS createdAt,
-             ss.unit AS unit
-      FROM inventory_transaction tx
-      LEFT JOIN seed_sources ss ON ss.id = tx.business_id
-      WHERE tx.business_id = ?
-        AND tx.business_type = 'inventory_transfer'
-        AND tx.transaction_type = 'transfer_in'
-      ORDER BY tx.create_time DESC
+      SELECT u.*, ss.unit AS unit
+      FROM (
+        -- ① 退库到作物库存（只取主记录；伴生 transfer_out 为内部记账不取，避免重复）
+        SELECT tx.id,
+               COALESCE(tx.operate_date, substr(tx.create_time, 1, 10)) AS recordDate,
+               'return_to_stock' AS outType,
+               tx.quantity AS quantity,
+               tx.instance_id AS targetDesc,
+               tx.operator_name AS operatorName,
+               tx.remarks AS remarks,
+               tx.create_time AS createdAt
+        FROM inventory_transaction tx
+        WHERE tx.business_id = ?
+          AND tx.business_type = 'inventory_transfer'
+          AND tx.transaction_type = 'transfer_in'
+
+        UNION ALL
+
+        -- ② 育苗使用（outbound 存负数，取 ABS）
+        SELECT tx.id,
+               COALESCE(tx.operate_date, substr(tx.create_time, 1, 10)),
+               'seedling_use',
+               ABS(tx.quantity),
+               tx.business_code || CASE WHEN s.greenhouse_name IS NOT NULL AND s.greenhouse_name != '' THEN ' · ' || s.greenhouse_name ELSE '' END,
+               tx.operator_name,
+               tx.remarks,
+               tx.create_time
+        FROM inventory_transaction tx
+        LEFT JOIN seedlings s ON s.id = tx.business_id
+        WHERE tx.instance_id = 'seed_source:' || ?
+          AND tx.transaction_type = 'outbound'
+          AND tx.business_type = 'seedling'
+
+        UNION ALL
+
+        -- ③ 种植移入（种源被种植领用）
+        SELECT pmr.id,
+               COALESCE(pmr.operation_date, substr(pmr.create_time, 1, 10)),
+               'planting_move_in',
+               pmr.quantity,
+               pmr.planting_code || CASE WHEN pmr.to_area_name IS NOT NULL AND pmr.to_area_name != '' THEN ' · ' || pmr.to_area_name ELSE '' END,
+               pmr.operator_name,
+               pmr.remarks,
+               pmr.create_time
+        FROM planting_move_records pmr
+        WHERE pmr.source_id = ?
+          AND pmr.source_type = 'seed'
+          AND pmr.operation_type = 'move_in'
+      ) u
+      LEFT JOIN seed_sources ss ON ss.id = ?
+      ORDER BY u.createdAt DESC
     `);
-    stmt.bind([seedSourceId]);
+    stmt.bind([seedSourceId, seedSourceId, seedSourceId, seedSourceId]);
     const rows: SeedSourceOutboundRecord[] = [];
     while (stmt.step()) rows.push(stmt.getAsObject() as unknown as SeedSourceOutboundRecord);
     stmt.free();
@@ -1266,11 +1311,14 @@ export interface SameCropSourceItem {
   createTime: string | null;
 }
 
-/** 2026-10-16：种源出库流水行（「出入库记录」Tab 出库区） */
+/** 2026-10-16：种源出库流水行（「出入库记录」Tab 出库区；v2 合并使用记录三来源） */
 export interface SeedSourceOutboundRecord {
   id: string;
+  /** return_to_stock（退库到作物库存）| seedling_use（育苗使用）| planting_move_in（种植移入） */
+  outType: string;
   quantity: number;
-  sourceInstanceId: string | null;
+  /** 去向文本（退库=原库存实例；育苗=育苗单+温室；种植=种植单+区域） */
+  targetDesc: string | null;
   recordDate: string | null;
   operatorName: string | null;
   remarks: string | null;

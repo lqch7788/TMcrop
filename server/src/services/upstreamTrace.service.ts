@@ -212,16 +212,22 @@ export function traceUpstream(sourceId: string, maxDepth = 10): UpstreamTraceRes
       switch (type) {
         case 'seed_source': {
           // 分支 1：调拨入库 — 每条路径独立 visited set（防止不同入库路径互相干扰）
+          // 2026-10-16 修复：同源多次调拨去重 —— 多条 INB 指向同一源库存时（如同一 IPR 分
+          //   11kg/100kg/10kg 多次调入），原实现为每条 INB 各展开一次 → 同一上游链路在溯源链中
+          //   重复出现（用户报告「溯源链重复、凌乱」）。
+          //   ⚠️ 分组键必须按"库存主键"归一：首条 INB 穿透得业务实例号（IPR-…），追加 INB 的
+          //   备注格式不同（"从 X"无"库存"二字）穿透失败、以 source_id（STK-…）查询——二者
+          //   最后都命中同一库存行，仅按穿透结果分组仍会重复。此处对每条 INB 先解析出库存行
+          //   （id 或 instance_id 双查），再以 stk.id 归一分组，每库存只展开一次、数量取合计。
           const ibStmt = db.prepare(`
             SELECT * FROM inventory_inbound_records WHERE business_id = ? LIMIT 3
           `);
           ibStmt.bind([id]);
+          const ibGroups = new Map<string, { stk: Record<string, unknown>; ib: Record<string, unknown>; totalQty: number }>();
+          const ibOrder: string[] = [];
           while (ibStmt.step()) {
             const ib = ibStmt.getAsObject() as Record<string, unknown>;
-            const st = String(ib.source_type || '');
-            const sm = String(ib.source_module || '');
             const srcId = String(ib.source_id || '');
-
             // 穿透策略：source_id 可能是中间库存（如 INS-20260722-0004），
             // 从 notes 提取真正的原库存 ID（如 IPR-20260722-0002）
             let realSrcId = srcId;
@@ -233,31 +239,45 @@ export function traceUpstream(sourceId: string, maxDepth = 10): UpstreamTraceRes
             stkStmt.bind([realSrcId, realSrcId]);
             if (stkStmt.step()) {
               const stk = stkStmt.getAsObject() as Record<string, unknown>;
-              // 用 inbound 的 quantity（调拨数量）覆盖 stock 的总量
+              const normKey = String(stk.id);  // 归一化分组键 = 库存主键
               const transferQty = Number(ib.quantity || 0);
-              if (transferQty > 0) {
-                stk.quantity = transferQty;
-                stk.unit = s(ib.unit) || s(stk.unit);
+              const existing = ibGroups.get(normKey);
+              if (existing) {
+                existing.totalQty += transferQty;
+              } else {
+                ibGroups.set(normKey, { stk, ib, totalQty: transferQty });
+                ibOrder.push(normKey);
               }
-              // 2026-10-16：source_type='transfer_inbound'（本次入库方式）已统一硬编码，
-              //   真正传递"源头信息"的是 source_origin（源头库存的入库方式，如 external_purchased/harvest 等）
-              //   显示「调拨入库（源头: 外购入库）」语义更准确
-              const originLabel = String(ib.source_origin || '');
-              const originText = SOURCE_TYPE_LABELS[originLabel] || originLabel || '';
-              const label = originText
-                ? `调拨入库（源头: ${originText}）`
-                : `调拨入库（来源: ${SOURCE_TYPE_LABELS[st] || st || sm}）`;
-              // 每条入库路径用独立的 visited set
-              const savedVisited = new Set(visited);
-              visited.clear();
-              const child = buildNode('inventory_stock', stk, 'transfer_to_source', label, depth + 1);
-              for (const vk of visited) savedVisited.add(vk);
-              visited = savedVisited;
-              if (child) children.push(child);
             }
             stkStmt.free();
           }
           ibStmt.free();
+
+          for (const normKey of ibOrder) {
+            const { stk, ib, totalQty } = ibGroups.get(normKey)!;
+            const st = String(ib.source_type || '');
+            const sm = String(ib.source_module || '');
+            // 用 inbound 的合计数量（调拨总量）覆盖 stock 的总量
+            if (totalQty > 0) {
+              stk.quantity = totalQty;
+              stk.unit = s(ib.unit) || s(stk.unit);
+            }
+            // 2026-10-16：source_type='transfer_inbound'（本次入库方式）已统一硬编码，
+            //   真正传递"源头信息"的是 source_origin（源头库存的入库方式，如 external_purchased/harvest 等）
+            //   显示「调拨入库（源头: 外购入库）」语义更准确
+            const originLabel = String(ib.source_origin || '');
+            const originText = SOURCE_TYPE_LABELS[originLabel] || originLabel || '';
+            const label = originText
+              ? `调拨入库（源头: ${originText}）`
+              : `调拨入库（来源: ${SOURCE_TYPE_LABELS[st] || st || sm}）`;
+            // 每条入库路径用独立的 visited set
+            const savedVisited = new Set(visited);
+            visited.clear();
+            const child = buildNode('inventory_stock', stk, 'transfer_to_source', label, depth + 1);
+            for (const vk of visited) savedVisited.add(vk);
+            visited = savedVisited;
+            if (child) children.push(child);
+          }
 
           // 分支 2：回流路径（PROPAGATION 种植留种）
           const circStmt = db.prepare(`

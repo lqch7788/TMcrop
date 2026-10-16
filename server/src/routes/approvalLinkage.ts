@@ -13,6 +13,8 @@ import { applyReturnStockOnApproval, revertReturnStockOnApproval } from './mater
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
 // 2026-10-10：本地日期工具——调拨联动写"日期类字段"（实例ID日期段/入库日期/流水操作日期）必须用本地日期
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
+// 2026-10-16：补录审批通过需执行真正的回流（executeCirculation 已同步化，可在同步链路直接调用）
+import { executeCirculation, deriveSeedFormSubType } from '../services/circulation.service';
 
 const router = Router();
 
@@ -1128,31 +1130,81 @@ export function updateBusinessTable(
       const seedStatus = status === 'approved' ? 'approved' : (status === 'rejected' ? 'rejected' : 'voided');
       try {
         if (status === 'approved') {
-          // 1. 写 planting_harvest_records（与 HarvestRecordModal 直入库流程对齐，destination=planting_self_kept）
+          // 2026-10-16 修复：审批通过必须执行真正的回流 —— 原实现只写审计行，
+          // 导致"种植自留种 22kg 后种源无回流记录、数量不增"（用户报告）。
+          // 对齐 planting.ts POST /:id/harvest-records 的 destination='planting_self_kept' 直连路径：
+          //   先 executeCirculation（PROPAGATION 合并/新建种源 + circulation 记录 + flow + 数量更新），
+          //   再写审计行并回填 planting_code / circulation_record_id。
+          const appSourceId = String(seedVal[seedIdx['source_id']] || '');
+          const appSourceModule = String(seedVal[seedIdx['source_module']] || '');
+          const appSeedForm = String(seedVal[seedIdx['seed_form']] || '');
+          const appQuantity = Number(seedVal[seedIdx['quantity']]) || 0;
+          const appUnit = String(seedVal[seedIdx['unit']] || '');
+
+          // 查 parentSourceId（来源记录的种源）+ planting_code（审计行回填）
+          let parentSourceId: string | null = null;
+          let plantingCodeForLog: string | null = null;
+          if (appSourceModule === 'planting') {
+            const pRows = db.exec('SELECT source_id, planting_code FROM plantings WHERE id = ?', [appSourceId]);
+            if (pRows.length && pRows[0].values.length) {
+              parentSourceId = String(pRows[0].values[0][0] || '') || null;
+              plantingCodeForLog = String(pRows[0].values[0][1] || '') || null;
+            }
+          } else if (appSourceModule === 'seedling') {
+            const sRows = db.exec('SELECT source_id FROM seedlings WHERE id = ?', [appSourceId]);
+            if (sRows.length && sRows[0].values.length) {
+              parentSourceId = String(sRows[0].values[0][0] || '') || null;
+            }
+          }
+          if (!parentSourceId) {
+            return { success: false, message: `补录申请 ${seedAppCode} 的来源记录缺失种源，无法回流` };
+          }
+
+          // 1. 真回流（PROPAGATION → 合并/新建种源 + 写 circulation + flow + 数量更新）
+          const circResult = executeCirculation({
+            circulationType: 'PROPAGATION',
+            sourceModule: appSourceModule,
+            sourceId: appSourceId,
+            parentSourceId,
+            subType: deriveSeedFormSubType(appSeedForm),
+            destination: 'seed_source',
+            quantity: appQuantity,
+            unit: appUnit,
+            notes: String(seedVal[seedIdx['notes']] || ''),
+            generation: String(seedVal[seedIdx['generation']] || ''),
+            seedForm: appSeedForm || undefined,
+            forceNew: Number(seedVal[seedIdx['force_new']]) === 1,
+            operatorName: String(seedVal[seedIdx['operator_name']] || String(seedVal[seedIdx['applicant_name']] || '')),
+            operatorId: String(seedVal[seedIdx['applicant_id']] || ''),
+          });
+
+          // 2. 写 planting_harvest_records（含关联键：planting_code + circulation_record_id）
           const phrId = `PHR_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
           db.run(`
             INSERT INTO planting_harvest_records (
-              id, planting_id, record_date, destination,
+              id, planting_id, planting_code, record_date, destination,
               quantity, unit, notes, source_form, sub_type,
-              operator_name, create_by, create_time, update_time
-            ) VALUES (?, ?, ?, 'planting_self_kept', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              operator_name, create_by, circulation_record_id, create_time, update_time
+            ) VALUES (?, ?, ?, ?, 'planting_self_kept', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             phrId,
-            String(seedVal[seedIdx['source_id']] || ''),
+            appSourceId,
+            plantingCodeForLog,
             now.slice(0, 10),
-            Number(seedVal[seedIdx['quantity']]) || 0,
-            String(seedVal[seedIdx['unit']] || ''),
+            appQuantity,
+            appUnit,
             String(seedVal[seedIdx['notes']] || ''),
-            String(seedVal[seedIdx['seed_form']] || ''),  // 映射到 source_form 列
-            String(seedVal[seedIdx['seed_form']] || ''),  // sub_type (与 source_form 同步)
+            appSeedForm,  // 映射到 source_form 列
+            appSeedForm,  // sub_type (与 source_form 同步)
             String(seedVal[seedIdx['operator_name']] || String(seedVal[seedIdx['applicant_name']] || '')),
             String(seedVal[seedIdx['create_by']] || ''),
+            circResult.circulationId,
             now, now,
           ]);
-          // 2. UPDATE 申请单 status='approved' + 审批元数据
+          // 3. UPDATE 申请单 status='approved' + 审批元数据
           db.run(`UPDATE seedling_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,
             ['approved', now, requestId]);
-          return { success: true, message: `育苗补录申请 ${seedAppCode} 已审批通过，回流到种源` };
+          return { success: true, message: `补录申请 ${seedAppCode} 已审批通过（已回流 ${appQuantity}${appUnit} 到种源）` };
         } else {
           // rejected / cancelled / voided → 仅改申请单状态
           db.run(`UPDATE seedling_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,

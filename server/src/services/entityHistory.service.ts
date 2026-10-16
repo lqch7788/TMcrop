@@ -233,7 +233,11 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           : txnType === 'inbound'
             ? '入库'
             : txnType === 'outbound'
-              ? '出库'
+              // 2026-10-16：领用类 outbound 按用途显示（比笼统的「出库」更准确）——
+              //   seedling → 育苗使用；internal_planting → 种植使用（与出库区命名一致）
+              ? (bizType === 'seedling' ? '育苗使用'
+                : bizType === 'internal_planting' ? '种植使用'
+                : '出库')
               : txnType === 'freeze'
                 ? '冻结'
                 : txnType === 'unfreeze'
@@ -314,10 +318,14 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           ON ss_new.id = cc.new_source_id
         LEFT JOIN users u
           ON u.id = cc.operator_id OR u.oid = cc.operator_id
-        WHERE cc.parent_source_id = ? OR cc.new_source_id = ?
+        -- 2026-10-16 修复：只显示"本人收到"的回流（new_source_id = 当前种源）——
+        --   原 parent_source_id OR new_source_id 会把"以本种源为母本的留种产出"也显示出来，
+        --   但新建模式下数量落在新种源（parent 种源数量不变），显示 +N 会让用户误以为回流加到了本种源
+        --   （用户报告）。母本血缘链在新种源的溯源链中完整可见，此处不丢信息。
+        WHERE cc.new_source_id = ?
         ORDER BY cc.created_at DESC LIMIT ?
       `);
-      stmt.bind([entityId, entityId, limit]);
+      stmt.bind([entityId, limit]);
       while (stmt.step()) {
         const r = stmt.getAsObject() as Record<string, unknown>;
         const qty = Number(r.quantity || 0);

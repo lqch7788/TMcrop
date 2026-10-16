@@ -70,6 +70,13 @@ export default function SeedlingPage() {
     createBy: '',
     status: ''
   });
+  // 2026-10-16：支持 ?seedlingCode= 深链（溯源链编码点击跳转 → 预填单号搜索自动定位到该行）
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('seedlingCode');
+    if (!code) return;
+    setFilters((prev) => ({ ...prev, seedlingCode: code }));
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);

@@ -435,7 +435,13 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         if (srcInfo[0]?.values?.[0]) {
           sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string);
         }
-        finalSourceCode = (seedling as any).source_code || (seedling as any).sourceCode || effectiveSourceId;
+        // 2026-10-16 修复：source_code 必须写种源业务编码（ZYxxx）——trace 端点按业务编码匹配
+        //   （source_code=? OR target_code=?），原值可能是内部 ID（SSxxx），会导致种源时间线
+        //   「流转」分类查不到该育苗领用记录（用户报告：被育苗使用后的流转缺失）
+        const ssCodeRows = db.exec('SELECT source_code FROM seed_sources WHERE id = ?', [effectiveSourceId]);
+        const realSsCode = ssCodeRows[0]?.values?.[0]?.[0];
+        finalSourceCode = (realSsCode ? String(realSsCode) : '')
+          || (seedling as any).source_code || (seedling as any).sourceCode || effectiveSourceId;
       }
       writeFlowLog({
         flow_type: flowType,
@@ -1210,10 +1216,18 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
           const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [source_id]);
           if (srcInfo[0]?.values?.[0]) { sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string); }
         } catch {}
+        // 2026-10-16 修复：source_code 写种源业务编码（ZYxxx），与 trace 端点匹配口径一致
+        //   （原 source_name || source_id 可能写内部 ID，导致种源时间线「流转」分类查不到）
+        let sourceCodeForFlow: string = source_name || source_id;
+        try {
+          const scr = db.exec('SELECT source_code FROM seed_sources WHERE id = ?', [source_id]);
+          const realCode = scr[0]?.values?.[0]?.[0];
+          if (realCode) sourceCodeForFlow = String(realCode);
+        } catch {}
         writeFlowLog({
           flow_type: 'seed_source→seedling',
           crop_name: crop_name,
-          source_type: 'seed_source', source_id: source_id, source_code: source_name || source_id,
+          source_type: 'seed_source', source_id: source_id, source_code: sourceCodeForFlow,
           source_quantity: seedling_quantity ?? 0, source_unit: '粒', source_category: sourceCategory,
           target_type: 'seedling', target_id: newId, target_code: seedling_code,
           target_quantity: seedling_quantity || 0, target_unit: '株',
