@@ -30,9 +30,9 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-import { SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+import { SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE as SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
-import { SEED_FORM_OPTIONS, SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
+import { SEED_FORM_OPTIONS, resolveSeedFormLabel } from '../../../../constants/seedFormDict';
 import { useSupplierStore } from '../../../../stores/useSupplierStore';
 // 2026-07-21：共享品种路径 hook（与列表/详情完全一致）
 import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
@@ -52,6 +52,8 @@ type EditabilityRule = {
   supplierEditable: boolean;
   purchaseDateEditable: boolean;
   unitEditable: boolean;
+  /** 2026-10-17：作物是否可编辑（内部来源锁定只读，见 getEditRule） */
+  cropEditable: boolean;
   seedFormEditable: boolean;
   /** 原始供应商是否展示 */
   showOriginalSupplier: boolean;
@@ -78,7 +80,12 @@ function getEditRule(sourceOrigin: string): EditabilityRule {
     supplierEditable: isExternalPurchase,
     purchaseDateEditable: isExternalPurchase,
     unitEditable: isExternalPurchase && false, // 单位永远只读（quantity 按单位算）
-    seedFormEditable: true, // 形态是物理属性，所有来源都可改
+    // 2026-10-17：内部来源（调拨/留种）的作物与形态均为创建时确定（用户决策：不需要编辑选择）——
+    //   调拨 ← 来源库存自动带入；留种 ← 种植批号 + 留种弹窗当次选定。
+    //   全库数据核验：19/19 作物与上游一致，从未需要编辑。外购来源是用户直接录入、
+    //   选错需修正的窗口（且形态还派生 propagation_method 并参与回流合并键），保持可编辑。
+    cropEditable: !isImported,
+    seedFormEditable: !isImported,
     showOriginalSupplier: isImported,
   };
 }
@@ -165,14 +172,14 @@ export function EditModal({
   };
 
   const handleSubmit = async () => {
-    // 校验："其他"形态必须备注
-    if (formData.seedForm === '其他' && !formData.remarks.trim()) {
+    // 校验："其他"形态必须备注（仅可编辑来源 — 锁定来源的形态非用户所选）
+    if (editRule.seedFormEditable && formData.seedForm === '其他' && !formData.remarks.trim()) {
       await showAlert('种源形态选择"其他"时，备注为必填项，请输入详细说明');
       return;
     }
     // 外购入库必须选供应商
     if (editRule.supplierEditable && !formData.supplierId) {
-      await showAlert('请选择供应商');
+      await showAlert('请选择原始供应商');
       return;
     }
 
@@ -185,12 +192,16 @@ export function EditModal({
         // ========== 按编辑规则提交字段 ==========
         // 来源途径：仅 external_purchase 可改
         ...(editRule.sourceOriginEditable && { sourceOrigin: formData.sourceOrigin as SourceOrigin }),
-        cropCategory: formData.cropCategory,
-        typeName: formData.typeName,
-        varietyName: formData.varietyName,
-        cropName: formData.cropName,
-        cropVariety: formData.cropVariety,
-        cropCode: cropCode,
+        // 作物（6 字段）：仅可编辑来源提交 —— 内部来源由上游带入，不提交避免与来源数据分叉
+        // （2026-10-17：用户决策锁定内部来源的作物与形态）
+        ...(editRule.cropEditable && {
+          cropCategory: formData.cropCategory,
+          typeName: formData.typeName,
+          varietyName: formData.varietyName,
+          cropName: formData.cropName,
+          cropVariety: formData.cropVariety,
+          cropCode,
+        }),
         // 供应商：仅 external_purchase 可改
         ...(editRule.supplierEditable && {
           supplierId: formData.supplierId,
@@ -203,8 +214,8 @@ export function EditModal({
         unitPrice: formData.unitPrice,
         // 总金额 = 单价 × 累计入库量（不随编辑变）
         totalAmount: formData.unitPrice * record.quantity,
-        // 种源形态：所有来源都可改
-        seedForm: formData.seedForm || undefined,
+        // 种源形态：仅可编辑来源提交（内部来源创建时已确定，锁定只读）
+        ...(editRule.seedFormEditable && { seedForm: formData.seedForm || undefined }),
         pictures: formData.pictures,
         remarks: formData.remarks,
         // 操作人
@@ -270,41 +281,51 @@ export function EditModal({
           )}
         </div>
 
-        {/* ========== 第 2 行：作物选择 + 种源类型 ========== */}
+        {/* ========== 第 2 行：作物品种（种源类型行已按用户决策删除，见上方说明） ========== */}
         <div>
           <Label className="text-gray-900">
-            <span className="text-red-500">*</span> 作物选择
+            {editRule.cropEditable && <span className="text-red-500">*</span>}
+            作物品种
           </Label>
-          <CropCodeSelector
-            value={cropCode}
-            onChange={handleCropCodeChange}
-            placeholder="搜索或选择作物品种..."
-            size="md"
-            showFullPath={true}
-          />
-          {/* 2026-07-21：显示当前种源的完整品种路径（与列表/详情完全一致） */}
-          {getVarietyPath(record) && getVarietyPath(record) !== '—' && (
-            <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-              <div className="text-emerald-700">{getVarietyPath(record)}</div>
-            </div>
+          {/* 2026-10-17：内部来源（调拨/留种）作物锁定只读 —— 创建时由来源带入，编辑改会与
+              上游（库存/种植批次/original_* 快照）分叉并影响回流合并键（用户决策） */}
+          {editRule.cropEditable ? (
+            <>
+              <CropCodeSelector
+                value={cropCode}
+                onChange={handleCropCodeChange}
+                placeholder="搜索或选择作物品种..."
+                size="md"
+                showFullPath={true}
+              />
+              {/* 2026-07-21：显示当前种源的完整品种路径（与列表/详情完全一致） */}
+              {getVarietyPath(record) && getVarietyPath(record) !== '—' && (
+                <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                  <div className="text-emerald-700">{getVarietyPath(record)}</div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <Input
+                type="text"
+                value={getVarietyPath(record) && getVarietyPath(record) !== '—'
+                  ? getVarietyPath(record)
+                  : (record.cropName || '-')}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
+                title={getVarietyPath(record)}
+              />
+              <p className="mt-1 text-xs text-gray-400">由来源（调拨/留种）带入，编辑时不可修改</p>
+            </>
           )}
         </div>
 
-        <div>
-          <Label className="text-gray-900">种源类型</Label>
-          {/* 种源类型不可编辑（入库时已确定，避免类型和库存单位/形态不匹配） */}
-          {/* 2026-07-21：去掉 .label — SOURCE_TYPE_MAP 值是字符串不是对象（之前 .label 永远 undefined 导致 fallback 英文） */}
-          {/* 2026-07-26 修复：与列表/详情对齐 — 用 SEED_FORM_EN_MAP 直译（SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 反模式） */}
-          <Input
-            type="text"
-            value={SEED_FORM_EN_MAP[record.sourceType] || record.sourceType || '-'}
-            readOnly
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
-          />
-          <p className="mt-1 text-xs text-gray-400">入库时已确定，编辑时不可修改</p>
-        </div>
+        {/* 2026-10-17：删除「种源类型」显示行（用户决策，与详情弹窗同步）——
+            列表 2026-06-30 已将「种源类型 + 种源形态」合并为单列展示，单独成行属遗留冗余；
+            DB 字段保留（供应商候选过滤 SOURCE_TYPE_TO_SUPPLIER_TYPE 在用，见 buildFormData 上方） */}
 
-        {/* ========== 第 3 行：种源形态 + 供应商 ========== */}
+        {/* ========== 第 3 行：种源形态 + 供应商（调拨/回流来源无「供应商」框，见下方条件） ========== */}
         <div>
           <Label className="text-gray-900">种源形态</Label>
           {editRule.seedFormEditable ? (
@@ -319,54 +340,65 @@ export function EditModal({
               ))}
             </select>
           ) : (
-            <Input
-              type="text"
-              value={formData.seedForm || '-'}
-              readOnly
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
-            />
+            <>
+              <Input
+                type="text"
+                value={resolveSeedFormLabel(formData.seedForm) || '-'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
+              />
+              {/* 2026-10-17：内部来源形态锁定只读（创建时确定） */}
+              <p className="mt-1 text-xs text-gray-400">由来源（调拨/留种）带入，编辑时不可修改</p>
+            </>
           )}
-          {formData.seedForm === '其他' && (
+          {/* 2026-10-17："其他"备注校验仅对可编辑来源生效（锁定来源非用户所选，不再要求） */}
+          {editRule.seedFormEditable && formData.seedForm === '其他' && (
             <p className="mt-1 text-xs text-red-500">备注必填：形态为"其他"时需说明详情</p>
           )}
         </div>
 
-        <div>
-          <Label className="text-gray-900">
-            {editRule.supplierEditable && <span className="text-red-500">*</span>}
-            供应商
-          </Label>
-          {editRule.supplierEditable ? (
-            <select
-              value={formData.supplierId || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val) {
-                  setFormData({ ...formData, supplierId: '', supplierName: '' });
-                  return;
-                }
-                const supplier = filteredSuppliers.find(s => s.value === val);
-                setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
-              }}
-              className="w-full h-10 px-3 border border-gray-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-            >
-              <option value="">请选择供应商</option>
-              {filteredSuppliers.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-              {filteredSuppliers.length === 0 && suppliers.length > 0 && (
-                <option value="" disabled>当前种源类型下无匹配供应商，请切换种源类型</option>
-              )}
-            </select>
-          ) : (
-            <Input
-              type="text"
-              value={formData.supplierName || '内部自留/无供应商'}
-              readOnly
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
-            />
-          )}
-        </div>
+        {/* 2026-10-17：调拨/回流来源隐藏只读「供应商」框 —— 其值只是来源库存供应商的副本
+            （创建时从 inventory_stock 复制），与第 4 行「原始供应商」同值并列显示会造成
+            "重复字段"困惑（用户报告：一条种源看到两个相同供应商）。外购来源保留可编辑供应商；
+            其他未识别来源保持原只读展示（showOriginalSupplier 仅对调拨/回流为 true）。 */}
+        {!editRule.showOriginalSupplier && (
+          <div>
+            <Label className="text-gray-900">
+              {editRule.supplierEditable && <span className="text-red-500">*</span>}
+              原始供应商
+            </Label>
+            {editRule.supplierEditable ? (
+              <select
+                value={formData.supplierId || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    setFormData({ ...formData, supplierId: '', supplierName: '' });
+                    return;
+                  }
+                  const supplier = filteredSuppliers.find(s => s.value === val);
+                  setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
+                }}
+                className="w-full h-10 px-3 border border-gray-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+              >
+                <option value="">请选择原始供应商</option>
+                {filteredSuppliers.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+                {filteredSuppliers.length === 0 && suppliers.length > 0 && (
+                  <option value="" disabled>当前种源类型下无匹配供应商，请切换种源类型</option>
+                )}
+              </select>
+            ) : (
+              <Input
+                type="text"
+                value={formData.supplierName || '内部自留/无供应商'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
+              />
+            )}
+          </div>
+        )}
 
         {/* ========== 第 4 行：原始供应商（仅调拨/回流展示） + 采购/入库日期 ========== */}
         {editRule.showOriginalSupplier ? (
@@ -432,13 +464,13 @@ export function EditModal({
               </div>
             </div>
             <div className="px-3 py-2 border border-gray-200 rounded-lg bg-emerald-50">
-              <div className="text-xs text-gray-500">剩余可用</div>
+              <div className="text-xs text-gray-500">可用数量</div>
               <div className="text-lg font-semibold text-emerald-700 mt-1">
                 {record.availableCount?.toLocaleString() || 0} <span className="text-xs text-gray-500 font-normal">{record.unit || ''}</span>
               </div>
             </div>
             <div className="px-3 py-2 border border-gray-200 rounded-lg bg-amber-50">
-              <div className="text-xs text-gray-500">已使用</div>
+              <div className="text-xs text-gray-500">已使用数量</div>
               <div className="text-lg font-semibold text-amber-700 mt-1">
                 {usedCount.toLocaleString()} <span className="text-xs text-gray-500 font-normal">{record.unit || ''}</span>
               </div>
@@ -570,18 +602,8 @@ export function EditModal({
                   {record.endTime ? `${record.endType === 'abnormal' ? '异常结束' : '正常结束'} (${record.endTime})` : '进行中'}
                 </span>
               </div>
-              {record.productionPlanCode && (
-                <div>
-                  <span className="text-gray-500">生产计划：</span>
-                  <span className="text-gray-700 font-mono">{record.productionPlanCode}</span>
-                </div>
-              )}
-              {record.traceabilityCode && (
-                <div>
-                  <span className="text-gray-500">溯源码：</span>
-                  <span className="text-gray-700 font-mono">{record.traceabilityCode}</span>
-                </div>
-              )}
+              {/* 2026-10-17：删除「生产计划 / 溯源码」显示（用户决策，与详情弹窗同步）——
+                  两字段在种源模块无有效数据源（详见 DetailModal 同款注释），原为条件渲染（非空才显示） */}
               {record.transferredFromStockId && (
                 <>
                   <div>

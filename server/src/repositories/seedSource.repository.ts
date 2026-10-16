@@ -94,6 +94,40 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
  * 种源 Repository 类
  * 提供种源数据的增删改查操作
  */
+/**
+ * 2026-10-16：入库凭证 ↔ 回流记录 配对去重（纯函数，供 getInboundRecordsUnion 调用）
+ *
+ * 背景（用户报告）：一次 22kg 种植留种回流，入库区同时显示入库凭证（INB）与回流记录（CIRC）
+ * 两行，累计数量翻倍成 44kg。两条记录是同一事件的两种账目：
+ *   - inventory_inbound_records（source_type='planting_self_kept'）= 入库凭证
+ *   - crop_circulation_records（PROPAGATION）= 回流记录（含撤销入口）
+ * 规则：按「同数量 + 同日期」逐张凭证消费一条回流记录（1:1 先到先得，防止同源多张
+ *   同量同日记录被重复配对；已撤销的回流记录同样参与消费——其撤销状态由凭证行承载）。
+ * 返回：被凭证覆盖、应从入库区隐藏的回流记录 id 集合。
+ * 未配对的回流记录（历史数据无凭证）不在集合中 → 保持显示，「撤销」入口不丢失。
+ */
+export function matchCirculationIdsCoveredByVouchers(
+  voucherRows: Array<{ id: string; quantity?: unknown; recordDate?: unknown }>,
+  circulationRows: Array<{ id: string; quantity?: unknown; recordDate?: unknown }>,
+): Set<string> {
+  const consumedVoucherIds = new Set<string>();
+  const covered = new Set<string>();
+  for (const c of circulationRows) {
+    const voucher = voucherRows.find(
+      (v) =>
+        !consumedVoucherIds.has(v.id) &&
+        Math.abs(Number(v.quantity || 0) - Number(c.quantity || 0)) < 1e-9 &&
+        !!v.recordDate &&
+        String(v.recordDate) === String(c.recordDate || ''),
+    );
+    if (voucher) {
+      consumedVoucherIds.add(voucher.id);
+      covered.add(c.id);
+    }
+  }
+  return covered;
+}
+
 export class SeedSourceRepository {
   /**
    * 查询种源列表（分页、筛选）
@@ -143,6 +177,8 @@ export class SeedSourceRepository {
       COALESCE(ss.print_count, 0) AS printCount,
       ss.create_by AS createBy,
       ss.create_time AS createTime,
+      -- 2026-10-17：命名审计共生修复 —— 此前 findAll 漏取 update_by，详情弹窗「最后修改人」恒显示 "—"
+      ss.update_by AS updateBy,
       ss.update_time AS updateTime,
       -- 2026-06-30 Bug 14：种源列表展示形态（优先级最高的字段）。
       -- 来源：种植自留种回流时录入 / 调拨入种源时自动从源库存 product_form 复制
@@ -1046,6 +1082,8 @@ export class SeedSourceRepository {
              source_module AS sourceModule,
              source_id AS sourceId, source_code AS sourceCode,
              stock_type AS stockType,
+             -- 2026-10-16 v3：供凭证↔回流记录配对识别（planting_self_kept = 种植留种入库凭证）
+             source_type AS sourceType,
              business_id AS businessId,
              crop_name AS cropName, variety_name AS varietyName,
              warehouse_name AS warehouseName,
@@ -1090,7 +1128,21 @@ export class SeedSourceRepository {
     while (s2.step()) results.push(s2.getAsObject());
     s2.free();
 
-    return results.sort((a, b) =>
+    // 2026-10-16 v3：凭证 ↔ 回流记录配对去重（用户报告：一次留种回流显示两行、累计翻倍 44kg）。
+    // 凭证行保留（入库账目权威），被覆盖的回流记录行从入库区隐藏；撤销语义合并到凭证行的「冲销」，
+    // 冲销时由 inboundReverse.service 级联标记回流记录撤销（配套改动，保证账目不分叉）。
+    const voucherRows = results.filter(
+      (r) => r.recordSource === 'inventory_inbound_records' && r.sourceType === 'planting_self_kept'
+    );
+    const coveredCircIds = matchCirculationIdsCoveredByVouchers(
+      voucherRows,
+      results.filter((r) => r.recordSource === 'crop_circulation_records'),
+    );
+    const visible = coveredCircIds.size > 0
+      ? results.filter((r) => !(r.recordSource === 'crop_circulation_records' && coveredCircIds.has(r.id)))
+      : results;
+
+    return visible.sort((a, b) =>
       (b.recordDate || '').localeCompare(a.recordDate || '')
     ) as UnifiedInboundRecord[];
   }

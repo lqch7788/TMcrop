@@ -126,3 +126,18 @@ export const SEED_FORM_EN_MAP: Record<string, string> = {
   bulb: '种球/球根',
   other: '其他',
 };
+
+/**
+ * 2026-10-17：种源形态/类型值 → 中文显示统一解析（单一真理源）
+ *
+ * 规则：中文（果实/种子/穗条…）直通 → SEED_FORM_EN_MAP 英中翻译 → 未知英文兜底「其他」；
+ *       空值返回 ''（由调用方决定占位显示，如「—」）—— 保证任何界面不泄漏英文枚举
+ *       （脏值 'seedling' 在列表显示"种苗"、详情却显示"种苗/实生苗"、导出又显示"seedling"的三处不一致根因）。
+ * 用于：列表列、详情弹窗、编辑弹窗、导出 Excel —— 全部走此函数。
+ */
+export function resolveSeedFormLabel(raw: string | null | undefined): string {
+  const t = String(raw ?? '').trim();
+  if (!t) return '';
+  if (/[一-鿿]/.test(t)) return t;
+  return SEED_FORM_EN_MAP[t] || '其他';
+}

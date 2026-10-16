@@ -3,7 +3,7 @@
  * 功能：种源列表展示、筛选、新增、编辑、删除、标签打印、图片查看、导出Excel
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Package } from 'lucide-react';
 // 2026-07-14：移除 useNavigate import（入库汇总入口已删除）
 import { SeedSourceFilter } from './components/SeedSourceFilter';
@@ -16,6 +16,8 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { SOURCE_ORIGIN_MAP } from '@/constants/cropConstants';
+// 2026-10-17：形态值统一中文解析（与列表/详情/编辑同一函数，杜绝导出泄漏英文枚举）
+import { resolveSeedFormLabel } from '@/constants/seedFormDict';
 // 2026-07-10 P1-1：抽取公共导出函数（替代原内联 csv/xls 分支）
 import { exportCsv, exportXlsx } from '@/services/exporters';
 import { ExportFormatModal } from './modals/ExportFormatModal';
@@ -35,7 +37,7 @@ import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../..
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
 import { useToastStore } from '../../../stores/useToastStore';
-import { computeStockStatus } from '../../../lib/stockStatus';
+import { computeStockStatus, isAlertStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
@@ -53,6 +55,19 @@ type BatchOpState =
   | { mode: 'delete' }
   | { mode: 'export' }
   | { mode: 'print' };
+
+/**
+ * 2026-10-17：种源库存预警判定（标题徽章 + 「只看预警」过滤共用同一口径）
+ *
+ * 口径复用 stockStatus 单一真理源（不另立阈值）：
+ * - 可用数量 = 0 → 耗尽（红）
+ * - 可用数量 < 入库数量 × LOW_THRESHOLD_RATIO（20%）→ 不足（橙）
+ * - 已结束种源（endTime 非空 = 业务终态）不参与预警（无需补货）
+ */
+function isAlertSeedSource(s: SeedSource): boolean {
+  if (s.endTime) return false;
+  return isAlertStatus(computeStockStatus(Number(s.availableCount) || 0, Number(s.initialCount) || 0));
+}
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -171,7 +186,26 @@ export default function SeedSourcePage() {
   // 2026-07-07 V3.4：取消「入库登记（外购）」弹窗，删除 inboundModal state / 派生数组 / seedSavingInit / URL 参数 useEffect
 
   // 2026-06-06: M3 — 12 项过滤逻辑下沉到 useFilteredSeedSources Hook
-  const filteredData = useFilteredSeedSources(seedSources, filters);
+  const baseFilteredData = useFilteredSeedSources(seedSources, filters);
+
+  // 2026-10-17：库存预警设施 —— 计数徽章 + 「只看预警」开关（对标作物库存 showLowStockOnly 模式）
+  const [showAlertOnly, setShowAlertOnly] = useState(false);
+  const alertSummary = useMemo(() => {
+    const alerts = seedSources.filter(isAlertSeedSource);
+    const depleted = alerts.filter(
+      (s) => computeStockStatus(Number(s.availableCount) || 0, Number(s.initialCount) || 0) === StockStatus.DEPLETED
+    ).length;
+    return { total: alerts.length, depleted, low: alerts.length - depleted };
+  }, [seedSources]);
+  const toggleAlertFilter = useCallback(() => {
+    setShowAlertOnly((v) => !v);
+    setPagination((p) => ({ ...p, current: 1 })); // 切换后回第 1 页，避免停留空页
+  }, []);
+  // 预警开关与主筛选是加法叠加；全选/导出/表格共用此数据源，保证口径一致
+  const filteredData = useMemo(
+    () => (showAlertOnly ? baseFilteredData.filter(isAlertSeedSource) : baseFilteredData),
+    [baseFilteredData, showAlertOnly]
+  );
 
   // 2026-06-05: 顶部统计卡片已删除（user 要求）
 
@@ -372,25 +406,27 @@ export default function SeedSourcePage() {
     // 2026-07-14：导出表头改用共享常量 SEED_SOURCE_EXPORT_HEADERS
     const headers = [...SEED_SOURCE_EXPORT_HEADERS];
 
-    // 生成导出数据（2026-07-21：与列表字段完全对齐）
+    // 生成导出数据（2026-07-21：与列表字段完全对齐；2026-10-17：表头命名按全界面统一方案调整）
     const exportData = selectedData.map(record => ({
       '种源批号': record.seedCode,
       '作物编码': record.cropCode || '-',
       '作物品种': record.cropName || record.cropVariety || '-',
       '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVarietyName].filter(Boolean).join(' > ') || '-',
-      '形态': record.seedForm || record.sourceType || '-',
+      // 2026-10-17：与列表列同口径解析（中文直通/英中翻译/其他兜底）——修复导出显示 'seedling' 等英文脏值
+      '种源形态': resolveSeedFormLabel(record.seedForm && record.seedForm.trim() ? record.seedForm : record.sourceType) || '-',
       '来源途径': SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-',
-      '供应商': record.supplierName || '-',
-      '采购/入库日期': record.purchaseDate || record.createTime || '-',
+      // 2026-10-17：与列表列展示口径对齐（调拨/回流优先取原始供应商）
+      '原始供应商': record.originalSupplierName || record.supplierName || '-',
+      '入库日期': record.purchaseDate || record.createTime || '-',
       '入库数量': record.quantity,
-      '剩余数量': record.availableCount,
+      '可用数量': record.availableCount,
       '单位': record.unit || '-',
       '库存状态': (() => {
         const live = computeStockStatus(record.availableCount, record.initialCount);
         return live === StockStatus.SUFFICIENT ? '充足' : live === StockStatus.LOW ? '不足' : '耗尽';
       })(),
       '备注': record.remarks || '',
-      '创建人/时间': `${record.createBy || '-'} / ${record.createTime || '-'}`
+      '创建人 / 创建时间': `${record.createBy || '-'} / ${record.createTime || '-'}`
     }));
 
     const fileName = `内部种源_${todayLocal()}.${exportFormat}`;
@@ -454,6 +490,7 @@ export default function SeedSourcePage() {
               <Package className="w-6 h-6 text-white" />
             </div>
             <div>
+              {/* 2026-10-17：库存预警徽章已移至「种源列表」标题右侧（SeedSourceTable，用户反馈位置修正） */}
               <h1 className="text-2xl font-bold text-gray-900">内部种源</h1>
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
@@ -505,6 +542,9 @@ export default function SeedSourcePage() {
         onTransfer={handleTransfer}
         onReturn={handleReturn}
         onLabelManage={handleLabelManage}
+        alertSummary={alertSummary}
+        showAlertOnly={showAlertOnly}
+        onAlertToggle={toggleAlertFilter}
       />
 
       {/* 弹窗 */}
