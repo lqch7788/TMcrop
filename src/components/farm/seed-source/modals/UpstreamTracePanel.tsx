@@ -79,6 +79,19 @@ const TYPE_LABEL: Record<string, string> = {
   unknown: '未知',
 };
 
+// 2026-10-16：A 方案溯源链树状显示 — 按 depth 选 border-l 颜色（4 层一组循环，避免过多颜色）
+const DEPTH_BORDER_COLOR: string[] = [
+  'border-l-blue-400',
+  'border-l-emerald-400',
+  'border-l-amber-400',
+  'border-l-purple-400',
+  'border-l-rose-400',
+  'border-l-cyan-400',
+];
+function getDepthBorder(depth: number): string {
+  return DEPTH_BORDER_COLOR[(depth - 1) % DEPTH_BORDER_COLOR.length] || 'border-l-gray-300';
+}
+
 // ========== 子组件 ==========
 
 /** 把树展平为列表（深度优先） */
@@ -90,71 +103,89 @@ function flattenTree(node: UpstreamNode): UpstreamNode[] {
   return list;
 }
 
-/** 折叠组内的追溯行（包含根节点及其所有子节点） */
+/** 折叠组内的追溯行（A 方案：树状缩进 + 边/节点分行 + 层级颜色）
+ *  - 每层节点一个嵌套 div，paddingLeft 按 depth 缩进
+ *  - 边（关系）单独一行：浅灰背景 + 箭头 + 关系说明
+ *  - 节点（实体）单独一行：badge + 名称 + 元数据
+ *  - border-l 按 depth 区分颜色，让层级一目了然
+ */
 function TraceGroupRows({ root }: { root: UpstreamNode }) {
   const flat = flattenTree(root); // 全部展开（根节点也显示）
   return (
-    <div>
-      {flat.map((node, idx) => (
-        <div
-          key={`${node.id}-${idx}`}
-          className="grid grid-cols-[180px_1fr_130px_130px_100px_100px] gap-2 items-center py-2 transition-colors border-b border-gray-200"
-        >
-          {/* 第一列：箭头 + 关系说明 */}
-          <div className="flex items-center gap-2 min-w-0">
-            <ArrowUp className="w-4 h-4 text-black font-bold stroke-2 flex-shrink-0" strokeWidth={3} />
-            <span className="text-xs text-gray-600 truncate">{node.relationLabel}</span>
+    <div className="bg-white">
+      {flat.map((node, idx) => {
+        const depth = Math.max(node.depth || 1, 1);
+        const indent = `${(depth - 1) * 20}px`;
+        const borderColor = getDepthBorder(depth);
+        return (
+          <div
+            key={`${node.id}-${idx}`}
+            className={`border-b border-gray-100 border-l-4 ${borderColor}`}
+            style={{ paddingLeft: indent }}
+          >
+            {/* 边（关系）行：浅色 + 箭头，区别于节点行 */}
+            <div className="flex items-center gap-2 py-1.5 px-2 bg-gray-50/60">
+              <ArrowUp className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" strokeWidth={2.5} />
+              <span className="text-xs text-gray-600">
+                {node.isCycle ? '⟳ 循环引用' : node.relationLabel}
+              </span>
+              <span className="text-xs text-gray-400 ml-auto">
+                {node.isOrphan && <span className="text-red-400">（数据已删除）</span>}
+              </span>
+            </div>
+
+            {/* 节点（实体）行：图标 + badge + 名称 + 元数据 */}
+            <div className="grid grid-cols-[1fr_140px_100px_120px_140px] gap-2 items-center py-2 pr-3">
+              {/* 来源信息：图标 + badge + 名称 */}
+              <div className="min-w-0">
+                {node.isCycle ? (
+                  <span className="text-xs text-blue-600 truncate">{node.label}</span>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {TYPE_ICON[node.type]}
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${TYPE_BADGE[node.type] || 'bg-gray-100 text-gray-600'}`}>
+                        {TYPE_LABEL[node.type] || '-'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 truncate">{node.label}</span>
+                      {node.cropVariety && !node.label.includes(node.cropVariety) && (
+                        <span className="text-sm text-gray-700">{node.cropVariety}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5 flex-wrap">
+                      {node.supplierName && <span>供应商: {node.supplierName}</span>}
+                      {node.seedForm && <span>形态: {node.seedForm}</span>}
+                      {node.operatorName && <span>操作: {node.operatorName}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 编号 */}
+              <span className="text-xs font-mono text-gray-700 truncate">
+                {node.code || (node.id || '').substring(0, 16) || '-'}
+              </span>
+
+              {/* 时间 */}
+              <span className="text-xs text-gray-600">
+                {(node.occurredAt || '').slice(0, 10) || '-'}
+              </span>
+
+              {/* 数量 */}
+              <span className="text-xs text-gray-700 truncate">
+                {node.quantity != null && node.quantity > 0
+                  ? `${node.quantity.toLocaleString()}${node.unit || ''}`
+                  : '-'}
+              </span>
+
+              {/* 备注 */}
+              <span className="text-xs text-gray-500 truncate">
+                {node.sourceModule || '-'}
+              </span>
+            </div>
           </div>
-
-          {/* 来源信息：图标 + badge + 名称 */}
-          <div className="min-w-0">
-            {node.isCycle ? (
-              <span className="text-xs text-blue-600 truncate">{node.label}</span>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {TYPE_ICON[node.type]}
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${TYPE_BADGE[node.type] || 'bg-gray-100 text-gray-600'}`}>
-                    {TYPE_LABEL[node.type] || '-'}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 truncate">{node.label}</span>
-                  {node.cropVariety && !node.label.includes(node.cropVariety) && (
-                    <span className="text-sm text-gray-700">{node.cropVariety}</span>
-                  )}
-                  {node.isOrphan && <span className="text-xs text-red-400">数据已删除</span>}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-600 mt-0.5 flex-wrap">
-                  {node.supplierName && <span>供应商: {node.supplierName}</span>}
-                  {node.seedForm && <span>形态: {node.seedForm}</span>}
-                  {node.operatorName && <span>操作: {node.operatorName}</span>}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* 编号 */}
-          <span className="text-xs font-mono text-gray-700 truncate">
-            {node.code || (node.id || '').substring(0, 16) || '-'}
-          </span>
-
-          {/* 时间 */}
-          <span className="text-xs text-gray-600">
-            {(node.occurredAt || '').slice(0, 10) || '-'}
-          </span>
-
-          {/* 数量 */}
-          <span className="text-xs text-gray-700 truncate">
-            {node.quantity != null && node.quantity > 0
-              ? `${node.quantity.toLocaleString()}${node.unit || ''}`
-              : '-'}
-          </span>
-
-          {/* 备注 */}
-          <span className="text-xs text-gray-600 truncate">
-            {node.sourceModule || node.operatorName || '-'}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -244,10 +275,9 @@ export function UpstreamTracePanel({ seedSourceId }: UpstreamTracePanelProps) {
         <span className="ml-auto text-gray-400">{traceTime}ms</span>
       </div>
 
-      {/* 表头 */}
-      <div className="grid grid-cols-[180px_1fr_130px_130px_100px_100px] gap-2 px-3 py-2 text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
-        <span>来源说明</span>
-        <span>来源信息</span>
+      {/* 表头 — 与节点行 5 列对齐（边行已包含「来源说明」，不再单独列表头） */}
+      <div className="grid grid-cols-[1fr_140px_100px_120px_140px] gap-2 px-3 py-2 text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
+        <span>来源信息（↑ 边 = 关系说明）</span>
         <span>编号</span>
         <span>时间</span>
         <span>数量</span>

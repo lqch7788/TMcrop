@@ -22,7 +22,8 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   external_sale: '外售入库',
   transfer_inbound: '调拨入库',
   transfer_out: '调拨出库',
-  transfer_in: '退库入库',
+  // 2026-10-16：退库主记录文案对齐 —— 「退库入库」在种源时间线中歧义（实为种源 -N、原库存 +N），改为「退库到作物库存」
+  transfer_in: '退库到作物库存',
   // 2026-07-16：库存调拨入库（inventoryTransfer.service.ts 写入 source_type='inventory_transfer'）
   inventory_transfer: '库存调拨入库',
   circulation: '回流',
@@ -243,7 +244,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
   }, [load]);
 
   // 2026-08-16：按 entity 隐藏分类 + 改写悬停说明
-  // - 种源传 hiddenCategories=['inbound','circulation']（与主 Tab「入库记录」重复）
+  // - 种源传 hiddenCategories=['inbound']（2026-10-16：入库数据入口统一到「出入库记录」Tab，避免重复）
   // - 育苗/种植不传 → 6 个分类全显，行为与之前完全一致
   const hiddenSet = useMemo(() => new Set(hiddenCategories ?? []), [hiddenCategories]);
   const visibleFilters = useMemo(
@@ -255,9 +256,16 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
   const effectiveFilter = visibleFilters.some((f) => f.key === filter) ? filter : 'all';
 
   // 筛选
+  // 2026-10-16 修复：hiddenCategories 此前仅隐藏「分类 chip」，未过滤行 ——
+  //   被隐藏分类的记录在「全部」视图中仍然逐行显示（与隐藏按钮的表意矛盾，
+  //   也是种源时间线"入库行与入库记录 Tab 重复"的根因之一）。
+  //   现在统一：先按 hiddenSet 排除隐藏分类的行，再按当前筛选分类过滤。
   const filtered = useMemo(
-    () => (effectiveFilter === 'all' ? items : items.filter((i) => i.category === effectiveFilter)),
-    [items, effectiveFilter],
+    () => {
+      const visible = hiddenSet.size > 0 ? items.filter((i) => !hiddenSet.has(i.category)) : items;
+      return effectiveFilter === 'all' ? visible : visible.filter((i) => i.category === effectiveFilter);
+    },
+    [items, effectiveFilter, hiddenSet],
   );
 
   // 导出 Excel
@@ -336,7 +344,8 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
           </div>
           {/* 操作按钮（独立于筛选） */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={load} className="text-sm">
+            {/* 2026-10-16：刷新按钮背景改蓝色（variant=blue）；该组件为种源/育苗/种植三端共享，三端统一为蓝底 */}
+            <Button variant="blue" size="sm" onClick={load} className="text-sm">
               <RefreshCw className="w-3.5 h-3.5 mr-1" /> 刷新
             </Button>
             <Button variant="default" size="sm" onClick={handleExport} disabled={filtered.length === 0} className="text-sm">

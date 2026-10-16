@@ -222,8 +222,12 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
       //   - business_type='transfer' → 调拨入种源（新种源库存被记 transfer_in，库存增加）
       //   - business_type='inventory_transfer' → 退库（原始库存被记 transfer_in，恢复库存）
       // 否则会把调拨入种源错标成"退库入库"，让用户困惑。
+      // 2026-10-16：transfer_in + inventory_transfer 是种源退库主记录（TX-RET-*，由 seedSourceReturn 写入）。
+      //   该流水的金额语义是"原库存 +N"（原库存视角），但消费方是**种源详情时间线**（种源视角为 -N），
+      //   原文案「退库入库」+ 正数显示会让用户误以为"种源库增加了"（用户报告歧义）。
+      //   改为「退库到作物库存」并在下方 quantityDelta 取负，与种源实际数量变化一致。
       const actionLabel = txnType === 'transfer_in'
-        ? (bizType === 'inventory_transfer' ? '退库入库' : '调拨入库')
+        ? (bizType === 'inventory_transfer' ? '退库到作物库存' : '调拨入库')
         : txnType === 'transfer_out'
           ? '调拨出库'
           : txnType === 'inbound'
@@ -235,8 +239,11 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
                 : txnType === 'unfreeze'
                   ? '解冻'
                   // 2026-08-16：补冲销/撤销回流的类型中文映射（instance_id 匹配后这些行变为可见）
+                  // 2026-10-16：「冲销入库」在种源时间线中有歧义（"入库"字样 + 负数 -N 读不通，
+                  //   用户误读为"入库增加"）。改为「入库作废」——准确描述"该笔入库记录被作废、种源扣回 N"，
+                  //   不暗示货物流动（冲销不退还源库存）。与面板「已冲销/作废审计」用语呼应。
                   : txnType === 'reverse_inbound'
-                    ? '冲销入库'
+                    ? '入库作废'
                     : txnType === 'reverse_circulation'
                       ? '撤销回流'
                       : txnType;
@@ -248,7 +255,13 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         action: actionLabel,
         // 2026-08-16：出库/调拨出行入库时已存负数（如 -safeCount），-qty 会翻成正数；
         // 改用 -Math.abs 保证出库恒为负（兼容历史上存正数的数据）
-        quantityDelta: txnType === 'transfer_out' || txnType === 'outbound' ? -Math.abs(qty) : qty,
+        // 2026-10-16：种源退库主记录（transfer_in + inventory_transfer）在种源时间线中同样取负 ——
+        //   流水存的是"原库存 +N"，种源视角应为 -N（与「退库到作物库存」文案配套，消除"+1"歧义）
+        quantityDelta: (txnType === 'transfer_out' || txnType === 'outbound')
+          ? -Math.abs(qty)
+          : (txnType === 'transfer_in' && bizType === 'inventory_transfer')
+            ? -Math.abs(qty)
+            : qty,
         unit: '',
         // 2026-07-16：填 refCode（业务单号，如 YM20260716-001）
         refCode: String(r.business_code || ''),

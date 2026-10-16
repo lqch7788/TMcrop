@@ -585,18 +585,26 @@ export async function executeTransferToSource(
       db.run(
         `INSERT INTO inventory_inbound_records (
           id, record_type, record_date, source_module, source_id, source_code,
-          stock_type, source_type, warehouse_id, warehouse_name,
+          stock_type, source_type, source_origin, warehouse_id, warehouse_name,
           crop_id, crop_code, crop_name, variety_name,
           quantity, unit, unit_price, total_amount, quality_grade,
           supplier_id, supplier_name, production_plan_code,
           business_id, notes, operator_name, create_by, create_time, update_time
-        ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           inbRecordId, now.slice(0, 10),
           newStockId, newCode,
           // 2026-07-15：与 inventory_stock 同步 — 调拨入种源后 stock_type 强制 'seed'，
           // 保留原 stock_type 在 notes 里（业务追溯）
-          'seed', sourceStock.source_type || 'inventory_transfer',
+          // 2026-10-16 修复：source_type 写死 'transfer_inbound'，不再复用源库存 source_type
+            // 根因：源库存 STK-20260716-0001 的 source_type='external_purchased'（外购入库），
+            //       复用会让本入库记录被错标为"外购入库"，前端溯源链 Tab 显示错误（应恒为"调拨入库"）
+            // 与 server/src/routes/seedSource.ts:625 追加模式保持一致（那里也硬编码 'transfer_inbound'）
+            // 注意：inventory_stock.source_type（同 INSERT 第 568 行）保持 'inventory_transfer' 不变 —
+            //   它表达"库存的产生方式"，与入库记录的"入库方式"语义不同，不受本次修复影响
+            // 2026-10-16 增强：新增 source_origin 列记录"源头入库方式"（如 external_purchased/harvest 等），
+            //   溯源链 Tab 显示「调拨入库（源头: 外购入库）」语义更清晰，不再丢源头信息
+            'seed', 'transfer_inbound', sourceStock.source_type || null,
           sourceStock.warehouse_id || null, sourceStock.warehouse_name || null,
           sourceStock.crop_id || null, sourceStock.crop_code || null, sourceStock.crop_name, sourceStock.variety_name || null,
           item.transferQuantity, sourceUnit,

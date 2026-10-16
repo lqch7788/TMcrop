@@ -84,6 +84,11 @@ const SOURCE_MODULE_LABELS: Record<string, string> = {
   external_purchase: '外部采购',
   inventory_transfer: '库存调拨',
   transfer_inbound: '调拨入库',
+  // 2026-10-16 溯源链英中化补全
+  seed: '种子入库',
+  transfer: '库存调拨',
+  cross_warehouse: '跨仓库调拨',
+  other: '其他',
 };
 
 /** source_type → 入库方式标签（6 种入库方式对应） */
@@ -100,6 +105,29 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   harvest: '采收入库',
   purchase: '采购入库',
   other: '其他',
+  // 2026-10-16 溯源链英中化补全：缺失值走 fallback 直接渲染英文，全部映射
+  seedling: '育苗入库',
+  seed: '种子入库',
+  seed_source: '种源入库',
+  inventory_transfer: '库存调拨',
+  inventory: '库存调拨',
+  cross_warehouse: '跨仓库调拨',
+};
+
+/** 种源/育苗 seed_form 英文 → 中文（2026-10-16 溯源链英中化补全） */
+const SEED_FORM_LABELS: Record<string, string> = {
+  seed: '种子',
+  seedling: '种苗',
+  其他: '其他',
+};
+
+/** 单位英文 → 中文（2026-10-16 溯源链英中化补全） */
+const UNIT_LABELS: Record<string, string> = {
+  kg: '千克',
+  g: '克',
+  t: '吨',
+  ml: '毫升',
+  l: '升',
 };
 
 export interface UpstreamTraceResult {
@@ -211,7 +239,14 @@ export function traceUpstream(sourceId: string, maxDepth = 10): UpstreamTraceRes
                 stk.quantity = transferQty;
                 stk.unit = s(ib.unit) || s(stk.unit);
               }
-              const label = `调拨入库（来源: ${SOURCE_TYPE_LABELS[st] || st || sm}）`;
+              // 2026-10-16：source_type='transfer_inbound'（本次入库方式）已统一硬编码，
+              //   真正传递"源头信息"的是 source_origin（源头库存的入库方式，如 external_purchased/harvest 等）
+              //   显示「调拨入库（源头: 外购入库）」语义更准确
+              const originLabel = String(ib.source_origin || '');
+              const originText = SOURCE_TYPE_LABELS[originLabel] || originLabel || '';
+              const label = originText
+                ? `调拨入库（源头: ${originText}）`
+                : `调拨入库（来源: ${SOURCE_TYPE_LABELS[st] || st || sm}）`;
               // 每条入库路径用独立的 visited set
               const savedVisited = new Set(visited);
               visited.clear();
@@ -595,10 +630,10 @@ export function traceUpstream(sourceId: string, maxDepth = 10): UpstreamTraceRes
       occurredAt: String(row.create_time || row.record_date || row.purchase_date || row.harvest_date || row.planting_date || row.seedling_date || ''),
       operatorName: String(row.operator_name || row.create_by || row.operater || ''),
       quantity: Number(row.quantity || row.current_quantity || row.harvest_quantity || row.seedling_quantity || 0),
-      unit: String(row.unit || ''),
+      unit: UNIT_LABELS[String(row.unit || '')] || String(row.unit || ''),
       cropName: String(row.crop_name || ''),
       cropVariety: String(row.crop_variety || ''),
-      seedForm: String(row.seed_form || ''),
+      seedForm: SEED_FORM_LABELS[String(row.seed_form || '')] || String(row.seed_form || ''),
       supplierName: String(row.supplier_name || ''),
       supplierId: String(row.supplier_id || ''),
       sourceModule: SOURCE_MODULE_LABELS[String(row.source_module || '')] || String(row.source_module || ''),

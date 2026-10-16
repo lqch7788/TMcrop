@@ -573,7 +573,12 @@ router.post('/append-from-inventory', async (req, res) => {
         insTx.run([
           outTxId, outTransactionId, sourceInstanceId, String(sourceObj.stock_type || 'seed'),
           -item.transferQuantity, sourceCurrent, newSourceCurrent,
-          targetSeedSourceId, targetCode, operator.id, operator.name, dateStr,
+          // 2026-10-16 修复：business_id 写源库存 ID 而非种源 ID ——
+          //   与首次模式 inventoryTransfer.service.ts:391 一致（那里也是 String(item.sourceStockId)）。
+          //   原代码写 targetSeedSourceId 导致 entityHistoryService 按种源ID 匹配时
+          //   把"源库存扣减"流水错误地展示在种源详情里（用户报告的「出库 -100」就是这个）
+          String(item.sourceStockId), sourceInstanceId,
+          operator.id, operator.name, dateStr,
           `调拨入种源 ${targetCode}（追加模式）`, now,
         ]);
         insTx.free();
@@ -587,6 +592,12 @@ router.post('/append-from-inventory', async (req, res) => {
         // 2026-07-26 修复：去掉 || sourceObj.stock_type fallback — product_form 为 null 时不能再写英文 stock_type
         //   （之前 fallback 写入 "seedling" 等英文码，导致种源形态列显示英文）。product_form 为空时存空串，
         //   由前端 SeedSourceTable.tsx 的 resolveForm 走 SOURCE_TYPE_MAP 翻译兜底。
+        // 2026-10-16：UPDATE 前读旧数量（供下方 transfer_in 流水的 balance_before 使用）
+        const beforeQtyStmt = db.prepare(`SELECT quantity FROM seed_sources WHERE id = ?`);
+        beforeQtyStmt.bind([targetSeedSourceId]);
+        const beforeQty = beforeQtyStmt.step() ? Number((beforeQtyStmt.getAsObject() as { quantity?: number }).quantity || 0) : 0;
+        beforeQtyStmt.free();
+
         const updSS = db.prepare(
           `UPDATE seed_sources
            SET remaining_quantity = remaining_quantity + ?, quantity = quantity + ?,
@@ -597,6 +608,40 @@ router.post('/append-from-inventory', async (req, res) => {
         const sourceForm = String(sourceObj.product_form || (sourceObj as any).source_form || '');
         updSS.run([item.transferQuantity, item.transferQuantity, sourceForm, now, targetSeedSourceId]);
         updSS.free();
+
+        // 6.5. 写目标种源的 transfer_in 流水（2026-10-16 修复）
+        // 根因：原追加模式只写源侧 outbound（第 5 步），从不写目标种源的 transfer_in —
+        //   首次模式 executeTransferToSource 会写（inventoryTransfer.service.ts 步骤 5b），两条路径行为不一致。
+        //   导致种源时间线「库存流水」分类缺"调拨入库 +N"正向记录（用户报告追加 +100 在时间线无记录，
+        //   只剩一条歧义的「出库 -100」）。此处对齐首次模式：business_id=种源ID（entityHistory 按此匹配）、
+        //   transaction_type='transfer_in'、business_type='transfer'（action 映射为「调拨入库」）。
+        const inTxId = await generateTransactionId(idDateStr);
+        // 目标种源的库存实例（首次创建时写入）；查不到时 fallback 裸种源ID
+        const instStmt = db.prepare(
+          `SELECT instance_id FROM inventory_stock WHERE business_id = ? AND stock_type = 'seed' AND instance_id IS NOT NULL ORDER BY create_time ASC LIMIT 1`
+        );
+        instStmt.bind([targetSeedSourceId]);
+        const targetInstanceId = instStmt.step()
+          ? String((instStmt.getAsObject() as { instance_id?: string }).instance_id || targetSeedSourceId)
+          : targetSeedSourceId;
+        instStmt.free();
+        const insTxIn = db.prepare(
+          `INSERT INTO inventory_transaction (
+            id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+            balance_before, balance_after, business_id, business_type, business_code,
+            operator_id, operator_name, operate_date, remarks, create_time
+          ) VALUES (?, ?, ?, 'seed', 'transfer_in', ?, ?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)`
+        );
+        insTxIn.run([
+          inTxId, inTxId, targetInstanceId,
+          item.transferQuantity, beforeQty, beforeQty + item.transferQuantity,
+          targetSeedSourceId, targetCode,
+          operator.id, operator.name, dateStr,
+          // 2026-10-16：remarks 与首次模式对齐为干净文案（不带"（追加模式）"后缀——
+          //   该后缀在种源时间线备注列直接展示给用户，属技术性描述）
+          `从库存 ${sourceInstanceId} 调拨入种源 ${targetCode}`, now,
+        ]);
+        insTxIn.free();
 
         // 7. 写 inventory_inbound_records
         // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('IR') 与 inventory_stock.instance_id 跨表冲突
@@ -615,20 +660,23 @@ router.post('/append-from-inventory', async (req, res) => {
         const insIR = db.prepare(
           `INSERT INTO inventory_inbound_records (
             id, record_type, record_date, source_module, source_id, source_code,
-            stock_type, source_type,
+            stock_type, source_type, source_origin,
             warehouse_id, warehouse_name,
             crop_id, crop_code, crop_name, variety_name,
             quantity, unit, unit_price, total_amount, quality_grade,
             supplier_id, supplier_name,
             production_plan_id, production_plan_code,
             business_id, notes, operator_name, create_time
-          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         insIR.run([
           inRecId,
           dateStr,
           item.sourceStockId, sourceInstanceId,
           String(sourceObj.stock_type || 'seed'),
+          // 2026-10-16：source_origin = 源头库存的 source_type（外购入库/调拨入库/采收入库等），
+          //   与 inventoryTransfer.service.ts:607 首次模式对齐。溯源链 Tab 显示「源头: X」
+          String(sourceObj.source_type || ''),
           // 仓库/品种/供应商/价格：从源库存行继承（追加入库时前端不传这些字段，否则入库记录缺字段显示为 "-"）
           String(sourceObj.warehouse_id || ''),
           String(sourceObj.warehouse_name || ''),
@@ -653,6 +701,34 @@ router.post('/append-from-inventory', async (req, res) => {
         ]);
         insIR.free();
         writtenInboundRecordIds.push(inRecId);
+
+        // 2026-10-16 修复：补写 material_flow_log（之前追加模式完全没写追溯链，导致
+        //   「追溯时间线」Tab 缺「库存→种源」记录，与首次模式 inventoryTransfer.service.ts:645 行为不一致）
+        //   与首次模式一致：每次 append 一条 flow_log，flow_type='inventory→seed_source'
+        try {
+          const { writeFlowLog } = require('../services/flowLogService');
+          writeFlowLog({
+            flow_type: 'inventory→seed_source',
+            crop_name: targetCropName || String(sourceObj.crop_name || ''),
+            crop_variety: String(sourceObj.variety_name || ''),
+            source_type: 'inventory_stock',
+            source_id: String(item.sourceStockId),
+            source_code: sourceInstanceId,
+            source_quantity: -item.transferQuantity,
+            source_unit: String(sourceObj.unit || ''),
+            source_category: '调拨出库',  // 与首次模式 inventoryTransfer.service.ts:647 一致
+            target_type: 'seed_source',
+            target_id: targetSeedSourceId,
+            target_code: targetCode,
+            target_quantity: item.transferQuantity,
+            target_unit: String(sourceObj.unit || ''),
+            business_code: outTxId,
+            created_by: operator.name || operator.id || '',
+          });
+        } catch (flowErr: any) {
+          // 流水失败不应阻断主流程（库存已入），但必须 console.warn 让问题可见
+          console.warn('[seedSource.append] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+        }
 
         totalAppended += item.transferQuantity;
       }
@@ -718,6 +794,20 @@ router.get('/:id/history-inbound', asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
     const records = await seedSourceRepository.getInboundRecordsUnion(String(id));
+    res.json({ success: true, data: records });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}));
+
+/**
+ * GET /api/seed-sources/:id/history-outbound
+ * 2026-10-16：种源出库流水（当前为「退库到作物库存」），用于「出入库记录」Tab 的出库区
+ */
+router.get('/:id/history-outbound', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  try {
+    const records = await seedSourceRepository.getOutboundRecords(String(id));
     res.json({ success: true, data: records });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
