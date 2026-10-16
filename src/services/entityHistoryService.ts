@@ -176,9 +176,68 @@ export async function fetchFullHistory(
     merged.push(item);
   }
 
-  // 2026-10-16 v2：同事件配对去重不再在数据层做 —— 已移至 EntityHistoryTimeline 的 filtered：
-  //   「全部」视图去重（同事件只显示账务行），「流转」等分类视图保留完整台账（该分类的价值即完整流水）。
+  // 2026-10-16 v3：同事件合并由调用方（EntityHistoryTimeline）仅在「全部」视图触发
+  //   （合并函数 mergeTimelineEventPairs 见本文件下方）；「流转」等分类视图保留完整台账。
   // 按时间倒序
   merged.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   return merged;
+}
+
+/** 同事件配对时间窗口（毫秒）：一次业务操作的多视角记录写入间隔通常在毫秒级 */
+const PAIR_WINDOW_MS = 2000;
+
+/** 同事件判据：|数量| 相同（允许镜像符号，如「种源→育苗 +11」vs「育苗使用 -11」）+ 时间差 ≤ 窗口 */
+function isSameEvent(a: HistoryItem, b: HistoryItem): boolean {
+  if (a.quantityDelta == null || b.quantityDelta == null) return false;
+  if (Math.abs(Math.abs(a.quantityDelta) - Math.abs(b.quantityDelta)) > 1e-9) return false;
+  const ta = Date.parse(a.occurredAt);
+  const tb = Date.parse(b.occurredAt);
+  return !Number.isNaN(ta) && !Number.isNaN(tb) && Math.abs(ta - tb) <= PAIR_WINDOW_MS;
+}
+
+/**
+ * 「全部」视图同事件合并（2026-10-16 v3；由 EntityHistoryTimeline 仅在「全部」视图调用，
+ * 分类视图保留完整台账）：
+ * 1. flow 行若存在同事件的 transaction/inbound 行（账务视角）→ 隐藏 flow 行；
+ * 2. circulation 行若存在同事件的 flow 行 → 合并为一条并保留两边全部字段。
+ *    数据实况（用户报告场景）：种植留种回流同时写 material_flow_log（「种植 → 种源」）
+ *    与 crop_circulation_records（「繁殖回流」），并列显示 +22 两条会让用户误以为回流了两次。
+ *    合并规则：flow 的方向文案并入类型徽章、备注拼接去重、关联单号/操作员/作物品种/单位缺失时互相兜底。
+ *    例：繁殖回流（种植 → 种源） +22 千克 关联单号 ZZ20261016-001 备注「红颜 ｜ 测试」
+ *    注：flow 行的 refCode 是 targetCode（= 当前实体自身编码，自指无信息量），
+ *    合并后以 circulation 行的关联单号（种植/育苗批号）为准，不重复自指编码。
+ */
+export function mergeTimelineEventPairs(items: HistoryItem[]): HistoryItem[] {
+  const flowRows = items.filter((i) => i.category === 'flow');
+  const accountRows = items.filter((i) => i.category === 'transaction' || i.category === 'inbound');
+  const circulationRows = items.filter((i) => i.category === 'circulation');
+
+  // 回流合并：circulation 行吸收同事件 flow 行（每条 flow 行最多被消费一次）
+  const consumedFlowIds = new Set<string>();
+  const mergedById = new Map<string, HistoryItem>();
+  for (const c of circulationRows) {
+    const f = flowRows.find((row) => !consumedFlowIds.has(row.id) && isSameEvent(row, c));
+    if (!f) continue;
+    consumedFlowIds.add(f.id);
+    const remarks = Array.from(new Set([f.remarks, c.remarks].filter((t): t is string => !!t)));
+    mergedById.set(c.id, {
+      ...c,
+      // 方向文案并入类型徽章：繁殖回流（种植 → 种源）
+      action: f.action && f.action !== c.action ? `${c.action}（${f.action}）` : c.action,
+      remarks: remarks.join(' ｜ ') || undefined,
+      refCode: c.refCode || f.refCode,
+      operatorName: c.operatorName || f.operatorName,
+      cropName: c.cropName || f.cropName,
+      unit: c.unit || f.unit,
+      inboundSource: c.inboundSource || f.inboundSource,
+    });
+  }
+
+  return items
+    .map((i) => mergedById.get(i.id) ?? i)
+    .filter((i) => {
+      if (i.category !== 'flow') return true;
+      if (consumedFlowIds.has(i.id)) return false;                 // 已并入 circulation 行
+      return !accountRows.some((t) => isSameEvent(i, t));          // 与账务行配对 → 隐藏
+    });
 }

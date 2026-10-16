@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Undo2 } from 'lucide-react';
+import { ArrowLeftRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Undo2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToastStore } from '@/stores/useToastStore';
 // 2026-07-19 P2：导入 todayLocal 避免运行时 ReferenceError
 import { todayLocal } from '@/lib/dateUtils';
@@ -27,10 +27,10 @@ import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 // 2026-08-16：种源隐藏「入库」「回流」两个重复分类 + 改写保留分类悬停说明
 import type { CategoryKey } from '@/components/ui/EntityHistoryTimeline';
 import { SeedSource } from '../../../../types/crop';
-import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 // 2026-07-16：种源形态字段 seedForm 后端可能存中文（来自 product_form）或英文（来自 stock_type），
 // 统一在前端兜底翻译成中文显示
-import { SEED_FORM_OPTIONS, SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
+import { resolveSeedFormLabel } from '../../../../constants/seedFormDict';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getInboundRecords,
@@ -48,17 +48,10 @@ import { UpstreamTracePanel } from './UpstreamTracePanel';
 
 /**
  * 2026-07-16：种源形态字段兜底翻译
- * - 后端可能写中文（来自 inventory_stock.product_form「花朵/果实/种子」等 12 选）
- * - 也可能写英文（来自 inventory_stock.stock_type 或回流时存的 seed/seedling/planting）
- * - 显示统一返回中文，未匹配则原样回显
+ * 2026-10-17：原 formatSeedForm 已删除 —— 统一改为 seedFormDict.resolveSeedFormLabel（单一真理源）。
+ *   原实现走 SOURCE_TYPE_MAP（'seedling'='种苗/实生苗' 反模式）且未匹配原样回显（会泄漏英文），
+ *   导致同一脏值在列表/详情/导出三处显示三种结果。
  */
-function formatSeedForm(sf: string | null | undefined): string {
-  if (!sf) return '—';
-  // 已在中文词典中 → 原样返回
-  if (SEED_FORM_OPTIONS.some(opt => opt.value === sf)) return sf;
-  // 走英文 → 中文映射
-  return SOURCE_TYPE_MAP[sf] || sf;
-}
 
 /** 入库模式配置 — 三种入口各有不同的关联信息 */
 const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -97,12 +90,73 @@ interface DetailModalProps {
   record: SeedSource;
 }
 
+/** 图片放大查看器（2026-10-17 新增，与种植详情 DetailModal 同模式复用） */
+function ImageViewer({ images, selectedIndex, onClose, onPrev, onNext }: {
+  images: string[];
+  selectedIndex: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-10"
+      >
+        <X className="w-8 h-8" />
+      </Button>
+      {selectedIndex > 0 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onPrev}
+          className="absolute left-4 text-white hover:bg-white/20 rounded-full z-10"
+        >
+          <ChevronLeft className="w-8 h-8" />
+        </Button>
+      )}
+      <img
+        src={images[selectedIndex]}
+        alt={`图片${selectedIndex + 1}`}
+        className="max-w-[90vw] max-h-[90vh] object-contain"
+      />
+      {selectedIndex < images.length - 1 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onNext}
+          className="absolute right-4 text-white hover:bg-white/20 rounded-full z-10"
+        >
+          <ChevronRight className="w-8 h-8" />
+        </Button>
+      )}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+        {selectedIndex + 1} / {images.length}
+      </div>
+    </div>
+  );
+}
+
 /** 基本信息面板 — 涵盖种源列表全部列 + 模式感知 */
 function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
   const formatUnit = (unit: string) => UNIT_MAP[unit] || unit || '';
   const status = STOCK_STATUS_MAP[computeStockStatus(record.availableCount, record.initialCount)] || STOCK_STATUS_MAP['sufficient'];
   // 2026-07-21：使用共享 hook 取完整 4 段品种路径（与列表完全一致）
   const { getVarietyPath } = useSeedSourceVarietyPath();
+
+  // 2026-10-17：图片列表 + 放大查看器状态（用户报告：编辑弹窗已支持上传图片，详情无法查看）
+  // 后端列存 JSON 字符串（Base64 数组），前端类型虽标 string[]，仍需防御式解析（与编辑/种植详情同模式）
+  const images: string[] = (() => {
+    if (Array.isArray(record.pictures)) return record.pictures;
+    if (typeof record.pictures === 'string') {
+      try { return JSON.parse(record.pictures); } catch { return []; }
+    }
+    return [];
+  })();
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
   // 判断入库模式
   const originKey = record.sourceOrigin || (record.transferredFromStockId ? 'transfer_from_inventory' : 'external');
@@ -145,19 +199,12 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-900">{SOURCE_ORIGIN_MAP[originKey]?.label || mode.label}</span>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">形态：</span>
-            <span className="text-sm text-gray-900">{formatSeedForm(record.seedForm)}</span>
+            <span className="text-sm text-gray-500 w-24">种源形态：</span>
+            <span className="text-sm text-gray-900">{resolveSeedFormLabel(record.seedForm) || '—'}</span>
           </div>
-          {/* 2026-07-21：补种源类型字段（与编辑/列表对齐） */}
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">种源类型：</span>
-            {/* 2026-07-26 修复：与列表 resolveForm 对齐 — SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 是反模式
-                （同文件 84 行 ORIGINAL_SOURCE_MODULE_MAP['seedling']='种苗'、seedFormDict.ts:55 都是 '种苗'），
-                走 SEED_FORM_EN_MAP 直译保持一致 */}
-            <span className="text-sm text-gray-900">
-              {SEED_FORM_EN_MAP[record.sourceType] || record.sourceType || '—'}
-            </span>
-          </div>
+          {/* 2026-10-17：删除「种源类型」显示行（用户决策）——列表 2026-06-30 已将
+              「种源类型 + 种源形态」合并为单列（仓库角色不区分繁殖细节），详情单独成行属遗留冗余；
+              DB 字段保留（供应商候选过滤 SOURCE_TYPE_TO_SUPPLIER_TYPE 在用） */}
         </div>
       </div>
 
@@ -193,13 +240,11 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-900">{record.totalAmount ? `¥${record.totalAmount.toLocaleString()}元` : '—'}</span>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">供应商：</span>
-            <span className="text-sm text-gray-900">
-              {record.supplierName || '—'}
-              {isTransfer && record.originalSupplierName && (
-                <span className="text-xs text-gray-400 ml-1">（原始：{record.originalSupplierName}）</span>
-              )}
-            </span>
+            {/* 2026-10-17：命名统一为「原始供应商」+ 去重复括号 ——
+                调拨/回流的 supplierName 只是来源库存供应商的副本，两者同值时展示一次；
+                统一取值 originalSupplierName 优先（与列表/导出/编辑口径一致） */}
+            <span className="text-sm text-gray-500 w-24">原始供应商：</span>
+            <span className="text-sm text-gray-900">{record.originalSupplierName || record.supplierName || '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">可用数量：</span>
@@ -236,19 +281,12 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-500 w-24">最后修改时间：</span>
             <span className="text-sm text-gray-900">{record.updateTime || '—'}</span>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">打印次数：</span>
-            <span className="text-sm text-gray-900">{record.printCount} 次</span>
-          </div>
-          {/* 2026-07-21：始终展示生产计划和溯源码（空值显示"—"） */}
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">生产计划：</span>
-            <span className="text-sm font-mono text-gray-900">{record.productionPlanCode || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">溯源码：</span>
-            <span className="text-sm font-mono text-gray-900">{record.traceabilityCode || '—'}</span>
-          </div>
+          {/* 2026-10-17：删除「打印次数 / 生产计划 / 溯源码」三行显示（用户决策）——
+              打印次数：唯一 +1 端点（POST /seed-sources/:id/print）在前端已无调用方，
+                实际打印走标签模块（/plant-labels/batch-create）不回写 → 统计断链，显示会误导；
+              溯源码：种源模块无写入端，全库 0/19 恒为空（溯源语义已由二维码 + 溯源链承载）；
+              生产计划：调拨仅从来源库存复制（本批全空）、留种不写，原计划链路已由溯源链「原始快照」承载。
+              DB 字段全部保留（不删列，仅去掉恒空/断链的显示）。 */}
           {/* 2026-07-18: 种源合并 - 回流次数 + 最近回流时间 + 合并历史 */}
           {(record.reflowCount ?? 0) > 0 && (
             <div className="flex items-center">
@@ -298,6 +336,36 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           )}
         </div>
       </div>
+
+      {/* 2026-10-17：图片信息 — 编辑/新建弹窗支持上传图片，详情此前缺少展示（用户报告）。
+          与种植详情 DetailModal「图片信息」区块同模式：缩略图网格 + 点击放大查看器 */}
+      {images.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">图片信息</h4>
+          <div className="grid grid-cols-4 gap-3">
+            {images.map((img: string, index: number) => (
+              <div
+                key={index}
+                onClick={() => setSelectedImageIndex(index)}
+                className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 border border-gray-200"
+              >
+                <img src={img} alt={`图片${index + 1}`} className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 图片放大查看器 */}
+      {selectedImageIndex !== null && images.length > 0 && (
+        <ImageViewer
+          images={images}
+          selectedIndex={selectedImageIndex}
+          onClose={() => setSelectedImageIndex(null)}
+          onPrev={() => setSelectedImageIndex((i) => (i !== null && i > 0 ? i - 1 : i))}
+          onNext={() => setSelectedImageIndex((i) => (i !== null && i < images.length - 1 ? i + 1 : i))}
+        />
+      )}
     </div>
   );
 }
@@ -620,7 +688,8 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                 r.totalAmount ?? 0,
                 r.supplierName || '',
                 r.operatorName || '',
-                isCirculation ? '留种回流' : '调拨入库',
+                // 2026-10-16：种植留种入库凭证（source_module='planting'）原误标为「调拨入库」，按其来源修正
+                isCirculation ? '留种回流' : (r.sourceModule === 'planting' ? '种植采收回流' : '调拨入库'),
                 isReversed ? (isCirculation ? '已撤销' : '已冲销') : '',
                 r.notes || '',
               ];

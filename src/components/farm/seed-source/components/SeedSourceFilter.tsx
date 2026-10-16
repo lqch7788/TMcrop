@@ -61,7 +61,7 @@ export function SeedSourceFilter({
 
         {/* V2 改造 (任务 13): 来源 (source_origin 9 枚举) */}
         <div className="min-w-[100px] flex-shrink-0">
-          <Label className="text-gray-700">来源</Label>
+          <Label className="text-gray-700">来源途径</Label>
           <Select
             value={filters.sourceOrigin || '__all__'}
             onValueChange={(val) => onChange({ ...filters, sourceOrigin: val === '__all__' ? '' : val })}
@@ -80,7 +80,7 @@ export function SeedSourceFilter({
 
         {/* 种源类型 (形态, V2 双下拉) */}
         <div className="min-w-[100px] flex-shrink-0">
-          <Label className="text-gray-700">形态</Label>
+          <Label className="text-gray-700">种源形态</Label>
           <Select
             value={filters.sourceType}
             onValueChange={(val) => onChange({ ...filters, sourceType: val })}
@@ -99,7 +99,7 @@ export function SeedSourceFilter({
 
         {/* 供应商 */}
         <div className="min-w-[120px] flex-shrink-0">
-          <Label className="text-gray-700">供应商</Label>
+          <Label className="text-gray-700">原始供应商</Label>
           <Select
             value={filters.supplierName}
             onValueChange={(val) => onChange({ ...filters, supplierName: val })}
@@ -118,7 +118,7 @@ export function SeedSourceFilter({
 
         {/* 状态 */}
         <div className="min-w-[100px] flex-shrink-0">
-          <Label className="text-gray-700">状态</Label>
+          <Label className="text-gray-700">库存状态</Label>
           <Select
             value={filters.status}
             onValueChange={(val) => onChange({ ...filters, status: val })}
@@ -153,9 +153,9 @@ export function SeedSourceFilter({
           </Select>
         </div>
 
-        {/* 采购/入库日期 — 窄一点 (160px) */}
+        {/* 入库日期 — 窄一点 (160px)；2026-10-17：命名统一（原「采购/入库日期」） */}
         <div className="min-w-[160px] flex-shrink-0">
-          <Label className="text-gray-700">采购/入库日期</Label>
+          <Label className="text-gray-700">入库日期</Label>
           <DateRangePicker
             startDate={filters.startDate ? new Date(filters.startDate) : undefined}
             endDate={filters.endDate ? new Date(filters.endDate) : undefined}

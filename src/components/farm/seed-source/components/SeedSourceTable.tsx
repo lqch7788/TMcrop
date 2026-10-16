@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeftRight, Download, Edit2, Plus, Printer, Tag, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Download, Edit2, Plus, Printer, Tag, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
@@ -22,7 +22,7 @@ import {
   SOURCE_ORIGIN_MAP,
 } from '../../../../constants/cropConstants';
 // 2026-07-26：英文 stock_type → 中文形态映射抽到共享常量（与 DetailModal/EditModal 复用）
-import { SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
+import { resolveSeedFormLabel } from '../../../../constants/seedFormDict';
 import { computeStockStatus, LOW_THRESHOLD_RATIO } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
@@ -94,6 +94,11 @@ interface SeedSourceTableProps {
   canDelete?: boolean;
   canExport?: boolean;
   canPrint?: boolean;
+  // 2026-10-17：库存预警 —— 明细由页面计算（口径复用 stockStatus 单一真理源），
+  //   徽章渲染在「种源列表」标题右侧；过滤在页面层执行（保证与全选/导出口径一致）
+  alertSummary: { total: number; depleted: number; low: number };
+  showAlertOnly: boolean;
+  onAlertToggle: () => void;
 }
 
 export function SeedSourceTable({
@@ -126,6 +131,9 @@ export function SeedSourceTable({
   canDelete = true,
   canExport = true,
   canPrint = true,
+  alertSummary,
+  showAlertOnly,
+  onAlertToggle,
 }: SeedSourceTableProps) {
   // 2026-07-21：使用共享 hook 取品种路径（与详情/编辑完全一致）
   const { getVarietyByAny, getVarietyPath } = useSeedSourceVarietyPath();
@@ -207,11 +215,57 @@ export function SeedSourceTable({
     onSelectionChange([]);
   };
 
+  // 2026-10-17：预警徽章配色 —— 含耗尽 → 红主题；仅不足 → 橙主题（对标作物库存橙色，耗尽更严重用红）
+  const alertPalette = alertSummary.depleted > 0
+    ? {
+        button: showAlertOnly
+          ? 'bg-red-500 text-white hover:bg-red-600 shadow-md ring-2 ring-red-300'
+          : 'bg-red-50 text-red-700 hover:bg-red-100',
+        count: 'bg-red-700 text-white',
+      }
+    : {
+        button: showAlertOnly
+          ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-md ring-2 ring-orange-300'
+          : 'bg-orange-50 text-orange-800 hover:bg-orange-100',
+        count: 'bg-orange-700 text-white',
+      };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 右上角操作按钮栏 - 根据模式显示不同内容 */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">种源列表</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">种源列表</h3>
+          {/* 2026-10-17：库存预警徽章（对标作物库存「库存不足」按钮；N=0 时不显示；点击切换只看预警） */}
+          {alertSummary.total > 0 && (
+            <Tooltip
+              content={
+                <div className="text-left space-y-1">
+                  <div className="font-medium border-b border-white/30 pb-1 mb-1">库存预警明细</div>
+                  <div>· 耗尽（可用 = 0）：<span className="text-red-200 font-semibold">{alertSummary.depleted} 条</span></div>
+                  <div>· 不足（可用 &lt; 入库 × {Math.round(LOW_THRESHOLD_RATIO * 100)}%）：<span className="text-amber-200 font-semibold">{alertSummary.low} 条</span></div>
+                  <div className="pt-1 text-white/80">点击只看预警 · 已结束种源不参与</div>
+                </div>
+              }
+              position="bottom"
+              multiline
+              maxWidth={300}
+              className="bg-emerald-800 text-white"
+            >
+              <button
+                type="button"
+                onClick={onAlertToggle}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${alertPalette.button}`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                库存预警
+                <span className={`px-1.5 py-0.5 rounded-full font-bold shadow-sm ${alertPalette.count}`}>
+                  {alertSummary.total}
+                </span>
+              </button>
+            </Tooltip>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {/* 导出模式 */}
           {exportMode ? (
@@ -348,13 +402,14 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">形态</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种源形态</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源途径</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
+              {/* 2026-10-17：命名统一 — 全界面该字段统一为「原始供应商」（列表/筛选/导出/详情/新建/编辑） */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">原始供应商</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">入库日期</TableHead>
               {/* 2026-06-30 合并：内部种源仓库不做育种，"初始数量" 与 "入库数量" 语义合并为 1 列 */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="种源入库数量（采购/调拨一次性入库）">入库数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">剩余数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">可用数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
               {/* 2026-07-21：回流次数列已删除（移到筛选器，详情弹窗展示完整信息） */}
               {/* 2026-06-30 合并：内部仓库不做分批，剩余率与状态列功能重叠（都是库存健康度表达） */}
@@ -374,11 +429,11 @@ export function SeedSourceTable({
                   maxWidth={260}
                   className="bg-emerald-800 text-white"
                 >
-                  <span className="cursor-help border-b border-dotted border-white/50">状态<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span></span>
+                  <span className="cursor-help border-b border-dotted border-white/50">库存状态<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span></span>
                 </Tooltip>
               </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人/时间</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人 / 创建时间</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
               <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20">操作</TableHead>
             </TableRow>
@@ -437,26 +492,12 @@ export function SeedSourceTable({
                     title={undefined}
                   >
                     {(() => {
-                      // 2026-07-26：从 seedFormDict.ts 抽出来共享（避免与 DetailModal/EditModal 重复定义）
-                      const resolveForm = (): string => {
-                        const sf = record.seedForm;
-                        if (sf && typeof sf === 'string' && sf.trim()) {
-                          const t = sf.trim();
-                          // 是中文文本（果实/种子/穗条/枝条...）→ 直接返回
-                          if (/[一-鿿]/.test(t)) return t;
-                          // 是英文 key → 翻译
-                          if (SEED_FORM_EN_MAP[t]) return SEED_FORM_EN_MAP[t];
-                          return t; // 兜底
-                        }
-                        // 2026-07-26 修复：seedForm 为空时不再 fallback 到 SOURCE_TYPE_MAP
-                        // （SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 是历史遗留反模式，违反 [[KISS]]，
-                        //   且与同文件 ORIGINAL_SOURCE_MODULE_MAP['seedling']='种苗' / seedFormDict.ts:55['seedling']='种苗' 不一致）。
-                        // 直接走 SEED_FORM_EN_MAP 直译，SOURCE_TYPE_MAP 不在的 key（如 transfer/external_seed）显示"其他"
-                        const st = record.sourceType;
-                        if (st && st.trim()) return SEED_FORM_EN_MAP[st.trim()] || '其他';
-                        return '其他';
-                      };
-                      const form = resolveForm();
+                      // 2026-10-17：统一走 seedFormDict.resolveSeedFormLabel（中文直通 → 英中翻译 → 其他兜底）——
+                      //   与详情/编辑/导出 Excel 同一函数，任何界面都不再泄漏英文枚举（脏值 'seedling' 等）。
+                      //   优先级：seedForm 非空取 seedForm，否则 fallback sourceType（2026-07-26 决策，不用 SOURCE_TYPE_MAP 反模式）
+                      const form = resolveSeedFormLabel(
+                        record.seedForm && record.seedForm.trim() ? record.seedForm : record.sourceType
+                      ) || '其他';
                       // 2026-06-30 Bug 16：用 inline span 替代 Badge variant=default
                       // 原因：Badge default 自带 bg-gray-900 + hover:bg-gray-900/80（黑底），
                       //       className 的 bg-emerald-100 被覆盖，鼠标悬停变黑底。
@@ -486,7 +527,6 @@ export function SeedSourceTable({
                     {record.sourceOrigin === 'inventory_transfer' ? (
                       <span>
                         {truncateText(record.originalSupplierName || record.supplierName)}
-                        <span className="ml-1 text-[10px] text-cyan-600">(调拨来源)</span>
                       </span>
                     ) : (
                       truncateText(record.supplierName)

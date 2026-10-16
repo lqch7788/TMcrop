@@ -287,7 +287,7 @@ export function AddModal({
     }
     // 外部采购时供应商必填
     if (formData.sourceOrigin === 'external_purchase' && !formData.supplierId) {
-      await showAlert('请选择供应商');
+      await showAlert('请选择原始供应商');
       return;
     }
     // 2026-06-06: HIGH #6 — 数量必须 > 0，单价必须为有限数字
@@ -512,7 +512,7 @@ export function AddModal({
           {/* 作物选择 - 使用统一的 CropCodeSelector */}
           <div>
             <Label className="text-gray-900">
-              <span className="text-red-500">*</span> 作物选择
+              <span className="text-red-500">*</span> 作物品种
             </Label>
             <CropCodeSelector
               value={cropCode}
@@ -596,7 +596,7 @@ export function AddModal({
           {formData.propagationType === PropagationType.EXTERNAL && (
             <div ref={supplierSearchRef} className="relative">
               <Label className="text-gray-900">
-                <span className="text-red-500">*</span> 供应商
+                <span className="text-red-500">*</span> 原始供应商
               </Label>
               {selectedSupplier ? (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
