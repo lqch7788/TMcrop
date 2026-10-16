@@ -431,6 +431,55 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
       console.warn('[executePropagation] writeFlowLog failed:', e.message)
     }
 
+    // 2026-10-16：回流补写入库凭证（用户确认）—— 此前回流不写 inventory_inbound_records，
+    //   导致创建的种源在「出入库记录·入库区」无入库记录（账链不完整）。
+    //   字段对齐采收入库 INB 形态（source_module='planting'、source_id=来源种植 id）；
+    //   business_id=回流落点种源（finalStockId）→ 该种源的出入库记录可查聚合；
+    //   notes 刻意不含「从库存 IPx…」格式（防溯源链穿透正则误判）。
+    try {
+      const inbDate = circulationDate.split('T')[0]
+      const inbDateStr = inbDate.replace(/-/g, '')
+      const inbMaxRow = db.exec(`SELECT id FROM inventory_inbound_records WHERE id LIKE 'INB-${inbDateStr}-%' ORDER BY id DESC LIMIT 1`)
+      let inbSerial = 1
+      if (inbMaxRow.length && inbMaxRow[0].values.length) {
+        const m = String(inbMaxRow[0].values[0][0]).match(/-(\d{4})$/)
+        if (m) inbSerial = parseInt(m[1], 10) + 1
+      }
+      const inbId = `INB-${inbDateStr}-${String(inbSerial).padStart(4, '0')}`
+      let srcCode = ''
+      if (input.sourceModule === 'planting') {
+        const pRow = db.exec('SELECT planting_code FROM plantings WHERE id = ?', [input.sourceId])
+        if (pRow.length && pRow[0].values.length) srcCode = String(pRow[0].values[0][0] || '')
+      } else if (input.sourceModule === 'seedling') {
+        const sRow = db.exec('SELECT seedling_code FROM seedlings WHERE id = ?', [input.sourceId])
+        if (sRow.length && sRow[0].values.length) srcCode = String(sRow[0].values[0][0] || '')
+      }
+      const stockRow = db.exec('SELECT crop_code, crop_name, variety_name FROM seed_sources WHERE id = ?', [finalStockId])
+      const st = stockRow.length && stockRow[0].values.length ? stockRow[0].values[0] : []
+      const nowIso = new Date().toISOString()
+      db.run(`
+        INSERT INTO inventory_inbound_records (
+          id, record_type, record_date, source_module, source_id, source_code,
+          stock_type, source_type, source_origin, warehouse_id, warehouse_name,
+          crop_id, crop_code, crop_name, variety_name,
+          quantity, unit, unit_price, total_amount, quality_grade,
+          supplier_id, supplier_name, production_plan_id, production_plan_code,
+          business_id, notes, operator_name, create_by, create_time, update_time
+        ) VALUES (?, 'inbound', ?, ?, ?, ?, 'seed', 'planting_self_kept', 'planting_self_kept', 'SEED_SOURCE_VIRTUAL', '内部种源库', ?, ?, ?, ?, ?, ?, 0, 0, NULL, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)
+      `, [
+        inbId, inbDate, input.sourceModule, input.sourceId, srcCode,
+        null, st[0] ?? null, st[1] ?? null, st[2] ?? null,
+        input.quantity ?? 0, unit,
+        finalStockId,
+        `种植留种入库（${input.sourceModule === 'planting' ? '种植' : '育苗'} ${srcCode || input.sourceId}，回流 ${input.quantity ?? 0}${unit}）`,
+        input.operatorName || 'system', input.operatorName || 'system',
+        nowIso, nowIso,
+      ])
+    } catch (inbErr: any) {
+      // 凭证写入失败不阻断回流主流程（种源已建）——但必须显式记录（Fail Loud）
+      console.warn('[executePropagation] 回流入库凭证写入失败:', inbErr?.message || inbErr)
+    }
+
     db.run('COMMIT')
     saveDatabase()
   } catch (e) {

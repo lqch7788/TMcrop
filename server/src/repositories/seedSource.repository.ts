@@ -1057,7 +1057,8 @@ export class SeedSourceRepository {
              reverse_reason AS reverseReason
       FROM inventory_inbound_records
       WHERE business_id = ?
-        AND source_module IN ('seed_source', 'inventory')
+        -- 2026-10-16：白名单加 'planting'（回流"种植留种入库"凭证由 executePropagation 写入）
+        AND source_module IN ('seed_source', 'inventory', 'planting')
     `);
     s1.bind([seedSourceId]);
     while (s1.step()) results.push(s1.getAsObject());
