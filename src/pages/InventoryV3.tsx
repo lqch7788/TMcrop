@@ -4,7 +4,7 @@
  * 数据流：组件 → enhancedApiClient → 后端 Express → SQLite
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
@@ -18,6 +18,7 @@ import {
 import {
   INVENTORY_STATUS_FILTER_OPTIONS,
   INVENTORY_SOURCE_FILTER_OPTIONS,
+  INVENTORY_STATUS_MAP,
   LOW_STOCK_THRESHOLD,
 } from '../constants/cropConstants';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
@@ -26,11 +27,13 @@ import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
 // 2026-07-28 审核 C-2：导入 useToast 修复导出时 toast.success/warning/error ReferenceError
 import { useToast } from '../contexts/ToastContext';
+// 2026-10-16：深链兜底单查（已转移等不在活跃列表的库存 → 直接打开详情弹窗）
+import { getInventoryByInstanceId } from '../services/inventoryService';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-07-10 P1-1：抽取公共导出函数
 import { exportCsv, exportXlsx } from '@/services/exporters';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
-import { DeleteConfirmModal, Button } from '@/components/ui';
+import { DeleteConfirmModal, Button, Badge } from '@/components/ui';
 // 2026-07-19 P2：100% 对齐内部种源导出模式（2 步流程 + ExportFormatModal 弹窗）
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 
@@ -68,6 +71,16 @@ export default function InventoryV3Page() {
     sourceType: '',
     keyword: '',
   });
+  // 2026-10-16：支持 ?keyword= 深链（溯源链编码点击跳转 → 预填搜索自动定位到该行）
+  // deepLinkRef 记录待确认的深链编码，供下方兜底 effect 判断列表是否命中
+  const deepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const kw = new URLSearchParams(window.location.search).get('keyword');
+    if (!kw) return;
+    setFilters((prev) => ({ ...prev, keyword: kw }));
+    deepLinkRef.current = kw;
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
   // 弹窗状态
@@ -145,6 +158,71 @@ export default function InventoryV3Page() {
     }
     return result;
   }, [stocks, filters.stockType, filters.status, filters.sourceType, filters.keyword, showLowStockOnly]);
+
+  // 2026-10-16：深链兜底 —— 预填搜索后若列表定位不到（如已转移 transferred / 已删除的历史库存
+  // 不暴露在活跃列表；溯源链跳转点常指向这类历史节点），自动按 instanceId 单查并打开详情弹窗，
+  // 让用户仍能查看该库存的完整信息（数量、状态、全链路追溯）
+  useEffect(() => {
+    const code = deepLinkRef.current;
+    if (!code || loading) return; // 等库存列表加载完成再判断
+    if (filteredStocks.length > 0) { deepLinkRef.current = null; return; } // 列表已命中，正常定位展示
+    deepLinkRef.current = null;
+    getInventoryByInstanceId(code)
+      .then((stock) => {
+        if (stock) {
+          setDetailStock(stock);
+          setDetailModalOpen(true);
+        } else {
+          toast.error(`未找到库存 ${code}`);
+        }
+      })
+      .catch((e) => {
+        console.error('[InventoryV3] 深链单查失败:', e);
+        toast.error(`查询库存失败：${(e && (e as { message?: string }).message) || '未知错误'}`);
+      });
+  }, [loading, filteredStocks, toast]);
+
+  // 2026-10-16：搜索框"列表外"兜底 —— 手动输入编码（如 INS-20260726-0001）时，
+  // 已调拨（transferred）等历史库存不在活跃列表 API 返回中（后端按设计过滤，防容器库存污染各处选择器），
+  // 此前表现为"搜不到、无提示"（用户误以为被删除）。这里在列表无结果时按编码单查，
+  // 查到时在表格下方展示"不在活跃列表"结果卡（含状态 + 查看详情入口）。
+  const [outOfListStock, setOutOfListStock] = useState<InventoryStock | null>(null);
+  const [outOfListQuery, setOutOfListQuery] = useState('');
+  useEffect(() => {
+    const kw = (filters.keyword || '').trim();
+    // 仅对"像库存编码"的搜索词兜底（长度 >= 8 且带业务前缀），普通关键词不额外查询
+    if (!kw || kw.length < 8 || !/^(INS|ISE|IPR|STK|SS)[-_]/i.test(kw)) {
+      setOutOfListStock(null); setOutOfListQuery('');
+      return;
+    }
+    if (loading || filteredStocks.length > 0) {
+      // 列表已有结果（或尚未加载完）→ 无需兜底展示
+      setOutOfListStock(null); setOutOfListQuery('');
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      getInventoryByInstanceId(kw)
+        .then((stock) => {
+          if (cancelled) return;
+          // 仅当单查结果与搜索词精确对应时展示（防打字中间态误展示）
+          if (stock && (stock.instanceId === kw || stock.id === kw)) {
+            setOutOfListStock(stock);
+            setOutOfListQuery(kw);
+          } else {
+            setOutOfListStock(null);
+            setOutOfListQuery('');
+          }
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          console.error('[InventoryV3] 列表外单查失败:', e);
+          setOutOfListStock(null);
+          setOutOfListQuery('');
+        });
+    }, 300); // 防抖：打字过程不频繁请求
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [filters.keyword, filteredStocks, loading]);
 
   // 2026-10-10：筛选条件变化时回到第 1 页（此前停留在旧页码，筛出结果可能为空页）
   useEffect(() => {
@@ -454,6 +532,39 @@ export default function InventoryV3Page() {
         showCheckboxes={deleteMode || exportMode}
         onSelectAll={handleSelectAll}
       />
+
+      {/* 2026-10-16：列表外结果卡 —— 搜索框输入编码命中"历史库存"（已调拨/已耗尽等不在活跃列表）时展示，
+          说明它存在但不在活跃列表，并提供完整详情入口（不再表现为"搜不到、无提示"） */}
+      {!loading && filteredStocks.length === 0 && outOfListStock && (
+        <div className="bg-white rounded-xl border border-amber-200 p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <Badge
+                className={`shrink-0 border-transparent ${
+                  INVENTORY_STATUS_MAP[String(outOfListStock.status || '')]?.bg || 'bg-amber-100'
+                } ${INVENTORY_STATUS_MAP[String(outOfListStock.status || '')]?.text || 'text-amber-700'}`}
+              >
+                {INVENTORY_STATUS_MAP[String(outOfListStock.status || '')]?.label || '不在活跃列表'}
+              </Badge>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {outOfListStock.cropName || '-'}
+                  {outOfListStock.varietyName ? `（${outOfListStock.varietyName}）` : ''}
+                  {' · '}
+                  <code className="font-mono">{outOfListStock.instanceId}</code>
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  「{outOfListQuery}」不在活跃库存列表（可能已调拨至种源或已耗尽）；当前数量{' '}
+                  {outOfListStock.currentQuantity ?? 0} {outOfListStock.unit || ''}
+                </div>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => handleViewDetail(outOfListStock)}>
+              查看详情
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 冻结弹窗 */}
       <FreezeModal

@@ -1035,20 +1035,30 @@ export async function getInboundRecords(seedSourceId: string): Promise<InboundRe
 }
 
 /**
- * 2026-10-16：种源出库流水（当前为「退库到作物库存」）
- * 用于「出入库记录」Tab 的出库区 —— 用户需求：一个 Tab 查看入库+冲销+退库全部数据
- * quantity 为原始正数（存储为原库存视角 +N），界面按种源视角显示为 -N
+ * 2026-10-16：种源出库流水（「出入库记录」Tab 出库区）
+ * v2 合并"使用记录"三来源：退库到作物库存 / 育苗使用 / 种植移入
+ * quantity 恒为正数（扣减量），界面按种源视角显示为 -N
  */
 export interface SeedSourceOutboundRecord {
   id: string;
+  /** return_to_stock（退库到作物库存）| seedling_use（育苗使用）| planting_move_in（种植移入） */
+  outType: string;
   quantity: number;
-  sourceInstanceId: string | null;
+  /** 去向文本（退库=原库存实例；育苗=育苗单+温室；种植=种植单+区域） */
+  targetDesc: string | null;
   recordDate: string | null;
   operatorName: string | null;
   remarks: string | null;
   createdAt: string | null;
   unit: string | null;
 }
+
+/** 出库类型 → 中文标签 + 徽章样式（2026-10-16 合并三来源） */
+export const OUTBOUND_TYPE_LABEL: Record<string, { label: string; cls: string }> = {
+  return_to_stock: { label: '退库到作物库存', cls: 'bg-amber-50 text-amber-700' },
+  seedling_use: { label: '育苗使用', cls: 'bg-teal-50 text-teal-700' },
+  planting_move_in: { label: '种植移入', cls: 'bg-emerald-50 text-emerald-700' },
+};
 
 export async function getOutboundRecords(seedSourceId: string): Promise<SeedSourceOutboundRecord[]> {
   const response = await enhancedApiClient.get(`/seed-sources/${seedSourceId}/history-outbound`);

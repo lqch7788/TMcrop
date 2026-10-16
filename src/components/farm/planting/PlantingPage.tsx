@@ -81,6 +81,13 @@ export default function PlantingPage() {
     countMin: undefined,
     countMax: undefined,
   });
+  // 2026-10-16：支持 ?plantCode= 深链（溯源链编码点击跳转 → 预填单号搜索自动定位到该行）
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('plantCode');
+    if (!code) return;
+    setFilters((prev) => ({ ...prev, plantCode: code }));
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);

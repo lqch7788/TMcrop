@@ -3,7 +3,8 @@
  * 种源已退化为纯仓库角色，移除繁育种源相关字段。
  * 三入口模式：外购入库 / 库存调拨 / 种植留种
  * Tab：基本信息 / 追溯时间线（隐藏「入库」分类，避免与出入库记录 Tab 重复；其余分类全显）
- *      / 溯源链 / 调拨来源（条件）/ 出入库记录（入库+冲销+退库）/ 使用记录
+ *      / 溯源链（含「原始快照」折叠区，原「调拨来源」Tab 已并入）
+ *      / 出入库记录（入库+冲销 + 出库：退库/育苗使用/种植移入 —— 原「使用记录」Tab 已并入出库区）
  * 2026-07-05: "调入种植" Tab 改名为 "使用记录"（更准确反映被育苗/种植使用两种场景）
  * 2026-08-16: 追溯时间线分类按"两来源"现实优化注释（见 SEED_SOURCE_CATEGORY_DESCRIPTIONS）
  * 2026-10-16: 终稿 —— 入库数据入口唯一化：保留顶层 Tab（后改名「出入库记录」，功能超集：冲销/作废/退库/出库/导出），
@@ -11,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Undo2 } from 'lucide-react';
+import { ArrowLeftRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Undo2 } from 'lucide-react';
 import { useToastStore } from '@/stores/useToastStore';
 // 2026-07-19 P2：导入 todayLocal 避免运行时 ReferenceError
 import { todayLocal } from '@/lib/dateUtils';
@@ -26,17 +27,16 @@ import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 // 2026-08-16：种源隐藏「入库」「回流」两个重复分类 + 改写保留分类悬停说明
 import type { CategoryKey } from '@/components/ui/EntityHistoryTimeline';
 import { SeedSource } from '../../../../types/crop';
-import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP, TRANSFERRED_FROM_BUSINESS_TYPE_MAP, ORIGINAL_SOURCE_MODULE_MAP } from '../../../../constants/cropConstants';
+import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 // 2026-07-16：种源形态字段 seedForm 后端可能存中文（来自 product_form）或英文（来自 stock_type），
 // 统一在前端兜底翻译成中文显示
 import { SEED_FORM_OPTIONS, SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
-  getSeedSourceUsageRecords,
   getInboundRecords,
   getInboundEditLogs,
   getOutboundRecords,
-  type SeedSourceUsageRecord,
+  OUTBOUND_TYPE_LABEL,
   type InboundEditLog,
   type SeedSourceOutboundRecord,
 } from '@/services/apiSeedSourceService';
@@ -302,227 +302,8 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
   );
 }
 
-/** 调拨来源面板（条件渲染） */
-function TransferSourcePanel({ record }: { record: SeedSource }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-          <ArrowLeftRight className="w-4 h-4 text-emerald-600" />
-          调拨来源（原库存信息）
-        </h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原库存 ID：</span>
-            <code className="text-xs font-mono text-gray-700">{record.transferredFromStockId}</code>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">来源业务类型：</span>
-            {/* 2026-07-16：transferredFromBusinessType 是英文枚举（harvest/purchase/transfer），走字典翻译 */}
-            <span className="text-sm text-gray-900">{record.transferredFromBusinessType ? (TRANSFERRED_FROM_BUSINESS_TYPE_MAP[record.transferredFromBusinessType] || record.transferredFromBusinessType) : '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">来源业务 ID：</span>
-            <code className="text-xs font-mono text-gray-700">{record.transferredFromBusinessId || '—'}</code>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始入库日期：</span>
-            <span className="text-sm text-gray-900">{record.originalInboundDate || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始来源模块：</span>
-            {/* 2026-07-16：originalSourceModule 是英文枚举（seed_source/seedling/planting/harvest），走字典翻译 */}
-            <span className="text-sm text-gray-900">{record.originalSourceModule ? (ORIGINAL_SOURCE_MODULE_MAP[record.originalSourceModule] || record.originalSourceModule) : '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始来源 ID：</span>
-            <code className="text-xs font-mono text-gray-700">{record.originalSourceId || '—'}</code>
-          </div>
-        </div>
-      </div>
-      <div>
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">作物 / 品种 / 价格</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始作物：</span>
-            <span className="text-sm text-gray-900">{record.originalCropName || record.cropName || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始品种：</span>
-            <span className="text-sm text-gray-900">{record.originalVarietyName || record.cropVariety || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始单位：</span>
-            <span className="text-sm text-gray-900">{record.originalUnit || record.unit || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始单价：</span>
-            <span className="text-sm text-gray-900">
-              {record.originalUnitPrice != null ? `¥${record.originalUnitPrice}` : '—'}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始供应商：</span>
-            <span className="text-sm text-gray-900">{record.originalSupplierName || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-28">原始生产计划：</span>
-            <code className="text-xs font-mono text-gray-700">{record.originalProductionPlanCode || '—'}</code>
-          </div>
-        </div>
-      </div>
-      {record.originalHarvestRecordId && (
-        <div className="text-xs text-gray-500 bg-amber-50 border border-amber-200 rounded p-3">
-          <strong>采收记录：</strong>
-          <code className="font-mono">{record.originalHarvestRecordId}</code>
-          <span className="ml-2">（调拨前的入库来源）</span>
-        </div>
-      )}
-    </div>
-  );
-}
+/** 2026-10-16：TransferSourcePanel（调拨来源面板）已并入 UpstreamTracePanel 的「原始快照」折叠区 */
 
-/**
- * 使用记录面板
- * 2026-06-30: 列示当前种源被消耗/调拨出去的全量记录。
- * 2026-07-05: 改名为"使用记录"，覆盖被育苗使用 + 种植移入/移出。
- * 数据来源：GET /api/seed-sources/:id/usage-records
- */
-function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
-  const [records, setRecords] = useState<SeedSourceUsageRecord[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!seedSourceId) return
-    setLoading(true)
-    setError(null)
-    // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
-    getSeedSourceUsageRecords(seedSourceId)
-      .then((data) => setRecords(Array.isArray(data) ? data : []))
-      .catch((e) => { console.error('[DetailModal] 使用记录加载失败:', e); setError((e && (e as { message?: string }).message) || '加载失败'); })
-      .finally(() => setLoading(false))
-  }, [seedSourceId])
-
-  if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中…</div>
-  }
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    )
-  }
-  if (records.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
-        <MoveRight className="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <div className="text-sm">暂无使用记录</div>
-        <div className="text-xs mt-1 text-gray-400">
-          当该种源被育苗或种植环节调用时会显示在此
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-          <MoveRight className="w-4 h-4 text-emerald-600" />
-          使用记录（共 {records.length} 条）
-        </h4>
-        <Button
-          size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          onClick={() => {
-            const headers = ['日期', '类型', '种源批号', '作物名称', '作物编码', '形态', '数量', '目标种植单', '目标区域', '操作员', '备注'];
-            const data = records.map(r => [
-              r.operationDate || '',
-              r.operationType === 'move_in' ? '调入' : '调出',
-              r.sourceCode || '',
-              r.cropName || '',
-              r.cropCode || '',
-              r.seedForm ? (formatSeedForm(r.seedForm)) : '',
-              r.quantity ?? 0,
-              r.plantingCode || '',
-              r.toAreaName || r.fromAreaName || '',
-              r.operatorName || '',
-              r.remarks || '',
-            ]);
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-            ws['!cols'] = headers.map(() => ({ wch: 16 }));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '使用记录');
-            // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
-            const today = todayLocal().replace(/-/g, '');
-            XLSX.writeFile(wb, `使用记录_${today}_${records.length}条.xlsx`);
-          }}
-        >
-          <Download className="w-4 h-4 mr-1" />
-          导出 Excel
-        </Button>
-      </div>
-      <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-        <table className="w-full text-sm">
-          <thead className="bg-blue-500 text-white sticky top-0">
-            <tr>
-              <th className="px-2 py-2 text-left">日期</th>
-              <th className="px-2 py-2 text-left">类型</th>
-              <th className="px-2 py-2 text-left">种源批号</th>
-              <th className="px-2 py-2 text-left">作物名称</th>
-              <th className="px-2 py-2 text-left">作物编码</th>
-              <th className="px-2 py-2 text-left">形态</th>
-              <th className="px-2 py-2 text-right">数量</th>
-              <th className="px-2 py-2 text-left">目标种植单</th>
-              <th className="px-2 py-2 text-left">目标区域</th>
-              <th className="px-2 py-2 text-left">操作员</th>
-              <th className="px-2 py-2 text-left">备注</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50 border-b border-gray-100">
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.operationDate || '-'}</td>
-                <td className="px-2 py-1.5">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                      r.operationType === 'move_in'
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-amber-50 text-amber-600'
-                    }`}
-                  >
-                    {r.operationType === 'move_in' ? '调入' : '调出'}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5"><code className="text-xs">{r.sourceCode || '-'}</code></td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.cropName || '-'}</td>
-                <td className="px-2 py-1.5"><code className="text-xs text-orange-600">{r.cropCode || '-'}</code></td>
-                <td className="px-2 py-1.5">{r.seedForm ? formatSeedForm(r.seedForm) : '-'}</td>
-                <td className="px-2 py-1.5 text-right font-medium">
-                  {(r.quantity || 0).toLocaleString()}
-                </td>
-                <td className="px-2 py-1.5">
-                  <code className="text-xs">{r.plantingCode || '-'}</code>
-                </td>
-                {/* 2026-10-16 修复：加 fromAreaName 兜底（移出行 toAreaName 为空）——与导出逻辑（450 行）对齐 */}
-                <td className="px-2 py-1.5">{r.toAreaName || r.fromAreaName || '-'}</td>
-                <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
-                <td
-                  className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
-                  title={r.remarks || ''}
-                >
-                  {r.remarks || '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
 
 // 来源模块中文映射（与 SeedSourceInboundModal 的 sourceModule 保持一致）
 // 2026-07-14：移到模块顶层（避免 InboundRecordsPanel 每次 render 重建）
@@ -818,6 +599,7 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
         <Button
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          title="导出出入库记录（含「入库记录」「出库记录」两个工作表）"
           onClick={() => {
             // 2026-07-19 P1：Excel 导出增加"记录类型"+"作废状态"列，已冲销行显示"—（已冲销）"
             const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '原始数量', '已退数量', '可退数量', '单价', '总金额', '供应商', '操作员', '记录类型', '作废状态', '备注'];
@@ -847,9 +629,24 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
             ws['!cols'] = headers.map(() => ({ wch: 16 }));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '入库记录');
+            // 2026-10-16：补出库记录 sheet（用户报告：导出只能到入库记录，出库区数据缺失）
+            // 2026-10-16 v2：出库区合并使用记录（退库/育苗使用/种植移入），列同步
+            // 数量取负与页面显示一致（种源视角扣减）
+            const outHeaders = ['日期', '类型', '数量（种源扣减）', '去向', '操作员', '备注'];
+            const outData = outboundRecords.map(r => [
+              r.recordDate || (r.createdAt || '').slice(0, 10),
+              OUTBOUND_TYPE_LABEL[r.outType]?.label || r.outType,
+              -(Number(r.quantity) || 0),
+              r.targetDesc || '',
+              r.operatorName || '',
+              r.remarks || '',
+            ]);
+            const wsOut = XLSX.utils.aoa_to_sheet([outHeaders, ...outData]);
+            wsOut['!cols'] = outHeaders.map(() => ({ wch: 18 }));
+            XLSX.utils.book_append_sheet(wb, wsOut, '出库记录');
             // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
             const today = todayLocal().replace(/-/g, '');
-            XLSX.writeFile(wb, `入库记录_${today}_${records.length}条.xlsx`);
+            XLSX.writeFile(wb, `出入库记录_${today}_入库${records.length}条_出库${outboundRecords.length}条.xlsx`);
           }}
         >
           <Download className="w-4 h-4 mr-1" />
@@ -1052,12 +849,14 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
         ) : (
           <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50">
+              {/* 2026-10-16：表头样式与入库记录统一（蓝底白字） */}
+              <thead className="bg-blue-500 text-white sticky top-0">
                 <tr>
                   <th className="px-2 py-2 text-left w-24">日期</th>
                   <th className="px-2 py-2 text-left w-36">类型</th>
                   <th className="px-2 py-2 text-right w-32">数量（种源扣减）</th>
-                  <th className="px-2 py-2 text-left w-44">退回至（原库存）</th>
+                  {/* 2026-10-16：合并使用记录后列名由「退回至（原库存）」改「去向」（覆盖三种出库来源） */}
+                  <th className="px-2 py-2 text-left w-56">去向</th>
                   <th className="px-2 py-2 text-left w-24">操作员</th>
                   <th className="px-2 py-2 text-left">备注</th>
                 </tr>
@@ -1067,8 +866,9 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                   <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-2 py-1.5">{r.recordDate || (r.createdAt || '').slice(0, 10) || '-'}</td>
                     <td className="px-2 py-1.5">
-                      <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-xs">
-                        退库到作物库存
+                      {/* 2026-10-16：类型徽章按出库来源（退库/育苗使用/种植移入）映射 */}
+                      <span className={`px-1.5 py-0.5 rounded text-xs ${OUTBOUND_TYPE_LABEL[r.outType]?.cls || 'bg-gray-50 text-gray-700'}`}>
+                        {OUTBOUND_TYPE_LABEL[r.outType]?.label || r.outType}
                       </span>
                     </td>
                     <td className="px-2 py-1.5 text-right">
@@ -1078,7 +878,7 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                       <span className="text-gray-500 ml-1">{r.unit || ''}</span>
                     </td>
                     <td className="px-2 py-1.5">
-                      <code className="text-xs text-gray-700">{r.sourceInstanceId || '-'}</code>
+                      <code className="text-xs text-gray-700">{r.targetDesc || '-'}</code>
                     </td>
                     <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
                     <td className="px-2 py-1.5 text-gray-500 truncate max-w-[240px]" title={r.remarks || ''}>
@@ -1233,7 +1033,6 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
 
 
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
-  const hasTransferSource = !!record.transferredFromStockId;
 
   // 2026-07-19 P2：加 tooltip 字段（Hover 提示）
   const extraTabs: Array<{
@@ -1250,18 +1049,11 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     label: '溯源链',
     icon: <ArrowLeftRight className="w-4 h-4" />,
     tooltip: '追溯种源入库前的完整来源链路（调拨来源→库存→入库→采购/采收/种植）',
-    content: <UpstreamTracePanel seedSourceId={record.id} />,
+    content: <UpstreamTracePanel seedSourceId={record.id} record={record} />,
   })
 
-  // 调拨来源 tab — 仅库存调拨入库的种源显示
-  if (hasTransferSource) {
-    extraTabs.push({
-      key: 'transfer-source',
-      label: '调拨来源',
-      icon: <ArrowLeftRight className="w-4 h-4" />,
-      content: <TransferSourcePanel record={record} />,
-    })
-  }
+  // 2026-10-16：「调拨来源」独立 Tab 已并入「溯源链」Tab 顶部（原始快照折叠区），
+  // 避免与溯源链的链路信息重复展示为两个平级页面
 
   // 2026-07-06 Bug 19：所有种源都显示「出入库记录」Tab
   // 2026-10-16：由「入库记录」改名为「出入库记录」并新增出库区（退库到作物库存）——
@@ -1283,14 +1075,6 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   // 2026-08-16 v4：删除独立的"冲销记录"Tab — 已合并到入库记录 Tab 行的折叠面板内
   // （原 13 字段全部保留 + 可独立导出）
 
-  // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
-  extraTabs.push({
-    key: 'move-to-plantings',
-    label: '使用记录',
-    icon: <MoveRight className="w-4 h-4" />,
-    tooltip: '记录该种源被育苗/种植环节调用的全部流水。',
-    content: <UsageRecordsPanel seedSourceId={record.id} />,
-  })
 
   const originKey = record.sourceOrigin || (record.transferredFromStockId ? 'transfer_from_inventory' : 'external');
   const mode = MODE_CONFIG[originKey] || MODE_CONFIG['external'];
@@ -1306,10 +1090,10 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       entity="seed-sources"
       entityId={record.id}
       entityCode={record.seedCode}
-      typeColumn={{
-        label: '入库方式',
-        value: mode.label,
-      }}
+      // 2026-10-16 移除 typeColumn（原传 { label: '入库方式', value: mode.label }）——
+      //   该列是"每行硬挂同一个值"的静态列，导致育苗使用/退库/冲销等行也显示"库存调拨"，语义矛盾
+      //   （用户反馈：被育苗使用的出库行显示"入库方式=库存调拨"不合理）。
+      //   种源创建方式的信息在「基本信息·来源途径」已有；每行的类型/来源由 action 与「来源」列动态表达。
       // 2026-10-16：隐藏「入库」分类（时间线不再重复罗列入库数据，入口统一到「出入库记录」Tab）；
       // 其余分类完整保留 + 种源专属悬停说明
       historyHiddenCategories={SEED_SOURCE_HIDDEN_CATEGORIES}

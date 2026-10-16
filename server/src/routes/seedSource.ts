@@ -395,7 +395,11 @@ router.get('/:id/usage-records', (req, res) => {
          --   - plantingId/plantingCode ← business_id/business_code（已映射好）
          --   - operatorName ← tx.operator_name（创建时已存 create_by）
          SELECT tx.id, tx.operate_date AS operationDate,
-                'move_out' AS operationType, tx.quantity AS quantity,
+                'move_out' AS operationType,
+                -- 2026-10-16 修复：outbound 流水 quantity 存负数（-5），使用记录语义是"被使用量"，
+                --   与种植移出（planting_move_records.quantity 恒正）并表后符号不一致，前端直接显示"-5"。
+                --   统一取 ABS，正数表达"用掉多少"。
+                ABS(tx.quantity) AS quantity,
                 ss.id AS sourceId, ss.source_code AS sourceCode,
                 tx.business_id AS plantingId, tx.business_code AS plantingCode,
                 '' AS toAreaId, s.greenhouse_name AS toAreaName,

@@ -11,7 +11,7 @@ import { handleMove } from '../services/plantingMoveHandler';
 import { authenticate } from '../middleware/auth';
 import { executeCirculation, deriveSeedFormSubType, SEED_FORM_OPTIONS } from '../services/circulation.service';
 import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
-import { generateInstanceId } from '../services/inventory.service';
+import { generateInstanceId, generateTransactionId } from '../services/inventory.service';
 import {
   validateDailyChange,
   normalizeChangeData,
@@ -882,7 +882,8 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.post('/', (req: Request, res: Response) => {
+// 2026-10-16：改 async —— 领用补链需 await generateTransactionId（流水号生成）；内部 try/catch 已覆盖错误
+router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body;
 
@@ -981,6 +982,54 @@ router.post('/', (req: Request, res: Response) => {
           if (remaining >= finalPlantingQuantity) {
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
               [finalPlantingQuantity, now, finalSourceId]);
+
+            // 2026-10-16 修复：种植领用种源补写审计/账务链（用户报告：时间线「库存流水」与「出入库记录」
+            //   缺失被种植使用的 -N；flow 仅显示"种源→种植 +N"）。对齐育苗领用模式并兼容历史 move 记录：
+            //   ① inventory_transaction outbound（instance_id='seed_source:<ID>'）→ 种源时间线「库存流水」显示 -N
+            //   ② planting_move_records move_in（source_type='seed'）→ 出库区/使用记录 显示「种植移入」
+            try {
+              const ssRow = db.exec('SELECT source_code, unit FROM seed_sources WHERE id = ?', [finalSourceId]);
+              const ssCode = String(ssRow[0]?.values?.[0]?.[0] || '');
+              const ssUnit = String(ssRow[0]?.values?.[0]?.[1] || '');
+              const opDate = (finalPlantingDate || now).slice(0, 10);
+              const txDateStr = opDate.replace(/-/g, '');
+              const txId = await generateTransactionId(txDateStr);
+              db.run(
+                `INSERT INTO inventory_transaction (
+                  id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+                  balance_before, balance_after, business_id, business_type, business_code,
+                  operator_id, operator_name, operate_date, remarks, create_time
+                ) VALUES (?, ?, ?, 'seed', 'outbound', ?, ?, ?, ?, 'internal_planting', ?, '', ?, ?, ?, ?)`,
+                [
+                  txId, txId, `seed_source:${finalSourceId}`,
+                  -finalPlantingQuantity, remaining, remaining - finalPlantingQuantity,
+                  newId, finalPlantCode,
+                  finalCreateBy || '', finalCreateBy || '', opDate,
+                  `种源被种植使用 ${finalPlantCode}（扣减 ${finalPlantingQuantity}${ssUnit ? ' ' + ssUnit : ''}）`, now,
+                ],
+              );
+              const mvId = `MOV_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+              const toAreaText = [finalRootName, finalAreaName].filter(Boolean).join(' > ') || finalAreaName || '';
+              db.run(
+                `INSERT INTO planting_move_records (
+                  id, planting_id, planting_code, operation_type,
+                  from_area_id, from_area_name, to_area_id, to_area_name,
+                  quantity, operation_date, operator_name, remarks, create_time,
+                  source_id, source_type, source_code
+                ) VALUES (?, ?, ?, 'move_in', '', ?, '', ?, ?, ?, ?, ?, ?, ?, 'seed', ?)`,
+                [
+                  mvId, newId, finalPlantCode,
+                  ssCode, toAreaText,
+                  finalPlantingQuantity, opDate, finalCreateBy || '',
+                  `种源 ${ssCode} 领用于种植 ${finalPlantCode}`, now,
+                  finalSourceId, ssCode,
+                ],
+              );
+            } catch (chainErr) {
+              // 补链失败不阻断创建（主扣减与种植记录已写入；抛出会让本应成功的创建整体回滚），
+              // 但必须显式记录（Fail Loud）——可事后从日志补偿
+              console.error('[planting:create] 种植领用流水/移库记录写入失败:', (chainErr as Error)?.message || chainErr);
+            }
           }
         }
         flowType = 'seed_source→planting';

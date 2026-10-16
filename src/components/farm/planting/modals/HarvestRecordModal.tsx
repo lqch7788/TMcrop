@@ -55,7 +55,7 @@ import { todayLocal } from '@/lib/dateUtils'
 // 提交到 POST /api/inventory/inbound-from-source → 4 表写入 + 跨页刷新
 import { submitUnifiedInbound, type InboundProduct } from '@/services/unifiedHarvestInboundService'
 // 2026-10-09：种植自留种走育苗补录审批流（之前 addHarvestRecord 是完成即生效，不进审批）
-import { submitSeedlingSupplementaryApplication } from '@/services/apiSeedlingSupplementary'
+// 2026-10-16：种植自留种取消补录审批 → 移除 submitSeedlingSupplementaryApplication import（改直连 addHarvestRecord）
 
 interface HarvestRecordModalProps {
   isOpen: boolean
@@ -489,48 +489,20 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         operatorName: currentUser?.realName || 'system',
       }
 
-      // 2026-10-09：种植自留种走育苗补录审批流（先审批后写库）
-      // 之前 addHarvestRecord 直接回流到 seed_sources；现在改写为写 seedling_supplementary_applications 表 + approvals
-      // 审批通过 → approvalLinkage case 'seedling' 真做回流（写 planting_harvest_records）
-      if (destination === 'planting_self_kept') {
-        const seedResult = await submitSeedlingSupplementaryApplication({
-          sourceId: String(record.id || ''),
-          sourceModule: 'planting',
-          sourceCode: String(record.plantCode || ''),
-          // Planting 类型无 cropId 字段，从可选扩展读取（申请单该字段可不传）
-          cropId: String((record as { cropId?: string } | null)?.cropId || ''),
-          cropCode: String(record.cropCode || ''),
-          cropName: String(record.cropName || ''),
-          varietyName: String(record.cropVariety || ''),
-          seedForm: String(sourceForm || ''),
-          generation: String(generation || ''),
-          forceNew: forceNew ? 1 : 0,
-          quantity: qtyNum,
-          unit: String(unit || ''),
-          supplementaryReason: notes || '种植自留种补录',
-          notes: notes || '',
-          applicantId: String(currentUser?.oid || ''),
-          applicantName: String(currentUser?.realName || 'system'),
-          // CurrentUser 无 department 字段，从可选扩展读取（兼容未来类型补充）
-          applicantDepartment: String((currentUser as { department?: string } | null)?.department || ''),
-          operatorName: String(currentUser?.realName || 'system'),
-        });
-        showAlert(`已提交种植自留种审批：${seedResult.applicationCode}（审批单 ${seedResult.approvalCode}），请到「库存审批 → 补录审批」tab 查看`);
+      // 2026-10-16：取消种植自留种的补录审批（用户决策）——种植自留种是正常留种采收，不属于补录范畴。
+      //   改回直连回流：POST /plantings/:id/harvest-records → executeCirculation（同步写 circulation/种源/flow/PHR）。
+      //   补录审批保留给「作物库存新建入库补录」（AddStockModal → crop_storage 联动）。
+      //   input 已按 destination 构造（含 planting_self_kept 的 seedForm/generation/forceNew 等）。
+      const result = await addHarvestRecord(record.id, input);
+      if (result) {
+        showAlert(destination === 'planting_self_kept' ? '种植自留种采收成功，已回流至种源' : '采收记录添加成功');
+        if (requiresSelfKept) {
+          try { await useSeedSourceStore.getState().loadItems() } catch (e) { console.warn('[HarvestRecordModal] 刷新种源列表失败:', e) }
+        }
         resetForm();
         onSuccess?.();
       } else {
-        // harvest 模式仍走原 addHarvestRecord（采收入库 4 表写入）
-        const result = await addHarvestRecord(record.id, input);
-        if (result) {
-          showAlert('采收记录添加成功');
-          if (requiresSelfKept) {
-            try { await useSeedSourceStore.getState().loadItems() } catch (e) { console.warn('[HarvestRecordModal] 刷新种源列表失败:', e) }
-          }
-          resetForm();
-          onSuccess?.();
-        } else {
-          showAlert('添加失败');
-        }
+        showAlert('添加失败');
       }
     } catch (e) {
       // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫

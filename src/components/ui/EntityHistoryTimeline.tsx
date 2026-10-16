@@ -260,10 +260,29 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
   //   被隐藏分类的记录在「全部」视图中仍然逐行显示（与隐藏按钮的表意矛盾，
   //   也是种源时间线"入库行与入库记录 Tab 重复"的根因之一）。
   //   现在统一：先按 hiddenSet 排除隐藏分类的行，再按当前筛选分类过滤。
+  // 2026-10-16 v2：同事件配对去重（原在 entityHistoryService 数据层，移到这里）——
+  //   一次业务操作会同时写 transaction/inbound 行（账务视角）与 flow 行（流转视角），
+  //   「全部」视图并列显示造成重复感。规则：flow 行若存在配对行（|数量| 相同【允许镜像符号，
+  //   如「种源→育苗 +11」vs「育苗使用 -11」】+ 时间差 ≤2 秒 的 transaction/inbound 行）则隐藏。
+  //   ⚠️ 仅在「全部」视图生效；点「流转」等分类时保留完整台账（该分类的价值即完整流水）。
+  const PAIR_WINDOW_MS = 2000;
   const filtered = useMemo(
     () => {
       const visible = hiddenSet.size > 0 ? items.filter((i) => !hiddenSet.has(i.category)) : items;
-      return effectiveFilter === 'all' ? visible : visible.filter((i) => i.category === effectiveFilter);
+      if (effectiveFilter !== 'all') return visible.filter((i) => i.category === effectiveFilter);
+      const isPairedFlow = (f: HistoryItem): boolean => {
+        if (f.category !== 'flow' || f.quantityDelta == null) return false;
+        const ft = Date.parse(f.occurredAt);
+        if (Number.isNaN(ft)) return false;
+        return visible.some((t) => {
+          if (t.category !== 'transaction' && t.category !== 'inbound') return false;
+          if (t.quantityDelta == null) return false;
+          if (Math.abs(Math.abs(t.quantityDelta) - Math.abs(f.quantityDelta!)) > 1e-9) return false;
+          const tt = Date.parse(t.occurredAt);
+          return !Number.isNaN(tt) && Math.abs(tt - ft) <= PAIR_WINDOW_MS;
+        });
+      };
+      return visible.filter((i) => !isPairedFlow(i));
     },
     [items, effectiveFilter, hiddenSet],
   );
