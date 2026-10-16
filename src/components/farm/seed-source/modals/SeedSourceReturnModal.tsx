@@ -91,6 +91,8 @@ export function SeedSourceReturnModal({
 
   // ============ 选中行 ============
   const toggleRow = (row: ReturnableInboundRow, checked: boolean) => {
+    // 2026-10-16：已冲销的流水不可选中（与「冲销」功能互斥，防重复操作；硬拦截在后端 INBOUND_REVERSED）
+    if (row.reversedAt) return;
     setSelected((prev) => {
       const next = new Map(prev);
       if (checked) {
@@ -183,8 +185,16 @@ export function SeedSourceReturnModal({
           模式：退库到原作物库存（严格 1:1 关联调拨流水）
         </Badge>
         <Badge variant="outline" className="text-xs">
-          {loading ? '加载中…' : `共 ${rows.length} 条可退流水`}
+          {loading
+            ? '加载中…'
+            : `共 ${rows.length} 条流水 · 可退 ${rows.filter((r) => !r.reversedAt && r.returnableQuantity > 0).length} 条`}
         </Badge>
+        {/* 2026-10-16：已冲销提示（与「冲销」功能互斥，防重复操作） */}
+        {!loading && rows.some((r) => r.reversedAt) && (
+          <Badge className="bg-red-100 text-red-700 text-xs">
+            {rows.filter((r) => r.reversedAt).length} 条已在「入库记录」中冲销 · 不可退库
+          </Badge>
+        )}
         {totalCount > 0 && (
           <Badge className="bg-emerald-500 text-white text-xs">
             已选 {totalCount} 条
@@ -231,25 +241,40 @@ export function SeedSourceReturnModal({
             </TableHeader>
             <TableBody>
               {rows.map((row) => {
-                const isSelected = selected.has(row.id);
+                // 2026-10-16：已冲销行置灰禁用（防与「冲销」功能重复操作）
+                const isReversedRow = !!row.reversedAt;
+                const isSelected = !isReversedRow && selected.has(row.id);
                 const sel = selected.get(row.id);
                 const qty = sel?.quantity ?? 0;
                 const overLimit = isSelected && qty > row.returnableQuantity;
                 return (
                   <TableRow
                     key={row.id}
-                    className={isSelected ? 'bg-emerald-50/40' : ''}
+                    className={
+                      isReversedRow
+                        ? 'bg-red-50/40 opacity-70'
+                        : isSelected
+                          ? 'bg-emerald-50/40'
+                          : ''
+                    }
                   >
                     <TableCell className="text-center">
                       <Checkbox
                         checked={isSelected}
+                        disabled={isReversedRow}
                         onCheckedChange={(c) => toggleRow(row, !!c)}
+                        title={isReversedRow ? '已在「入库记录」中冲销，不可退库' : undefined}
                       />
                     </TableCell>
                     <TableCell>
                       <code className="text-xs text-gray-700 whitespace-nowrap block truncate" title={row.sourceInstanceId || row.sourceCode}>
                         {row.sourceInstanceId || row.sourceCode}
                       </code>
+                      {isReversedRow && (
+                        <Badge variant="destructive" className="text-xs mt-0.5">
+                          已冲销
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge className="whitespace-nowrap bg-blue-100 text-blue-700">
@@ -280,10 +305,16 @@ export function SeedSourceReturnModal({
                       <span className="text-xs text-gray-400 ml-1">{row.unit}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="text-sm font-medium text-emerald-600 whitespace-nowrap">
-                        {row.returnableQuantity}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-1">{row.unit}</span>
+                      {isReversedRow ? (
+                        <span className="text-xs text-gray-400 whitespace-nowrap">—（已冲销）</span>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium text-emerald-600 whitespace-nowrap">
+                            {row.returnableQuantity}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-1">{row.unit}</span>
+                        </>
+                      )}
                     </TableCell>
                     <TableCell>
                       {isSelected ? (

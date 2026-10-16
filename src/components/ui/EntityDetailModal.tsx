@@ -11,7 +11,7 @@
  * - 育苗：{ label: '种苗类型', value: '穴盘苗' }
  * - 种植：{ label: '成品类型', value: '果实' }
  *
- * 2026-08-16：新增 historyHiddenCategories / historyCategoryDescriptions，透传给追溯时间线（种源隐藏入库/回流两个重复分类）
+ * 2026-08-16：新增 historyHiddenCategories / historyCategoryDescriptions，透传给追溯时间线（分类可隐藏、说明可改写）
  */
 
 import React, { useState, useEffect } from 'react';
@@ -50,7 +50,7 @@ interface EntityDetailModalProps {
   typeColumn?: TypeColumnConfig;
   /**
    * 追溯时间线隐藏的分类（2026-08-16，透传给 EntityHistoryTimeline.hiddenCategories）
-   * 种源传 ['inbound','circulation']（与主 Tab「入库记录」重复）；不传则 6 分类全显
+   * 种源传 ['inbound']（入库数据入口统一到「出入库记录」Tab，避免重复）；不传则分类全显
    */
   historyHiddenCategories?: CategoryKey[];
   /**

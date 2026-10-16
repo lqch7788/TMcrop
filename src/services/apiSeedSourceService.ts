@@ -1035,6 +1035,31 @@ export async function getInboundRecords(seedSourceId: string): Promise<InboundRe
 }
 
 /**
+ * 2026-10-16：种源出库流水（当前为「退库到作物库存」）
+ * 用于「出入库记录」Tab 的出库区 —— 用户需求：一个 Tab 查看入库+冲销+退库全部数据
+ * quantity 为原始正数（存储为原库存视角 +N），界面按种源视角显示为 -N
+ */
+export interface SeedSourceOutboundRecord {
+  id: string;
+  quantity: number;
+  sourceInstanceId: string | null;
+  recordDate: string | null;
+  operatorName: string | null;
+  remarks: string | null;
+  createdAt: string | null;
+  unit: string | null;
+}
+
+export async function getOutboundRecords(seedSourceId: string): Promise<SeedSourceOutboundRecord[]> {
+  const response = await enhancedApiClient.get(`/seed-sources/${seedSourceId}/history-outbound`);
+  // 2026-10-16：响应不合法时抛错（不静默返空）
+  if (!Array.isArray(response)) {
+    throw new Error('出库记录响应格式错误：期望数组');
+  }
+  return response as SeedSourceOutboundRecord[];
+}
+
+/**
  * 2026-07-18: 入库审计日志（inbound_edit_log）
  */
 export type InboundEditLog = import('@/types/crop').InboundEditLog;

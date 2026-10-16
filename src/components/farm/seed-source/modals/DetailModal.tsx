@@ -2,14 +2,16 @@
  * 种源详情弹窗（2026-07-02 重构）
  * 种源已退化为纯仓库角色，移除繁育种源相关字段。
  * 三入口模式：外购入库 / 库存调拨 / 种植留种
- * Tab：基本信息 / 追溯时间线（种源隐藏"入库""回流"两个重复分类，见 SEED_SOURCE_HIDDEN_CATEGORIES）
- *      / 溯源链 / 调拨来源（条件）/ 入库记录 / 使用记录
+ * Tab：基本信息 / 追溯时间线（隐藏「入库」分类，避免与出入库记录 Tab 重复；其余分类全显）
+ *      / 溯源链 / 调拨来源（条件）/ 出入库记录（入库+冲销+退库）/ 使用记录
  * 2026-07-05: "调入种植" Tab 改名为 "使用记录"（更准确反映被育苗/种植使用两种场景）
  * 2026-08-16: 追溯时间线分类按"两来源"现实优化注释（见 SEED_SOURCE_CATEGORY_DESCRIPTIONS）
+ * 2026-10-16: 终稿 —— 入库数据入口唯一化：保留顶层 Tab（后改名「出入库记录」，功能超集：冲销/作废/退库/出库/导出），
+ *      时间线隐藏「入库」分类；并修复时间线组件"隐藏分类仍显示行"的 bug（见 EntityHistoryTimeline.filtered）
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Undo2 } from 'lucide-react';
 import { useToastStore } from '@/stores/useToastStore';
 // 2026-07-19 P2：导入 todayLocal 避免运行时 ReferenceError
 import { todayLocal } from '@/lib/dateUtils';
@@ -33,8 +35,10 @@ import {
   getSeedSourceUsageRecords,
   getInboundRecords,
   getInboundEditLogs,
+  getOutboundRecords,
   type SeedSourceUsageRecord,
   type InboundEditLog,
+  type SeedSourceOutboundRecord,
 } from '@/services/apiSeedSourceService';
 // 2026-07-21：使用共享品种路径 hook（与列表/编辑完全一致）
 import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
@@ -66,23 +70,25 @@ const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color:
 };
 
 /**
- * 2026-08-16：种源专属「追溯时间线」分类配置
- * - 隐藏「入库」「回流」：与主 Tab「入库记录」逐行重复
- *   （时间线 inbound 查 inventory_inbound_records，circulation 查 crop_circulation_records PROPAGATION，
- *    主 Tab getInboundRecords 正是这两表 UNION）
- * - 改写保留分类悬停说明：内部种源仅「库存调拨」「种植留种」两个创建来源，
- *   二者均由服务层直写数据表，创建时刻不产生审计/流水/流转记录，文案如实交代"可能为空"
+ * 2026-10-16：种源「追溯时间线」隐藏「入库」分类（仅此一类）——
+ * 入库数据（inventory_inbound_records）的权威入口是顶层「出入库记录」Tab（功能超集：冲销/作废审计/退库/出库/导出），
+ * 时间线不再重复罗列同一数据（该重复是用户多次反馈的困惑点）。
+ * 其余分类（创建/修改/删除、库存流水、回流、流转）完整保留显示。
+ * 注：circulation 分类查询 crop_circulation_records 全部类型（含回填/废弃处置），非纯重复，故不隐藏。
+ * 育苗/种植详情没有独立入库面板，故它们的时间线保留「入库」分类（入库数据同样只有一个入口）。
+ * 分类悬停说明按种源"库存调拨/种植留种"两来源现实改写（继承 2026-08-16 决策）。
  */
-const SEED_SOURCE_HIDDEN_CATEGORIES: CategoryKey[] = ['inbound', 'circulation'];
+const SEED_SOURCE_HIDDEN_CATEGORIES: CategoryKey[] = ['inbound'];
 
 const SEED_SOURCE_CATEGORY_DESCRIPTIONS: Partial<Record<CategoryKey, string>> = {
   lifecycle: '种源审计记录（数据源：audit_logs）：仅含后续的修改、删除、打印、状态变更等操作。'
-    + '库存调拨与种植留种两种创建方式由服务层直写数据表，不产生"创建"记录；未发生上述操作时本分类可能为空。',
+    + '库存调拨与种植留种两种创建方式由服务层直写数据表，不产生"创建"记录；未发生上述操作时本分类可能为空。'
+    + '入库明细请查看「出入库记录」Tab。',
   transaction: '种源库存数量变动流水（数据源：inventory_transaction）：'
     + '调拨入库（含追加/合并）、入库冲销、撤销留种回流、被育苗使用的出库扣减等。'
     + '调拨/留种创建时本身不产生本类流水；未发生冲销、撤销或使用等操作时本分类可能为空。',
   flow: '全链路物料流转日志（数据源：material_flow_log）：种植留种产生"种植 → 种源"，'
-    + '被育苗/种植使用时产生"种源 → 育苗/种植"，冲销与撤销回流产生"数量修正"。库存调拨创建种源不写流转日志。',
+    + '调拨入库产生"库存 → 种源"，被育苗/种植使用时产生"种源 → 育苗/种植"，冲销与撤销回流产生"数量修正"。',
 };
 
 interface DetailModalProps {
@@ -500,7 +506,8 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
                 <td className="px-2 py-1.5">
                   <code className="text-xs">{r.plantingCode || '-'}</code>
                 </td>
-                <td className="px-2 py-1.5">{r.toAreaName || '-'}</td>
+                {/* 2026-10-16 修复：加 fromAreaName 兜底（移出行 toAreaName 为空）——与导出逻辑（450 行）对齐 */}
+                <td className="px-2 py-1.5">{r.toAreaName || r.fromAreaName || '-'}</td>
                 <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
                 <td
                   className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
@@ -588,7 +595,8 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
     const audits = getAuditForRecord(record.id);
     return (
       <tr key={`${record.id}-audit`} className="bg-red-50/40">
-        <td colSpan={17} className="px-3 py-2">
+        {/* 2026-10-16 修复：colSpan 17 → 16（入库表头实际 16 列，原值导致审计行宽度溢出一列） */}
+        <td colSpan={16} className="px-3 py-2">
           <div className="overflow-x-auto border border-red-100 rounded-lg bg-white">
             <table className="w-full text-xs">
               <thead className="bg-red-50 text-red-800">
@@ -737,14 +745,29 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
   }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 2026-10-16：出库流水（退库到作物库存）——「出入库记录」出库区
+  const [outboundRecords, setOutboundRecords] = useState<SeedSourceOutboundRecord[]>([])
+  const [outboundError, setOutboundError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!seedSourceId) return
     setLoading(true)
     setError(null)
-    // 2026-07-18：改用 getInboundRecords（UNION inventory_inbound + crop_circulation PROPAGATION）
-    getInboundRecords(seedSourceId)
-      .then((data) => setRecords(Array.isArray(data) ? data : []))
+    setOutboundError(null)
+    // 2026-07-18：入库改用 getInboundRecords（UNION inventory_inbound + crop_circulation PROPAGATION）
+    // 2026-10-16：并行加载出库流水（退库）；出库失败不阻塞入库区，但显式提示（不静默）
+    Promise.all([
+      getInboundRecords(seedSourceId),
+      getOutboundRecords(seedSourceId).catch((e) => {
+        console.error('[DetailModal] 出库记录加载失败:', e)
+        setOutboundError((e && (e as { message?: string }).message) || '出库记录加载失败')
+        return [] as SeedSourceOutboundRecord[]
+      }),
+    ])
+      .then(([inbound, outbound]) => {
+        setRecords(Array.isArray(inbound) ? inbound : [])
+        setOutboundRecords(outbound)
+      })
       .catch((e) => { console.error('[DetailModal] 入库记录加载失败:', e); setError((e && (e as { message?: string }).message) || '加载失败'); })
       .finally(() => setLoading(false))
   }, [seedSourceId])
@@ -1008,6 +1031,67 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
         </table>
       </div>
 
+      {/* 2026-10-16：出库记录区（退库到作物库存）—「出入库记录」Tab 的出库部分
+          用户需求：一个 Tab 查看 入库+冲销+退库 全部数据；育苗/种植领用流水在「使用记录」Tab */}
+      <div className="mt-6 space-y-2">
+        <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <Undo2 className="w-4 h-4 text-amber-600" />
+          出库记录（共 {outboundRecords.length} 条）
+        </h4>
+        {outboundError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{outboundError}</AlertDescription>
+          </Alert>
+        ) : outboundRecords.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+            <div className="text-sm">暂无出库记录</div>
+            <div className="text-xs mt-1 text-gray-400">
+              通过「退库（退回原作物库存）」操作后会显示在此
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-2 text-left w-24">日期</th>
+                  <th className="px-2 py-2 text-left w-36">类型</th>
+                  <th className="px-2 py-2 text-right w-32">数量（种源扣减）</th>
+                  <th className="px-2 py-2 text-left w-44">退回至（原库存）</th>
+                  <th className="px-2 py-2 text-left w-24">操作员</th>
+                  <th className="px-2 py-2 text-left">备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outboundRecords.map((r) => (
+                  <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-2 py-1.5">{r.recordDate || (r.createdAt || '').slice(0, 10) || '-'}</td>
+                    <td className="px-2 py-1.5">
+                      <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-xs">
+                        退库到作物库存
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <span className="text-red-600 font-medium">
+                        -{(Number(r.quantity) || 0).toLocaleString()}
+                      </span>
+                      <span className="text-gray-500 ml-1">{r.unit || ''}</span>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <code className="text-xs text-gray-700">{r.sourceInstanceId || '-'}</code>
+                    </td>
+                    <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
+                    <td className="px-2 py-1.5 text-gray-500 truncate max-w-[240px]" title={r.remarks || ''}>
+                      {r.remarks || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* 2026-07-18: 冲销确认对话框（C-1 修复） */}
       {/* 2026-07-19 P1：提交期间阻止关闭（避免中断进行中的库存扣减）*/}
       <Dialog
@@ -1179,14 +1263,17 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     })
   }
 
-  // 2026-07-06 Bug 19：所有种源都显示「入库记录」Tab
-  // 商品种源入库（SeedSourceInboundModal）+ 调拨入种源（executeTransferToSource）+ 追加调拨入库（append-from-inventory）
-  // 三条入库路径都通过 /api/seed-sources/:id/history-inbound 端点查 inventory_inbound_records
+  // 2026-07-06 Bug 19：所有种源都显示「出入库记录」Tab
+  // 2026-10-16：由「入库记录」改名为「出入库记录」并新增出库区（退库到作物库存）——
+  //   用户需求：只点这一个 Tab 就能查看 入库 + 冲销 + 退库 的全部数据。
+  //   入库：/history-inbound（inventory_inbound_records + crop_circulation PROPAGATION，含冲销/作废审计/导出）
+  //   出库：/history-outbound（inventory_transaction 退库主记录）
+  //   育苗/种植领用流水仍在「使用记录」Tab（不同粒度视角，避免重复）。
   extraTabs.push({
     key: 'inbound-records',
-    label: '入库记录',
+    label: '出入库记录',
     icon: <Package className="w-4 h-4" />,
-    tooltip: '所有入库流水（含外购入库、库存调拨、追加入库），来自 inventory_inbound_records 表。',
+    tooltip: '入库流水（含冲销/作废审计，支持导出）+ 出库流水（退库到作物库存）。',
     content: <InboundRecordsPanel seedSourceId={record.id} seedCode={record.seedCode} />,
   })
 
@@ -1223,7 +1310,8 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
         label: '入库方式',
         value: mode.label,
       }}
-      // 2026-08-16：种源隐藏「入库」「回流」两个与主 Tab「入库记录」重复的分类 + 专属悬停说明
+      // 2026-10-16：隐藏「入库」分类（时间线不再重复罗列入库数据，入口统一到「出入库记录」Tab）；
+      // 其余分类完整保留 + 种源专属悬停说明
       historyHiddenCategories={SEED_SOURCE_HIDDEN_CATEGORIES}
       historyCategoryDescriptions={SEED_SOURCE_CATEGORY_DESCRIPTIONS}
       extraTabs={extraTabs}
@@ -1237,7 +1325,9 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
  *  顶部对齐 Modal 内容区顶部（= 标题栏底部），固定高度覆盖 Tab行+来源行+基本信息标题行
  *  二维码 128×128 + 标题 + 复制按钮垂直排列 */
 function SeedSourceQrCodeCard({ seedCode }: { seedCode: string }) {
-  const url = `${window.location.origin}/crop/seed-sources?seedCode=${encodeURIComponent(seedCode)}`;
+  // 2026-10-16 修复：路由为 /crop/seed-source（单数，见 App.tsx:513），原 /crop/seed-sources（复数）
+  //   不匹配任何路由 → 扫码命中 "No routes matched" 空白页
+  const url = `${window.location.origin}/crop/seed-source?seedCode=${encodeURIComponent(seedCode)}`;
   return (
     <div className="flex flex-col items-center gap-1.5 px-2 py-2 bg-gradient-to-br from-emerald-50 to-cyan-50 border border-emerald-200 rounded-lg shadow-sm">
       <div className="bg-white p-1 rounded">

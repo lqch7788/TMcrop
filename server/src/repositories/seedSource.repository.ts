@@ -167,7 +167,23 @@ export class SeedSourceRepository {
       -- 2026-07-21：种源合并统计 3 列（之前 list SQL 漏掉导致前端永远看不到回流次数）
       ss.reflow_count AS reflowCount,
       ss.last_reflow_at AS lastReflowAt,
-      ss.merged_from_ids AS mergedFromIds
+      ss.merged_from_ids AS mergedFromIds,
+      -- 2026-10-16 审计修复：补 13 个调拨/原始来源字段（此前 findAll 漏列，而 findById 用 SELECT * 有）——
+      --   详情弹窗的 record 来自本列表数据 → transferredFromStockId 恒为 undefined →
+      --   「调拨来源」Tab 永不显示（hasTransferSource 恒 false）+ 基本信息"原始单价/原始供应商"降级不显示。
+      ss.transferred_from_stock_id AS transferredFromStockId,
+      ss.transferred_from_business_type AS transferredFromBusinessType,
+      ss.transferred_from_business_id AS transferredFromBusinessId,
+      ss.original_inbound_date AS originalInboundDate,
+      ss.original_source_module AS originalSourceModule,
+      ss.original_source_id AS originalSourceId,
+      ss.original_harvest_record_id AS originalHarvestRecordId,
+      ss.original_crop_name AS originalCropName,
+      ss.original_variety_name AS originalVarietyName,
+      ss.original_unit AS originalUnit,
+      ss.original_unit_price AS originalUnitPrice,
+      ss.original_supplier_name AS originalSupplierName,
+      ss.original_production_plan_code AS originalProductionPlanCode
     FROM seed_sources ss
     LEFT JOIN crop_varieties cv
       ON ss.crop_code = cv.crop_code
@@ -1076,6 +1092,34 @@ export class SeedSourceRepository {
   }
 
   /**
+   * 2026-10-16：种源出库流水（用于「出入库记录」Tab 的出库区）
+   * 当前出库业务仅「退库到作物库存」——take 退库主记录（transfer_in + business_type='inventory_transfer'，
+   * 由 seedSourceReturn.service 写入，remarks='种源 X 退库 N单位'）。
+   * 注：退库可能伴生一条 transfer_out（内部记账，扣减种源库存），此处只取主记录避免重复显示。
+   * quantity 返回原始正数（存储为原库存视角 +N），前端按种源视角显示为负。
+   */
+  async getOutboundRecords(seedSourceId: string): Promise<SeedSourceOutboundRecord[]> {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT tx.id, tx.quantity, tx.instance_id AS sourceInstanceId,
+             tx.operate_date AS recordDate, tx.operator_name AS operatorName,
+             tx.remarks, tx.create_time AS createdAt,
+             ss.unit AS unit
+      FROM inventory_transaction tx
+      LEFT JOIN seed_sources ss ON ss.id = tx.business_id
+      WHERE tx.business_id = ?
+        AND tx.business_type = 'inventory_transfer'
+        AND tx.transaction_type = 'transfer_in'
+      ORDER BY tx.create_time DESC
+    `);
+    stmt.bind([seedSourceId]);
+    const rows: SeedSourceOutboundRecord[] = [];
+    while (stmt.step()) rows.push(stmt.getAsObject() as unknown as SeedSourceOutboundRecord);
+    stmt.free();
+    return rows;
+  }
+
+  /**
    * 2026-07-18: 查询入库审计日志（冲销/编辑记录）
    * 通过 inventory_inbound_records.business_id = seedSourceId 关联
    */
@@ -1220,6 +1264,18 @@ export interface SameCropSourceItem {
   quantity: number;
   remainingQuantity: number;
   createTime: string | null;
+}
+
+/** 2026-10-16：种源出库流水行（「出入库记录」Tab 出库区） */
+export interface SeedSourceOutboundRecord {
+  id: string;
+  quantity: number;
+  sourceInstanceId: string | null;
+  recordDate: string | null;
+  operatorName: string | null;
+  remarks: string | null;
+  createdAt: string | null;
+  unit: string | null;
 }
 
 export interface UnifiedInboundRecord {

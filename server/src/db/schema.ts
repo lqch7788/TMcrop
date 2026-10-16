@@ -3654,7 +3654,12 @@ export function initializeDatabase() {
       operator_name TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-10-16：调拨入种源场景下，区分"本次入库方式"与"源头库存的入库方式"
+      -- source_type = 'transfer_inbound'（本次入库方式，恒为调拨入库）
+      -- source_origin = 源头库存 inventory_stock.source_type（外购入库/采收入库/自产入库/调拨入库等）
+      -- 溯源链 Tab 用 source_origin 显示「源头: X」，与 source_type 解耦
+      source_origin TEXT
     )
   `);
   // 3 索引(幂等)
@@ -4339,6 +4344,8 @@ export function initializeDatabase() {
       ['reversed_at', 'TEXT'],
       ['reversed_by', 'TEXT'],
       ['reverse_reason', 'TEXT'],
+      // 2026-10-16：调拨入种源场景下区分 source_type（入库方式）与 source_origin（源头入库方式）
+      ['source_origin', 'TEXT'],
     ];
     for (const [col, type] of inboundCols) {
       if (!existing.has(col)) {

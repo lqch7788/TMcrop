@@ -388,6 +388,8 @@ export interface ReturnableInboundRow {
   unit: string;
   cropName: string | null;
   cropCode: string | null;
+  /** 2026-10-16：已冲销标记（非空 = 已冲销，前端置灰禁用；与冲销功能互斥提示用） */
+  reversedAt: string | null;
 }
 
 export function listReturnableInboundRecords(seedSourceId: string): ReturnableInboundRow[] {
@@ -398,6 +400,7 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
             ist.instance_id AS source_instance_id,
             ir.stock_type, ir.warehouse_id, ir.warehouse_name,
             ir.record_date, ir.quantity, COALESCE(ir.returned_quantity, 0) AS returned_quantity,
+            ir.reversed_at,
             ir.unit, ir.crop_name, ir.crop_code,
             -- 2026-07-16 修复：JOIN 种源表取剩余量，避免弹窗可退量与种源实际可用不一致
             ss.remaining_quantity AS source_remaining
@@ -407,7 +410,10 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
      WHERE ir.source_module = 'inventory'
        AND ir.business_id = ?
        AND ir.record_type = 'inbound'
-       AND COALESCE(ir.returned_quantity, 0) < ir.quantity
+       -- 2026-10-16：已冲销记录也列出（前端置灰+禁用+「已冲销」标记，给用户明确提示），
+       --   不再直接过滤消失 —— 与「冲销」功能的互斥提示（用户要求：保留两个功能但两边有提示、不能重复操作）。
+       --   真正的硬拦截在 executeReturnToInventory（INBOUND_REVERSED 校验）；这里列出来只为提示可见。
+       AND (ir.reversed_at IS NOT NULL OR COALESCE(ir.returned_quantity, 0) < ir.quantity)
      ORDER BY ir.record_date DESC, ir.id DESC`
   );
   stmt.bind([seedSourceId]);
@@ -416,10 +422,14 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
     const r = stmt.getAsObject() as Record<string, unknown>;
     const quantity = Number(r.quantity || 0);
     const returned = Number(r.returned_quantity || 0);
+    const reversedAt = r.reversed_at ? String(r.reversed_at) : null;
     const sourceRemaining = Number(r.source_remaining ?? quantity);  // fallback: 无值时用 quantity
     // 2026-07-16 修复：可退量取 MIN(入库未退量, 种源剩余量) — 防止种源剩余<入库未退时仍显示可退全部入库量
     const inboundReturnable = quantity - returned;
-    const returnableQuantity = Math.max(0, Math.min(inboundReturnable, sourceRemaining));
+    // 2026-10-16：已冲销行可退量恒为 0（前端据此置灰禁用；硬拦截仍在 executeReturnToInventory）
+    const returnableQuantity = reversedAt
+      ? 0
+      : Math.max(0, Math.min(inboundReturnable, sourceRemaining));
     rows.push({
       id: String(r.id || ''),
       sourceId: String(r.source_id || ''),
@@ -435,6 +445,7 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
       unit: String(r.unit || ''),
       cropName: r.crop_name ? String(r.crop_name) : null,
       cropCode: r.crop_code ? String(r.crop_code) : null,
+      reversedAt,
     });
   }
   stmt.free();

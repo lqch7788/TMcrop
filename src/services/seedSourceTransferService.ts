@@ -87,6 +87,8 @@ export interface ReturnableInboundRow {
   unit: string;
   cropName: string | null;
   cropCode: string | null;
+  /** 2026-10-16：已冲销标记（非空 = 已在「入库记录」中被冲销，此弹窗中置灰禁用，防重复操作） */
+  reversedAt?: string | null;
 }
 
 /** 列出可调拨库存的查询参数 */

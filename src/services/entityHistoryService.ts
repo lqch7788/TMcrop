@@ -170,7 +170,29 @@ export async function fetchFullHistory(
     merged.push(item);
   }
 
+  // 2026-10-16：同事件去重 —— 一次业务操作会同时写 transaction/inbound 行（账务视角，备注含来源明细）
+  //   和 flow 行（流转视角，如「库存 → 种源」），两条在时间线中并列显示造成重复感
+  //   （用户报告：每次调拨显示「调拨入库 +N」+「库存→种源 +N」两条，信息高度重复）。
+  //   规则：flow 行若存在配对行（数量相同 + 时间差 ≤2 秒 的 transaction/inbound 行）则隐藏 ——
+  //   transaction 行的备注含更完整的来源信息（如"从库存 IPR-xxx 调拨入种源"），flow 行信息是其子集。
+  //   同时自然覆盖「数量修正(correction) vs 入库作废/冲销(reverse_inbound)」等同类重复。
+  //   未配对的历史 flow 行（如无对应流水的流转记录）照常显示，不丢信息。
+  const PAIR_WINDOW_MS = 2000;
+  const isPairedFlow = (f: HistoryItem): boolean => {
+    if (f.category !== 'flow' || f.quantityDelta == null) return false;
+    const ft = Date.parse(f.occurredAt);
+    if (Number.isNaN(ft)) return false;
+    return merged.some((t) => {
+      if (t.category !== 'transaction' && t.category !== 'inbound') return false;
+      if (t.quantityDelta == null) return false;
+      if (Math.abs(t.quantityDelta - f.quantityDelta!) > 1e-9) return false;
+      const tt = Date.parse(t.occurredAt);
+      return !Number.isNaN(tt) && Math.abs(tt - ft) <= PAIR_WINDOW_MS;
+    });
+  };
+  const deduped = merged.filter((item) => !isPairedFlow(item));
+
   // 按时间倒序
-  merged.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-  return merged;
+  deduped.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  return deduped;
 }
