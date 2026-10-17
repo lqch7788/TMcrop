@@ -15,6 +15,7 @@ import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { getMotherLossCapacity, getSeedlingRemainingCount } from '@/lib/seedlingPool';
 import {
   WATERING_METHOD_MAP,
   WATERING_UNIT_MAP,
@@ -22,6 +23,8 @@ import {
   PESTICIDE_CATEGORY_MAP,
   APPLICATION_METHOD_MAP,
   FEED_UNIT_MAP,
+  WATERING_METHOD_OPTIONS,
+  DAILY_RECORD_WATERING_UNITS,
 } from '@/constants/cropConstants';
 import { FeedRecordCard, type FeedRecordItem } from './FeedRecordCard';
 import { Button } from '@/components/ui';
@@ -201,45 +204,33 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       return;
     }
 
-    // 2026-06-16: 数量体系重构 — 两池分离校验（母株池 + 小苗池 各自独立）
-    // 1:多 模式：sc=母株损耗, ri=小苗产出, rc=补苗（新增母株）
-    // 1:1 模式：sc/ri 都是死字段（强制 0），只校验 lc + tc + rc（补种子）
-    const sc = isMotherMode ? (formData.survivalCountChange || 0) : 0;  // 1:多=母株损耗；1:1=0（死字段）
-    const ri = isMotherMode ? (formData.runnerIncreaseCount || 0) : 0;  // 1:多=小苗产出；1:1=0（死字段）
-    const lc = formData.lossCountChange || 0;
+    // 2026-10-17 单池化：数量字段按模式路由
+    // 1:多（双池）：sc=母株损耗, ri=小苗产出, lc=小苗损耗, rc=补苗
+    // 1:1（单池） ：损耗全部走母株池 —— sc=母株损耗（原"小苗损耗"输入），无小苗产出/小苗损耗
+    const sc = formData.survivalCountChange || 0;                       // 母株损耗（两种模式）
+    const ri = isMotherMode ? (formData.runnerIncreaseCount || 0) : 0;  // 小苗产出（仅 1:多）
+    const lc = isMotherMode ? (formData.lossCountChange || 0) : 0;      // 小苗损耗（仅 1:多）
     const rc = formData.replantChange || 0;                            // 2026-06-16: 补苗
 
-    // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并！）
-    // 母株池剩余可用 = 母株存活 - 母株损耗 + 补苗累计（1:1 = 母株存活 + 补苗；1:多 = 母株存活 - 母株损耗 + 补苗）
-    const motherAvailable = Math.max(0,
-      (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0)
-    );
-    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/采收入库）
-    // 2026-06-28：彻底移除 transplantedCount（已定植）业务字段，业务规则：种植管理不再从育苗取苗
-    // ⚠️ 注意：本次损耗 lc 不参与"剩余可用"计算（避免双重扣减）
-    const seedlingAvailable = Math.max(0,
-      (record.expandedPlantCount || 0)
-      + ri                          // 本次产出
-      + (isMotherMode ? 0 : rc)     // 1:1 模式补苗计入小苗池（补种子）
-      - (record.seedlingLossCount || 0)
-      - (record.harvestStockedCount || 0)
-    );
-
     if (isMotherMode) {
-      // 1:多 模式：母株池校验 — 母株损耗不能超过母株剩余可用
+      // ── 1:多 双池口径（统一走 seedlingPool 单一真理源，避免第四套算式）──
+      // 母株池可用 = 母株 + 补苗 − 母株损耗
+      const motherAvailable = getMotherLossCapacity(record);
+      // 小苗池可用 = 当前剩余 + 本次产出（本次损耗不参与，避免双重扣减）
+      const seedlingAvailable = getSeedlingRemainingCount(record) + ri;
       if (sc > 0 && sc > motherAvailable) {
         await showAlert(`1:多 模式：母株损耗 ${sc} 超过母株剩余可用 ${motherAvailable} 株，请调整（母株池：${motherAvailable} 株）`);
         return;
       }
-      // 1:多 模式：小苗池校验 — 小苗损耗不能超过小苗剩余可用
       if (lc > 0 && lc > seedlingAvailable) {
         await showAlert(`1:多 模式：小苗损耗 ${lc} 超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
         return;
       }
     } else {
-      // 1:1 模式：小苗池校验（母株池无损耗概念，无需校验）
-      if (lc > 0 && lc > seedlingAvailable) {
-        await showAlert(`1:1 模式：小苗损耗 ${lc} 超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
+      // ── 1:1 单池口径：损耗只能扣母株池（母株 + 补苗 − 母株损耗 − 历史小苗损耗 − 已入库）──
+      const motherLossCapacity = getMotherLossCapacity(record);
+      if (sc > 0 && sc > motherLossCapacity) {
+        await showAlert(`1:1 模式：母株损耗 ${sc} 超过母株可损耗数量 ${motherLossCapacity} 株，请调整（母株池：${motherLossCapacity} 株）`);
         return;
       }
     }
@@ -298,10 +289,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
             notes: r.notes || undefined,
           })),
         abnormality: formData.abnormality || undefined,
-        // 5 个新业务字段
-        motherLossChange: sc,      // 1:多=母株损耗；1:1=0
-        seedlingLossChange: lc,    // 两种模式=小苗损耗
-        expandedChange: ri,        // 1:多=小苗产出；1:1=0
+        // 5 个新业务字段（2026-10-17 单池化：1:1 的损耗统一走 motherLossChange）
+        motherLossChange: sc,      // 母株损耗（1:1 的损耗也从这里入母株池）
+        seedlingLossChange: lc,    // 小苗损耗（仅 1:多）
+        expandedChange: ri,        // 小苗产出（仅 1:多）
         replantChange: rc,         // 2026-06-16: 补苗（两种模式都支持）
         // 4 个旧字段名（兼容历史 data 读取）— 2026-06-27 移除 transplantedChange/plantedCountChange
         survivalCountChange: sc,
@@ -416,6 +407,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
              'runnerIncreaseCount', 'phValue', 'ecValue', 'operator'].forEach(k => {
               if (editingRow[k] !== undefined) biz[k] = editingRow[k];
             });
+            // 2026-10-17 修复：同步写新版字段名（与新增记录的 payload 一致）——
+            //   后端 PUT 归一化只认新名，此前只写旧名会导致"撤销旧值成功、应用新值变成 0"，
+            //   该记录的数量贡献被静默清零（实测：母株损耗 2 改成 4 → 主表变 0）
+            biz.motherLossChange = Number(editingRow.survivalCountChange) || 0;
+            biz.seedlingLossChange = Number(editingRow.lossCountChange) || 0;
+            biz.expandedChange = Number(editingRow.runnerIncreaseCount) || 0;
+            biz.replantChange = Number(editingRow.replantChange) || 0;
             return biz;
           })();
       const payload: any = {
@@ -735,15 +733,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                 <div>
                   <Label className="text-gray-700">浇水方式</Label>
                   <Select
-                    value={formData.wateringMethod || 'spray'}
+                    value={formData.wateringMethod || 'manual_watering'}
                     onValueChange={(v) => setFormData({ ...formData, wateringMethod: v })}
                   >
                     <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="选择浇水方式（可选）" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* 16 种浇水方式（2026-06-28：PR1）— 从 WATERING_METHOD_MAP 自动渲染，便于维护 */}
-                      {Object.entries(WATERING_METHOD_MAP).map(([value, label]) => (
+                      {/* 2026-10-17：下拉精简为 5 种主流方式（人工浇水/滴灌/喷灌/喷雾/漫灌），
+                          选项来自常量 WATERING_METHOD_OPTIONS；
+                          历史数据的翻译仍走全量 WATERING_METHOD_MAP */}
+                      {WATERING_METHOD_OPTIONS.map(({ value, label }) => (
                         <SelectItem key={value} value={value}>{label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -772,8 +772,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* 单位（2026-06-28：PR1）— 从 WATERING_UNIT_MAP 自动渲染 */}
-                        {Object.entries(WATERING_UNIT_MAP).map(([value, label]) => (
+                        {/* 2026-10-17：下拉精简为 升 / 立方米（选项来自常量 DAILY_RECORD_WATERING_UNITS）；
+                            历史数据的单位翻译仍走全量 WATERING_UNIT_MAP */}
+                        {DAILY_RECORD_WATERING_UNITS.map(({ value, label }) => (
                           <SelectItem key={value} value={value}>{label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -856,22 +857,28 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
               <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                 <span>▼ 数量统计</span>
                 <span className="text-xs text-gray-500 font-normal">
-                  {/* 2026-07-28 审核 H-7：原读 motherLossCount/replantCount/expandedPlantCount/seedlingLossCount 是死字段从未被赋值，改读实际输入字段（按模式区分母株损耗） */}
-                  {(isMotherMode && (formData.survivalCountChange || 0) > 0) ? '母株损耗 ' + formData.survivalCountChange : ''}
+                  {/* 2026-07-28 审核 H-7：原读 motherLossCount/replantCount/expandedPlantCount/seedlingLossCount 是死字段从未被赋值，改读实际输入字段 */}
+                  {/* 2026-10-17 单池化：母株损耗两种模式都有效；小苗产出/小苗损耗仅 1:多 */}
+                  {(formData.survivalCountChange || 0) > 0 ? ' 母株损耗 ' + formData.survivalCountChange : ''}
                   {(formData.replantChange || 0) > 0 ? ' 补苗 ' + formData.replantChange : ''}
-                  {(formData.runnerIncreaseCount || 0) > 0 ? ' 小苗产出 ' + formData.runnerIncreaseCount : ''}
-                  {(formData.lossCountChange || 0) > 0 ? ' 小苗损耗 ' + formData.lossCountChange : ''}
+                  {(isMotherMode && (formData.runnerIncreaseCount || 0) > 0) ? ' 小苗产出 ' + formData.runnerIncreaseCount : ''}
+                  {(isMotherMode && (formData.lossCountChange || 0) > 0) ? ' 小苗损耗 ' + formData.lossCountChange : ''}
                 </span>
               </summary>
               {/* 2026-06-28：内部 4 列布局 — 1:多 模式 4 字段一行（母株损耗/补苗/小苗产出/小苗损耗 — 母株池先排，再小苗池）；1:1 模式 2 字段（补苗/小苗损耗） */}
               <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                {/* 1:多 模式：母株损耗（仅 1:多 模式） */}
-                {isMotherMode && (
-                  <div>
-                    <Label className="text-gray-700">
-                      母株损耗
-                      <span className="text-xs text-gray-500 ml-1">（母株死亡/减少，存入"母株损耗"字段）</span>
-                    </Label>
+                {/* 2026-10-17 单池化：母株损耗两种模式都显示 ——
+                    1:1 模式下苗床上的苗既是母株也是小苗，损耗统一记入母株池
+                    （此前 1:1 隐藏本字段、只留"小苗损耗"，而 1:1 的小苗产出池恒为 0 → 损耗永远录不进去） */}
+                <div>
+                  <Label className="text-gray-700">
+                    母株损耗
+                    <span className="text-xs text-gray-500 ml-1">
+                      {isMotherMode
+                        ? '（母株死亡/减少，存入"母株损耗"字段）'
+                        : '（1:1 模式：小苗即母株，损耗记入母株池）'}
+                    </span>
+                  </Label>
                     <Input
                       type="number"
                       min="0"
@@ -891,7 +898,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                   className={deepInputClass}
                 />
               </div>
-            )}
             {/* 2026-06-28：补苗移到母株损耗之后（按"母株池 → 小苗池"业务分组：母株损耗+补苗=母株池；小苗产出+小苗损耗=小苗池） */}
             {/* 补苗（两种模式都显示）— 1:1=补种子进入；1:多=补母株进入；补入"补苗累计"字段 */}
             <div>
@@ -948,7 +954,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
               </div>
             )}
             {/* 2026-06-27：移除"人工定植"录入字段（按业务规则：所有成品小苗必须先入库再出库） */}
-            {/* 小苗损耗（两种模式都显示） */}
+            {/* 2026-10-17 单池化：小苗损耗仅 1:多 模式显示 ——
+                1:1 没有独立小苗产出池（expanded 恒 0），损耗统一走上面的"母株损耗" */}
+            {isMotherMode && (
             <div>
               <Label className="text-gray-700">
                 小苗损耗
@@ -973,6 +981,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                 className={deepInputClass}
               />
             </div>
+            )}
               </div>{/* 关闭数量统计 details 内层 grid */}
             </details>{/* 关闭数量统计 details 面板 */}
             {/* 2026-06-28：操作人员 + 异常情况 已移到第 1 行（与记录日期同排），此处不再重复 */}
@@ -1032,13 +1041,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                     {/* 2026-06-28：施肥/用药子表（种类计数，详情 hover tooltip） */}
                     <th className="px-2 py-2 text-left font-semibold w-16 text-emerald-700">施肥</th>
                     <th className="px-2 py-2 text-left font-semibold w-16 text-red-700">用药</th>
-                    {/* 2026-06-16: 列名对齐 DB 字段 — 1:1 模式无 sc 累加（死字段），隐藏"成活变化"列；1:多 模式显示"母株损耗"列 */}
-                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">母株损耗</th>}
+                    {/* 2026-10-17 单池化：母株损耗列两种模式都显示（1:1 的损耗也记在母株池） */}
+                    <th className="px-2 py-2 text-left font-semibold">母株损耗</th>
                     {/* 2026-06-28：补苗列移到母株损耗后（母株池字段先排列） */}
                     <th className="px-2 py-2 text-left font-semibold">补苗</th>
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
                     {/* 2026-06-27：移除"人工定植"列（按业务规则：所有成品小苗必须先入库再出库） */}
-                    <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>
+                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>}
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
                     <th className="px-2 py-2 text-left font-semibold">备注</th>
                     <th className="px-2 py-2 text-center font-semibold w-24">操作</th>
@@ -1106,12 +1115,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                           </span>
                         ) : <span className="text-gray-300">-</span>}
                       </td>
-                      {/* 2026-06-16: 1:多 模式才显示母株损耗列（1:1 模式 sc 是死字段） */}
-                      {isMotherMode && (
-                        <td className="px-2 py-1.5">
-                          {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
-                        </td>
-                      )}
+                      {/* 2026-10-17 单池化：母株损耗列两种模式都显示 */}
+                      <td className="px-2 py-1.5">
+                        {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
+                      </td>
                       {/* 2026-06-28：补苗列移到母株损耗后（母株池字段先排列） */}
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'replantChange', r.replantChange)}
@@ -1122,9 +1129,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                         </td>
                       )}
                       {/* 2026-06-27：移除 plantedCountChange 数据列 */}
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
-                      </td>
+                      {isMotherMode && (
+                        <td className="px-2 py-1.5">
+                          {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
+                        </td>
+                      )}
                       <td className="px-2 py-1.5">{r.operator || '-'}</td>
                       {/* 2026-07-01 P0-6 修复：备注超长时支持悬停查看完整内容（与种植 modal 对齐） */}
                       <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]" title={r.remarks || ''}>

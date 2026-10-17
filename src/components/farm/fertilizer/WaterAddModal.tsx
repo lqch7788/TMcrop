@@ -9,8 +9,8 @@ import { UnifiedModal, Button, Input, Label, TextArea, TabsList, TabsTrigger } f
 import { useWateringStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import { showAlert, showToast } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
-import { WATERING_METHOD_MAP } from '@/constants/cropConstants';
-import { WATER_UNITS, normalizeWaterUnit, getWaterUnitCategory } from '@/constants/waterUnits';
+import { WATERING_METHOD_MAP, WATERING_METHOD_OPTIONS } from '@/constants/cropConstants';
+import { WATER_UNIT_OPTIONS, normalizeWaterUnit, getWaterUnitCategory } from '@/constants/waterUnits';
 
 interface SelectedArea {
   type: 'planting' | 'seedling';
@@ -343,8 +343,9 @@ const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).fil
                       <select value={row.wateringMethod} onChange={(e) => updateRow(row.area.id, { wateringMethod: e.target.value })}
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                         title={labelOfMethod(row.wateringMethod)}>
-                        {Object.entries(WATERING_METHOD_MAP).map(([code, label]) => (
-                          <option key={code} value={code}>{label}</option>
+                        {/* 2026-10-17：下拉精简为 5 种主流方式（与育苗每日记录同口径） */}
+                        {WATERING_METHOD_OPTIONS.map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
                         ))}
                       </select>
                     </div>
@@ -356,7 +357,9 @@ const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).fil
                     <div className="col-span-1">
                       <select value={row.waterUnit} onChange={(e) => updateRow(row.area.id, { waterUnit: e.target.value })}
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                        {WATER_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                        {/* 2026-10-17：单位下拉精简为 升 / 立方米（选项来自 WATER_UNIT_OPTIONS）；
+                            历史数据归一化仍走全量 WATER_UNITS */}
+                        {WATER_UNIT_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                       </select>
                     </div>
                     <div className="col-span-3">

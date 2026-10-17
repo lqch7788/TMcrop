@@ -36,6 +36,7 @@ import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
 // 2026-07-01: 行级采收入库成功后需要同步写 planting_harvest_records，让 HarvestRecordModal 历史表能显示
 import { usePlantingStore } from '@/stores/usePlantingStore'
 import { todayLocal } from '@/lib/dateUtils'
+import { getSeedlingRemainingCount } from '@/lib/seedlingPool'
 import { showAlert, showConfirm } from '@/lib/dialogService'
 // 2026-07-07：HARVEST_FORMS / SOURCE_FORMS 字面量迁移至统一字典 seedFormDict
 import { HARVEST_FORM_OPTIONS, SEED_FORM_OPTIONS } from '@/constants/seedFormDict'
@@ -106,6 +107,11 @@ export interface UnifiedRowHarvestInboundModalProps {
     expandedPlantCount?: number
     seedlingLossCount?: number
     harvestStockedCount?: number
+    // 2026-10-17 单池化：1:1 模式的可入库量走母株池（母株 + 补苗 − 损耗 − 已入库）
+    propagationMode?: string
+    motherPlantCount?: number
+    motherLossCount?: number
+    replantCount?: number
   }
 }
 
@@ -379,6 +385,18 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         seedlingLossCount: sourceRecord.seedlingLossCount,
         harvestStockedCount: sourceRecord.harvestStockedCount,
         totalQty,
+        // 2026-10-17 单池化：1:1 没有独立小苗产出池，剩余可入库 = 母株池可用
+        remainingBase: sourceRecord.propagationMode === 'one_to_one'
+          ? getSeedlingRemainingCount({
+              propagationMode: 'one_to_one',
+              motherPlantCount: sourceRecord.motherPlantCount ?? 0,
+              replantCount: sourceRecord.replantCount ?? 0,
+              motherLossCount: sourceRecord.motherLossCount ?? 0,
+              seedlingLossCount: sourceRecord.seedlingLossCount ?? 0,
+              expandedPlantCount: sourceRecord.expandedPlantCount ?? 0,
+              harvestStockedCount: sourceRecord.harvestStockedCount ?? 0,
+            })
+          : undefined,
       })
       if (softCheck.exceeded) {
         const ok = await showConfirm(

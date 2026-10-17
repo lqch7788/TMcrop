@@ -5,7 +5,47 @@
  * - SOURCE_TYPES: 9 枚举 source_type 中文标签
  * - SEED_SOURCE_FILTER_DEFAULTS: 筛选栏初始值（SeedSourcePage + handleReset 共用）
  * - SEED_SOURCE_EXPORT_HEADERS: 导出 Excel 表头（SeedSourcePage 用）
+ * - getSeedSourceVarietyName: 种源「作物品种」名称口径（跨模块共用的单一真理源）
+ * - getSeedSourceOriginOrSupplier: 种源「种源来源/原始供应商」显示口径
  */
+import type { SeedSource } from '../types/crop';
+import { SOURCE_ORIGIN_MAP } from './cropConstants';
+
+/**
+ * 种源「作物品种」名称（2026-10-17）
+ *
+ * 口径：cropVariety（作物品种，最细） > varietyName（后端按品种库解析的最细名称） > cropName（兜底）
+ *
+ * 为什么需要：cropName 是作物级名称（如"草莓"），同一作物下多个品种无法区分；
+ *   品种判断/展示必须用品种级名称（如"红颜"/"宁玉"/"章姬"）。
+ *   后端 findAll 返回的 varietyName = COALESCE(品种库子品种, 品种库品种, crop_variety, variety_name)，
+ *   故作为 cropVariety 为空时的解析兜底。
+ */
+export function getSeedSourceVarietyName(
+  record: Pick<SeedSource, 'cropVariety' | 'varietyName' | 'cropName'>,
+): string {
+  return record.cropVariety || record.varietyName || record.cropName || '';
+}
+
+/**
+ * 种源「种源来源 / 原始供应商」显示值（2026-10-17）
+ *
+ * 口径与内部种源列表的「来源途径」「原始供应商」两列一致：
+ *   1. 有原始供应商（调拨来源优先 originalSupplierName，其余取 supplierName）→ 显示供应商名称
+ *   2. 没有供应商（如种植留种回流、无供应商的调拨）→ 回退显示来源途径中文（如"种植留种"）
+ *
+ * 为什么调拨优先取 originalSupplierName：种源的 supplierName 是入库时复制过来的，
+ *   originalSupplierName 才是来源库存真正的供应商（与列表列注释一致）。
+ */
+export function getSeedSourceOriginOrSupplier(
+  record: Pick<SeedSource, 'sourceOrigin' | 'supplierName' | 'originalSupplierName'>,
+): string {
+  const supplier = record.sourceOrigin === 'inventory_transfer'
+    ? (record.originalSupplierName || record.supplierName)
+    : record.supplierName;
+  if (supplier && supplier.trim()) return supplier.trim();
+  return SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '';
+}
 
 /**
  * 9 种 source_origin 中文标签

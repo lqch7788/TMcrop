@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling, SeedSource, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
+import { getMotherAliveCount, getMotherLossCapacity, getMotherLossDisplayCount, getSeedlingRemainingCount, isOneToOneMode } from '@/lib/seedlingPool';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety, CropVarietyOption } from '../../../../types/cropVariety';
@@ -18,6 +19,7 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { getSeedSourceVarietyName } from '../../../../constants/seedSourceDict';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -99,13 +101,15 @@ export function EditModal({
     return (seedSources || []).filter(s =>
       s.seedCode?.toLowerCase().includes(q) ||
       s.cropName?.toLowerCase().includes(q) ||
-      s.cropVariety?.toLowerCase().includes(q)
+      s.cropVariety?.toLowerCase().includes(q) ||
+      s.varietyName?.toLowerCase().includes(q)
     );
   }, [seedSources, sourceSearch]);
 
+  // 2026-10-17：名称口径与下拉表格一致，显示品种而非作物名（cropName 如"草莓"无法区分品种）
   const selectedSourceLabel = useMemo(() => {
     const source = seedSources.find(s => s.id === formData.sourceId);
-    return source ? `${source.seedCode} - ${source.cropName}` : '';
+    return source ? `${source.seedCode} - ${getSeedSourceVarietyName(source)}` : '';
   }, [seedSources, formData.sourceId]);
 
   const sourcePopoverRef = useRef<HTMLDivElement>(null);
@@ -185,12 +189,14 @@ export function EditModal({
     const source = seedSources.find(s => s.id === formData.sourceId);
     const sourceCode = source?.seedCode || formData.sourceCode;
 
-    // 计算成苗率和损耗
-    const survivalCount = formData.survivalCount;
-    const initialCount = formData.initialCount;
-    const survivalRate = initialCount > 0 ? Math.round((survivalCount / initialCount) * 100) : 0;
-    const lossCount = initialCount - survivalCount;
-    const lossRate = initialCount > 0 ? Math.round((lossCount / initialCount) * 100) : 0;
+    // 2026-10-17：成苗率 / 损耗 / 损耗率统一由 seedlingPool 派生（原从死字段 survival_count 反推）
+    //   存活 = 母株 + 补苗 − 损耗累计；分母为累计投入（初始 + 补苗），与详情弹窗/标签同口径
+    const mergedForCalc = { ...record, ...formData } as typeof record;
+    const survivalCount = getMotherAliveCount(mergedForCalc);
+    const lossCount = getMotherLossDisplayCount(mergedForCalc);
+    const invested = (formData.initialCount || 0) + (formData.replantCount || 0);
+    const survivalRate = invested > 0 ? Math.round((survivalCount / invested) * 100) : 0;
+    const lossRate = invested > 0 ? Math.round((lossCount / invested) * 100) : 0;
 
     try {
       await updateItem(String(record.id), {
@@ -312,7 +318,7 @@ export function EditModal({
             <Input
               type="text"
               value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
-              placeholder="搜索种源批号或作物名称..."
+              placeholder="搜索种源批号或作物品种..."
               onFocus={() => {
                 setSourcePopoverOpen(true);
                 setSourceSearch('');
@@ -341,10 +347,13 @@ export function EditModal({
               <div ref={sourcePopoverRef} className="absolute z-50 mt-1 bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
                 style={{ minWidth: '500px', left: 0, right: 0 }}
               >
-                <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-                  <div>作物名称</div>
+                {/* 2026-10-17：删「采购数量」列（选种源只需看可用数量）；
+                    「作物名称」→「作物品种」（作物级名称无法区分品种，如草莓/红颜）；
+                    列顺序：种源批号在前（用户主要按批号找），品种其次；
+                    列宽按内容分配：种源批号最宽（如 SRC-SS-20261016-001 需完整显示） */}
+                <div className="grid grid-cols-[1.6fr_0.85fr_0.95fr] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
                   <div>种源批号</div>
-                  <div>采购数量</div>
+                  <div>作物品种</div>
                   <div>可用数量</div>
                 </div>
                 <div className="overflow-y-auto max-h-48">
@@ -359,12 +368,11 @@ export function EditModal({
                           setSourcePopoverOpen(false);
                           setSourceSearch('');
                         }}
-                        className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
+                        className={`grid grid-cols-[1.6fr_0.85fr_0.95fr] gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
                           ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
                       >
-                        <div className="truncate font-medium text-gray-800">{s.cropName}</div>
                         <div className="truncate text-emerald-700">{s.seedCode}</div>
-                        <div className="text-gray-600">{s.quantity} {s.unit}</div>
+                        <div className="truncate font-medium text-gray-800">{getSeedSourceVarietyName(s)}</div>
                         <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
                           {s.availableCount} {s.unit}
                         </div>
@@ -474,21 +482,24 @@ export function EditModal({
           />
         </div>
 
-        {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，可手动纠错） */}
-        <div>
-          <Label className="text-gray-700">
-            {record.propagationMode === 'one_to_many' ? '母株数量' : '成活数量'}
-            <span className="text-xs text-gray-500 ml-1">（每日记录自动累加，可手动纠错）</span>
-          </Label>
-          <Input
-            type="number"
-            min={0}
-            value={formData.survivalCount || ''}
-            title="从每日记录累加（手动修改仅用于纠错）"
-            className={deepInputClass}
-            onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, survivalCount: v < 0 ? 0 : v }); }}
-          />
-        </div>
+        {/* 2026-10-17：仅 1:多 保留「母株数量」输入（绑定母株池基数 mother_plant_count）；
+            1:1 的"成活数量"是派生值（母株 + 补苗 − 损耗），不再提供输入，避免继续写死字段 survival_count */}
+        {record.propagationMode === 'one_to_many' && (
+          <div>
+            <Label className="text-gray-700">
+              母株数量
+              <span className="text-xs text-gray-500 ml-1">（建档投入的母株数，参与"母株存活"计算）</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              value={formData.motherPlantCount || ''}
+              title="母株池基数：母株存活 = 母株 + 补苗 − 母株损耗"
+              className={deepInputClass}
+              onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, motherPlantCount: v < 0 ? 0 : v }); }}
+            />
+          </div>
+        )}
 
         {/* 2026-06-28：彻底移除"已定植数量"输入框
       业务规则变更：种植管理不再从育苗管理取苗（统一从内部种源页面），育苗小苗全部先入库作物库存再出库。
@@ -534,17 +545,16 @@ export function EditModal({
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            {/* 2026-06-16: 剩余可定植公式按模式分支（兼容历史脏数据：mother - motherLoss） */}
-            {/* 1:1 模式：expanded = mother（后端同步），只算一次：expanded - 各种 */}
-            {/* 1:多 模式：母株池剩余 = 母株存活 - 母株损耗 + 补苗 | 小苗池剩余 = 小苗产出 - 小苗损耗 - 采收入库（2026-06-28 移除人工/自动定植） */}
+            {/* 2026-10-17：统一走 seedlingPool 单一真理源（此前这里是第三套独立算式） */}
+            {/* 1:1：单池 —— 存活 = 初始 + 补苗 − 损耗；可出圃 = 存活 − 已入库 */}
+            {/* 1:多：双池 —— 母株池 = 母株 + 补苗 − 母株损耗；小苗池 = 产出 − 损耗 − 已入库 */}
             {(() => {
-              const is11 = (record.propagationMode || 'one_to_one') === 'one_to_one';
-              // 母株池 / 小苗池 严格分离计算（不合并）
-              const motherAvailable = (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0);
-              const seedlingAvailable = (record.expandedPlantCount || 0)
-                - (formData.seedlingLossCount || 0)
-                - (formData.harvestStockedCount || 0);
-              return `母株池剩余 = ${Math.max(0, motherAvailable).toLocaleString()} 株 | 小苗池剩余 = ${Math.max(0, seedlingAvailable).toLocaleString()} 株（两池独立，不合并）`;
+              // 用表单当前值覆盖记录值，编辑时实时反映
+              const merged = { ...record, ...formData } as typeof record;
+              if (isOneToOneMode(merged)) {
+                return `存活 = ${getMotherAliveCount(merged).toLocaleString()} 株 | 可出圃 = ${getSeedlingRemainingCount(merged).toLocaleString()} 株（1:1：苗即母株，单池计算）`;
+              }
+              return `母株池剩余 = ${getMotherLossCapacity(merged).toLocaleString()} 株 | 小苗池剩余 = ${getSeedlingRemainingCount(merged).toLocaleString()} 株（两池独立，不合并）`;
             })()}
           </p>
           {/* 2026-08-14 H3 修复：手动修改累加字段的风险提示（与入库记录聚合/每日记录历史会不一致） */}

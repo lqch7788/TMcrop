@@ -5,6 +5,8 @@
  */
 import { LabelPrintModal, type LabelPrintConfig } from '@/components/farm/labels/LabelPrintModal';
 import type { Seedling } from '@/types/crop';
+// 2026-10-17：存活数量统一走 src/lib/seedlingPool.ts（列表/详情/导出/标签同一个口径）
+import { getMotherAliveCount, isOneToOneMode } from '@/lib/seedlingPool';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -33,20 +35,20 @@ const SEEDLING_CONFIG: LabelPrintConfig = {
       ? (r?.motherPlantCount || r?.initialCount || 0)
       : (r?.initialCount || 0);
   },
-  // 2026-06-28 关键口径：1:多 = 母株存活数 motherPlantCount；1:1 = 初始 - seedlingLossCount
-  surviving: (r) => {
-    const mode = r?.propagationMode || 'one_to_one';
-    if (mode === 'one_to_many') {
-      return r?.motherPlantCount || 0;
-    }
-    return Math.max(0, (r?.initialCount || 0) - (r?.seedlingLossCount || 0));
-  },
+  // 2026-10-17 统一口径：存活 = 初始(母株) + 补苗 − 损耗累计（1:1 含历史小苗损耗）
+  //   与列表「母株/植株存活数」列、详情弹窗、导出完全同源（src/lib/seedlingPool.ts）
+  surviving: (r) => getMotherAliveCount(r),
   previewRight: (r, surviving) => [
     { label: '初始数量', value: (r?.initialCount ?? 0).toLocaleString() },
     { label: '成活数量', value: surviving.toLocaleString(), cls: 'emerald-bold' },
     {
       label: '成活率',
-      value: (r?.initialCount || 0) > 0 ? `${Math.round((surviving / (r?.initialCount || 1)) * 100)}%` : '0%',
+      // 2026-10-17：分母改为"累计投入（初始 + 补苗）" —— 存活数已含补苗，
+      //   若仍除以初始数会出现 >100% 的荒谬值（如初始 5 + 补苗 2500 → 50040%）
+      value: (() => {
+        const invested = (r?.initialCount || 0) + (r?.replantCount || 0);
+        return invested > 0 ? `${Math.round((surviving / invested) * 100)}%` : '0%';
+      })(),
       cls: 'emerald-bold',
     },
     { label: '育苗日期', value: r?.startDate || '-' },
@@ -64,15 +66,14 @@ const SEEDLING_CONFIG: LabelPrintConfig = {
 };
 
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
-  // 育苗快捷口径（初始/成活/新增）+ 成活数量（按模式实时计算）
-  const propagationMode = record?.propagationMode || 'one_to_one';
+  // 育苗快捷口径（初始/成活/新增）
+  // 2026-10-17：成活数量统一走 seedlingPool（此前这里第三套独立算式，与列表、标签模板、后端三处不一致）
   const initialQuantity = record?.initialCount || 0;
-  const currentSurviving = propagationMode === 'one_to_many'
-    ? Math.max(0, (record?.expandedPlantCount || 0) + (record?.replantCount || 0) - (record?.lossCount || 0))
-    : Math.max(0, (record?.initialCount || 0) - (record?.lossCount || 0));
-  const recentNew = propagationMode === 'one_to_many'
-    ? (record?.expandedPlantCount || 0)
-    : (record?.replantCount || 0);
+  const currentSurviving = getMotherAliveCount(record);
+  // 新增口径：1:多 = 小苗累计产出；1:1 = 补苗累计
+  const recentNew = isOneToOneMode(record)
+    ? (record?.replantCount || 0)
+    : (record?.expandedPlantCount || 0);
 
   const config: LabelPrintConfig = {
     ...SEEDLING_CONFIG,

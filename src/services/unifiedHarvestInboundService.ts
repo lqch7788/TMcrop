@@ -139,12 +139,16 @@ export function checkSeedlingInboundSoftLimit(params: {
   seedlingLossCount?: number
   harvestStockedCount?: number
   totalQty: number
+  /** 2026-10-17 单池化：调用方直接给出剩余可入库（1:1 走母株池口径），优先于产出池公式 */
+  remainingBase?: number
 }): SeedlingInboundSoftCheckResult {
-  const remaining = Math.max(0,
-    (params.expandedPlantCount || 0)
-    - (params.seedlingLossCount || 0)
-    - (params.harvestStockedCount || 0),
-  )
+  const remaining = params.remainingBase !== undefined
+    ? Math.max(0, params.remainingBase)
+    : Math.max(0,
+        (params.expandedPlantCount || 0)
+        - (params.seedlingLossCount || 0)
+        - (params.harvestStockedCount || 0),
+      )
   const exceeded = params.totalQty > 0 && params.totalQty > remaining
   return {
     exceeded,
