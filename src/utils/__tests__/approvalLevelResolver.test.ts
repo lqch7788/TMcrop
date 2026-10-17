@@ -49,73 +49,40 @@ describe('分级审批解析器', () => {
     });
   });
 
-  describe('resolveApprovalLevel - 请假规则', () => {
-    it('请假3天内应该快速审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.LEAVE, 0, { leaveDays: 2 });
-      expect(result.level).toBe(ApprovalLevel.QUICK);
-      expect(result.reason).toContain('请假规则');
-      expect(result.approverCount).toBe(1);
-    });
+  describe('resolveApprovalLevel - 请假/加班（2026-10-10 起统一单人审批）', () => {
+    // 2026-10-10 决策：LEAVE/OVERTIME/ONBOARDING/CONTRACT_RENEWAL 等 13 类统一 forcedLevel=QUICK
+    //   （单人审批，一次通过即终审），不再按天数/小时分级。
+    //   原因：此前无级别配置 → 提交 amount=0 落入"金额<1000 免审批"档 → 提交即自动通过（事故型）。
+    //   原测试仍按"请假3-7天=标准 / 加班2小时内=免审"的旧规则断言，已不符合当前策略。
+    const quickCases: Array<[string, ApprovalType, { leaveDays?: number; overtimeHours?: number }]> = [
+      ['请假2天', ApprovalType.LEAVE, { leaveDays: 2 }],
+      ['请假5天', ApprovalType.LEAVE, { leaveDays: 5 }],
+      ['请假10天', ApprovalType.LEAVE, { leaveDays: 10 }],
+      ['请假边界3天', ApprovalType.LEAVE, { leaveDays: 3 }],
+      ['请假边界7天', ApprovalType.LEAVE, { leaveDays: 7 }],
+      ['加班1小时', ApprovalType.OVERTIME, { overtimeHours: 1 }],
+      ['加班5小时', ApprovalType.OVERTIME, { overtimeHours: 5 }],
+      ['加班10小时', ApprovalType.OVERTIME, { overtimeHours: 10 }],
+      ['加班边界2小时', ApprovalType.OVERTIME, { overtimeHours: 2 }],
+      ['加班边界8小时', ApprovalType.OVERTIME, { overtimeHours: 8 }],
+    ];
 
-    it('请假3-7天应该标准审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.LEAVE, 0, { leaveDays: 5 });
-      expect(result.level).toBe(ApprovalLevel.STANDARD);
-      expect(result.approverCount).toBe(2);
-    });
-
-    it('请假超过7天应该严格审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.LEAVE, 0, { leaveDays: 10 });
-      expect(result.level).toBe(ApprovalLevel.STRICT);
-      expect(result.approverCount).toBe(3);
-    });
-
-    it('请假天数边界值：3天应该快速审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.LEAVE, 0, { leaveDays: 3 });
-      expect(result.level).toBe(ApprovalLevel.QUICK);
-    });
-
-    it('请假天数边界值：7天应该标准审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.LEAVE, 0, { leaveDays: 7 });
-      expect(result.level).toBe(ApprovalLevel.STANDARD);
-    });
-  });
-
-  describe('resolveApprovalLevel - 加班规则', () => {
-    it('加班2小时内应该免审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.OVERTIME, 0, { overtimeHours: 1 });
-      expect(result.level).toBe(ApprovalLevel.EXEMPT);
-      expect(result.autoApprove).toBe(true);
-      expect(result.approverCount).toBe(0);
-    });
-
-    it('加班2-8小时应该快速审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.OVERTIME, 0, { overtimeHours: 5 });
-      expect(result.level).toBe(ApprovalLevel.QUICK);
-      expect(result.approverCount).toBe(1);
-    });
-
-    it('加班超过8小时应该标准审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.OVERTIME, 0, { overtimeHours: 10 });
-      expect(result.level).toBe(ApprovalLevel.STANDARD);
-      expect(result.approverCount).toBe(2);
-    });
-
-    it('加班边界值：2小时应该免审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.OVERTIME, 0, { overtimeHours: 2 });
-      expect(result.level).toBe(ApprovalLevel.EXEMPT);
-    });
-
-    it('加班边界值：8小时应该快速审批', () => {
-      const result = resolveApprovalLevel(ApprovalType.OVERTIME, 0, { overtimeHours: 8 });
-      expect(result.level).toBe(ApprovalLevel.QUICK);
+    it('请假/加班均按强制单人审批（不按天数/小时分级，不自动通过）', () => {
+      quickCases.forEach(([name, type, extra]) => {
+        const result = resolveApprovalLevel(type, 0, extra as any);
+        expect(result.level, name).toBe(ApprovalLevel.QUICK);
+        expect(result.approverCount, name).toBe(1);
+        expect(result.autoApprove, name).toBe(false);
+        expect(result.reason, name).toContain('强制');
+      });
     });
   });
 
   describe('resolveApprovalLevel - forcedLevel 强制级别配置', () => {
-    it('招聘应该标准二级审批 (forcedLevel)', () => {
+    it('招聘同为单人审批 (forcedLevel=quick)', () => {
       const result = resolveApprovalLevel(ApprovalType.RECRUITMENT, 0);
-      expect(result.level).toBe(ApprovalLevel.STANDARD);
-      expect(result.approverCount).toBe(2);
+      expect(result.level).toBe(ApprovalLevel.QUICK);
+      expect(result.approverCount).toBe(1);
       expect(result.reason).toContain('强制');
     });
 
@@ -303,11 +270,12 @@ describe('分级审批解析器', () => {
       expect(result.level).toBe(ApprovalLevel.EXEMPT);
     });
 
-    it('不提供 additionalData 时 LEAVE 类型按金额判断，50000元匹配严格审批', () => {
-      // 当没有 leaveDays 时，不进入请假特殊规则，而是按金额判断
-      // 50000 元不满足任何阈值（< 1000, < 10000, < 50000），返回 STRICT
+    it('LEAVE 即使金额 50000 元也走强制单人审批（forcedLevel 优先于金额档）', () => {
+      // 2026-10-10 起 LEAVE 配了 forcedLevel=QUICK：无论金额多少都不再按金额分级
+      // （否则会落回"金额<1000 免审批"档 → 提交即自动通过）
       const result = resolveApprovalLevel(ApprovalType.LEAVE, 50000);
-      expect(result.level).toBe(ApprovalLevel.STRICT);
+      expect(result.level).toBe(ApprovalLevel.QUICK);
+      expect(result.reason).toContain('强制');
     });
 
     it('超高金额应该严格审批', () => {

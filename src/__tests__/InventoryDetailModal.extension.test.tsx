@@ -26,16 +26,22 @@ vi.mock('@/lib/dialogService', () => ({
   showAlert: vi.fn(),
 }));
 
-vi.mock('@/constants/cropConstants', () => ({
-  QUALITY_GRADE_MAP: {},
-  INVENTORY_STATUS_MAP: {
-    in_stock: { label: '在库', bg: 'bg-emerald-500', text: 'text-white' },
-  },
-  getPlantingModeLabel: (v: string) => v,
-  SOURCE_ORIGIN_MAP: {
-    self_produced: { label: '自产', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  },
-}));
+// 2026-10-17：改为 importOriginal + 覆盖 —— 手工 mock 漏了组件后来新增的导出（UNIT_MAP），
+//   导致组件 import 时即抛错、8 个用例全部失败（组件本身正常）
+vi.mock('@/constants/cropConstants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/constants/cropConstants')>();
+  return {
+    ...actual,
+    QUALITY_GRADE_MAP: {},
+    INVENTORY_STATUS_MAP: {
+      in_stock: { label: '在库', bg: 'bg-emerald-500', text: 'text-white' },
+    },
+    getPlantingModeLabel: (v: string) => v,
+    SOURCE_ORIGIN_MAP: {
+      self_produced: { label: '自产', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+    },
+  };
+});
 
 import { InventoryDetailModal } from '../components/farm/inventory/InventoryDetailModal';
 
