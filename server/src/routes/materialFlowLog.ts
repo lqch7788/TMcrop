@@ -4,6 +4,7 @@
  */
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+import { archiveBeforeDelete } from '../services/recycleBin.service';
 
 const router = Router();
 
@@ -231,6 +232,11 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
     const { id } = req.params;
     const db = getDatabase();
+    // 2026-10-17：删除前归档到回收站（流转类只归档查看，不提供恢复）
+    archiveBeforeDelete('material_flow_log', id, {
+      operator: { name: req.user?.name, id: req.user?.userId },
+      sourcePage: '/crop/material-flow',
+    });
     const result = db.run('DELETE FROM material_flow_log WHERE id = ?', [id]);
     if ((result as any).changes === 0) {
       return res.status(404).json({ success: false, error: '流转记录不存在' });
@@ -272,6 +278,13 @@ router.delete('/', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: `单次最多删除 ${MAX_BATCH_DELETE} 条，当前 ${ids.length} 条` });
     }
     const db = getDatabase();
+    // 2026-10-17：批量删除前逐条归档
+    for (const fid of ids) {
+      archiveBeforeDelete('material_flow_log', fid, {
+        operator: { name: req.user?.name, id: req.user?.userId },
+        sourcePage: '/crop/material-flow',
+      });
+    }
     const placeholders = ids.map(() => '?').join(',');
     const result = db.run(
       `DELETE FROM material_flow_log WHERE id IN (${placeholders})`,

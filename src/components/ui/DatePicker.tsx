@@ -9,6 +9,7 @@
 import * as React from "react"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DayPicker } from "react-day-picker"
+import type { Matcher } from "react-day-picker"
 import { zhCN } from "date-fns/locale"
 import "react-day-picker/dist/style.css"
 import { cn } from "@/lib/utils"
@@ -19,6 +20,8 @@ export interface DatePickerProps {
   onChange?: (date: Date) => void
   placeholder?: string
   disabled?: boolean
+  /** 2026-10-17：禁用指定日期（透传 DayPicker 的 disabled，用于“结束日期不得早于/等于开始日期”等限制） */
+  disabledDays?: Matcher | Matcher[]
   className?: string
 }
 
@@ -34,6 +37,7 @@ export function DatePicker({
   onChange,
   placeholder = "选择日期",
   disabled,
+  disabledDays,
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
@@ -72,6 +76,7 @@ export function DatePicker({
           mode="single"
           locale={zhCN}
           selected={selected}
+          disabled={disabledDays}
           onSelect={(date) => {
             if (date) {
               onChange?.(date)

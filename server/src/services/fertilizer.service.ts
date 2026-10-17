@@ -10,6 +10,7 @@ import { queryToObjects } from '../utils/queryHelper';
 import { fertilizerRepository, FertilizerRepository, FertilizerRecord } from '../repositories/fertilizer.repository';
 import { wateringRepository, WateringRecord } from '../repositories/watering.repository';
 import { toSpecUnit } from '../lib/unitConversions';
+import { archiveBeforeDelete, markArchiveFailed } from './recycleBin.service';
 
 /**
  * 2026-07-16：本地时间字符串（替换 toISOString）—— UTC 跨天错位 bug 修复
@@ -855,7 +856,7 @@ export class FertilizerService {
   /**
    * 删除单条施肥记录（含事务：恢复库存 → 删记录）
    */
-  async remove(id: string): Promise<{ id: string }> {
+  async remove(id: string, operator?: { name?: string; id?: string }): Promise<{ id: string }> {
     const existing = this.repository.findById(id);
     if (!existing) {
       throw new BusinessError(FertilizerErrorCode.NOT_FOUND, '施肥记录不存在', 404);
@@ -869,8 +870,11 @@ export class FertilizerService {
     const db = getDatabase();
     const now = nowLocalTimestamp();
 
+    let archiveId: string | null = null;
     db.exec('BEGIN');
     try {
+      // 2026-10-17：删除前归档到回收站
+      archiveId = archiveBeforeDelete('fertilizer_record', id, { operator, sourcePage: '/crop/fertilizer' });
       // 2026-07-17：恢复库存（含顶层 fertilizerId + fertilization_pool 池里每条 specId）
       this.increaseStockFromFarmRecord(ex, now);
       this.repository.deleteById(id);
@@ -882,6 +886,8 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
+      // 2026-10-17：删除失败时标记归档失败（避免残留 pending 假记录）
+      markArchiveFailed(archiveId, err);
       // 2026-07-25：所有 throw 转 BusinessError 详细错误
       if (err instanceof BusinessError) throw err;
       console.error('[fertilizer.service] 详细错误堆栈:', err);
@@ -911,7 +917,7 @@ export class FertilizerService {
    * 批量删除（含事务：每条记录恢复库存后删除；过滤 IoT 只读）
    * @returns { deleted, skipped, iotSkipped }
    */
-  async removeBatch(ids: string[]): Promise<{ deleted: number; skipped: number; iotSkipped: number }> {
+  async removeBatch(ids: string[], operator?: { name?: string; id?: string }): Promise<{ deleted: number; skipped: number; iotSkipped: number }> {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new BusinessError(FertilizerErrorCode.INVALID_QUANTITY, '请提供要删除的记录ID数组');
     }
@@ -929,6 +935,7 @@ export class FertilizerService {
       throw new BusinessError(FertilizerErrorCode.ALL_IOT_READONLY, '所选记录均为 IoT 自动记录，不可删除', 403);
     }
     const now = nowLocalTimestamp();
+    const archiveIds: Array<string | null> = [];
     db.exec('BEGIN');
     try {
       // 对每条 deletable 记录，恢复库存后删除
@@ -937,6 +944,8 @@ export class FertilizerService {
       for (const id of deletable) {
         const rec = this.repository.findById(id) as unknown as Record<string, any> | null;
         if (rec) {
+          // 2026-10-17：删除前归档
+          archiveIds.push(archiveBeforeDelete('fertilizer_record', id, { operator, sourcePage: '/crop/fertilizer' }));
           this.increaseStockFromFarmRecord(rec, now);
         }
         this.repository.deleteById(id);
@@ -949,6 +958,8 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
+      // 2026-10-17：批量删除失败时逐条标记归档失败
+      for (const archiveId of archiveIds) markArchiveFailed(archiveId, err);
       // 2026-07-25：所有 throw 转 BusinessError 详细错误
       if (err instanceof BusinessError) throw err;
       console.error('[fertilizer.service] 详细错误堆栈:', err);

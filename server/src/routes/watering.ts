@@ -95,7 +95,10 @@ router.put('/:id', async (req, res, next) => {
  */
 router.delete('/:id', async (req, res, next) => {
   try {
-    const result = await wateringService.remove(req.params.id);
+    const result = await wateringService.remove(req.params.id, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -109,7 +112,10 @@ router.delete('/:id', async (req, res, next) => {
 router.post('/batch-delete', async (req, res, next) => {
   try {
     const { ids } = req.body || {};
-    const result = await wateringService.removeBatch(ids);
+    const result = await wateringService.removeBatch(ids, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

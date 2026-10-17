@@ -24,7 +24,76 @@ import { writeAuditLog } from '../services/auditLog.service';
 
 import seedlingDailyRecordsRouter from "./seedlingDailyRecords.route";
 import seedlingTransplantRouter from "./seedlingTransplant.route";
+import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 const router = Router();
+
+/**
+ * 2026-10-17：删除育苗时退回种源扣减（单条/批量共用）
+ * - 余额 + 库存流水 + 纠错流转 三件套，保证删除后四 Tab 对账一致
+ * - 批量删除此前漏退款，回收站恢复会重复扣减，故统一到本函数
+ */
+async function refundSeedlingSourceOnDelete(
+  db: any,
+  row: any,
+  now: string,
+  operator: { name?: string; id?: string },
+): Promise<void> {
+  // 注意：queryToObjects 返回 camelCase（不是表字段 snake_case）
+  const sourceId = row?.sourceId ?? row?.source_id;
+  const sourceMode = String(row?.sourceMode ?? row?.source_mode ?? '');
+  const deducted = Number(row?.sourceDeductedQuantity ?? row?.source_deducted_quantity) || 0;
+  if (!row || sourceMode !== 'internal' || !sourceId || deducted <= 0) return;
+
+  const srcRows = queryToObjects<any>(
+    db,
+    'SELECT source_code, unit, remaining_quantity FROM seed_sources WHERE id = ?',
+    [sourceId],
+  );
+  const src = srcRows[0];
+  if (!src) return; // 种源已硬删：跳过库存调整（历史孤儿数据）
+
+  // queryToObjects 返回 camelCase：remainingQuantity / sourceCode / unit
+  const before = Number(src.remainingQuantity ?? src.remaining_quantity) || 0;
+  const after = before + deducted;
+  db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?', [
+    after, now, sourceId,
+  ]);
+
+  const ymd = now.slice(0, 10).replace(/-/g, '');
+  const txId = await generateTransactionId(ymd);
+  const transactionId = await generateTransactionId(ymd);
+  const correctCode = row.seedlingCode ?? row.seedling_code ?? row.id;
+  db.run(
+    `INSERT INTO inventory_transaction (
+      id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+      balance_before, balance_after, business_id, business_type, business_code,
+      operator_id, operator_name, operate_date, remarks, create_time
+    ) VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
+    [
+      txId, transactionId, `seed_source:${sourceId}`, 'seed',
+      deducted, before, after,
+      row.id, correctCode,
+      operator.id || '', operator.name || 'system', now.slice(0, 10),
+      `删除育苗 ${correctCode} 退回种源 ${deducted}${src.unit || ''}`,
+      now,
+    ],
+  );
+  // 纠错流转：种源领用量减少（负增量），种源时间线可见
+  writeCorrection({
+    flow_type: 'seed_source→seedling',
+    source_type: 'seed_source',
+    source_id: sourceId,
+    source_code: String(src.sourceCode ?? src.source_code ?? ''),
+    target_type: 'seedling',
+    target_id: row.id,
+    target_code: correctCode,
+    source_quantity_delta: -deducted,
+    source_unit: String(src.unit || ''),
+    crop_name: String(row.cropName ?? row.crop_name ?? ''),
+    crop_variety: String(row.cropVariety ?? row.crop_variety ?? ''),
+    created_by: operator.name || 'system',
+  });
+}
 
 // C1：全局应用 auth 中间件
 router.use(authenticate);
@@ -122,26 +191,47 @@ router.put('/batch', (req: Request, res: Response) => {
  * 批量删除育苗记录
  * DELETE /api/seedlings/batch?ids=id1,id2,id3
  */
-router.delete('/batch', (req: Request, res: Response) => {
-  try {
-    const { ids } = req.query;
-    if (!ids || typeof ids !== 'string') {
-      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
-    }
-    const idArray = ids.split(',').filter(id => id.trim() !== '');
-    if (idArray.length === 0) {
-      return res.json({ success: true, data: { deletedCount: 0 } });
-    }
-    const db = getDatabase();
-    const placeholders = idArray.map(() => '?').join(',');
-    const now = new Date().toISOString();
-    db.run(`UPDATE seedlings SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...idArray]);
-    saveDatabase();
-    res.json({ success: true, data: { deletedCount: idArray.length } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '批量删除育苗记录失败' });
+router.delete('/batch', asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.query;
+  if (!ids || typeof ids !== 'string') {
+    return res.status(400).json({ success: false, error: '缺少 ids 参数' });
   }
-});
+  const idArray = ids.split(',').filter(id => id.trim() !== '');
+  if (idArray.length === 0) {
+    return res.json({ success: true, data: { deletedCount: 0 } });
+  }
+  const db = getDatabase();
+  const placeholders = idArray.map(() => '?').join(',');
+  const now = new Date().toISOString();
+  const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
+  // 仅处理未删除记录，避免重复退款
+  const rows = queryToObjects<any>(
+    db,
+    `SELECT * FROM seedlings WHERE id IN (${placeholders}) AND deleted_at IS NULL`,
+    idArray,
+  );
+
+  const archiveIds: Array<string | null> = [];
+  const deletedIds: string[] = [];
+  db.run('BEGIN');
+  try {
+    for (const row of rows) {
+      // 2026-10-17：删除前归档到回收站
+      archiveIds.push(archiveBeforeDelete('seedling', row.id, { operator, sourcePage: '/crop/seedling' }));
+      // 2026-10-17：批量删除补退款（与单条删除一致：余额 + 流水 + 纠错流转）
+      await refundSeedlingSourceOnDelete(db, row, now, operator);
+      db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, row.id]);
+      deletedIds.push(row.id);
+    }
+    db.run('COMMIT');
+  } catch (error) {
+    try { db.run('ROLLBACK'); } catch { /* 保持原错误 */ }
+    for (const archiveId of archiveIds) markArchiveFailed(archiveId, error);
+    throw error;
+  }
+  saveDatabase();
+  res.json({ success: true, data: { deletedCount: deletedIds.length } });
+}));
 
 /**
  * 生成育苗批号
@@ -1317,7 +1407,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -1446,12 +1536,26 @@ router.put('/:id', (req: Request, res: Response) => {
     let newSourceUnit = '';
     let newSourceRemaining = 0;
     let newSourceExists = false;
+    let newSourceCode = '';
     if (newSourceId && newSourceMode === 'internal') {
-      const srcRow = db.exec('SELECT unit, remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [newSourceId]);
+      const srcRow = db.exec('SELECT unit, remaining_quantity, source_code FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [newSourceId]);
       if (srcRow[0]?.values?.[0]) {
         newSourceExists = true;
         newSourceUnit = String(srcRow[0].values[0][0] || '');
         newSourceRemaining = Number(srcRow[0].values[0][1] || 0);
+        newSourceCode = String(srcRow[0].values[0][2] || '');
+      }
+    }
+    // 2026-10-17：旧种源信息（换种源退回 / 差额流水余额计算 需要）
+    let oldSourceUnit = '';
+    let oldSourceCode = '';
+    let oldSourceRemaining = 0;
+    if (old.source_id && old.source_mode === 'internal') {
+      const oldSrcRow = db.exec('SELECT unit, remaining_quantity, source_code FROM seed_sources WHERE id = ?', [old.source_id]);
+      if (oldSrcRow[0]?.values?.[0]) {
+        oldSourceUnit = String(oldSrcRow[0].values[0][0] || '');
+        oldSourceRemaining = Number(oldSrcRow[0].values[0][1] || 0);
+        oldSourceCode = String(oldSrcRow[0].values[0][2] || '');
       }
     }
     // 关联种源已被删除：跳过种源库存调整（避免误改已删记录/误报可用不足）
@@ -1510,30 +1614,112 @@ router.put('/:id', (req: Request, res: Response) => {
         const returnAmount = sourceChanged ? oldDeducted : Math.max(0, oldDeducted - (newDeducted ?? oldDeducted));
         const deductAmount = sourceChanged ? (newDeducted || 0) : Math.max(0, (newDeducted ?? oldDeducted) - oldDeducted);
 
+        const operatorName = (req as any).user?.name || updates.create_by || updates.createBy || 'system';
+        // 2026-10-17：编辑差额写库存流水（正=退回入库 / 负=补扣出库），
+        //   让种源「时间线」「出入库记录」与余额同步，不再只有余额变动
+        const writeAdjustTx = async (
+          txSourceId: string,
+          delta: number,
+          balanceBefore: number,
+          balanceAfter: number,
+          unit: string,
+          remark: string,
+        ) => {
+          if (Math.abs(delta) <= 0.0001) return;
+          const ymd = now.slice(0, 10).replace(/-/g, '');
+          const txId = await generateTransactionId(ymd);
+          const transactionId = await generateTransactionId(ymd);
+          db.run(
+            `INSERT INTO inventory_transaction (
+              id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+              balance_before, balance_after, business_id, business_type, business_code,
+              operator_id, operator_name, operate_date, remarks, create_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
+            [
+              txId, transactionId, `seed_source:${txSourceId}`, 'seed',
+              delta > 0 ? 'inbound' : 'outbound', delta, balanceBefore, balanceAfter,
+              id, old.seedling_code || id,
+              (req as any).user?.userId || '', operatorName, now.slice(0, 10), remark, now,
+            ]
+          );
+        };
+
         if (returnAmount > 0.0001 && old.source_id && old.source_mode === 'internal') {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE id = ?',
             [returnAmount, now, old.source_id]);
+          await writeAdjustTx(
+            old.source_id, returnAmount, oldSourceRemaining, oldSourceRemaining + returnAmount,
+            oldSourceUnit || newSourceUnit,
+            `编辑育苗消耗量 ${oldDeducted} → ${newDeducted ?? 0}${oldSourceUnit || ''}，退回 ${returnAmount}${oldSourceUnit || ''}（${old.seedling_code || id}）`,
+          );
         }
         if (deductAmount > 0.0001 && newSourceId && newSourceMode === 'internal') {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
             [deductAmount, now, newSourceId]);
+          await writeAdjustTx(
+            newSourceId, -deductAmount, newSourceRemaining, newSourceRemaining - deductAmount,
+            newSourceUnit,
+            `编辑育苗消耗量 ${oldDeducted} → ${newDeducted ?? 0}${newSourceUnit}，补扣 ${deductAmount}${newSourceUnit}（${old.seedling_code || id}）`,
+          );
         }
         // source_deducted_quantity 记录当前实际扣减量（DELETE 时按它归还）
         db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted ?? 0, id]);
 
-        // 数量变更 correction 流水（净变化；单位写种源真实单位）
-        const correctionDelta = (newDeducted ?? 0) - oldDeducted;
-        if (Math.abs(correctionDelta) > 0.001) {
-          writeCorrection({
-            flow_type: 'seed_source→seedling',
-            target_type: 'seedling',
-            target_id: id,
-            source_quantity_delta: correctionDelta,
-            source_unit: newSourceUnit || old.unit || '株',
-            crop_name: old.crop_name || '',
-            crop_variety: old.crop_variety || '',
-            created_by: updates.create_by || updates.createBy || '',
-          });
+        // 数量变更 correction 流转（带种源 ID/编码，种源时间线按 source_code 可查到）
+        const createdBy = updates.create_by || updates.createBy || '';
+        if (sourceChanged) {
+          // 换种源：旧种源退回原扣减、新种源记录新扣减，各写一条
+          if (oldDeducted > 0 && old.source_id) {
+            writeCorrection({
+              flow_type: 'seed_source→seedling',
+              source_type: 'seed_source',
+              source_id: old.source_id,
+              source_code: oldSourceCode,
+              target_type: 'seedling',
+              target_id: id,
+              target_code: old.seedling_code || id,
+              source_quantity_delta: -oldDeducted,
+              source_unit: oldSourceUnit || old.unit || '株',
+              crop_name: old.crop_name || '',
+              crop_variety: old.crop_variety || '',
+              created_by: createdBy,
+            });
+          }
+          if ((newDeducted ?? 0) > 0 && newSourceId) {
+            writeCorrection({
+              flow_type: 'seed_source→seedling',
+              source_type: 'seed_source',
+              source_id: newSourceId,
+              source_code: newSourceCode,
+              target_type: 'seedling',
+              target_id: id,
+              target_code: old.seedling_code || id,
+              source_quantity_delta: newDeducted ?? 0,
+              source_unit: newSourceUnit || newSeedlingUnit,
+              crop_name: old.crop_name || '',
+              crop_variety: old.crop_variety || '',
+              created_by: createdBy,
+            });
+          }
+        } else {
+          // 同种源：一条净变化纠错流转
+          const correctionDelta = (newDeducted ?? 0) - oldDeducted;
+          if (Math.abs(correctionDelta) > 0.001) {
+            writeCorrection({
+              flow_type: 'seed_source→seedling',
+              source_type: 'seed_source',
+              source_id: newSourceId || old.source_id || undefined,
+              source_code: newSourceCode || oldSourceCode,
+              target_type: 'seedling',
+              target_id: id,
+              target_code: old.seedling_code || id,
+              source_quantity_delta: correctionDelta,
+              source_unit: newSourceUnit || old.unit || '株',
+              crop_name: old.crop_name || '',
+              crop_variety: old.crop_variety || '',
+              created_by: createdBy,
+            });
+          }
         }
       } catch (e) {
         console.error('[seedling] PUT 种源剩余量修正失败:', e);
@@ -1555,102 +1741,55 @@ router.put('/:id', (req: Request, res: Response) => {
     console.error('更新育苗记录失败:', error);
     res.status(500).json({ success: false, error: '更新育苗记录失败' });
   }
-});
+}));
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
+
+  const rows = queryToObjects<any>(db, 'SELECT * FROM seedlings WHERE id = ? AND deleted_at IS NULL', [id]);
+  const row = rows[0];
+  if (!row) return res.status(404).json({ success: false, error: '育苗记录不存在或已删除' });
+
+  let archiveId: string | null = null;
+  db.exec('BEGIN');
   try {
-    const { id } = req.params;
-    const db = getDatabase();
-    const now = new Date().toISOString();
+    // 2026-10-17：删除前归档到回收站
+    archiveId = archiveBeforeDelete('seedling', id, { operator, sourcePage: '/crop/seedling' });
+    db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
 
-    const stmt = db.prepare('SELECT source_id, source_mode, source_deducted_quantity FROM seedlings WHERE id = ?');
-    stmt.bind([id]);
-    let row = null;
-    if (stmt.step()) row = stmt.getAsObject();
-    stmt.free();
-
-    db.exec('BEGIN');
+    // 2026-07-18 P0-C4：软删育苗后置空防治记录关联（恢复时由回收站处理器写回）
     try {
-      db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
-      if (row && row.source_mode === 'internal' && row.source_id) {
-        const deducted = Number(row.source_deducted_quantity) || 0;
-        if (deducted > 0) {
-          db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE id = ?',
-            [deducted, now, row.source_id]);
-        }
-      }
-      // 2026-07-18 P0-C4 修复：软删育苗后，置空关联的防治记录的 seedling_id/seedling_code
-      // - 保留防治历史，但断关联（避免跳转 404 / 孤儿数据）
-      try {
-        db.run(
-          `UPDATE pesticide_records
-           SET seedling_id = NULL, seedling_code = NULL
-           WHERE seedling_id = ?`,
-          [id]
-        );
-      } catch (e) {
-        console.error('[seedling DELETE] 清理关联防治记录 ERROR:', e);
-      }
-
-      // 2026-08-21 修复：软删育苗写 material_flow_log correction（反向回流到种源）
-      // - 仅 internal 模式且有扣减量时写（外购/外部育苗不涉及种源回流）
-      if (row && row.source_mode === 'internal' && row.source_id) {
-        const deducted = Number(row.source_deducted_quantity) || 0;
-        if (deducted > 0) {
-          try {
-            const { writeFlowLog } = require('../services/flowLogService');
-            // 反查种源编码（source_code 用作 target_code，方便追溯链查源头）
-            const ssRows = db.exec(
-              `SELECT source_code, crop_name, crop_variety FROM seed_sources WHERE id = ?`,
-              [row.source_id]
-            );
-            const ssCode = ssRows[0]?.values?.[0]?.[0] || '';
-            const ssCrop = ssRows[0]?.values?.[0]?.[1] || '';
-            const ssVariety = ssRows[0]?.values?.[0]?.[2] || '';
-            writeFlowLog({
-              flow_type: 'correction',
-              crop_name: ssCrop,
-              crop_variety: ssVariety,
-              source_type: 'seed_source',
-              source_id: row.source_id,
-              source_code: ssCode,
-              source_quantity: deducted,
-              source_unit: null,
-              source_category: '手动',  // 2026-08-21：改为中文持久化
-              target_type: 'seedling',
-              target_id: id,
-              target_code: id,
-              target_quantity: -deducted,
-              target_unit: null,
-              business_code: `SD-DELETE-${id}`,
-              created_by: (req as any).user?.name || '',
-            });
-          } catch (flowErr: any) {
-            console.warn('[seedling DELETE] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
-          }
-        }
-      }
-
-      db.exec('COMMIT');
-      saveDatabase();
-      // 2026-07-22：追溯修复 - seedling 删除补 audit_log
-      writeAuditLog({
-        businessType: 'seedling.delete',
-        businessId: id,
-        action: 'delete',
-        operatorName: (req as any).user?.name,
-        opinion: `软删育苗 ${id}`,
-      });
-      res.json({ success: true, data: { id, deleted: true } });
-    } catch (innerErr) {
-      try { db.exec('ROLLBACK'); } catch {}
-      throw innerErr;
+      db.run(
+        `UPDATE pesticide_records SET seedling_id = NULL, seedling_code = NULL WHERE seedling_id = ?`,
+        [id],
+      );
+    } catch (e) {
+      console.error('[seedling DELETE] 清理关联防治记录 ERROR:', e);
     }
-  } catch (error) {
-    console.error('删除育苗记录失败:', error);
-    res.status(500).json({ success: false, error: '删除育苗记录失败' });
+
+    // 2026-10-17：退回种源扣减（余额 + 库存流水 + 纠错流转，单条/批量共用）
+    await refundSeedlingSourceOnDelete(db, row, now, operator);
+
+    db.exec('COMMIT');
+  } catch (innerErr) {
+    try { db.exec('ROLLBACK'); } catch { /* 保持原错误 */ }
+    markArchiveFailed(archiveId, innerErr);
+    throw innerErr;
   }
-});
+
+  saveDatabase();
+  writeAuditLog({
+    businessType: 'seedling.delete',
+    businessId: id,
+    action: 'delete',
+    operatorName: (req as any).user?.name,
+    opinion: `软删育苗 ${id}（已移入回收站）`,
+  });
+  res.json({ success: true, data: { id, deleted: true, recycleId: archiveId } });
+}));
 
 /**
  * 2026-06-15: 数量体系重构 — 统一校验函数（按 2 模式分支）

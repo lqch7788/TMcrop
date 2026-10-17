@@ -432,6 +432,13 @@ export function AddModal({
       return;
     }
 
+    // 2026-10-17：日期逻辑校验 —— 预计结束日期必须晚于开始日期（两者均已选时校验）
+    if (formData.startDate && formData.expectedEndDate
+      && new Date(formData.expectedEndDate) <= new Date(formData.startDate)) {
+      await showAlert('预计结束日期必须晚于开始日期，请调整');
+      return;
+    }
+
     // 2026-10-17 单位口径：种源单位与育苗单位不同 → 必填种源消耗量，且不得超可用量
     if (sourceRequiresExplicitConsumption) {
       const srcUnit = selectedSource?.unit || '';
@@ -1376,7 +1383,15 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </Label>
               <DatePicker className="w-full"
                 selected={formData.startDate ? new Date(formData.startDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, startDate: todayLocal(date) })}
+                onChange={(date) => {
+                  const startDate = todayLocal(date);
+                  // 2026-10-17：开始日期后移导致已选结束日期不再晚于开始日期时，自动清空，避免留下非法区间
+                  setFormData(prev => ({
+                    ...prev,
+                    startDate,
+                    expectedEndDate: prev.expectedEndDate && prev.expectedEndDate <= startDate ? '' : prev.expectedEndDate,
+                  }));
+                }}
               />
             </div>
 
@@ -1385,6 +1400,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <Label className="text-gray-900">预计结束日期</Label>
               <DatePicker className="w-full"
                 selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
+                // 2026-10-17：日历层面禁选「开始日期及更早」的日期，从根上避免选到不合理的结束日期
+                disabledDays={formData.startDate
+                  ? (date: Date) => date <= new Date(`${formData.startDate}T00:00:00`)
+                  : undefined}
                 onChange={(date) => setFormData({ ...formData, expectedEndDate: todayLocal(date) })}
               />
             </div>

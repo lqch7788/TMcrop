@@ -4637,6 +4637,36 @@ export function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
+
+  // 2026-10-17：作物管理通用回收站（删除归档 + 恢复）
+  // - snapshot/dependencies/restore_info 存 JSON 文本
+  // - restore_status: pending | restored | purged | failed
+  db.run(`
+    CREATE TABLE IF NOT EXISTS recycle_bin (
+      id TEXT PRIMARY KEY,
+      module TEXT NOT NULL DEFAULT 'crop',
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_code TEXT,
+      display_name TEXT,
+      snapshot TEXT NOT NULL,
+      dependencies TEXT,
+      restore_info TEXT,
+      delete_mode TEXT NOT NULL,
+      source_page TEXT,
+      deleted_by TEXT,
+      deleted_by_id TEXT,
+      deleted_at TEXT NOT NULL,
+      restore_status TEXT NOT NULL DEFAULT 'pending',
+      restored_by TEXT,
+      restored_at TEXT,
+      restore_error TEXT,
+      purge_at TEXT,
+      created_at TEXT NOT NULL
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_recycle_list ON recycle_bin(module, entity_type, restore_status, deleted_at DESC)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_recycle_code ON recycle_bin(entity_code)`);
 }
 
 export { createMaterialFlowLogTable };

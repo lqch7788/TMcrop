@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, MapPin, ScrollText, Target, ChevronRight,
   ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor,
   Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database,
-  DollarSign, Package, Bug, AlertTriangle, LayoutGrid,
+  DollarSign, Package, Bug, AlertTriangle, LayoutGrid, Trash2,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -16,6 +16,8 @@ const basicDataSections = [
   { icon: Building2, label: '基地架构管理', path: '/settings/bases', desc: '公司-基地结构配置（编辑基地面积/负责人/经纬度等）' },
   { icon: Building2, label: '基地运营中心', path: '/settings/base-operations?baseOid=base_1780023508412', desc: '设施管理 · 区域划分 · 种植记录' },
   { icon: Bell, label: '通知设置', path: '/settings/notification', desc: '消息通知渠道和规则' },
+  // 2026-10-17：作物管理回收站（从作物管理菜单迁入）
+  { icon: Trash2, label: '作物管理回收站', path: '/settings/recycle-bin', desc: '查看/恢复种源、育苗、种植、水肥、病虫害、每日记录的删除数据' },
   { icon: FileText, label: '操作日志', path: '/settings/audit-log', desc: '系统操作审计日志' },
 ];
 

@@ -22,6 +22,7 @@ import {
   normalizeChangeData,
   applyDailyChangeToPlanting,
 } from '../services/plantingDailyChange';
+import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 
 const router = Router({ mergeParams: true }); // 合并父路由的 :id 参数
 
@@ -296,6 +297,7 @@ router.put('/:recordId', (req: Request, res: Response) => {
 
 /** DELETE /:recordId — 删除每日记录（事务：反向累加 + 恢复同步库存） */
 router.delete('/:recordId', (req: Request, res: Response) => {
+  let archiveId: string | null = null;
   try {
     const { id, recordId } = req.params;
     const db = getDatabase();
@@ -315,6 +317,12 @@ router.delete('/:recordId', (req: Request, res: Response) => {
       try { oldData = JSON.parse((oldStmt.getAsObject() as any).data || '{}'); } catch { oldData = {}; }
     }
     oldStmt.free();
+
+    // 2026-10-17：删除前归档（含同步生成的肥料/防治记录快照）
+    archiveId = archiveBeforeDelete('daily_record', recordId, {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop/planting',
+    });
 
     db.run('DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?', [recordId, id, 'planting']);
 
@@ -345,6 +353,7 @@ router.delete('/:recordId', (req: Request, res: Response) => {
       opinion: `删除种植日常记录 ${recordId}`,
     });
   } catch (error) {
+    markArchiveFailed(archiveId, error);
     console.error('[plantingDailyRecords] 删除失败:', error);
     res.status(500).json({ success: false, error: '删除种植每日记录失败' });
   }

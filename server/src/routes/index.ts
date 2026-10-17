@@ -8,6 +8,7 @@ import inventoryRouter from './inventory';
 import seedlingRouter from './seedling';
 import seedlingPropagationRecordsRouter from './seedlingPropagationRecords';
 import seedSourceRouter from './seedSource';
+import recycleBinRouter from './recycleBin';
 import plantingRouter from './planting';
 import plantingRecordsRouter from './plantingRecords';
 import harvestRouter from './harvest';
@@ -198,6 +199,8 @@ router.use('/seedlings', requireAuth, seedlingPropagationRecordsRouter);
 
 // 种源管理路由 - 需要认证
 router.use('/seed-sources', requireAuth, seedSourceRouter);
+// 2026-10-17：作物管理通用回收站（列表/恢复/彻底删除）
+router.use('/recycle-bin', requireAuth, recycleBinRouter);
 
 // 种植管理路由 - 需要认证
 router.use('/plantings', requireAuth, plantingRouter);

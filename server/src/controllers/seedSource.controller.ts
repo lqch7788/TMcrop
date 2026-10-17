@@ -15,6 +15,7 @@ import { AppError } from '../middleware/errorHandler';
 // 2026-07-21：字符串乱码防御工具（防止再次写入 U+FFFD 替代字符）
 import { sanitizeObject, assertNoMojibake } from '../utils/stringSanitizer';
 import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
+import { archiveBeforeDelete } from '../services/recycleBin.service';
 
 /**
  * 2026-07-14：snake/camel 双字段读取 helper（替代 `data as any` 强转 30+ 处）
@@ -371,10 +372,20 @@ export class SeedSourceController {
       const db = getDatabase();
       const now = new Date().toISOString();
       // 2026-06-26: 取种源 code 用于审计日志
-      const oldStmt = db.prepare('SELECT source_code FROM seed_sources WHERE id = ?');
+      // 2026-10-17：加 deleted_at 条件，避免重复删除重复归档
+      const oldStmt = db.prepare('SELECT source_code FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
       oldStmt.bind([id]);
       const oldRow = oldStmt.step() ? oldStmt.getAsObject() as any : null;
       oldStmt.free();
+      if (!oldRow) {
+        res.status(404).json({ success: false, error: '种源不存在或已删除' });
+        return;
+      }
+      // 2026-10-17：删除前归档到回收站
+      archiveBeforeDelete('seed_source', id, {
+        operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+        sourcePage: '/crop/seed-source',
+      });
       db.run('UPDATE seed_sources SET deleted_at = ? WHERE id = ?', [now, id]);
       saveDatabase();
       // 2026-06-26: 写审计日志
@@ -424,7 +435,12 @@ export class SeedSourceController {
         return next(new AppError('缺少 ids 参数', 400));
       }
 
-      const idArray = (ids as string).split(',');
+      const idArray = (ids as string).split(',').filter((id) => id.trim() !== '');
+      // 2026-10-17：批量删除前逐条归档（已删除记录不重复归档）
+      const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
+      for (const id of idArray) {
+        archiveBeforeDelete('seed_source', id, { operator, sourcePage: '/crop/seed-source' });
+      }
       const result = await this.service.deleteBatch(idArray);
       res.json({ success: true, data: result });
     } catch (error) {

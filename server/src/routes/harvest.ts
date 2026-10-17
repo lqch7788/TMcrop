@@ -18,6 +18,7 @@ import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
 import { checkHarvestRecordDeletable } from '../services/inventoryDeleteGuard.service';
+import { archiveBeforeDelete } from '../services/recycleBin.service';
 
 const router = Router();
 router.use(authenticate);
@@ -107,6 +108,11 @@ router.delete('/:id', (req: Request, res: Response) => {
     // 2026-07-14：4 表级联删除用事务包裹（修复 S7：此前无事务，DELETE 部分成功时数据不一致）
     try {
       db.run('BEGIN TRANSACTION');
+      // 2026-10-17：删除前归档到回收站（含库存/入库凭证/流水快照）
+      archiveBeforeDelete('harvest_record', id, {
+        operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+        sourcePage: '/harvest',
+      });
       // 2026-08-14：删除入库记录时同步回退源记录"已入库量"（与入库累加逻辑对应，MAX 防负数）
       // - seedling → seedlings.harvest_stocked_count
       // - planting → plantings.harvest_to_inventory_qty（2026-08-14 种植闭环）

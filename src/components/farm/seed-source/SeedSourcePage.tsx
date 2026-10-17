@@ -662,6 +662,7 @@ export default function SeedSourcePage() {
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={selectedRows.length}
+        impactHint="删除后记录会移入「作物管理 > 回收站」，可随时恢复；请确认该种源确无保留价值。"
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
       />

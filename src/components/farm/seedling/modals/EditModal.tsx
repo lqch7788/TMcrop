@@ -120,10 +120,19 @@ export function EditModal({
     () => seedSources.find(s => s.id === formData.sourceId) || null,
     [seedSources, formData.sourceId]
   );
-  const selectedSourceLabel = useMemo(
-    () => selectedSource ? `${selectedSource.seedCode} - ${getSeedSourceVarietyName(selectedSource)}` : '',
-    [selectedSource]
-  );
+  // 2026-10-17：种源已停用/删除时不在可用种源列表中（GET /seed-sources 只返回未删除记录），
+  //   此时回退用列表行自带的 sourceCode + 作物品种，保证编辑弹窗与「关联种源」列口径一致；
+  //   品种名缺失时只显示编码，避免出现尾部 " - "
+  const selectedSourceLabel = useMemo(() => {
+    if (selectedSource) {
+      return `${selectedSource.seedCode} - ${getSeedSourceVarietyName(selectedSource)}`;
+    }
+    const code = formData.sourceCode || record.sourceCode || '';
+    // 品种名口径与列表「作物品种」列一致：优先最细分子品种名（subVarietyName → varietyName → cropVariety → cropName）
+    const variety = record.subVarietyName || record.varietyName || record.cropVariety || record.cropName || '';
+    if (!code) return '';
+    return variety ? `${code} - ${variety}` : code;
+  }, [selectedSource, formData.sourceCode, record.sourceCode, record.subVarietyName, record.varietyName, record.cropVariety, record.cropName]);
   // 2026-10-17：种源单位与育苗单位不同口径时，初始数量变化不自动换算种源消耗，
   //   需在下方"种源消耗量（种源单位）"中单独维护
   const sourceRequiresExplicitConsumption = !!selectedSource
@@ -200,6 +209,13 @@ export function EditModal({
   }, [record]);
 
   const handleSubmit = async () => {
+    // 2026-10-17：日期逻辑校验 —— 预计结束日期必须晚于开始日期（两者均已填时校验，兜底防御）
+    if (formData.startDate && formData.expectedEndDate
+      && new Date(formData.expectedEndDate) <= new Date(formData.startDate)) {
+      await showAlert('预计结束日期必须晚于开始日期，请调整');
+      return;
+    }
+
     // 获取场地名称
     const site = sites.find(s => s.value === formData.siteId);
     const siteName = site?.label || formData.siteName;
@@ -319,6 +335,9 @@ export function EditModal({
       onClose={onClose}
       title="编辑育苗"
       size="xl"
+      // 2026-10-17：默认尺寸放大 25%（xl 基准 900×600 → 1125×750）
+      width={1125}
+      height={750}
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="保存"
@@ -364,8 +383,9 @@ export function EditModal({
           </div>
         </div>
 
-        {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
-        <div className="col-span-2">
+        {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select
+            2026-10-17：与「作物品种」并排显示（各占一列） */}
+        <div>
           <Label className="text-gray-900">关联种源</Label>
           <div className="relative">
             <Input
@@ -441,6 +461,17 @@ export function EditModal({
           </div>
         </div>
 
+        {/* 作物品种选择 — 2026-10-17：与「关联种源」并排显示 */}
+        <div>
+          <Label className="text-gray-900">作物品种</Label>
+          <CropCodeSelector
+            value={formData.selectedCropCode}
+            onChange={handleCropCodeChange}
+            placeholder="搜索或选择作物品种..."
+            size="md"
+          />
+        </div>
+
         {/* 2026-10-17：种源与育苗单位不同口径时，种源消耗量单独维护（不随初始数量自动换算） */}
         {sourceRequiresExplicitConsumption && (
           <div className="col-span-2">
@@ -471,47 +502,7 @@ export function EditModal({
           </div>
         )}
 
-        {/* 作物品种选择 */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">作物品种</Label>
-          <CropCodeSelector
-            value={formData.selectedCropCode}
-            onChange={handleCropCodeChange}
-            placeholder="搜索或选择作物品种..."
-            size="md"
-          />
-        </div>
-
-        {/* 育苗方式 */}
-        <div>
-          <Label className="text-gray-900">育苗方式</Label>
-          <Select
-            value={formData.seedlingType}
-            onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="请选择" />
-            </SelectTrigger>
-            <SelectContent>
-              {seedlingTypes.map(t => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* 2026-07-01 P1-6 修复：单位改为 DictSelect（category="unit"），与 AddModal/种植 AddModal 跨页统一 */}
-        <div>
-          <Label className="text-gray-900">单位</Label>
-          <DictSelect
-            category="unit"
-            value={formData.unit}
-            onChange={(value) => setFormData({ ...formData, unit: value })}
-            placeholder="选择单位"
-          />
-        </div>
-
-        {/* 育苗区域 */}
+        {/* 育苗区域 — 2026-10-17：移到育苗方式前面，两者保持同一行 */}
         <div>
           <Label className="text-gray-900">育苗区域</Label>
           <Select
@@ -532,12 +523,38 @@ export function EditModal({
           </Select>
         </div>
 
+        {/* 育苗方式 */}
+        <div>
+          <Label className="text-gray-900">育苗方式</Label>
+          <Select
+            value={formData.seedlingType}
+            onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
+          >
+            <SelectTrigger className={deepInputClass}>
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {seedlingTypes.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* 开始日期 */}
         <div>
           <Label className="text-gray-900">开始日期</Label>
           <DatePicker className="w-full"
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, startDate: todayLocal(date) })}
+            onChange={(date) => {
+              const startDate = todayLocal(date);
+              // 2026-10-17：开始日期后移导致已选结束日期不再晚于开始日期时，自动清空，避免留下非法区间
+              setFormData(prev => ({
+                ...prev,
+                startDate,
+                expectedEndDate: prev.expectedEndDate && prev.expectedEndDate <= startDate ? '' : prev.expectedEndDate,
+              }));
+            }}
           />
         </div>
 
@@ -546,50 +563,69 @@ export function EditModal({
           <Label className="text-gray-900">预计结束日期</Label>
           <DatePicker className="w-full"
             selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
+            // 2026-10-17：日历层面禁选「开始日期及更早」的日期，从根上避免选到不合理的结束日期
+            disabledDays={formData.startDate
+              ? (date: Date) => date <= new Date(`${formData.startDate}T00:00:00`)
+              : undefined}
             onChange={(date) => setFormData({ ...formData, expectedEndDate: todayLocal(date) })}
           />
         </div>
 
-        {/* 初始数量 */}
-        <div>
-          <Label className="text-gray-900">初始数量</Label>
-          <Input
-            type="number"
-            min={0}
-            value={formData.initialCount || ''}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              const nv = v < 0 ? 0 : v;
-              // 2026-10-17 不变量同步：母株池基数与初始数量恒等（后端 PUT 双向强制同口径）
-              setFormData({ ...formData, initialCount: nv, motherPlantCount: nv });
-            }}
-            className={deepInputClass}
-          />
-        </div>
+        {/* 母株数量 + 初始数量 + 单位 — 2026-10-17：三个字段同一行（6 列栅格）
+            1:多：母株数量占一半（3/6）｜初始数量 2/6｜单位 1/6（右半的三分之一，更窄）
+            1:1 ：无母株数量，初始数量 4/6｜单位 2/6（单位仍占整行三分之一） */}
+        <div className="col-span-2 grid grid-cols-6 gap-3">
+          {/* 2026-10-17：仅 1:多 保留「母株数量」输入（绑定母株池基数 mother_plant_count）；
+              1:1 的"成活数量"是派生值（母株 + 补苗 − 损耗），不再提供输入，避免继续写死字段 survival_count */}
+          {record.propagationMode === 'one_to_many' && (
+            <div className="col-span-3">
+              <Label className="text-gray-700">
+                母株数量
+                <span className="text-xs text-gray-500 ml-1">（建档投入的母株数，参与"母株存活"计算）</span>
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                value={formData.motherPlantCount || ''}
+                title="母株池基数：母株存活 = 母株 + 补苗 − 母株损耗"
+                className={deepInputClass}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const nv = v < 0 ? 0 : v;
+                  // 2026-10-17 不变量同步：与「初始数量」恒等（后端 PUT 双向强制同口径）
+                  setFormData({ ...formData, motherPlantCount: nv, initialCount: nv });
+                }}
+              />
+            </div>
+          )}
 
-        {/* 2026-10-17：仅 1:多 保留「母株数量」输入（绑定母株池基数 mother_plant_count）；
-            1:1 的"成活数量"是派生值（母株 + 补苗 − 损耗），不再提供输入，避免继续写死字段 survival_count */}
-        {record.propagationMode === 'one_to_many' && (
-          <div>
-            <Label className="text-gray-700">
-              母株数量
-              <span className="text-xs text-gray-500 ml-1">（建档投入的母株数，参与"母株存活"计算）</span>
-            </Label>
+          <div className={record.propagationMode === 'one_to_many' ? 'col-span-2' : 'col-span-4'}>
+            <Label className="text-gray-900">初始数量</Label>
             <Input
               type="number"
               min={0}
-              value={formData.motherPlantCount || ''}
-              title="母株池基数：母株存活 = 母株 + 补苗 − 母株损耗"
-              className={deepInputClass}
+              value={formData.initialCount || ''}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 const nv = v < 0 ? 0 : v;
-                // 2026-10-17 不变量同步：与「初始数量」恒等（后端 PUT 双向强制同口径）
-                setFormData({ ...formData, motherPlantCount: nv, initialCount: nv });
+                // 2026-10-17 不变量同步：母株池基数与初始数量恒等（后端 PUT 双向强制同口径）
+                setFormData({ ...formData, initialCount: nv, motherPlantCount: nv });
               }}
+              className={deepInputClass}
             />
           </div>
-        )}
+
+          {/* 单位 — 2026-07-01 P1-6 修复：改为 DictSelect（category="unit"），与 AddModal/种植 AddModal 跨页统一 */}
+          <div className={record.propagationMode === 'one_to_many' ? 'col-span-1' : 'col-span-2'}>
+            <Label className="text-gray-900">单位</Label>
+            <DictSelect
+              category="unit"
+              value={formData.unit}
+              onChange={(value) => setFormData({ ...formData, unit: value })}
+              placeholder="选择单位"
+            />
+          </div>
+        </div>
 
         {/* 2026-06-28：彻底移除"已定植数量"输入框
       业务规则变更：种植管理不再从育苗管理取苗（统一从内部种源页面），育苗小苗全部先入库作物库存再出库。

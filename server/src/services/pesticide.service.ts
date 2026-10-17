@@ -14,6 +14,7 @@ import { queryToObjects } from '../utils/queryHelper';
 import { pesticideRepository, PesticideRepository, PesticideRecord, parseLeafFertilizerList, LeafFertilizerItem } from '../repositories/pesticide.repository';
 import { fertilizerRepository } from '../repositories/fertilizer.repository';
 import { adjustPesticideStock, getOldPesticideSync } from '../lib/syncDailyRecords';
+import { archiveBeforeDelete, markArchiveFailed } from './recycleBin.service';
 
 /**
  * 2026-07-17：本地时间戳（替换 toISOString）—— UTC 跨天错位 bug 修复
@@ -622,7 +623,7 @@ export class PesticideService {
    * 2026-07-17：删除单条防治记录（恢复库存 → 删记录）
    * 2026-07-18 P0-C3 修复：同步路径（source_type='daily_record_sync'）也恢复药剂库存
    */
-  async remove(id: string): Promise<{ id: string }> {
+  async remove(id: string, operator?: { name?: string; id?: string }): Promise<{ id: string }> {
     const existing = this.repository.findById(id);
     if (!existing) {
       throw new PesticideBusinessError(PesticideErrorCode.NOT_FOUND, '防治记录不存在', 404);
@@ -645,8 +646,11 @@ export class PesticideService {
     const db = getDatabase();
     const now = nowLocalTimestamp();
 
+    let archiveId: string | null = null;
     db.exec('BEGIN');
     try {
+      // 2026-10-17：删除前归档到回收站（同步明细在删除前抓取）
+      archiveId = archiveBeforeDelete('pesticide_record', id, { operator, sourcePage: '/pest-control' });
       if (deductions.length > 0) {
         increaseStock(deductions, now);
       }
@@ -663,6 +667,8 @@ export class PesticideService {
         console.error('[pesticide.service] ROLLBACK 失败:', rbErr);
         console.error('[pesticide.service] 原错误:', err);
       }
+      // 2026-10-17：删除失败时标记归档失败
+      markArchiveFailed(archiveId, err);
       throw err;
     }
   }
@@ -770,7 +776,7 @@ export class PesticideService {
    * 旧逻辑：循环调 remove()，每条独立 BEGIN/COMMIT → 部分失败时前 N 条已提交不可回滚
    * 新逻辑：单事务 BEGIN → N 条恢复库存+删除 → COMMIT → 任一失败则 ROLLBACK 全部
    */
-  async removeBatch(ids: string[]): Promise<{ deleted: number; skipped: number }> {
+  async removeBatch(ids: string[], operator?: { name?: string; id?: string }): Promise<{ deleted: number; skipped: number }> {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new PesticideBusinessError(PesticideErrorCode.INVALID_INPUT, '请提供要删除的记录ID数组');
     }
@@ -784,6 +790,7 @@ export class PesticideService {
     const now = nowLocalTimestamp();
     let deleted = 0;
     let skipped = 0;
+    const archiveIds: Array<string | null> = [];
 
     db.exec('BEGIN');
     try {
@@ -793,6 +800,8 @@ export class PesticideService {
           skipped++;
           continue;
         }
+        // 2026-10-17：删除前归档到回收站
+        archiveIds.push(archiveBeforeDelete('pesticide_record', id, { operator, sourcePage: '/pest-control' }));
         // 恢复肥料库存
         const items = parseLeafFertilizerList((existing as unknown as Record<string, any>).leafFertilizerList);
         const deductions = aggregateDeductions(extractDeductions(items));
@@ -819,6 +828,8 @@ export class PesticideService {
         console.error('[pesticide.service] removeBatch ROLLBACK 失败:', rbErr);
         console.error('[pesticide.service] 原错误:', err);
       }
+      // 2026-10-17：批量删除失败时逐条标记归档失败
+      for (const archiveId of archiveIds) markArchiveFailed(archiveId, err);
       throw err;
     }
   }

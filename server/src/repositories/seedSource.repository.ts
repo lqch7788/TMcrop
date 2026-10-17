@@ -1224,11 +1224,11 @@ export class SeedSourceRepository {
 
         UNION ALL
 
-        -- ② 育苗使用（outbound 存负数，取 ABS）
+        -- ② 育苗使用（按育苗单净领用量显示：source_deducted_quantity 为编辑差额调整后的当前值）
         SELECT tx.id,
                COALESCE(tx.operate_date, substr(tx.create_time, 1, 10)),
                'seedling_use',
-               ABS(tx.quantity),
+               COALESCE(s.source_deducted_quantity, ABS(tx.quantity)),
                tx.business_code || CASE WHEN s.greenhouse_name IS NOT NULL AND s.greenhouse_name != '' THEN ' · ' || s.greenhouse_name ELSE '' END,
                tx.operator_name,
                tx.remarks,
@@ -1241,6 +1241,17 @@ export class SeedSourceRepository {
           -- 2026-10-17：已手工冲正（source_deducted_quantity=0）的历史领用不再视为有效出库，
           --   避免出库区出现“幽灵领用”（种源余额已恢复，但旧流水仍显示）
           AND COALESCE(s.source_deducted_quantity, 0) > 0
+          -- 2026-10-17：同一育苗单有多条出库流水（初始领用 + 编辑补扣）时只取最新一条，
+          --   数量用上面的 source_deducted_quantity（净额），避免重复行/旧值
+          AND tx.id = (
+            SELECT tx2.id FROM inventory_transaction tx2
+            WHERE tx2.instance_id = tx.instance_id
+              AND tx2.business_id = tx.business_id
+              AND tx2.transaction_type = 'outbound'
+              AND tx2.business_type = 'seedling'
+            ORDER BY tx2.create_time DESC, tx2.id DESC
+            LIMIT 1
+          )
 
         UNION ALL
 

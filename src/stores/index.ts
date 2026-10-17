@@ -91,6 +91,8 @@ export { useMonthlyPlanStore } from './useMonthlyPlanStore';
 export { useSeedSourceStore } from './useSeedSourceStore';
 
 export { useSeedlingStore } from './useSeedlingStore';
+// 2026-10-17：作物管理通用回收站
+export { useRecycleBinStore } from './useRecycleBinStore';
 
 export { useMaterialFlowStore } from './useMaterialFlowStore';
 export { usePlantingStore } from './usePlantingStore';

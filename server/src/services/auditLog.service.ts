@@ -45,6 +45,7 @@ const MODULE_BY_BUSINESS_TYPE: Record<string, string> = {
   seedling: '作物管理',
   seed_source: '作物管理',
   crop: '作物管理',
+  recycle_bin: '作物管理',
 };
 
 /** 由 business_type（如 'planting.update'）解析模块分类 */

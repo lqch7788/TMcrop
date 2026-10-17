@@ -46,7 +46,10 @@ router.get('/generate-code', (req: Request, res: Response) => {
 router.post('/batch-delete', async (req: Request, res: Response) => {
   try {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
-    const result = await fertilizerService.removeBatch(ids);
+    const result = await fertilizerService.removeBatch(ids, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: result });
   } catch (error) {
     handleError(res, error, 'batch-delete', '批量删除失败');
@@ -137,7 +140,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 /** DELETE /api/fertilizer/:id — 删除（service.remove 含事务 + 库存恢复） */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const result = await fertilizerService.remove(req.params.id);
+    const result = await fertilizerService.remove(req.params.id, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: result });
   } catch (error) {
     handleError(res, error, 'delete', '删除失败');
