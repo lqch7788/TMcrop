@@ -73,3 +73,50 @@ export const DOSAGE_UNITS = [
 // 药剂规格单位（用于药剂库规格编辑器）
 // ============================================
 export const PESTICIDE_SPEC_UNITS = COMPOUND_UNITS;
+
+// ============================================
+// 单位口径判断（种源领用 / 育苗扣减）
+// ============================================
+
+/**
+ * 同义单位归一化：把写法不同但口径相同的单位映射到统一值
+ * 例：公斤 = 千克、棵/苗 = 株、颗 = 粒
+ */
+const UNIT_ALIASES: Record<string, string> = {
+  '公斤': '千克',
+  kg: '千克',
+  KG: '千克',
+  g: '克',
+  G: '克',
+  ml: '毫升',
+  mL: '毫升',
+  ML: '毫升',
+  l: '升',
+  L: '升',
+  '棵': '株',
+  '苗': '株',
+  '颗': '粒',
+};
+
+/** 单位归一化（空值返回空串） */
+export function normalizeUnit(unit?: string | null): string {
+  const u = String(unit ?? '').trim();
+  if (!u) return '';
+  return UNIT_ALIASES[u] || u;
+}
+
+/**
+ * 种源单位与育苗单位是否同口径
+ *
+ * 同口径 → 可直接按数量 1:1 扣减（如 株→株、粒→粒）
+ * 不同口径 → 不可换算（如 千克→株），必须由用户显式填写「种源消耗量」
+ *
+ * 缺失单位时返回 true（按旧行为处理，避免误伤历史数据）
+ * ⚠️ 后端孪生实现：server/src/lib/unitCategories.ts（两处必须同步改）
+ */
+export function isSameUnitDimension(sourceUnit?: string | null, seedlingUnit?: string | null): boolean {
+  const a = normalizeUnit(sourceUnit);
+  const b = normalizeUnit(seedlingUnit);
+  if (!a || !b) return true;
+  return a === b;
+}

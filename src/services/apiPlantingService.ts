@@ -111,6 +111,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     sourceCode: item.sourceCode || '',
     // 2026-06-25: 关联种源的真实类型（badge 显示用）
     sourceSeedSourceType: item.sourceSeedSourceType || undefined,
+    // 2026-10-17：种源单位 + 已扣减量（编辑弹窗异口径消耗量回显依赖）
+    sourceUnit: item.sourceUnit || undefined,
+    sourceDeductedQuantity: item.sourceDeductedQuantity ?? 0,
     cropName: item.cropName || '',
     cropVariety: item.cropVariety || '',
     cropCode: item.cropCode || '',
@@ -303,6 +306,8 @@ export async function updatePlanting(id: string, updates: Partial<Planting>): Pr
     seedPlantMarker: 'seed_plant_marker',
     lossCount: 'loss_count',
     supplementCount: 'supplement_count',
+    // 2026-10-17：种源消耗量（单位=种源单位）—— 异口径时由编辑弹窗显式维护
+    sourceConsumedQuantity: 'source_consumed_quantity',
   };
   const backendUpdates: Record<string, any> = {};
   for (const [key, value] of Object.entries(updates)) {

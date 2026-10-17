@@ -281,6 +281,18 @@ export const SEEDLING_STATUS_MAP: Record<string, { label: string; color: string 
   abnormal: { label: '异常结束', color: 'bg-red-100 text-red-700' },
 };
 
+// ========== 育苗状态徽章映射（2026-07-04 v2：6 态口径，列表/编辑弹窗共用） ==========
+// 与 SeedlingStatus 枚举对齐；transplanted 为历史孤儿值兜底（保留显示，避免空白）
+export const SEEDLING_STATUS_BADGE_MAP: Record<string, { label: string; color: string }> = {
+  sown: { label: '已播种', color: 'text-blue-600 bg-blue-50' },
+  in_progress: { label: '生长中', color: 'text-amber-600 bg-amber-50' },
+  transplant_ready: { label: '待出圃', color: 'text-emerald-600 bg-emerald-50' },
+  completed: { label: '已出圃', color: 'text-green-600 bg-green-50' },
+  cancelled: { label: '已取消', color: 'text-gray-600 bg-gray-100' },
+  abnormal: { label: '异常结束', color: 'text-red-600 bg-red-50' },
+  transplanted: { label: '已出圃', color: 'text-green-600 bg-green-50' },
+};
+
 // ========== 定植记录状态映射 ==========
 export const TRANSPLANT_STATUS_MAP: Record<string, string> = {
   in_stock: '库存中',

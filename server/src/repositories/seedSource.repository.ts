@@ -6,6 +6,9 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { SeedSourceRecord, SeedSourceQuery } from '../types/seedSource';
+// 2026-10-17：完成繁殖入库补写台账（凭证 + 库存流水）
+import { generateInboundRecordId } from '../services/inventory.service';
+import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
 /**
  * 2026-06-13: 把单行 snake_case 字段转 camelCase（与 queryToObjects 行为一致）
@@ -793,8 +796,13 @@ export class SeedSourceRepository {
       throw new Error('种源记录不存在');
     }
 
-    const newAvailable = (existing.remaining_quantity || 0) + quantity;
-    const newInitial = (existing.quantity || 0) + quantity;
+    // 2026-10-17 修复：findById 返回 camelCase，原代码读 remaining_quantity/quantity（snake_case）
+    //   恒为 undefined → 会把种源数量重置为「本次繁殖量」，丢失原余额（潜伏 API bug）。
+    const beforeQty = Number((existing as any).quantity) || 0;
+    // 兼容两种运行时形状：findById 现返回 camelCase，旧调用/类型仍为 snake_case
+    const beforeRemaining = Number((existing as any).remainingQuantity ?? (existing as any).remaining_quantity) || 0;
+    const newAvailable = beforeRemaining + quantity;
+    const newInitial = beforeQty + quantity;
 
     db.run(
       `UPDATE seed_sources SET
@@ -807,6 +815,46 @@ export class SeedSourceRepository {
       WHERE id = ?`,
       [newInitial, newAvailable, now, now, id]
     );
+
+    // 2026-10-17 台账加固：完成繁殖入库必须同步写「入库凭证 + 库存流水」，
+    //   否则出入库记录/Tab 与时间线看不到这笔增量（原实现只改余额）。
+    try {
+      const sourceCode = String((existing as any).sourceCode || id);
+      const unit = String((existing as any).unit || '袋');
+      const cropName = String((existing as any).cropName || '');
+      const varietyName = String((existing as any).varietyName || '');
+      const inbId = await generateInboundRecordId(formatLocalDateYYYYMMDD());
+      db.run(
+        `INSERT INTO inventory_inbound_records (
+          id, record_type, record_date, source_module, source_id, source_code,
+          stock_type, source_type, crop_name, variety_name,
+          quantity, returned_quantity, unit,
+          business_id, notes, operator_name, create_by, create_time, update_time
+        ) VALUES (?, 'inbound', ?, 'seed_source', ?, ?, 'seed', 'propagation', ?, ?, ?, 0, ?, ?, ?, 'system', 'system', ?, ?)`,
+        [
+          inbId, formatLocalDateISO(), id, sourceCode,
+          cropName, varietyName || null,
+          quantity, unit,
+          id, `完成繁殖入库 +${quantity}${unit}`,
+          now, now,
+        ],
+      );
+      const txId = `TXN-PROP-${Date.now()}`;
+      db.run(
+        `INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, 'seed', 'inbound', ?, ?, ?, ?, 'propagation', ?, '', 'system', ?, ?, ?)`,
+        [
+          txId, txId, `seed_source:${id}`, quantity, beforeRemaining, newAvailable,
+          id, sourceCode, formatLocalDateISO(), `完成繁殖入库 +${quantity}${unit}`, now,
+        ],
+      );
+    } catch (e: any) {
+      // Fail Loud：余额已增加但台账写入失败，抛出以便调用方感知
+      throw new Error(`完成繁殖入库已更新余额，但台账写入失败：${e.message}`);
+    }
     saveDatabase();
   }
 
@@ -1190,6 +1238,9 @@ export class SeedSourceRepository {
         WHERE tx.instance_id = 'seed_source:' || ?
           AND tx.transaction_type = 'outbound'
           AND tx.business_type = 'seedling'
+          -- 2026-10-17：已手工冲正（source_deducted_quantity=0）的历史领用不再视为有效出库，
+          --   避免出库区出现“幽灵领用”（种源余额已恢复，但旧流水仍显示）
+          AND COALESCE(s.source_deducted_quantity, 0) > 0
 
         UNION ALL
 
@@ -1206,6 +1257,15 @@ export class SeedSourceRepository {
         WHERE pmr.source_id = ?
           AND pmr.source_type = 'seed'
           AND pmr.operation_type = 'move_in'
+          -- 2026-10-17：已按单位口径手工冲正（存在「单位口径修复」库存流水）的种植领用
+          --   不再视为有效出库，避免出库区出现幽灵领用。
+          --   注意：不能用 source_deducted_quantity=0 判断——历史种植记录该列默认就是 0，
+          --   会误伤所有历史合法领用（6 月初的粒/袋种源领用）。
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_transaction fix
+            WHERE fix.business_code = pmr.planting_code
+              AND fix.remarks LIKE '单位口径修复%'
+          )
       ) u
       LEFT JOIN seed_sources ss ON ss.id = ?
       ORDER BY u.createdAt DESC

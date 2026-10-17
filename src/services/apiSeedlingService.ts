@@ -50,6 +50,9 @@ interface BackendSeedling {
   varietyName?: string;
   subVarietyName?: string;
   sourceCode?: string;
+  // 2026-10-17：种源来源模式 + 已扣减量（单位=种源单位）
+  sourceMode?: 'internal' | 'external';
+  sourceDeductedQuantity?: number;
   // 2026-06-15: 繁殖模式相关字段（后端 snake_case → queryHelper 转 camelCase）
   propagationMode?: 'one_to_one' | 'one_to_many';  // 2026-06-15: 6 种合并为 2 种
   motherPlantCount?: number;
@@ -130,6 +133,9 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     seedlingCode: item.seedlingCode,
     sourceId: item.sourceId || '',
     sourceCode: item.sourceCode || '',
+    // 2026-10-17：透传种源来源模式与已扣减量（编辑弹窗异口径消耗量回显依赖）
+    sourceMode: item.sourceMode,
+    sourceDeductedQuantity: item.sourceDeductedQuantity ?? 0,
     productionPlanCode: item.productionPlanCode || '',
     cropName: item.cropName,
     cropVariety: item.varietyName || item.cropName || '',
@@ -337,10 +343,17 @@ export async function addSeedlingWithDeduct(data: {
   sourceId: string;
   count: number;
   seedling: Record<string, unknown>;
+  /**
+   * 种源消耗量（单位=种源单位）
+   * 2026-10-17：种源单位与育苗单位不同（如 千克→株）时必填；
+   *   同口径时可不传，后端按 count 扣减。
+   */
+  sourceConsumedQuantity?: number;
 }): Promise<{ id: string }> {
   const result = await enhancedApiClient.post<{ id: string }>('/seedlings/with-deduct', {
     sourceId: data.sourceId,
     count: data.count,
+    sourceConsumedQuantity: data.sourceConsumedQuantity,
     seedling: toBackendSeedlingPayload(data.seedling),
   });
   return result;
@@ -395,6 +408,8 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     customMultiple: 'custom_multiple',
     theoreticalYield: 'theoretical_yield',
     availableTransplantCount: 'available_transplant_count',
+    // 2026-10-17：种源消耗量（单位=种源单位）—— 单位不同口径时由编辑弹窗显式维护
+    sourceConsumedQuantity: 'source_consumed_quantity',
     remarks: 'remarks',
     status: 'status',
   };

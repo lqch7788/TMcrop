@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { SEEDLING_FORM_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+// 2026-10-17：单位口径判断 —— 种源单位 ≠ 育苗单位时，不能按育苗数量扣减种源
+import { isSameUnitDimension } from '@/constants/units';
 import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { getSeedSourceVarietyName, getSeedSourceOriginOrSupplier } from '../../../../constants/seedSourceDict';
 import { X, Upload, RefreshCw } from 'lucide-react';
@@ -126,6 +128,8 @@ export function AddModal({
     startDate: '',
     expectedEndDate: '',
     initialCount: 0,
+    // 2026-10-17：种源消耗量（单位=种源单位）—— 种源单位与育苗单位不同时必填
+    sourceConsumedQuantity: 0,
     targetSurvivalRate: 90,
     planType: SeedlingPlanType.ROUTINE,
     chargePerson: '',
@@ -225,6 +229,10 @@ export function AddModal({
     [seedSources, formData.sourceId]
   );
   const sourceAvailableCount = selectedSource?.availableCount ?? 0;
+  // 2026-10-17：种源单位与育苗单位不同口径（如 千克→株）时，不可按育苗数量扣减，
+  //   必须由用户填写「种源消耗量（种源单位）」
+  const sourceRequiresExplicitConsumption = !!selectedSource
+    && !isSameUnitDimension(selectedSource.unit, formData.unit);
 
   // 完整品种路径：与种源列表/育苗列表的"品种路径"列保持一致（4 段）
   // 2026-10-17 修复：主数据源改为 API 品种库（按 cropCode 精确匹配）；
@@ -289,10 +297,13 @@ export function AddModal({
   }, [theoreticalYield, formData.calculateMode, formData.theoreticalYield]);
 
   // 数量上限校验：单株模式 initialCount / 扩繁模式 motherPlantCount 不能超过种源可用数量
-  const initialCountExceeds = formData.calculateMode === SeedlingCalculateMode.SINGLE
+  // 2026-10-17：单位不同口径时不比较育苗数量与种源数量（维度不同），改校验种源消耗量
+  const initialCountExceeds = !sourceRequiresExplicitConsumption
+    && formData.calculateMode === SeedlingCalculateMode.SINGLE
     && formData.initialCount > 0
     && formData.initialCount > sourceAvailableCount;
-  const motherCountExceeds = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+  const motherCountExceeds = !sourceRequiresExplicitConsumption
+    && formData.calculateMode === SeedlingCalculateMode.PROPAGATION
     && formData.motherPlantCount > 0
     && formData.motherPlantCount > sourceAvailableCount;
   const isCountExceeded = initialCountExceeds || motherCountExceeds;
@@ -421,13 +432,26 @@ export function AddModal({
       return;
     }
 
+    // 2026-10-17 单位口径：种源单位与育苗单位不同 → 必填种源消耗量，且不得超可用量
+    if (sourceRequiresExplicitConsumption) {
+      const srcUnit = selectedSource?.unit || '';
+      if (!formData.sourceConsumedQuantity || formData.sourceConsumedQuantity <= 0) {
+        await showAlert(`种源按「${srcUnit}」计量，与育苗单位「${formData.unit}」不同，请填写种源消耗量（${srcUnit}）`);
+        return;
+      }
+      if (formData.sourceConsumedQuantity > sourceAvailableCount) {
+        await showAlert(`种源消耗量 ${formData.sourceConsumedQuantity}${srcUnit} 超过可用数量 ${sourceAvailableCount}${srcUnit}，请调整`);
+        return;
+      }
+    }
+
     // 单株育苗模式验证
     if (formData.calculateMode === SeedlingCalculateMode.SINGLE) {
       if (!formData.initialCount || formData.initialCount <= 0) {
         await showAlert('请输入初始数量');
         return;
       }
-      if (formData.sourceId && formData.initialCount > sourceAvailableCount) {
+      if (!sourceRequiresExplicitConsumption && formData.sourceId && formData.initialCount > sourceAvailableCount) {
         await showAlert(`初始数量 ${formData.initialCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
         return;
       }
@@ -439,7 +463,7 @@ export function AddModal({
         await showAlert('请输入母株数量');
         return;
       }
-      if (formData.sourceId && formData.motherPlantCount > sourceAvailableCount) {
+      if (!sourceRequiresExplicitConsumption && formData.sourceId && formData.motherPlantCount > sourceAvailableCount) {
         await showAlert(`母株数量 ${formData.motherPlantCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
         return;
       }
@@ -535,12 +559,13 @@ export function AddModal({
     // 保存育苗数据：使用 /with-deduct 原子端点（扣减种源 + 创建育苗）
     let addedSeedlingId: string | null = null;
     try {
-      const deductCount = finalInitialCount;
       // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
       const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
       const result = await addSeedlingWithDeduct({
         sourceId: formData.sourceId,
-        count: deductCount,
+        count: finalInitialCount,
+        // 2026-10-17：种源与育苗单位不同口径时，扣减量 = 用户填写的种源消耗量
+        sourceConsumedQuantity: sourceRequiresExplicitConsumption ? formData.sourceConsumedQuantity : undefined,
         seedling: seedlingData,
       });
       addedSeedlingId = result.id;
@@ -619,6 +644,8 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName || '',
         cropVariety: source.cropVariety || '',
+        // 2026-10-17：换种源后单位可能变化，消耗量必须重新填写
+        sourceConsumedQuantity: 0,
         // 一致性:清空不匹配的生产计划
         productionPlanId: shouldClearPlan ? '' : formData.productionPlanId,
       });
@@ -1056,6 +1083,29 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       超过种源可用数量（{sourceAvailableCount}）
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* 2026-10-17：种源单位与育苗单位不同口径时，必须显式填写种源消耗量 */}
+              {sourceRequiresExplicitConsumption && (
+                <div>
+                  <Label className="text-gray-900">
+                    种源消耗量（{selectedSource?.unit}）<span className="text-red-500">*</span>
+                  </Label>
+                  <NumberInput
+                    value={formData.sourceConsumedQuantity}
+                    onChange={(val) => setFormData({ ...formData, sourceConsumedQuantity: parseFloat(val) || 0 })}
+                    className={`${deepInputClass} ${formData.sourceConsumedQuantity > sourceAvailableCount ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                    placeholder={`请输入本次领用的种源数量（${selectedSource?.unit}）`}
+                    decimals={3}
+                  />
+                  <p className="text-xs text-amber-600 mt-1">
+                    种源按「{selectedSource?.unit}」计量，与育苗单位「{formData.unit}」不同，
+                    不能按育苗数量自动扣减，请填写本次实际领用量
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    可用：{sourceAvailableCount} {selectedSource?.unit}
+                  </p>
                 </div>
               )}
 

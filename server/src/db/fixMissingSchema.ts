@@ -1882,6 +1882,8 @@ export async function fixMissingSchema(): Promise<void> {
     // 补栽无上限；损耗必须 ≤ 当前活体剩余（POST 路由校验）
     { name: 'loss_count', sql: 'ALTER TABLE plantings ADD COLUMN loss_count INTEGER DEFAULT 0' },
     { name: 'supplement_count', sql: 'ALTER TABLE plantings ADD COLUMN supplement_count INTEGER DEFAULT 0' },
+    // 2026-10-17：已从种源扣减的数量（单位=种源单位；异口径时=显式种源消耗量）
+    { name: 'source_deducted_quantity', sql: 'ALTER TABLE plantings ADD COLUMN source_deducted_quantity INTEGER DEFAULT 0' },
   ];
 
   for (const col of plantingsColumns) {
@@ -1892,6 +1894,25 @@ export async function fixMissingSchema(): Promise<void> {
       if (e.message.includes('duplicate column')) seedLog.skip(`• plantings.${col.name} 列已存在`);
       else seedLog.skip(`• plantings.${col.name} 列添加: ${e.message}`);
     }
+  }
+
+  // 2026-10-17：used_quantity 自动派生（= quantity - remaining_quantity）
+  // 根因：该字段历史上无任何写入方，长期与主表数量脱节（审计发现 6 个种源不一致）。
+  // 用触发器保证任何修改 quantity/remaining_quantity 的路径都会同步 used_quantity，
+  // 避免再新增一处手写同步逻辑。
+  try {
+    db.run(`
+      CREATE TRIGGER IF NOT EXISTS trg_seed_sources_used_qty
+      AFTER UPDATE OF quantity, remaining_quantity ON seed_sources
+      FOR EACH ROW
+      WHEN NEW.used_quantity IS NOT (NEW.quantity - NEW.remaining_quantity)
+      BEGIN
+        UPDATE seed_sources SET used_quantity = NEW.quantity - NEW.remaining_quantity WHERE id = NEW.id;
+      END
+    `);
+    seedLog.info('✓ seed_sources.used_quantity 派生触发器已就绪');
+  } catch (e: any) {
+    seedLog.error(`✗ used_quantity 触发器创建失败: ${e.message}`);
   }
 
   try {

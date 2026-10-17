@@ -15,6 +15,8 @@ import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
 import { generateTransactionId } from '../services/inventory.service';
 import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
+// 2026-10-17：单位口径判断（种源单位 ≠ 育苗单位时禁止按株扣减，必须显式消耗量）
+import { isSameUnitDimension } from '../lib/unitCategories';
 import { seedLog } from '../lib/seedLogger';
 import { formatLocalDateISO } from '../utils/dateUtil';
 // 2026-07-22：追溯修复 - 子表操作写入 audit_log
@@ -192,6 +194,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   // 2026-06-13: 修复 — 支持外部种源模式（sourceId 为空 + externalSource 字段）
   // 设计文档 §4 场景B/E/F：育苗户/种植户/育苗+种植 三个场景需要 sourceId 可空
   const { sourceId, count, seedling, externalSource } = req.body || {};
+  // 2026-10-17：种源单位与育苗单位不同时，客户端必须显式提交种源消耗量（单位=种源单位）
+  const explicitConsumedRaw = req.body?.sourceConsumedQuantity ?? req.body?.source_consumed_quantity;
   const isExternalMode = !sourceId && externalSource;
 
   if (!sourceId && !isExternalMode) {
@@ -249,6 +253,10 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       `参数错误: count 必须为正整数，当前 ${count}`,
     );
   }
+  // 2026-10-17：实际扣减量（同口径=育苗数量；异口径=用户填写的种源消耗量，可为小数）
+  const seedlingUnitForDeduct = String((seedling as any)?.unit || '株');
+  let deductCount = safeCount;
+  let deductUnit = seedlingUnitForDeduct;
 
   // 真事务：扣减 + 插入 整体原子化
   db.exec('BEGIN');
@@ -278,9 +286,9 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       ]);
     } else {
       // 步骤1b：内部种源模式 — 校验并扣减
-      const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
+      const stmt = db.prepare('SELECT remaining_quantity, propagation_status, unit FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
       stmt.bind([sourceId]);
-      let existing: { remaining_quantity?: number; propagation_status?: string } | null = null;
+      let existing: { remaining_quantity?: number; propagation_status?: string; unit?: string } | null = null;
       if (stmt.step()) {
         existing = stmt.getAsObject() as any;
       }
@@ -293,13 +301,28 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
       }
       const current = existing.remaining_quantity ?? 0;
-      if (current < safeCount) {
+      // 2026-10-17 单位口径：同口径直接扣育苗数量；不同口径（如 千克→株）必须显式消耗量
+      const sourceUnitForDeduct = String(existing.unit || '');
+      deductUnit = sourceUnitForDeduct || seedlingUnitForDeduct;
+      if (!isSameUnitDimension(sourceUnitForDeduct, seedlingUnitForDeduct)) {
+        const consumed = Number(explicitConsumedRaw);
+        if (!Number.isFinite(consumed) || consumed <= 0) {
+          throw new BusinessError(
+            SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+            `种源单位为「${sourceUnitForDeduct}」，与育苗单位「${seedlingUnitForDeduct}」不同，请填写种源消耗量（${sourceUnitForDeduct}）`,
+          );
+        }
+        deductCount = consumed;
+      } else {
+        deductCount = safeCount;
+      }
+      if (current < deductCount) {
         throw new BusinessError(
           SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
-          `可用数量不足：当前 ${current}，需扣减 ${safeCount}`,
+          `可用数量不足：当前 ${current}${sourceUnitForDeduct ? ' ' + sourceUnitForDeduct : ''}，需扣减 ${deductCount}${sourceUnitForDeduct ? ' ' + sourceUnitForDeduct : ''}`,
         );
       }
-      const newAvailable = current - safeCount;
+      const newAvailable = current - deductCount;
 
       // 步骤2：扣减种源
       db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
@@ -326,10 +349,10 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
         [
           useTxId, useTransactionId, seedSourceInstanceId, 'seed',
-          -safeCount, current, newAvailable,
+          -deductCount, current, newAvailable,
           newId, seedling_code || '',
           create_by || '', operatorName, now.slice(0, 10),
-          `种源被育苗使用 ${seedling_code || newId}（扣减 ${safeCount}）`,
+          `种源被育苗使用 ${seedling_code || newId}（扣减 ${deductCount}${deductUnit ? ' ' + deductUnit : ''}）`,
           now,
         ]
       );
@@ -363,7 +386,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
       source_mode || 'internal', external_seed_code || null, external_seed_name || null, external_seed_quantity ?? 0, external_seed_note || null,
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
-      safeCount,
+      // 2026-10-17：记录实际扣减量（同口径=育苗数量；异口径=显式种源消耗量）
+      deductCount,
       chargePerson,
       seedling.seedling_form || null, // 2026-06-27：种苗形态
       // 2026-07-03 v5：无性繁殖母株溯源
@@ -450,14 +474,15 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         source_type: isExternalMode ? null : 'seed_source',
         source_id: isExternalMode ? null : effectiveSourceId,
         source_code: finalSourceCode,
-        source_quantity: safeCount,
-        source_unit: '粒',
+        // 2026-10-17：原 source_unit 硬编码 '粒'，与种源真实单位不符；改为实际单位 + 实际扣减量
+        source_quantity: deductCount,
+        source_unit: deductUnit,
         source_category: sourceCategory,
         target_type: 'seedling',
         target_id: newId,
         target_code: seedling_code,
         target_quantity: seedling_quantity || 0,
-        target_unit: '株',
+        target_unit: seedlingUnitForDeduct,
         business_code: seedling_code,
         created_by: create_by || '',
       });
@@ -1067,6 +1092,36 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     const db = getDatabase();
+    // 2026-10-17 单位口径修复：种源单位与育苗单位不同 → 不允许按育苗数量扣减种源
+    //   旧行为：22 千克种源被扣 10「株」，剩余变成 12 千克（语义错误）。
+    //   新规则：同口径直接扣育苗数量；不同口径必须显式提交种源消耗量（单位=种源单位）。
+    const sourceConsumedRaw = req.body.source_consumed_quantity ?? req.body.sourceConsumedQuantity;
+    let sourceUnit = '';
+    let sourceDeductQuantity = 0;
+    if (sourceMode === 'internal' && source_id) {
+      const srcRow = db.exec('SELECT unit, remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [source_id]);
+      sourceUnit = String(srcRow[0]?.values?.[0]?.[0] || '');
+      const remainingQty = Number(srcRow[0]?.values?.[0]?.[1] || 0);
+      if (!isSameUnitDimension(sourceUnit, seedlingUnit)) {
+        const consumed = Number(sourceConsumedRaw);
+        if (!Number.isFinite(consumed) || consumed <= 0) {
+          return res.status(400).json({
+            success: false,
+            error: `种源单位为「${sourceUnit}」，与育苗单位「${seedlingUnit}」不同，请填写种源消耗量（${sourceUnit}）`,
+          });
+        }
+        if (consumed > remainingQty) {
+          return res.status(400).json({
+            success: false,
+            error: `种源消耗量 ${consumed}${sourceUnit} 超过可用数量 ${remainingQty}${sourceUnit}`,
+          });
+        }
+        sourceDeductQuantity = consumed;
+      } else {
+        sourceDeductQuantity = Number(seedling_quantity) || 0;
+      }
+    }
+
     // 2026-06-15: 数组列名 + 自动 ? 占位符（避免加列时占位符错位）
     const insertCols = [
       'id', 'seedling_code', 'source_id', 'source_name', 'crop_code', 'crop_name', 'crop_variety',
@@ -1094,7 +1149,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
       sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
-      (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
+      // 2026-10-17：按单位口径记录实际扣减量（同口径=育苗数量；异口径=显式种源消耗量）
+      (sourceMode === 'internal' && source_id ? sourceDeductQuantity : 0),
       chargePerson,
       seedlingForm, // 2026-07-23：已校验必填，不再 `|| null`
       seedlingUnit, // 2026-07-01: 单位
@@ -1153,17 +1209,18 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       );
 
       // 内部种源时扣减种源 remaining_quantity + 写 inventory_transaction
+      // 2026-10-17：扣减量改按单位口径 —— 同口径=育苗数量；异口径=用户填写的种源消耗量
       const operatorName = create_by || 'system';
-      if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
+      if (sourceMode === 'internal' && source_id && sourceDeductQuantity > 0) {
         const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [source_id]);
         const remaining = Number(chk[0]?.values?.[0]?.[0] || 0);
-        if (remaining >= seedling_quantity) {
+        if (remaining >= sourceDeductQuantity) {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
-            [seedling_quantity, now, source_id]);
+            [sourceDeductQuantity, now, source_id]);
           const useDateYmd2 = now.slice(0, 10).replace(/-/g, '');
           const useTxId2 = await generateTransactionId(useDateYmd2);
           const useTransactionId2 = await generateTransactionId(useDateYmd2);
-          const newRemaining2 = remaining - seedling_quantity;
+          const newRemaining2 = remaining - sourceDeductQuantity;
           db.run(
             `INSERT INTO inventory_transaction (
               id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -1172,17 +1229,17 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
             ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
             [
               useTxId2, useTransactionId2, `seed_source:${source_id}`, 'seed',
-              -seedling_quantity, remaining, newRemaining2,
+              -sourceDeductQuantity, remaining, newRemaining2,
               newId, seedling_code || '',
               create_by || '', operatorName, now.slice(0, 10),
-              `种源被育苗使用 ${seedling_code || newId}（扣减 ${seedling_quantity}）`,
+              `种源被育苗使用 ${seedling_code || newId}（扣减 ${sourceDeductQuantity}${sourceUnit ? ' ' + sourceUnit : ''}）`,
               now,
             ]
           );
         } else {
           throw new BusinessError(
             SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
-            `可用数量不足：当前 ${remaining}，需扣减 ${seedling_quantity}`,
+            `可用数量不足：当前 ${remaining}${sourceUnit ? ' ' + sourceUnit : ''}，需扣减 ${sourceDeductQuantity}${sourceUnit ? ' ' + sourceUnit : ''}`,
           );
         }
       }
@@ -1228,9 +1285,11 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
           flow_type: 'seed_source→seedling',
           crop_name: crop_name,
           source_type: 'seed_source', source_id: source_id, source_code: sourceCodeForFlow,
-          source_quantity: seedling_quantity ?? 0, source_unit: '粒', source_category: sourceCategory,
+          // 2026-10-17：source_unit 原硬编码 '粒'，与种源真实单位（千克/克/袋/株）不符；
+          //   改为实际单位 + 实际扣减量（异口径时=用户填写的种源消耗量）
+          source_quantity: sourceDeductQuantity, source_unit: sourceUnit || seedlingUnit, source_category: sourceCategory,
           target_type: 'seedling', target_id: newId, target_code: seedling_code,
-          target_quantity: seedling_quantity || 0, target_unit: '株',
+          target_quantity: seedling_quantity || 0, target_unit: seedlingUnit,
           business_code: seedling_code, created_by: create_by || '',
         });
       } catch (e) { console.error('[seedling] writeFlowLog 失败:', (e as any)?.message || e); }
@@ -1355,9 +1414,87 @@ router.put('/:id', (req: Request, res: Response) => {
         snakeUpdates[snakeKey] = value;
       }
     }
+    // 2026-10-17 固化不变量：母株池基数与初始数量恒等（mother_plant_count == seedling_quantity）
+    // 历史三种口径（建档基数 / 含补苗 / 扣损耗）打架导致 9 行漂移、存活数补苗双计。
+    // 补苗/损耗必须走独立列（replant_count / *_loss_count），禁止并入或偏离基数。
+    // 双向强制：改任一字段，另一字段跟随（前端两个输入框也已互相同步）。
+    if (snakeUpdates.seedling_quantity !== undefined) {
+      snakeUpdates.mother_plant_count = snakeUpdates.seedling_quantity;
+    } else if (snakeUpdates.mother_plant_count !== undefined) {
+      snakeUpdates.seedling_quantity = snakeUpdates.mother_plant_count;
+    }
+
     const safeKeys = Object.keys(snakeUpdates);
     if (safeKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+    }
+
+    // ============================================================
+    // 2026-10-17 种源扣减口径（PUT）
+    //   ① 单位同口径：扣减量 = 育苗初始数量（改 initialCount 时按差额补/退）
+    //   ② 单位不同口径（如种源千克、育苗株）：初始数量变化不自动换算，
+    //      必须显式提交 sourceConsumedQuantity（单位=种源单位），按差额调整
+    //   ③ 支持更换种源：旧种源退回原扣减，新种源按新口径重新扣减
+    //   ④ 修复原代码两处静默失配（读原始 body 的 snake_case 键、读 camelCase 的 old 行字段）
+    // ============================================================
+    const newSourceId = snakeUpdates.source_id !== undefined ? snakeUpdates.source_id : old.source_id;
+    const newSourceMode = snakeUpdates.source_mode !== undefined ? snakeUpdates.source_mode : old.source_mode;
+    const newSeedlingUnit = String(snakeUpdates.unit ?? old.unit ?? '株');
+    const oldDeducted = Number(old.source_deducted_quantity) || 0;
+    const sourceChanged = String(newSourceId || '') !== String(old.source_id || '');
+
+    let newSourceUnit = '';
+    let newSourceRemaining = 0;
+    let newSourceExists = false;
+    if (newSourceId && newSourceMode === 'internal') {
+      const srcRow = db.exec('SELECT unit, remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [newSourceId]);
+      if (srcRow[0]?.values?.[0]) {
+        newSourceExists = true;
+        newSourceUnit = String(srcRow[0].values[0][0] || '');
+        newSourceRemaining = Number(srcRow[0].values[0][1] || 0);
+      }
+    }
+    // 关联种源已被删除：跳过种源库存调整（避免误改已删记录/误报可用不足）
+    const skipSourceAdjustment = newSourceMode === 'internal' && !newSourceExists && !sourceChanged;
+
+    const explicitConsumption = newSourceExists && newSourceMode === 'internal'
+      && !isSameUnitDimension(newSourceUnit, newSeedlingUnit);
+    const consumedRaw = updates.source_consumed_quantity ?? updates.sourceConsumedQuantity;
+
+    // 计算更新后的种源扣减量
+    let newDeducted: number | null = null;
+    if (!newSourceId || newSourceMode !== 'internal') {
+      newDeducted = 0;
+    } else if (explicitConsumption) {
+      if (consumedRaw !== undefined) {
+        const consumed = Number(consumedRaw);
+        if (!Number.isFinite(consumed) || consumed < 0) {
+          return res.status(400).json({ success: false, error: `种源消耗量必须 ≥ 0（单位：${newSourceUnit}）` });
+        }
+        newDeducted = consumed;
+      } else if (sourceChanged) {
+        return res.status(400).json({
+          success: false,
+          error: `新种源单位为「${newSourceUnit}」，与育苗单位「${newSeedlingUnit}」不同，请填写种源消耗量（${newSourceUnit}）`,
+        });
+      } else {
+        newDeducted = oldDeducted; // 未提交消耗量 → 保持不变
+      }
+    } else {
+      // 同口径：按初始数量「变化量」调整（保留历史已扣数，不强行对齐初始数量，
+      //   避免用户只是编辑其他字段就把差额补扣到种源上）
+      const newQty = Number(snakeUpdates.seedling_quantity !== undefined ? snakeUpdates.seedling_quantity : old.seedling_quantity) || 0;
+      const oldQty = Number(old.seedling_quantity) || 0;
+      newDeducted = Math.max(0, oldDeducted + (newQty - oldQty));
+    }
+
+    // 可用量校验（同种源时把原扣减加回再比较；种源已删除时跳过）
+    const availableForDeduct = newSourceRemaining + (sourceChanged ? 0 : oldDeducted);
+    if (!skipSourceAdjustment && newSourceMode === 'internal' && newSourceExists && newDeducted > availableForDeduct + 0.0001) {
+      return res.status(400).json({
+        success: false,
+        error: `种源可用数量不足：可用 ${availableForDeduct}${newSourceUnit ? ' ' + newSourceUnit : ''}，需扣减 ${newDeducted}${newSourceUnit ? ' ' + newSourceUnit : ''}`,
+      });
     }
 
     const fields = safeKeys.map(k => `${k} = ?`).join(', ');
@@ -1365,44 +1502,45 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE seedlings SET ${fields}, update_time = ? WHERE id = ?`, values);
-    saveDatabase();
 
-    // 数量变更 correction 流水
-    const hasQtyChanged = (
-      (updates.seedling_quantity !== undefined && updates.seedling_quantity !== old.seedling_quantity) ||
-      (updates.survival_quantity !== undefined && updates.survival_quantity !== old.survival_quantity)
-    );
-    if (hasQtyChanged) {
+    // 应用种源库存调整：退回旧扣减 / 扣减新消耗量
+    // 种源已删除且未更换种源时整体跳过（保留历史 source_deducted_quantity 原值）
+    if (!skipSourceAdjustment) {
       try {
-        const oldQty = (updates.seedling_quantity !== undefined) ? old.seedling_quantity : old.survival_quantity;
-        const newQty = (updates.seedling_quantity !== undefined) ? updates.seedling_quantity : updates.survival_quantity;
-        const delta = newQty - oldQty;
-        if (Math.abs(delta) > 0.001) {
+        const returnAmount = sourceChanged ? oldDeducted : Math.max(0, oldDeducted - (newDeducted ?? oldDeducted));
+        const deductAmount = sourceChanged ? (newDeducted || 0) : Math.max(0, (newDeducted ?? oldDeducted) - oldDeducted);
+
+        if (returnAmount > 0.0001 && old.source_id && old.source_mode === 'internal') {
+          db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE id = ?',
+            [returnAmount, now, old.source_id]);
+        }
+        if (deductAmount > 0.0001 && newSourceId && newSourceMode === 'internal') {
+          db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
+            [deductAmount, now, newSourceId]);
+        }
+        // source_deducted_quantity 记录当前实际扣减量（DELETE 时按它归还）
+        db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted ?? 0, id]);
+
+        // 数量变更 correction 流水（净变化；单位写种源真实单位）
+        const correctionDelta = (newDeducted ?? 0) - oldDeducted;
+        if (Math.abs(correctionDelta) > 0.001) {
           writeCorrection({
             flow_type: 'seed_source→seedling',
             target_type: 'seedling',
             target_id: id,
-            source_quantity_delta: delta,
-            source_unit: '株',
+            source_quantity_delta: correctionDelta,
+            source_unit: newSourceUnit || old.unit || '株',
             crop_name: old.crop_name || '',
             crop_variety: old.crop_variety || '',
-            created_by: updates.create_by || '',
+            created_by: updates.create_by || updates.createBy || '',
           });
-          // 2026-06-14: 种源增量补偿（PUT 改 initialCount 时）
-          // delta > 0 多扣；delta < 0 归还
-          if (old.source_mode === 'internal' && old.source_id) {
-            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
-              [delta, now, old.source_id]);
-            // 同步更新 source_deducted_quantity 让 DELETE 时能正确归还
-            const newDeducted = (Number(old.sourceDeductedQuantity) || 0) + delta;  // 2026-07-21 修复：queryToObjects 已转 camelCase，读 snake_case 返回 undefined → NaN
-            db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted, id]);
-          }
         }
       } catch (e) {
         console.error('[seedling] PUT 种源剩余量修正失败:', e);
         // 不阻断主流程（育苗记录已成功更新），但写入日志便于排查
       }
     }
+    saveDatabase();
 
     // 2026-07-22：追溯修复 - seedling 更新补 audit_log
     writeAuditLog({
