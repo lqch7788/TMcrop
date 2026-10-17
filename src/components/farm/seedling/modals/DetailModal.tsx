@@ -64,6 +64,17 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             <span className="text-sm text-gray-500 w-24">关联种源：</span>
             <span className="text-sm text-gray-900">{record.sourceCode}</span>
           </div>
+          {/* 2026-10-17：关联生产计划/繁殖模式此前只在列表/编辑弹窗出现，详情缺失 */}
+          {record.productionPlanCode && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">关联生产计划：</span>
+              <span className="text-sm text-gray-900">{record.productionPlanCode}</span>
+            </div>
+          )}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">繁殖模式：</span>
+            <span className="text-sm text-gray-900">{record.propagationMode === 'one_to_many' ? '1:多' : '1:1'}</span>
+          </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">育苗方式：</span>
             {/* 2026-07-16 修复：seedlingType 是育苗方式（plug/direct/cutting/grafting 等），
@@ -77,6 +88,25 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
               <span className="text-sm text-gray-900">{SEEDLING_FORM_MAP[record.seedlingForm] || record.seedlingForm}</span>
             </div>
           )}
+          {/* 2026-10-17：计算模式此前只在新增/编辑使用，详情无展示出口 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">计算模式：</span>
+            <span className="text-sm text-gray-900">
+              {record.calculateMode === 'propagation' ? '扩繁育苗' : '单株育苗'}
+            </span>
+          </div>
+          {record.calculateMode === 'propagation' && (
+            <>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">扩繁倍数：</span>
+                <span className="text-sm text-gray-900">{record.propagationMultiple || record.customMultiple || 0} 倍</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-24">理论产量：</span>
+                <span className="text-sm text-gray-900">{record.theoreticalYield || 0}</span>
+              </div>
+            </>
+          )}
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">温室场地：</span>
             <span className="text-sm text-gray-900">{record.siteName}</span>
@@ -85,12 +115,6 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">所属组织：</span>
               <span className="text-sm text-gray-900">{record.orgName}</span>
-            </div>
-          )}
-          {record.seedlingTaskTime !== undefined && (
-            <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">育苗工时：</span>
-              <span className="text-sm text-gray-900">{record.seedlingTaskTime} 小时</span>
             </div>
           )}
         </div>
@@ -135,9 +159,26 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
               })()}%
             </span>
           </div>
+          {/* 2026-10-17：目标成活率/目标成苗数此前仅在列表与导出出现，详情缺失 */}
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">育苗结束：</span>
-            <span className="text-sm text-gray-900">{record.isFinished ? '是' : '否'}</span>
+            <span className="text-sm text-gray-500 w-24">目标成活率：</span>
+            <span className="text-sm text-gray-900">
+              {record.targetSurvivalRate ? `${record.targetSurvivalRate}%` : '—'}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">目标成活数：</span>
+            <span className="text-sm text-gray-900">{(record.targetSurvivalCount ?? 0).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center">
+            {/* 2026-10-17：原「育苗结束」读前端死字段 isFinished（DB 无列，恒为否）；
+                改为按结束动作实际写入的 endType/endTime 展示 */}
+            <span className="text-sm text-gray-500 w-24">结束状态：</span>
+            <span className="text-sm text-gray-900">
+              {record.endTime
+                ? `${record.endType === 'abnormal' ? '异常结束' : '正常结束'}（${record.endTime}）`
+                : '未结束'}
+            </span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">状态：</span>
@@ -270,18 +311,27 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             <span className="text-sm text-gray-500 w-24">单位：</span>
             <span className="text-sm text-gray-900">{record.unit || '—'}</span>
           </div>
+          {/* 2026-10-17：种源来源/消耗量此前只在编辑弹窗可见，详情无法核对种源扣减 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">种源来源：</span>
+            <span className="text-sm text-gray-900">{record.sourceMode === 'external' ? '外部种源' : '内部种源'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">种源消耗量：</span>
+            <span className="text-sm text-gray-900">
+              {(record.sourceDeductedQuantity ?? 0).toLocaleString()}{record.sourceUnit ? ` ${record.sourceUnit}` : ''}
+            </span>
+          </div>
+          {/* 2026-10-17：负责人此前只在新增/编辑录入，详情无展示出口，此处补上 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">负责人：</span>
+            <span className="text-sm text-gray-900">{record.chargePerson || '—'}</span>
+          </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">育苗工时：</span>
             <span className="text-sm text-gray-900">{record.seedlingTaskTime ? `${record.seedlingTaskTime} 小时` : '—'}</span>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">创建人：</span>
-            <span className="text-sm text-gray-900">{record.createBy || '—'}</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">创建时间：</span>
-            <span className="text-sm text-gray-900">{record.createTime || '—'}</span>
-          </div>
+          {/* 2026-10-17：删除重复的创建人/创建时间（同块上方已展示一次） */}
           {record.remarks && (
             <div className="col-span-2 flex items-start">
               <span className="text-sm text-gray-500 w-24 flex-shrink-0">备注：</span>

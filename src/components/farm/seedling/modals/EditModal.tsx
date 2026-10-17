@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { Seedling, SeedSource, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
+import { Seedling, SeedSource, SeedlingCalculateMode } from '../../../../types/crop';
 import { getMotherAliveCount, getMotherLossCapacity, getMotherLossDisplayCount, getMotherAliveFormula, getSeedlingRemainingCount, isOneToOneMode } from '@/lib/seedlingPool';
 import { SEEDLING_STATUS_BADGE_MAP } from '../../../../constants/cropConstants';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
@@ -65,20 +65,15 @@ export function EditModal({
     // 2026-10-17：种源已扣减量（单位=种源单位）—— 种源与育苗单位不同口径时可编辑
     sourceConsumedQuantity: record.sourceDeductedQuantity ?? 0,
     survivalCount: record.survivalCount,
-    plantedCount: 0, // 2026-06-28：保留字段以兼容后端 PUT ALLOWED_FIELDS，但前端不再使用
     remarks: record.remarks || '',
-    // 方案2.6: 育苗工时
-    // 2026-07-21 修复：workHours 映射到 seedlingTaskTime（对齐详情显示）
-    workHours: record.seedlingTaskTime || 0,
     // 新增缺失字段
     qualityGrade: record.qualityGrade || '',
-    isFinished: record.isFinished || false,
+    // 2026-10-17：删除 isFinished（DB 无此列、后端白名单不支持，结束状态由列表「结束」按钮写入 status/end_type/end_time）
     chargePerson: record.chargePerson || '',
     targetSurvivalCount: record.targetSurvivalCount || 0,
     // 补齐 AddModal 同名字段 — 否则编辑保存会丢这些值
     targetSurvivalRate: record.targetSurvivalRate || 0,
     productionPlanId: record.productionPlanCode || '',
-    planType: record.planType || SeedlingPlanType.ROUTINE,
     calculateMode: record.calculateMode || SeedlingCalculateMode.SINGLE,
     motherPlantCount: record.motherPlantCount || 0,
     propagationMultiple: record.propagationMultiple || 0,
@@ -179,21 +174,14 @@ export function EditModal({
       // 2026-10-17：种源已扣减量（单位=种源单位），整体重置时必须带回
       sourceConsumedQuantity: record.sourceDeductedQuantity ?? 0,
       survivalCount: record.survivalCount,
-      // 2026-06-28：前端不再使用 plantedCount（业务规则：种植管理不再从育苗取苗），
-      //   但 state 声明中保留该键以兼容后端 PUT 白名单 → 整体替换时必须带回（原缺失导致 TS2345）
-      plantedCount: 0,
       remarks: record.remarks || '',
-      // 2026-07-28 审核 H-6：workHours 字段不存在，正确的是 seedlingTaskTime（与 useState 行 65 对齐）
-      workHours: record.seedlingTaskTime || 0,
       // 新增缺失字段
       qualityGrade: record.qualityGrade || '',
-      isFinished: record.isFinished || false,
       chargePerson: record.chargePerson || '',
       targetSurvivalCount: record.targetSurvivalCount || 0,
       // 补齐 AddModal 同名字段
       targetSurvivalRate: record.targetSurvivalRate || 0,
       productionPlanId: record.productionPlanCode || '',
-      planType: record.planType || SeedlingPlanType.ROUTINE,
       calculateMode: record.calculateMode || SeedlingCalculateMode.SINGLE,
       motherPlantCount: record.motherPlantCount || 0,
       propagationMultiple: record.propagationMultiple || 0,
@@ -272,18 +260,16 @@ export function EditModal({
         lossRate,
         remarks: formData.remarks,
         qualityGrade: formData.qualityGrade,
-        isFinished: formData.isFinished,
         chargePerson: formData.chargePerson,
         targetSurvivalCount: formData.targetSurvivalCount,
         targetSurvivalRate: formData.targetSurvivalRate,
         productionPlanCode: formData.productionPlanId || undefined,
-        planType: formData.planType,
         calculateMode: formData.calculateMode,
         motherPlantCount: formData.motherPlantCount,
         propagationMultiple: formData.propagationMultiple,
         customMultiple: formData.customMultiple,
         theoreticalYield: formData.theoreticalYield,
-        workHours: formData.workHours || undefined,
+        // 2026-10-17：育苗工时已按业务决定停用（新增弹窗已删除），编辑不再提交，保留历史值
         // 2026-07-21 修复：添加 5 个数量字段 + replantCount 到提交 payload（之前缺失导致无法保存）
         motherLossCount: formData.motherLossCount,
         expandedPlantCount: formData.expandedPlantCount,
@@ -377,6 +363,13 @@ export function EditModal({
                   })()}
                 </span>
                 <span className="text-xs text-gray-500 ml-1">（建档后不可修改）</span>
+              </span>
+              {/* 2026-10-17：计算模式此前在编辑弹窗无展示，且 API 映射丢失导致保存被覆盖 */}
+              <span className="text-sm font-semibold text-indigo-900">
+                计算模式：
+                <span className="text-sm text-indigo-700 font-medium">
+                  {record.calculateMode === 'propagation' ? '扩繁育苗' : '单株育苗'}
+                </span>
               </span>
             </div>
             <span className="text-xs text-amber-600">数量字段由「每日记录」自动累加</span>
@@ -472,9 +465,10 @@ export function EditModal({
           />
         </div>
 
-        {/* 2026-10-17：种源与育苗单位不同口径时，种源消耗量单独维护（不随初始数量自动换算） */}
+        {/* 2026-10-17：种源与育苗单位不同口径时，种源消耗量单独维护（不随初始数量自动换算）
+            2026-10-17：字段宽度调整为占弹窗一半（与其他半宽字段对齐） */}
         {sourceRequiresExplicitConsumption && (
-          <div className="col-span-2">
+          <div>
             <Label className="text-gray-900">
               种源消耗量（{selectedSource?.unit}）
             </Label>
@@ -571,14 +565,17 @@ export function EditModal({
           />
         </div>
 
-        {/* 母株数量 + 初始数量 + 单位 — 2026-10-17：三个字段同一行（6 列栅格）
-            1:多：母株数量占一半（3/6）｜初始数量 2/6｜单位 1/6（右半的三分之一，更窄）
-            1:1 ：无母株数量，初始数量 4/6｜单位 2/6（单位仍占整行三分之一） */}
-        <div className="col-span-2 grid grid-cols-6 gap-3">
+        {/* 母株数量 + 初始数量 + 单位 — 2026-10-17
+            1:多：整行 8 列栅格 —— 母株数量 4/8（一半）｜初始数量 3/8｜单位 1/8
+            1:1 ：不占整行，作为普通半宽单元格自动排入上一行剩余半边（与「预计结束日期」同一行）
+                  内部 4 列栅格：初始数量 3/4｜单位 1/4，合计占弹窗宽度一半 */}
+        <div className={record.propagationMode === 'one_to_many'
+          ? 'col-span-2 grid grid-cols-8 gap-3'
+          : 'grid grid-cols-4 gap-3'}>
           {/* 2026-10-17：仅 1:多 保留「母株数量」输入（绑定母株池基数 mother_plant_count）；
               1:1 的"成活数量"是派生值（母株 + 补苗 − 损耗），不再提供输入，避免继续写死字段 survival_count */}
           {record.propagationMode === 'one_to_many' && (
-            <div className="col-span-3">
+            <div className="col-span-4">
               <Label className="text-gray-700">
                 母株数量
                 <span className="text-xs text-gray-500 ml-1">（建档投入的母株数，参与"母株存活"计算）</span>
@@ -599,7 +596,7 @@ export function EditModal({
             </div>
           )}
 
-          <div className={record.propagationMode === 'one_to_many' ? 'col-span-2' : 'col-span-4'}>
+          <div className="col-span-3">
             <Label className="text-gray-900">初始数量</Label>
             <Input
               type="number"
@@ -616,7 +613,7 @@ export function EditModal({
           </div>
 
           {/* 单位 — 2026-07-01 P1-6 修复：改为 DictSelect（category="unit"），与 AddModal/种植 AddModal 跨页统一 */}
-          <div className={record.propagationMode === 'one_to_many' ? 'col-span-1' : 'col-span-2'}>
+          <div className="col-span-1">
             <Label className="text-gray-900">单位</Label>
             <DictSelect
               category="unit"
@@ -726,13 +723,63 @@ export function EditModal({
               ? '1:1 单池：存活 = 初始 + 补苗 − 损耗累计；可出圃 = 存活 − 已入库（苗即母株）'
               : '1:多 双池：母株池剩余 = 母株 + 补苗 − 母株损耗；小苗池剩余 = 产出 − 损耗 − 已入库（两池独立，不合并）'}
           </p>
-          {/* 2026-08-14 H3 修复：手动修改累加字段的风险提示（与入库记录聚合/每日记录历史会不一致） */}
+          {/* 2026-10-17：提示语按实际代码口径修正 —— 累计字段为差额实时累加，重启不会重算/回填 */}
           <p className="text-xs text-amber-600 mt-1">
-            ⚠️ 以上累计字段由每日记录/入库自动累加，手动修改仅用于纠错。修改后与每日记录历史、入库记录聚合可能不一致（已入库数量被改回 0 时，服务器重启会按入库记录自动回填）。
+            ⚠️ 以上累计字段由每日记录/入库按差额实时累加，手动修改仅用于纠错。修改只调整主表累计值，不会改写历史记录，因此累计值与每日记录、入库明细的合计可能不一致；修正值会保留，后续新增记录在其基础上继续累加。
           </p>
         </div>
 
-        {/* 备注 - 占两列 */}
+        {/* 负责人 — 2026-10-17：与新增弹窗口径统一，改用 operator 字典下拉 */}
+        <div>
+          <Label className="text-gray-900">负责人</Label>
+          <DictSelect
+            category="operator"
+            value={formData.chargePerson}
+            onChange={(value) => setFormData({ ...formData, chargePerson: value })}
+            placeholder="请选择负责人"
+          />
+        </div>
+
+        {/* 目标成活数量 + 单位 — 2026-10-17：与「初始数量 + 单位」同款布局（占半宽，3:1 分配）；
+            单位与初始数量的单位共用 formData.unit，两处修改同步生效 */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="col-span-3">
+            <Label className="text-gray-900">目标成活数量</Label>
+            <Input
+              type="number"
+              min={0}
+              value={formData.targetSurvivalCount || ''}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setFormData({ ...formData, targetSurvivalCount: v < 0 ? 0 : v });
+              }}
+              className={deepInputClass}
+              placeholder="请输入目标成活数量"
+            />
+          </div>
+          <div className="col-span-1">
+            <Label className="text-gray-900">单位</Label>
+            <DictSelect
+              category="unit"
+              value={formData.unit}
+              onChange={(value) => setFormData({ ...formData, unit: value })}
+              placeholder="选择单位"
+            />
+          </div>
+        </div>
+
+        {/* 品质等级 — 2026-10-17：改用质量等级字典（special/excellent/good/qualified/unqualified），与新增弹窗统一 */}
+        <div>
+          <Label className="text-gray-900">品质等级</Label>
+          <DictSelect
+            category="quality_level"
+            value={formData.qualityGrade}
+            onChange={(value) => setFormData({ ...formData, qualityGrade: value })}
+            placeholder="请选择品质等级"
+          />
+        </div>
+
+        {/* 备注 - 2026-10-17：移到弹窗最后位置，占两列 */}
         <div className="col-span-2">
           <Label className="text-gray-900">备注</Label>
           <TextArea
@@ -744,79 +791,8 @@ export function EditModal({
           />
         </div>
 
-        {/* 负责人 */}
-        <div>
-          <Label className="text-gray-900">负责人</Label>
-          <Input
-            type="text"
-            value={formData.chargePerson}
-            onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
-            className={deepInputClass}
-            placeholder="请输入负责人"
-          />
-        </div>
-
-        {/* 目标成活数量 */}
-        <div>
-          <Label className="text-gray-900">目标成活数量</Label>
-          <Input
-            type="number"
-            min={0}
-            value={formData.targetSurvivalCount || ''}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setFormData({ ...formData, targetSurvivalCount: v < 0 ? 0 : v });
-            }}
-            className={deepInputClass}
-            placeholder="请输入目标成活数量"
-          />
-        </div>
-
-        {/* 方案2.6: 育苗工时 */}
-        <div>
-          <Label className="text-gray-900">工时（小时）</Label>
-          <Input
-            type="number"
-            min={0}
-            value={formData.workHours || ''}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setFormData({ ...formData, workHours: (v < 0 ? 0 : v) || 0 });
-            }}
-            className={deepInputClass}
-            placeholder="请输入育苗工时"
-            step="0.5"
-          />
-        </div>
-
-        {/* 品质等级 */}
-        <div>
-          <Label className="text-gray-900">品质等级</Label>
-          <Select
-            value={formData.qualityGrade}
-            onValueChange={(val) => setFormData({ ...formData, qualityGrade: val })}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="请选择品质等级" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="A级">A级</SelectItem>
-              <SelectItem value="B级">B级</SelectItem>
-              <SelectItem value="C级">C级</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* 是否结束 */}
-        <div>
-          <Label className="text-gray-900">是否结束</Label>
-          <DictSelect
-            category="yes_no"
-            value={formData.isFinished ? 'yes' : 'no'}
-            onChange={(value) => setFormData({ ...formData, isFinished: value === 'yes' })}
-            placeholder="选择是否结束"
-          />
-        </div>
+        {/* 2026-10-17：删除「是否结束」编辑项 —— 结束状态由列表「结束」按钮维护（status/end_type/end_time），
+            该字段在 DB 无列、后端白名单不支持，此前编辑不生效且详情/导出恒显示「否」 */}
       </div>
     </UnifiedModal>
   );

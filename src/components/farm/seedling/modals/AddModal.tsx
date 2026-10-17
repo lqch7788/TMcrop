@@ -13,7 +13,7 @@ import { isSameUnitDimension } from '@/constants/units';
 import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { getSeedSourceVarietyName, getSeedSourceOriginOrSupplier } from '../../../../constants/seedSourceDict';
 import { X, Upload, RefreshCw } from 'lucide-react';
-import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
+import { SeedSource, SeedlingStatus, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
@@ -131,15 +131,16 @@ export function AddModal({
     // 2026-10-17：种源消耗量（单位=种源单位）—— 种源单位与育苗单位不同时必填
     sourceConsumedQuantity: 0,
     targetSurvivalRate: 90,
-    planType: SeedlingPlanType.ROUTINE,
     chargePerson: '',
+    // 2026-10-17：品质等级此前只能在编辑弹窗补录，新增时无法设置
+    qualityGrade: '',
     remarks: '',
     calculateMode: SeedlingCalculateMode.SINGLE,
     motherPlantCount: 0,
     propagationMultiple: 0,
     customMultiple: 0,
     theoreticalYield: 0,
-    workHours: 0,
+    // 2026-10-17：删除 workHours（新增弹窗已按业务决定移除工时输入，提交恒为 undefined）
     // 2026-06-15: 数量体系重构 — 繁殖模式合并为 2 种（1:1 / 1:多）
     propagationMode: 'one_to_one' as 'one_to_one' | 'one_to_many',
     propagationMotherPlantCount: 0,  // 兼容字段（后续可移除）
@@ -538,19 +539,19 @@ export function AddModal({
       survivalRate: 0,
       lossCount: 0,
       lossRate: 0,
-      isFinished: false,
+      // 2026-10-17：删除 isFinished（DB 无此列，后端白名单不支持；结束状态由列表「结束」按钮维护）
       status: SeedlingStatus.IN_PROGRESS,
       dailyRecords: [],
       pictures: pictures,
       printCount: 0,
       remarks: formData.remarks,
       createBy: localStorage.getItem('username') || '未知用户',
-      planType: formData.planType,
       targetSurvivalRate: formData.targetSurvivalRate,
       targetSurvivalCount: targetSurvivalCount,
       chargePerson: formData.chargePerson || undefined,
+      // 2026-10-17：品质等级新增入口（quality_level 字典值）
+      qualityGrade: formData.qualityGrade || undefined,
       productionPlanCode: formData.productionPlanId || undefined,
-      workHours: formData.workHours || undefined,
       calculateMode: formData.calculateMode,
       propagationMultiple: formData.calculateMode === SeedlingCalculateMode.PROPAGATION
         ? (formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple)
@@ -1159,6 +1160,17 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* 品质等级（2026-10-17 新增：此前只能在编辑弹窗补录） */}
+              <div>
+                <Label className="text-gray-900">品质等级</Label>
+                <DictSelect
+                  category="quality_level"
+                  value={formData.qualityGrade}
+                  onChange={(value) => setFormData({ ...formData, qualityGrade: value })}
+                  placeholder="请选择品质等级"
+                />
+              </div>
             </div>
           )}
 
@@ -1280,6 +1292,17 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* 品质等级（2026-10-17 新增：此前只能在编辑弹窗补录） */}
+                <div>
+                  <Label className="text-gray-900">品质等级</Label>
+                  <DictSelect
+                    category="quality_level"
+                    value={formData.qualityGrade}
+                    onChange={(value) => setFormData({ ...formData, qualityGrade: value })}
+                    placeholder="请选择品质等级"
+                  />
                 </div>
               </div>
             </div>

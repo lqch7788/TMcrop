@@ -1362,7 +1362,6 @@ export function useTasks(): UseTasksReturn {
         try {
           await updateSeedling(task.sourceId!, {
             status: SeedlingStatus.COMPLETED,
-            isFinished: true
           });
           // logger.info('[acceptCompletion] 育苗状态已更新为已完成:', task.sourceId);
         } catch (error) {

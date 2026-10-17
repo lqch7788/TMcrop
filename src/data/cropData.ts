@@ -151,7 +151,6 @@ export const seedlings = [
     survivalRate: 90,
     lossCount: 5000,
     lossRate: 10,
-    isFinished: true,
     status: SeedlingStatus.COMPLETED,
     dailyRecords: [
       {
@@ -199,7 +198,6 @@ export const seedlings = [
     survivalRate: 90,
     lossCount: 300,
     lossRate: 10,
-    isFinished: false,
     status: SeedlingStatus.TRANSPLANT_READY,
     dailyRecords: [],
     pictures: [],
@@ -228,7 +226,6 @@ export const seedlings = [
     survivalRate: 95,
     lossCount: 500,
     lossRate: 5,
-    isFinished: false,
     status: SeedlingStatus.IN_PROGRESS,
     dailyRecords: [],
     pictures: [],

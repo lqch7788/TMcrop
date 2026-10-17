@@ -16,6 +16,8 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 // 2026-07-04：育苗无性繁殖记录弹窗（独立入口）
 import { SeedlingPropagationModal } from './modals/SeedlingPropagationModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-10-17：导出补种苗形态中文名
+import { SEEDLING_FORM_MAP } from '../../../constants/cropConstants';
 import {
   getMotherAliveCount,
   getSeedlingRemainingCount,
@@ -391,7 +393,7 @@ export default function SeedlingPage() {
 
     // 保留无 planCode 时不联动生产计划的逻辑
     if (!planCode || planCode.trim() === '') {
-      const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
+      const result = await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
       if (result) {
         await showAlert('育苗记录已结束');
         await loadItems();
@@ -403,7 +405,7 @@ export default function SeedlingPage() {
 
     const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
+      const result = await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
       if (result) {
         await showAlert('育苗记录已结束（强结）');
         await loadItems();
@@ -420,7 +422,7 @@ export default function SeedlingPage() {
 
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
-      await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
+      await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
       await showAlert('生产计划已正常结束（育苗记录同步结束）');
       loadItems();
     } else {
@@ -516,11 +518,11 @@ export default function SeedlingPage() {
 
     // 导出表头（2026-07-21：补全所有列表字段）
     const headers = [
-      '育苗批号', '繁殖模式', '关联生产计划', '关联种源', '作物编码', '作物名称', '作物品种', '品种路径',
-      '育苗方式', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
+      '育苗批号', '繁殖模式', '计算模式', '扩繁倍数', '理论产量', '关联生产计划', '关联种源', '种源来源', '种源消耗量', '作物编码', '作物名称', '作物品种', '品种路径',
+      '育苗方式', '种苗形态', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
       '初始数量', '母株/植株存活数', '母株/植株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '已入库数量', '小苗剩余数量',
-      '目标成苗数', '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
-      '创建人', '创建时间', '备注'
+      '目标成苗数', '目标成活率', '完成比例', '损耗率', '结束状态', '结束时间', '状态', '品质等级', '负责人',
+      '育苗工时(小时)', '打印次数', '创建人', '创建时间', '更新时间', '备注'
     ];
 
     // 2026-10-17 单池化：剩余数量与列表同口径（1:1 镜像母株池，1:多 = 产出 − 损耗 − 已入库）
@@ -531,13 +533,21 @@ export default function SeedlingPage() {
     const exportData = selectedData.map(record => ({
       '育苗批号': record.seedlingCode,
       '繁殖模式': record.propagationMode === 'one_to_many' ? '1:多' : '1:1',
+      // 2026-10-17：计算模式/扩繁参数此前仅在新增/编辑使用，导出缺失
+      '计算模式': record.calculateMode === 'propagation' ? '扩繁育苗' : '单株育苗',
+      '扩繁倍数': record.calculateMode === 'propagation' ? (record.propagationMultiple || record.customMultiple || 0) : '',
+      '理论产量': record.calculateMode === 'propagation' ? (record.theoreticalYield || 0) : '',
       '关联生产计划': record.productionPlanCode || '-',
       '关联种源': record.sourceCode,
+      '种源来源': record.sourceMode === 'external' ? '外部种源' : '内部种源',
+      // 2026-10-17：种源消耗量（单位=种源单位）此前只在编辑弹窗可见
+      '种源消耗量': `${record.sourceDeductedQuantity ?? 0}${record.sourceUnit ? ' ' + record.sourceUnit : ''}`,
       '作物编码': record.cropCode || '',
       '作物名称': record.cropName,
       '作物品种': record.cropVariety,
       '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVarietyName].filter(Boolean).join(' > ') || '-',
       '育苗方式': record.seedlingType || '',
+      '种苗形态': record.seedlingForm ? (SEEDLING_FORM_MAP[record.seedlingForm] || record.seedlingForm) : '',
       '育苗区域': record.siteName,
       '单位': record.unit || '株',
       '开始日期': record.startDate,
@@ -556,6 +566,8 @@ export default function SeedlingPage() {
       '已入库数量': record.harvestStockedCount || 0,
       '小苗剩余数量': getRemainingCount(record),
       '目标成苗数': record.targetSurvivalCount ?? '-',
+      // 2026-10-17：目标成活率此前只在新增时录入，列表/详情/导出均缺失
+      '目标成活率': record.targetSurvivalRate ? `${record.targetSurvivalRate}%` : '',
       // 2026-08-14：完成比例公式变更为 已入库数量 / 目标成苗数（与列表一致）
       '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, (record.harvestStockedCount || 0)) / record.targetSurvivalCount * 100)}%` : '-',
       // 2026-10-17：损耗率与标签/详情同口径 —— 损耗累计 ÷（初始 + 补苗），原读存量字段 loss_rate
@@ -563,7 +575,9 @@ export default function SeedlingPage() {
         const invested = (record.initialCount || 0) + (record.replantCount || 0);
         return invested > 0 ? `${Math.round((getMotherLossDisplayCount(record) / invested) * 100)}%` : '0%';
       })(),
-      '育苗结束': record.isFinished ? '是' : '否',
+      // 2026-10-17：原读前端死字段 isFinished（DB 无列，恒为否），改按结束动作写入的 endType/endTime
+      '结束状态': record.endTime ? (record.endType === 'abnormal' ? '异常结束' : '正常结束') : '未结束',
+      '结束时间': record.endTime || '',
       '状态': (() => {
         switch (record.status) {
           case 'sown': return '已播种';
@@ -576,8 +590,12 @@ export default function SeedlingPage() {
         }
       })(),
       '品质等级': record.qualityGrade || '',
+      '负责人': record.chargePerson || '',
+      '育苗工时(小时)': record.seedlingTaskTime || '',
+      '打印次数': record.printCount ?? 0,
       '创建人': record.createBy,
       '创建时间': record.createTime,
+      '更新时间': record.updateTime || '',
       '备注': record.remarks || ''
     }));
 

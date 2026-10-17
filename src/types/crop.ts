@@ -509,6 +509,8 @@ export interface Seedling {
   sourceId: string;           // 关联种源ID
   sourceCode: string;          // 关联种源批号
   sourceMode?: 'internal' | 'external'; // 来源模式（内部种源/外部）
+  /** 2026-10-17：种源单位（详情/导出展示种源消耗量用） */
+  sourceUnit?: string;
   /**
    * 已从种源扣减的数量（单位 = 种源单位）
    * 2026-10-17：单位同口径时=育苗初始数量；不同口径（如千克→株）时为用户显式填写的种源消耗量
@@ -536,7 +538,6 @@ export interface Seedling {
   survivalRate: number;       // 成苗率
   lossCount: number;          // 损耗数量
   lossRate: number;           // 损耗率
-  isFinished: boolean;        // 是否已完成
   status: SeedlingStatus;     // 状态
   // 2026-06-15: 数量体系重构 — 6 种模式合并为 2 种
   propagationMode?: 'one_to_one' | 'one_to_many';
@@ -570,7 +571,6 @@ export interface Seedling {
    */
   workHours?: number;
   // 新增字段
-  planType?: SeedlingPlanType; // 计划类型（常规/加急/实验）
   targetSurvivalRate?: number; // 目标成苗率
   targetSurvivalCount?: number; // 目标成苗数
   chargePerson?: string;      // 负责人
