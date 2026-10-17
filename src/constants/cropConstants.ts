@@ -133,6 +133,25 @@ export const WATERING_METHOD_MAP: Record<string, string> = {
   root_dip: '蘸根',
 };
 
+// 2026-10-17：浇水方式下拉精简口径（用户决策）—— 只保留 5 种主流方式
+// 适用：育苗「每日记录」弹窗 + 水肥管理新增/编辑弹窗
+// 注意：WATERING_METHOD_MAP 全量保留，历史记录的中文回显 / Excel 导出翻译仍依赖它，
+//   不可为了"精简下拉"而删除映射（否则老数据会回显英文代码）
+export const WATERING_METHOD_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'manual_watering', label: '人工浇水' },
+  { value: 'drip_irrigation', label: '滴灌' },
+  { value: 'sprinkler', label: '喷灌' },
+  { value: 'mist', label: '喷雾' },
+  { value: 'flood', label: '漫灌' },
+];
+
+// 2026-10-17：育苗「每日记录」浇水量单位精简口径（用户决策）—— 只保留 升 / 立方米
+// 注意：WATERING_UNIT_MAP 全量保留，历史记录的单位回显 / Excel 导出翻译仍依赖它
+export const DAILY_RECORD_WATERING_UNITS: Array<{ value: string; label: string }> = [
+  { value: 'L', label: '升' },
+  { value: 'm3', label: '立方米' },
+];
+
 // 浇水量单位映射（2026-06-28：PR1 — 7 种单位覆盖小量到大宗）
 export const WATERING_UNIT_MAP: Record<string, string> = {
   ml: '毫升',

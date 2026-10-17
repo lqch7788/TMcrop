@@ -13,6 +13,19 @@ export const WATER_UNITS = ['L', 'ml', 'm³', 'kg'] as const;
 export type WaterUnit = typeof WATER_UNITS[number];
 
 /**
+ * 浇水弹窗单位下拉精简口径（2026-10-17，用户决策）—— 只保留 升 / 立方米
+ *
+ * 为什么与 WATER_UNITS 分开：WATER_UNITS 仍承担历史数据归一化（normalizeWaterUnit），
+ *   不可为了"精简下拉"而缩减它，否则老数据里的 ml/kg 会被静默改成 L。
+ * 注意：本模块立方米字面量是上标 'm³'（与稀释公式一致），与育苗每日记录的 'm3' 不同，
+ *   两者各自独立存储，不要互相复制。
+ */
+export const WATER_UNIT_OPTIONS: Array<{ value: WaterUnit; label: string }> = [
+  { value: 'L', label: '升' },
+  { value: 'm³', label: '立方米' },
+];
+
+/**
  * 归一化单位字面量
  * - 'm3' → 'm³'
  * - 其他原样返回

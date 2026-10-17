@@ -9,14 +9,18 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { SEEDLING_FORM_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
+import { getSeedSourceVarietyName, getSeedSourceOriginOrSupplier } from '../../../../constants/seedSourceDict';
 import { X, Upload, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
-import { CropVarietyOption } from '../../../../types/cropVariety';
+import { CropVarietyOption, CropVariety } from '../../../../types/cropVariety';
 import { todayLocal } from '@/lib/dateUtils';
-import { getVarietyByCode } from '../../../../services/cropVarietyService';
+// 2026-10-17 修复：品种路径曾用 services/cropVarietyService（localStorage 旧品种库，编码为 11 位如 FL010100000），
+//   与种源的后端 cropCode（11 位标准码 / 9 位历史码，如 FR0101001）对不上 → 品种路径恒为空。
+//   改用 API 品种库（与育苗列表 SeedlingTable 同一数据源）。
+import * as apiCropVarietyService from '../../../../services/apiCropVarietyService';
 import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
@@ -106,7 +110,6 @@ export function AddModal({
     sourceId: '',
     sourceCode: '',
     sourceType: '',
-    supplierName: '',
     selectedCropCode: '',
     cropName: '',
     cropVariety: '',
@@ -156,6 +159,28 @@ export function AddModal({
   const [sourceSearch, setSourceSearch] = useState('');
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
 
+  // 品种库缓存（按 cropCode 索引）—— 用于「品种路径」展示，与育苗列表 SeedlingTable 同一数据源
+  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const varieties = await apiCropVarietyService.getAllVarieties();
+        if (cancelled) return;
+        const cache = new Map<string, CropVariety>();
+        varieties.forEach(v => {
+          const code = v.cropCode || '';
+          if (code && !cache.has(code)) cache.set(code, v);
+        });
+        setVarietyCache(cache);
+      } catch (e) {
+        // 品种库加载失败不阻断建档：品种路径将回退为种源自身字段拼接
+        console.warn('[AddModal] 加载品种库失败，品种路径改用种源字段兜底', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // ═══════════════════════════════════════════════════
   // 2026-07-04：所有种源必须录入内部种源后使用，不再区分内/外
   // ═══════════════════════════════════════════════════
@@ -173,10 +198,10 @@ export function AddModal({
   // 方案2.7: 过滤种源列表用于combogrid展示
   // 2026-06-12: 联动过滤版本下移到 availableProductionPlans 之后(避免 TDZ)
 
-  // 方案2.7: 获取选中种源的显示文本
+  // 方案2.7: 获取选中种源的显示文本（2026-10-17：名称口径与下拉表格一致，显示品种而非作物名）
   const selectedSourceLabel = useMemo(() => {
     const source = seedSources.find(s => s.id === formData.sourceId);
-    return source ? `${source.seedCode} - ${source.cropName}` : '';
+    return source ? `${source.seedCode} - ${getSeedSourceVarietyName(source)}` : '';
   }, [seedSources, formData.sourceId]);
 
   // 方案2.7: combogrid popover 外部点击关闭
@@ -193,18 +218,37 @@ export function AddModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [sourcePopoverOpen]);
 
+  // 关联种源信息（用于数量上限校验 + 品种路径兜底）
+  // 2026-10-17：声明提前到 fullVarietyPath 之前（避免 TDZ —— const 在其声明前被引用会抛错）
+  const selectedSource = useMemo(
+    () => seedSources.find(s => s.id === formData.sourceId) || null,
+    [seedSources, formData.sourceId]
+  );
+  const sourceAvailableCount = selectedSource?.availableCount ?? 0;
+
   // 完整品种路径：与种源列表/育苗列表的"品种路径"列保持一致（4 段）
+  // 2026-10-17 修复：主数据源改为 API 品种库（按 cropCode 精确匹配）；
+  //   品种库未命中（加载失败/编码缺失）时回退用种源自身字段拼接，避免字段恒空
   const fullVarietyPath = useMemo(() => {
-    if (!formData.selectedCropCode) return null;
-    const variety = getVarietyByCode(formData.selectedCropCode);
-    if (!variety) return null;
+    const variety = formData.selectedCropCode ? varietyCache.get(formData.selectedCropCode) : undefined;
+    if (variety) {
+      return {
+        categoryName: variety.categoryName || '',
+        typeName: variety.typeName || '',
+        varietyName: variety.varietyName || '',
+        subVariety1Name: variety.subVariety1Name || '',
+      };
+    }
+    if (!selectedSource) return null;
     return {
-      categoryName: variety.categoryName || '',
-      typeName: variety.typeName || '',
-      varietyName: variety.varietyName || '',
-      subVariety1Name: variety.subVariety1Name || '',
+      categoryName: selectedSource.cropCategory || '',
+      typeName: selectedSource.typeName || '',
+      varietyName: selectedSource.cropName || '',
+      subVariety1Name: selectedSource.cropVariety && selectedSource.cropVariety !== selectedSource.cropName
+        ? selectedSource.cropVariety
+        : '',
     };
-  }, [formData.selectedCropCode]);
+  }, [formData.selectedCropCode, varietyCache, selectedSource]);
 
   // 自动计算目标成苗数
   const targetSurvivalCount = useMemo(() => {
@@ -243,13 +287,6 @@ export function AddModal({
       setFormData(prev => ({ ...prev, theoreticalYield }));
     }
   }, [theoreticalYield, formData.calculateMode, formData.theoreticalYield]);
-
-  // 关联种源信息（用于实时校验数量上限）
-  const selectedSource = useMemo(
-    () => seedSources.find(s => s.id === formData.sourceId) || null,
-    [seedSources, formData.sourceId]
-  );
-  const sourceAvailableCount = selectedSource?.availableCount ?? 0;
 
   // 数量上限校验：单株模式 initialCount / 扩繁模式 motherPlantCount 不能超过种源可用数量
   const initialCountExceeds = formData.calculateMode === SeedlingCalculateMode.SINGLE
@@ -305,11 +342,12 @@ export function AddModal({
   }, [storePlans]);
 
   // 联动过滤 — 选了种源后,生产计划下拉只显示同品种(variety)的计划
-  // 种源的 cropName 是最细化名称(如"红颜"),生产计划的 variety 是品种名(如"红颜"),两者语义一致
+  // 2026-10-17：种源侧改用「作物品种」口径（cropVariety/varietyName，如"红颜"）。
+  //   原用 cropName（如"草莓"）与计划的 variety（"红颜"）永远不相等，导致选种源后计划下拉被清空
   const productionPlanVarietyFilter = useMemo(() => {
     if (!formData.sourceId) return null;
     const source = seedSources.find(s => s.id === formData.sourceId);
-    return source?.cropName || null;
+    return source ? getSeedSourceVarietyName(source) : null;
   }, [formData.sourceId, seedSources]);
 
   const filteredProductionPlans = useMemo(() => {
@@ -330,14 +368,16 @@ export function AddModal({
   const filteredSeedSources = useMemo(() => {
     let list = seedSources || [];
     if (productionPlanVarietyFilterFromPlan) {
-      list = list.filter(s => s.cropName === productionPlanVarietyFilterFromPlan);
+      // 2026-10-17：按「作物品种」匹配（原用 cropName 与计划 variety 永不相等，选了计划后种源列表恒为空）
+      list = list.filter(s => getSeedSourceVarietyName(s) === productionPlanVarietyFilterFromPlan);
     }
     if (sourceSearch) {
       const q = sourceSearch.toLowerCase();
       list = list.filter(s =>
         s.seedCode?.toLowerCase().includes(q) ||
         s.cropName?.toLowerCase().includes(q) ||
-        s.cropVariety?.toLowerCase().includes(q)
+        s.cropVariety?.toLowerCase().includes(q) ||
+        s.varietyName?.toLowerCase().includes(q)
       );
     }
     return list;
@@ -555,17 +595,16 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
     if (source) {
       // 转换来源类型枚举值为中文
       const sourceTypeLabel = source.sourceType ? (sourceTypeLabels[source.sourceType] || source.sourceType) : '';
-      // 供应商为空时显示"无"
-      const supplierName = source.supplierName?.trim() || '无';
 
       // 2026-06-12: 一致性校验 — 选种源后,若已选生产计划不匹配则清空
-      // 2026-06-14: 修复字段错配 — 计划用 variety（品种名）对比，不是 cropName（作物名）
+      // 2026-06-14: 计划侧用 variety（品种名）对比，不用 cropName（作物名）
+      // 2026-10-17: 种源侧同步改为品种口径（原 source.cropName 与 plan.variety 永不相等，导致选了种源就被误清空计划）
       const currentPlanId = formData.productionPlanId;
       let shouldClearPlan = false;
       let mismatchPlan: { batchCode: string; variety: string } | null = null;
       if (currentPlanId) {
         const plan = availableProductionPlans.find(p => p.batchCode === currentPlanId);
-        if (plan && plan.variety !== source.cropName) {
+        if (plan && plan.variety !== getSeedSourceVarietyName(source)) {
           shouldClearPlan = true;
           mismatchPlan = { batchCode: plan.batchCode, variety: plan.variety };
         }
@@ -577,7 +616,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         sourceCode: source.seedCode,
         sourceType: sourceTypeLabel,
         seedForm: (source as any).seedForm || '',
-        supplierName: supplierName,
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName || '',
         cropVariety: source.cropVariety || '',
@@ -586,7 +624,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       });
 
       if (shouldClearPlan && mismatchPlan) {
-        showAlert(`已选生产计划 [${mismatchPlan.batchCode}] 品种为 ${mismatchPlan.variety}，与新种源 ${source.cropName} 不一致,已自动清空关联计划。`);
+        showAlert(`已选生产计划 [${mismatchPlan.batchCode}] 品种为 ${mismatchPlan.variety}，与新种源 ${getSeedSourceVarietyName(source)} 不一致,已自动清空关联计划。`);
       }
     }
   };
@@ -731,16 +769,17 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 onValueChange={(val) => {
                   const nextId = val === '__none__' ? '' : val;
                   // 2026-06-12: 一致性校验 — 选生产计划后,若已选种源不匹配则清空
-                  // 2026-06-14: 修复字段错配 — 计划用 variety（品种名）对比种源 cropName
+                  // 2026-06-14: 计划侧用 variety（品种名）对比；
+                  // 2026-10-17: 种源侧同步改为品种口径（原 source.cropName 恒不相等，选计划即误清空种源）
                   let shouldClearSource = false;
-                  let mismatchSource: { seedCode: string; cropName: string } | null = null;
+                  let mismatchSource: { seedCode: string; varietyName: string } | null = null;
                   if (nextId && formData.sourceId) {
                     const plan = availableProductionPlans.find(p => p.batchCode === nextId);
                     if (plan) {
                       const source = seedSources.find(s => s.id === formData.sourceId);
-                      if (source && source.cropName !== plan.variety) {
+                      if (source && getSeedSourceVarietyName(source) !== plan.variety) {
                         shouldClearSource = true;
-                        mismatchSource = { seedCode: source.seedCode, cropName: source.cropName };
+                        mismatchSource = { seedCode: source.seedCode, varietyName: getSeedSourceVarietyName(source) };
                       }
                     }
                   }
@@ -752,11 +791,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     sourceId: shouldClearSource ? '' : formData.sourceId,
                     sourceCode: shouldClearSource ? '' : formData.sourceCode,
                     sourceType: shouldClearSource ? '' : formData.sourceType,
-                    supplierName: shouldClearSource ? '' : formData.supplierName,
                   });
 
                   if (shouldClearSource && mismatchSource) {
-                    showAlert(`已选种源 [${mismatchSource.seedCode}] 为 ${mismatchSource.cropName}，与新生产计划不匹配,已自动清空关联种源。`);
+                    showAlert(`已选种源 [${mismatchSource.seedCode}] 为 ${mismatchSource.varietyName}，与新生产计划不匹配,已自动清空关联种源。`);
                   }
                 }}
               >
@@ -766,7 +804,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <SelectContent>
                   {/* 固定"不关联"选项 — 2026-06-12 修复：之前漏写在 SelectContent 里 */}
                   <SelectItem value="__none__">不关联（独立批次）</SelectItem>
-                  {/* 2026-06-12: 联动过滤 — 选了种源后只显示同 cropName 的计划 */}
+                  {/* 2026-06-12: 联动过滤 — 选了种源后只显示同品种（variety）的计划 */}
                   {filteredProductionPlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.batchCode}>
                       [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.variety}
@@ -794,7 +832,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <Input
                     type="text"
                     value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
-                    placeholder="搜索种源批号或作物名称..."
+                    placeholder="搜索种源批号或作物品种..."
                     onFocus={() => {
                       setSourcePopoverOpen(true);
                       setSourceSearch('');
@@ -812,7 +850,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', seedForm: '', supplierName: '' }));
+                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', seedForm: '' }));
                         setSourceSearch('');
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -825,12 +863,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
                       style={{ minWidth: '500px', left: 0 }}
                     >
-                      {/* 表头 */}
-                      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-                        <div>作物名称</div>
+                      {/* 表头 — 2026-10-17：删「采购数量」列（选种源只需看可用数量）；
+                          「作物名称」→「作物品种」（作物级名称无法区分品种，如草莓/红颜）；
+                          列顺序：种源批号在前（用户主要按批号找），品种其次；
+                          列宽按内容分配：种源批号最宽（如 SRC-SS-20261016-001 需完整显示） */}
+                      <div className="grid grid-cols-[1.6fr_0.85fr_0.7fr_0.95fr] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
                         <div>种源批号</div>
+                        <div>作物品种</div>
                         <div>形态</div>
-                        <div>采购数量</div>
                         <div>可用数量</div>
                       </div>
                       {/* 表格行 */}
@@ -875,19 +915,18 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                                   setSourcePopoverOpen(false);
                                   setSourceSearch('');
                                 }}
-                                className={`grid grid-cols-5 gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
+                                className={`grid grid-cols-[1.6fr_0.85fr_0.7fr_0.95fr] gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
                                   ${isDisabled
                                     ? 'bg-gray-100 cursor-not-allowed opacity-60'
                                     : `cursor-pointer hover:bg-emerald-50 ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}`}
                                 title={disabledReason}
                               >
+                                <div className={`truncate ${isDisabled ? 'text-gray-400' : 'text-emerald-700'}`}>{s.seedCode}</div>
                                 <div className={`truncate font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-800'}`}>
-                                  {s.cropName}
+                                  {getSeedSourceVarietyName(s)}
                                   {isFailed && <span className="ml-1 text-xs text-red-500">[已失败]</span>}
                                 </div>
-                                <div className={`truncate ${isDisabled ? 'text-gray-400' : 'text-emerald-700'}`}>{s.seedCode}</div>
                                 <div className="text-gray-600 truncate">{formatSeedFormDisplay((s as any).seedForm) || '—'}</div>
-                                <div className="text-gray-600">{s.quantity} {s.unit}</div>
                                 <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
                                   {s.availableCount} {s.unit}
                                 </div>
@@ -916,12 +955,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 />
               </div>
 
-              {/* 供应商（只读自动带入） */}
+              {/* 种源来源/原始供应商（只读自动带入）
+                  2026-10-17：原「供应商」列改名并改为口径展示 —— 有原始供应商显示供应商，
+                  没有（如种植留种回流）显示来源途径中文，与内部种源列表两列口径一致 */}
               <div>
-                <Label className="text-gray-700">供应商</Label>
+                <Label className="text-gray-700">种源来源/原始供应商</Label>
                 <Input
                   type="text"
-                  value={formData.supplierName || '请先选择种源'}
+                  value={selectedSource ? getSeedSourceOriginOrSupplier(selectedSource) : '请先选择种源'}
                   readOnly
                   className={`${deepInputClass} bg-gray-100 text-gray-600`}
                 />

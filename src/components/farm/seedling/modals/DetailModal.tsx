@@ -9,6 +9,7 @@ import React from 'react';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
 import { SEEDLING_FORM_MAP, SEEDLING_TYPE_MAP, QUALITY_GRADE_MAP } from '../../../../constants/cropConstants';
+import { getMotherAliveCount, getMotherLossDisplayCount, isOneToOneMode } from '@/lib/seedlingPool';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -116,12 +117,23 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             <span className="text-sm text-gray-900">{record.initialCount.toLocaleString()}</span>
           </div>
           <div className="flex items-center">
+            {/* 2026-10-17：成活数量统一走 seedlingPool（原读 survival_count 死字段，恒 0） */}
             <span className="text-sm text-gray-500 w-24">成活数量：</span>
-            <span className="text-sm text-emerald-600 font-medium">{record.survivalCount.toLocaleString()}</span>
+            <span className="text-sm text-emerald-600 font-medium"
+                  title={`存活 = 初始(母株) + 补苗 − 损耗累计`}>
+              {getMotherAliveCount(record).toLocaleString()}
+            </span>
           </div>
           <div className="flex items-center">
+            {/* 2026-10-17：成苗率与标签同口径 —— 存活 ÷（初始 + 补苗），原读 survival_rate 存量字段 */}
             <span className="text-sm text-gray-500 w-24">成苗率：</span>
-            <span className="text-sm text-emerald-600 font-bold">{record.survivalRate}%</span>
+            <span className="text-sm text-emerald-600 font-bold"
+                  title="成苗率 = 存活 ÷（初始数量 + 补苗累计）">
+              {(() => {
+                const invested = (record.initialCount || 0) + (record.replantCount || 0);
+                return invested > 0 ? Math.round((getMotherAliveCount(record) / invested) * 100) : 0;
+              })()}%
+            </span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">育苗结束：</span>
@@ -146,16 +158,26 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
           <h5 className="text-sm font-semibold text-amber-900 mb-2">数量统计（自动累加，对应 DB 字段）</h5>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-32">母株累计损耗：</span>
-              <span className="text-sm text-red-500 font-medium">{(record.motherLossCount || 0).toLocaleString()}</span>
+              {/* 2026-10-17：与列表同口径 —— 1:1 把历史小苗损耗并入（单池），1:多 仅母株损耗 */}
+              <span className="text-sm text-gray-500 w-32">母株/植株累计损耗：</span>
+              <span className="text-sm text-red-500 font-medium">{getMotherLossDisplayCount(record).toLocaleString()}</span>
             </div>
             <div className="flex items-center">
+              {/* 2026-10-17：1:1 无小苗产出池（苗即母株），按实际显示 — */}
               <span className="text-sm text-gray-500 w-32">小苗累计产出：</span>
-              <span className="text-sm text-emerald-600 font-medium">{(record.expandedPlantCount || 0).toLocaleString()}</span>
+              {isOneToOneMode(record) ? (
+                <span className="text-sm text-gray-400" title="1:1 模式：苗即母株，无独立小苗产出池">—</span>
+              ) : (
+                <span className="text-sm text-emerald-600 font-medium" title="1:多 模式：匍匐茎/组培/扦插等每日新增的累计产出">
+                  {(record.expandedPlantCount || 0).toLocaleString()}
+                </span>
+              )}
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-32">小苗累计损耗：</span>
-              <span className="text-sm text-red-500 font-medium">{(record.seedlingLossCount || 0).toLocaleString()}</span>
+              <span className="text-sm text-red-500 font-medium">
+                {isOneToOneMode(record) ? '—' : (record.seedlingLossCount || 0).toLocaleString()}
+              </span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-32">采收入库累计：</span>
@@ -166,8 +188,13 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
               <span className="text-sm text-emerald-600 font-medium">{(record.replantCount || 0).toLocaleString()}</span>
             </div>
           </div>
+          {/* 2026-10-17：按模式说明口径（1:1 单池 / 1:多 双池），避免用户按列算账对不上 */}
           <p className="text-xs text-gray-500 mt-2">
-            累计损耗 = 母株累计损耗 + 小苗累计损耗 = {((record.motherLossCount || 0) + (record.seedlingLossCount || 0)).toLocaleString()} 株
+            {isOneToOneMode(record) ? (
+              <>累计损耗 = {getMotherLossDisplayCount(record).toLocaleString()} 株（1:1：苗即母株，损耗统一计入「母株/植株累计损耗」；可出圃数量见「小苗剩余数量」）</>
+            ) : (
+              <>累计损耗 = 母株损耗 {(record.motherLossCount || 0).toLocaleString()} + 小苗损耗 {(record.seedlingLossCount || 0).toLocaleString()} = {((record.motherLossCount || 0) + (record.seedlingLossCount || 0)).toLocaleString()} 株</>
+            )}
           </p>
         </div>
       </div>

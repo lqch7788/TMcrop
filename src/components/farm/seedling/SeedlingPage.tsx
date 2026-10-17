@@ -16,6 +16,12 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 // 2026-07-04：育苗无性繁殖记录弹窗（独立入口）
 import { SeedlingPropagationModal } from './modals/SeedlingPropagationModal';
 import { todayLocal } from '@/lib/dateUtils';
+import {
+  getMotherAliveCount,
+  getSeedlingRemainingCount,
+  getMotherLossDisplayCount,
+  isOneToOneMode,
+} from '@/lib/seedlingPool';
 // 2026-07-10 P1-2：抽取筛选 Hook（与 useFilteredSeedSources 对齐）
 import { useFilteredSeedlings } from '@/hooks/useFilteredSeedlings';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
@@ -512,17 +518,14 @@ export default function SeedlingPage() {
     const headers = [
       '育苗批号', '繁殖模式', '关联生产计划', '关联种源', '作物编码', '作物名称', '作物品种', '品种路径',
       '育苗方式', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
-      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '可入库小苗数', '小苗累计损耗', '已入库数量', '小苗剩余数量',
+      '初始数量', '母株/植株存活数', '母株/植株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '已入库数量', '小苗剩余数量',
       '目标成苗数', '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
 
-    // 计算剩余总数 = 产出 - 损耗 - 采收入库（2026-06-28：移除已定植统计）
-    const getRemainingCount = (record: Seedling) => Math.max(0,
-      (record.expandedPlantCount || 0)
-      - (record.seedlingLossCount || 0)
-      - (record.harvestStockedCount || 0)
-    );
+    // 2026-10-17 单池化：剩余数量与列表同口径（1:1 镜像母株池，1:多 = 产出 − 损耗 − 已入库）
+    // 口径单一真理源：src/lib/seedlingPool.ts
+    const getRemainingCount = (record: Seedling) => getSeedlingRemainingCount(record);
 
     // 生成导出数据（2026-07-21：补全所有列表字段）
     const exportData = selectedData.map(record => ({
@@ -541,17 +544,25 @@ export default function SeedlingPage() {
       '预计结束日期': record.expectedEndDate || '',
       '实际结束日期': record.endDate || '',
       '初始数量': record.initialCount,
-      '母株存活数': record.motherPlantCount || 0,
-      '母株累计损耗': record.motherLossCount || 0,
+      // 2026-10-17：存活数改为真存活（与列表同口径 —— 母株 + 补苗 − 损耗）
+      '母株/植株存活数': getMotherAliveCount(record),
+      // 2026-10-17：1:1 把历史小苗损耗并入损耗累计（单池口径），1:多 不变
+      '母株/植株累计损耗': getMotherLossDisplayCount(record),
       '补苗累计': record.replantCount || 0,
-      '可入库小苗数': record.expandedPlantCount || 0,
-      '小苗累计损耗': record.seedlingLossCount || 0,
+      // 2026-10-17：1:1 无小苗产出池（苗即母株），该列不适用，留空
+      '小苗累计产出': isOneToOneMode(record) ? '' : (record.expandedPlantCount || 0),
+      // 2026-10-17：1:1 的损耗已并入「母株/植株累计损耗」，此处留空避免重复统计
+      '小苗累计损耗': isOneToOneMode(record) ? '' : (record.seedlingLossCount || 0),
       '已入库数量': record.harvestStockedCount || 0,
       '小苗剩余数量': getRemainingCount(record),
       '目标成苗数': record.targetSurvivalCount ?? '-',
       // 2026-08-14：完成比例公式变更为 已入库数量 / 目标成苗数（与列表一致）
       '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, (record.harvestStockedCount || 0)) / record.targetSurvivalCount * 100)}%` : '-',
-      '损耗率': `${record.lossRate}%`,
+      // 2026-10-17：损耗率与标签/详情同口径 —— 损耗累计 ÷（初始 + 补苗），原读存量字段 loss_rate
+      '损耗率': (() => {
+        const invested = (record.initialCount || 0) + (record.replantCount || 0);
+        return invested > 0 ? `${Math.round((getMotherLossDisplayCount(record) / invested) * 100)}%` : '0%';
+      })(),
       '育苗结束': record.isFinished ? '是' : '否',
       '状态': (() => {
         switch (record.status) {
@@ -790,13 +801,20 @@ export default function SeedlingPage() {
             cropName: inboundModal.record.cropName || '',
             cropVariety: inboundModal.record.cropVariety || '',
             cropCode: inboundModal.record.cropCode || '',
-            unit: undefined,
+            // 2026-10-17：默认单位对齐列表里的作物单位（此前传 undefined → 弹窗内部回落成"克"，与列表不符）
+            //   弹窗内仍可逐行手动改单位
+            unit: inboundModal.record.unit || undefined,
             endTime: inboundModal.record.endTime,
             status: inboundModal.record.status,
             // 2026-08-14：育苗入库软校验 — 传入 3 个数量字段供弹窗计算剩余可入库
             expandedPlantCount: inboundModal.record.expandedPlantCount,
             seedlingLossCount: inboundModal.record.seedlingLossCount,
             harvestStockedCount: inboundModal.record.harvestStockedCount,
+            // 2026-10-17 单池化：1:1 模式的剩余可入库走母株池，需要以下字段
+            propagationMode: inboundModal.record.propagationMode,
+            motherPlantCount: inboundModal.record.motherPlantCount,
+            motherLossCount: inboundModal.record.motherLossCount,
+            replantCount: inboundModal.record.replantCount,
           }}
         />
       )}

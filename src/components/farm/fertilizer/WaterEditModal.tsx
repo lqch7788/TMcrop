@@ -10,8 +10,8 @@ import { UnifiedModal, Button, Input, Label, TextArea, TabsList, TabsTrigger } f
 import { useWateringStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import type { WateringData } from '@/stores';
 import { showAlert, showToast } from '@/lib/dialogService';
-import { WATERING_METHOD_MAP } from '@/constants/cropConstants';
-import { WATER_UNITS, normalizeWaterUnit, getWaterUnitCategory } from '@/constants/waterUnits';
+import { WATERING_METHOD_MAP, WATERING_METHOD_OPTIONS } from '@/constants/cropConstants';
+import { WATER_UNIT_OPTIONS, normalizeWaterUnit, getWaterUnitCategory } from '@/constants/waterUnits';
 
 interface SelectedArea {
   type: 'planting' | 'seedling';
@@ -412,8 +412,9 @@ export function WaterEditModal({ isOpen, record, onClose, onSaved }: {
                     <div className="col-span-3">
                       <select value={row.wateringMethod} onChange={(e) => updateRow(row.area.id, { wateringMethod: e.target.value })} disabled={isReadonly}
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-                        {Object.entries(WATERING_METHOD_MAP).map(([code, label]) => (
-                          <option key={code} value={code}>{label}</option>
+                        {/* 2026-10-17：下拉精简为 5 种主流方式（与育苗每日记录同口径） */}
+                        {WATERING_METHOD_OPTIONS.map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
                         ))}
                       </select>
                     </div>
@@ -425,7 +426,9 @@ export function WaterEditModal({ isOpen, record, onClose, onSaved }: {
                     <div className="col-span-1">
                       <select value={row.waterUnit} onChange={(e) => updateRow(row.area.id, { waterUnit: e.target.value })} disabled={isReadonly}
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-                        {WATER_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                        {/* 2026-10-17：单位下拉精简为 升 / 立方米（选项来自 WATER_UNIT_OPTIONS）；
+                            历史数据归一化仍走全量 WATER_UNITS */}
+                        {WATER_UNIT_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                       </select>
                     </div>
                     {/* 2026-07-25：与 WaterAddModal 对齐 — 备注列（按区域独立备注） */}

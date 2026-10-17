@@ -337,8 +337,12 @@ router.put("/:recordId", (req: Request, res: Response) => {
         const propagationMode = sRow?.propagation_mode || 'one_to_one';
         const newDataNormalized = normalizeSeedlingChange(newData, propagationMode);
         const oldDataNormalized = normalizeSeedlingChange(oldData, propagationMode);
-        const hasMeaningfulChange = ['survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount']
-          .some(k => Number(oldData[k] ?? 0) !== Number(newData[k] ?? 0));
+        // 2026-10-17：新旧字段名都参与"是否变化"判断，且补上补苗（replantChange）——
+        //   此前只比旧名，若 data 里只有新名则判定为"无变化"，编辑会被静默跳过
+        const hasMeaningfulChange = [
+          'survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount', 'replantChange',
+          'motherLossChange', 'seedlingLossChange', 'expandedChange',
+        ].some(k => Number(oldData[k] ?? 0) !== Number(newData[k] ?? 0));
         if (hasMeaningfulChange) {
           // 1) 临时反向抵消旧值（用 normalized 数据）
           if (oldData && Object.keys(oldData).length > 0) {
@@ -462,8 +466,10 @@ router.delete("/:recordId", (req: Request, res: Response) => {
     }
 
     // 反向累加（用 -1 把之前 +1 的变更抵消）
+    // 2026-10-17：先归一化（旧字段名兜底）再回退 —— 老记录 data 里可能只有旧字段名，
+    //   直接传原始对象会读不到值、回退失效（与 PUT 路径保持一致）
     if (oldData && Object.keys(oldData).length > 0) {
-      applyDailyChangeToSeedling(id, oldData, -1);
+      applyDailyChangeToSeedling(id, normalizeSeedlingChange(oldData), -1);
     }
 
     saveDatabase();

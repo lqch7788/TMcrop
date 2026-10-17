@@ -6,6 +6,7 @@
  */
 import { useMemo } from 'react';
 import { Seedling, SeedlingFilters } from '../types/crop';
+import { getSeedlingRemainingCount, getMotherAliveCount, getMotherLossDisplayCount } from '@/lib/seedlingPool';
 
 export function useFilteredSeedlings(
   seedlings: Seedling[],
@@ -24,16 +25,15 @@ export function useFilteredSeedlings(
       if (filters.createBy && !item.createBy.startsWith(filters.createBy)) return false;
       if (filters.initialCountMin !== undefined && item.initialCount < filters.initialCountMin) return false;
       if (filters.initialCountMax !== undefined && item.initialCount > filters.initialCountMax) return false;
-      if (filters.survivalCountMin !== undefined && item.survivalCount < filters.survivalCountMin) return false;
-      if (filters.survivalCountMax !== undefined && item.survivalCount > filters.survivalCountMax) return false;
-      if (filters.lossCountMin !== undefined && item.lossCount < filters.lossCountMin) return false;
-      if (filters.lossCountMax !== undefined && item.lossCount > filters.lossCountMax) return false;
-      // 现存数量 = 小苗剩余 = 产出 - 损耗 - 采收入库
-      const surplus = Math.max(0,
-        (item.expandedPlantCount || 0)
-        - (item.seedlingLossCount || 0)
-        - (item.harvestStockedCount || 0)
-      );
+      // 2026-10-17：成活/损耗筛选统一走 seedlingPool（原比较 survival_count/loss_count 存量字段，恒 0）
+      const alive = getMotherAliveCount(item);
+      const lossDisplay = getMotherLossDisplayCount(item);
+      if (filters.survivalCountMin !== undefined && alive < filters.survivalCountMin) return false;
+      if (filters.survivalCountMax !== undefined && alive > filters.survivalCountMax) return false;
+      if (filters.lossCountMin !== undefined && lossDisplay < filters.lossCountMin) return false;
+      if (filters.lossCountMax !== undefined && lossDisplay > filters.lossCountMax) return false;
+      // 2026-10-17：剩余数量统一走 seedlingPool（1:1 镜像母株池；1:多 = 产出 − 损耗 − 已入库）
+      const surplus = getSeedlingRemainingCount(item);
       if (filters.surplusMin !== undefined && surplus < filters.surplusMin) return false;
       if (filters.surplusMax !== undefined && surplus > filters.surplusMax) return false;
       if (filters.survivalRateMin !== undefined && item.survivalRate < filters.survivalRateMin) return false;

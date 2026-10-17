@@ -138,7 +138,17 @@ const LABEL_DETAIL_SQL = `
     COALESCE(planting.planting_date, seedling.seedling_date, seed.purchase_date) AS planting_date,
     COALESCE(planting.planting_quantity, seedling.seedling_quantity, seed.quantity) AS planting_count,
     COALESCE(planting.supplement_count, seedling.replant_count, 0)            AS supplement_count,
-    COALESCE(planting.loss_count, seedling.loss_count, 0)                    AS loss_count,
+    -- 2026-10-17：存活口径与育苗列表统一（seedlingPool 单一真理源）——
+    --   种植：planting.loss_count；
+    --   育苗：母株损耗 + 1:1 模式的历史小苗损耗（旧口径误用 legacy loss_count，恒 0 → 标签存活虚高）
+    COALESCE(
+      planting.loss_count,
+      CASE WHEN seedling.id IS NOT NULL THEN
+        COALESCE(seedling.mother_loss_count, 0)
+        + CASE WHEN seedling.propagation_mode = 'one_to_one' THEN COALESCE(seedling.seedling_loss_count, 0) ELSE 0 END
+      END,
+      0
+    ) AS loss_count,
     CASE
       WHEN planting.id IS NOT NULL THEN 'planting'
       WHEN seedling.id IS NOT NULL THEN 'seedling'

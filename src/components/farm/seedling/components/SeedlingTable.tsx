@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Edit2, Trash2, Printer, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
+import { Tooltip } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -15,6 +16,34 @@ import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import {
+  getMotherAliveCount,
+  getSeedlingRemainingCount,
+  isOneToOneMode,
+  getMotherLossDisplayCount,
+  getMotherAliveFormula,
+  getMotherLossFormula,
+} from '@/lib/seedlingPool';
+
+/**
+ * 表头列说明（2026-10-17 统一）
+ * 虚线+问号标记，鼠标悬浮显示该列的计算公式与口径说明。
+ * 使用 portal 模式：表头位于 overflow-x-auto 容器内，普通绝对定位会被容器裁剪
+ * （边缘列的提示只显示一半）；portal 挂到 body + fixed 定位后不再被裁剪。
+ */
+function HeaderHint({ label, maxWidth = 260, children }: {
+  label: string;
+  maxWidth?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip position="bottom" multiline maxWidth={maxWidth} portal content={children}>
+      <span className="cursor-help border-b border-dotted border-white/50">
+        {label}<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span>
+      </span>
+    </Tooltip>
+  );
+}
 
 // 操作模式类型（用于批量操作）
 // 2026-10-11：与 SeedlingPage 的 operationMode state 联合对齐（原缺 detail/dailyRecord/image，
@@ -468,18 +497,102 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">育苗区域</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">单位</th>
               {/* ===== 母株池（4 列） — 蓝色半透明背景标识 ===== */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池初始数量（建档时投入）">初始数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池当前存活数">母株存活数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计损耗">母株累计损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计补栽">补苗累计</th>
-              {/* ===== 小苗池（4 列） — 绿色半透明背景标识（2026-08-14 新增"已入库数量"列；2026-08-17 "可入库小苗数"移到"已入库数量"前） ===== */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 已入库（2026-06-28 移除已定植统计）">小苗剩余数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="可入库小苗数（按每日记录数量累计）">可入库小苗数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="采收入库弹窗累计入库的小苗总量">已入库数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30">
+                <HeaderHint label="初始数量">
+                  <>
+                    <div className="font-semibold mb-1">初始数量</div>
+                    <div>建档时投入的数量（1:1＝播种/嫁接数；1:多＝母株数）</div>
+                    <div className="mt-1">存活 = 初始 + 补苗 − 损耗累计</div>
+                  </>
+                </HeaderHint>
+              </th>
+              {/* 2026-10-17：1:1 模式下"苗即母株"，标题改为两种模式都成立的说法 + 悬浮说明口径 */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30">
+                <HeaderHint label="母株/植株存活数">
+                  <>
+                    <div className="font-semibold mb-1">存活数的两种口径</div>
+                    <div>1:多：母株 + 补苗 − 母株损耗</div>
+                    <div>1:1：初始 + 补苗 − 损耗（苗即母株）</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30">
+                <HeaderHint label="母株/植株累计损耗">
+                  <>
+                    <div className="font-semibold mb-1">损耗累计的两种口径</div>
+                    <div>1:多：母株死亡/减少累计</div>
+                    <div>1:1：植株死亡累计（含历史"小苗损耗"数据）</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30">
+                <HeaderHint label="补苗累计">
+                  <>
+                    <div className="font-semibold mb-1">补苗累计</div>
+                    <div>每日记录登记的补苗总数（1:1＝补种子；1:多＝补母株）</div>
+                    <div className="mt-1">计入存活：存活 = 初始 + 补苗 − 损耗累计</div>
+                  </>
+                </HeaderHint>
+              </th>
+              {/* ===== 小苗池（4 列） — 绿色半透明背景标识 ===== */}
+              {/* 2026-10-17 列序调整：按"收→支→余"排 —— 累计产出（毛）→ 累计损耗 → 剩余数量（净）→ 已入库 */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30">
+                {/* 列名回归真实含义 —— 该列值是"累计产出"（毛值），与「小苗剩余数量」（净值）职责不同 */}
+                <HeaderHint label="小苗累计产出" maxWidth={280}>
+                  <>
+                    <div className="font-semibold mb-1">小苗累计产出的两种口径</div>
+                    <div>1:多：匍匐茎/组培/扦插等每日新增的累计产出（毛值，不扣损耗与入库）</div>
+                    <div>1:1：无小苗产出池（苗即母株），不适用；当前可用数量见「小苗剩余数量」</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30">
+                <HeaderHint label="小苗累计损耗">
+                  <>
+                    <div className="font-semibold mb-1">小苗累计损耗</div>
+                    <div>1:多：小苗池累计损耗（每日记录累加）</div>
+                    <div>1:1：不适用（损耗计入「母株/植株累计损耗」）</div>
+                    <div className="mt-1">剩余 = 产出 − 损耗 − 已入库</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30">
+                <HeaderHint label="小苗剩余数量">
+                  <>
+                    <div className="font-semibold mb-1">小苗剩余数量</div>
+                    <div>1:多：产出 − 小苗损耗 − 已入库</div>
+                    <div>1:1：存活 − 已入库（单池）</div>
+                    <div className="mt-1">用途：出圃入库的可用上限</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30">
+                <HeaderHint label="已入库数量">
+                  <>
+                    <div className="font-semibold mb-1">已入库数量</div>
+                    <div>通过「出圃入库/采收」累计入库的小苗总量</div>
+                    <div className="mt-1">入库后不再计入「小苗剩余数量」</div>
+                  </>
+                </HeaderHint>
+              </th>
               {/* ===== 派生 ===== */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="完成比例 = 已入库数量 / 目标成苗数（2026-08-14 公式变更）">完成比例</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">
+                <HeaderHint label="目标成苗数" maxWidth={220}>
+                  <>
+                    <div className="font-semibold mb-1">目标成苗数</div>
+                    <div>生产计划设定的目标数量，是「完成比例」的分母</div>
+                  </>
+                </HeaderHint>
+              </th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">
+                <HeaderHint label="完成比例" maxWidth={240}>
+                  <>
+                    <div className="font-semibold mb-1">完成比例</div>
+                    <div>已完成 = 已入库数量 ÷ 目标成苗数</div>
+                    <div className="mt-1">≥80% 绿 / ≥50% 黄 / &lt;50% 红</div>
+                  </>
+                </HeaderHint>
+              </th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">状态</th>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index，避免脱离 thead） */}
               <th className="sticky right-0 px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)]">操作</th>
@@ -573,36 +686,50 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">
                     {(record.initialCount || 0).toLocaleString()}
                   </td>
-                  {/* 母株存活数 = motherPlantCount */}
-                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">
-                    {(record.motherPlantCount || 0).toLocaleString()}
+                  {/* 母株/植株存活数（2026-10-17：真存活 = 母株 + 补苗 − 损耗；1:1 另扣历史小苗损耗）
+                      单元格悬浮显示该行的具体算式，用户可当场对账 */}
+                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30"
+                      title={getMotherAliveFormula(record)}>
+                    {getMotherAliveCount(record).toLocaleString()}
                   </td>
-                  {/* 母株累计损耗 = motherLossCount（1:1 模式恒 0） */}
-                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-indigo-50/30">
-                    {(record.motherLossCount || 0).toLocaleString()}
+                  {/* 母株/植株累计损耗（2026-10-17：1:1 把历史小苗损耗并入，使"存活 = 初始 + 补苗 − 损耗"两模式同式） */}
+                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-indigo-50/30"
+                      title={getMotherLossFormula(record)}>
+                    {getMotherLossDisplayCount(record).toLocaleString()}
                   </td>
                   {/* 补苗累计 = replantCount */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-indigo-50/30">
                     {(record.replantCount || 0).toLocaleString()}
                   </td>
-                  {/* ===== 小苗池（4 列） — 与 thead bg-emerald-500/30 对应（2026-08-17 "可入库小苗数"移到"已入库数量"前） ===== */}
-                  {/* 小苗累计损耗 = seedlingLossCount */}
-                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
-                    {(record.seedlingLossCount || 0).toLocaleString()}
-                  </td>
-                  {/* 小苗剩余数量 = expanded - loss - harvest（2026-06-28：彻底移除已定植/自动定植统计，业务上种植管理不再从育苗管理取苗） */}
-                  <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30">
-                    {(() => {
-                      const expanded = record.expandedPlantCount || 0;
-                      const loss = record.seedlingLossCount || 0;
-                      const harvest = record.harvestStockedCount || 0;
-                      const remaining = Math.max(0, expanded - loss - harvest);
-                      return remaining.toLocaleString();
-                    })()}
-                  </td>
-                  {/* 可入库小苗数 = expandedPlantCount（按每日记录累计，2026-08-14 列名变更，数值来源不变） */}
-                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
-                    {(record.expandedPlantCount || 0).toLocaleString()}
+                  {/* ===== 小苗池（4 列） — 与 thead bg-emerald-500/30 对应（2026-10-17 列序：产出 → 损耗 → 剩余 → 已入库） ===== */}
+                  {/* 小苗累计产出（2026-10-17：1:1 无产出池 → 显示 —；当前可用数量在「小苗剩余数量」列） */}
+                  {isOneToOneMode(record) ? (
+                    <td className="px-2 py-1.5 text-sm text-gray-400 text-center bg-emerald-50/30"
+                        title="1:1 模式：苗即母株，无独立小苗产出池；当前可用数量见「小苗剩余数量」列">
+                      —
+                    </td>
+                  ) : (
+                    <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30"
+                        title="1:多 模式：小苗产出池累计产出（毛值，每日记录累加）">
+                      {(record.expandedPlantCount || 0).toLocaleString()}
+                    </td>
+                  )}
+                  {/* 小苗累计损耗（2026-10-17：1:1 单池化后该值已并入「母株/植株累计损耗」，此处显示 — 避免重复计数） */}
+                  {isOneToOneMode(record) ? (
+                    <td className="px-2 py-1.5 text-sm text-gray-400 text-center bg-emerald-50/30"
+                        title="1:1 模式下损耗已统一计入「母株/植株累计损耗」">
+                      —
+                    </td>
+                  ) : (
+                    <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30"
+                        title="1:多 模式：小苗池累计损耗">
+                      {(record.seedlingLossCount || 0).toLocaleString()}
+                    </td>
+                  )}
+                  {/* 小苗剩余数量（2026-10-17 单池化：1:1 镜像母株池；1:多 = 产出 − 损耗 − 已入库） */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30"
+                      title={isOneToOneMode(record) ? '1:1 模式：小苗即母株，剩余 = 母株池可用 − 已入库' : '1:多 模式：产出 − 小苗损耗 − 已入库'}>
+                    {getSeedlingRemainingCount(record).toLocaleString()}
                   </td>
                   {/* 已入库数量 = harvestStockedCount（2026-08-14 新增列，由采收入库弹窗入库累加） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
