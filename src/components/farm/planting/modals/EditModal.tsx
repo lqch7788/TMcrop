@@ -24,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
+// 2026-10-17：单位口径判断 —— 种源单位 ≠ 种植单位时，种植数量变化不自动换算种源消耗
+import { isSameUnitDimension } from '@/constants/units';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -46,6 +48,8 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
     areaName: record.areaName || '',
     rootName: record.rootName || '',
     plantingCount: record.plantingCount || 0,
+    // 2026-10-17：种源已扣减量（单位=种源单位）—— 异口径时可编辑
+    sourceConsumedQuantity: record.sourceDeductedQuantity ?? 0,
     plantingDate: record.plantingDate || '',
     soilPH: record.soilPH ?? 0,
     soilEC: record.soilEC ?? 0,
@@ -88,7 +92,17 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
       .filter(Boolean).join(' - ');
   }, [record.cropCode, record.cropName]);
 
+  // 2026-10-17：种源单位与种植单位不同口径（如 千克→株）时，种植数量变化不自动换算种源消耗
+  const sourceRequiresExplicitConsumption = !!record.sourceId
+    && !!record.sourceUnit
+    && !isSameUnitDimension(record.sourceUnit, formData.unit);
+
   const handleSubmit = async () => {
+    // 2026-10-17 单位口径：种源消耗量不得为负（可用量由后端校验并返回明确错误）
+    if (sourceRequiresExplicitConsumption && (Number(formData.sourceConsumedQuantity) || 0) < 0) {
+      showAlert('种源消耗量不能为负数');
+      return;
+    }
     try {
       await usePlantingStore.getState().updateItem(String(record.id), {
         // 可编辑字段
@@ -98,6 +112,8 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
         // 2026-10-11：去掉 (formData as any) —— 表单无 greenhouseName 字段，取值本就来自 record（已补类型）
         greenhouseName: record.greenhouseName || '',
         plantingCount: formData.plantingCount,
+        // 2026-10-17：异口径时提交种源消耗量（单位=种源单位）；同口径由种植数量差额自动处理
+        sourceConsumedQuantity: sourceRequiresExplicitConsumption ? (Number(formData.sourceConsumedQuantity) || 0) : undefined,
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,
         soilEC: formData.soilEC,
@@ -127,7 +143,9 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
       onClose();
     } catch (error) {
       console.error('[EditModal] 更新失败:', error);
-      showAlert('更新失败，请重试');
+      // 2026-10-17：种源可用量等业务错误透传给用户（原统一提示"更新失败"看不到原因）
+      const msg = error instanceof Error ? error.message : String(error);
+      showAlert(msg && (msg.includes('种源') || msg.includes('可用')) ? msg : '更新失败，请重试');
     }
   };
 
@@ -217,6 +235,31 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
             className={deepInputClass}
           />
         </div>
+
+        {/* 2026-10-17：种源与种植单位不同口径时，种源消耗量单独维护（不随种植数量自动换算） */}
+        {sourceRequiresExplicitConsumption && (
+          <div>
+            <Label className="text-gray-900">
+              种源消耗量（{record.sourceUnit}）
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.001"
+              value={formData.sourceConsumedQuantity || ''}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setFormData({ ...formData, sourceConsumedQuantity: v < 0 ? 0 : v });
+              }}
+              className={deepInputClass}
+              placeholder={`本次领用的种源数量（${record.sourceUnit}）`}
+            />
+            <p className="text-xs text-amber-600 mt-1">
+              种源按「{record.sourceUnit}」计量，与种植单位「{formData.unit}」不同；
+              种植数量的变化不会自动换算种源库存，请在此单独维护实际领用量
+            </p>
+          </div>
+        )}
 
         {/* 种植日期 */}
         <div>

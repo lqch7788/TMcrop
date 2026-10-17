@@ -555,6 +555,22 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-10-17：used_quantity 派生触发器（= quantity - remaining_quantity）
+  // 与 fixMissingSchema.ts 中的同名触发器保持一致；保证全新库也有该约束。
+  try {
+    db.run(`
+      CREATE TRIGGER IF NOT EXISTS trg_seed_sources_used_qty
+      AFTER UPDATE OF quantity, remaining_quantity ON seed_sources
+      FOR EACH ROW
+      WHEN NEW.used_quantity IS NOT (NEW.quantity - NEW.remaining_quantity)
+      BEGIN
+        UPDATE seed_sources SET used_quantity = NEW.quantity - NEW.remaining_quantity WHERE id = NEW.id;
+      END
+    `);
+  } catch (e: any) {
+    console.warn('[schema] used_quantity 触发器创建失败:', e?.message || e);
+  }
+
   // 创建育苗表
   db.run(`
     CREATE TABLE IF NOT EXISTS seedlings (
@@ -689,7 +705,9 @@ export function initializeDatabase() {
       supplement_count INTEGER DEFAULT 0,
       -- 2026-08-14：种植"已入库量"（行级采收入库累加，与育苗 harvest_stocked_count 对齐）
       harvest_to_inventory_qty INTEGER DEFAULT 0,
-      harvest_to_inventory_unit TEXT
+      harvest_to_inventory_unit TEXT,
+      -- 2026-10-17：已从种源扣减的数量（单位=种源单位；同口径=种植数量，异口径=显式种源消耗量）
+      source_deducted_quantity INTEGER DEFAULT 0
     )
   `);
 

@@ -7,7 +7,8 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling, SeedSource, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
-import { getMotherAliveCount, getMotherLossCapacity, getMotherLossDisplayCount, getSeedlingRemainingCount, isOneToOneMode } from '@/lib/seedlingPool';
+import { getMotherAliveCount, getMotherLossCapacity, getMotherLossDisplayCount, getMotherAliveFormula, getSeedlingRemainingCount, isOneToOneMode } from '@/lib/seedlingPool';
+import { SEEDLING_STATUS_BADGE_MAP } from '../../../../constants/cropConstants';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety, CropVarietyOption } from '../../../../types/cropVariety';
@@ -20,6 +21,8 @@ import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { getSeedSourceVarietyName } from '../../../../constants/seedSourceDict';
+// 2026-10-17：单位口径判断 —— 种源单位 ≠ 育苗单位时，初始数量变化不自动换算种源消耗
+import { isSameUnitDimension } from '@/constants/units';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -59,6 +62,8 @@ export function EditModal({
     expectedEndDate: record.expectedEndDate || '',
     endDate: record.endDate || '',
     initialCount: record.initialCount,
+    // 2026-10-17：种源已扣减量（单位=种源单位）—— 种源与育苗单位不同口径时可编辑
+    sourceConsumedQuantity: record.sourceDeductedQuantity ?? 0,
     survivalCount: record.survivalCount,
     plantedCount: 0, // 2026-06-28：保留字段以兼容后端 PUT ALLOWED_FIELDS，但前端不再使用
     remarks: record.remarks || '',
@@ -91,6 +96,10 @@ export function EditModal({
 
   const updateItem = useSeedlingStore((s) => s.updateItem);
 
+  // 2026-10-17：表单当前值覆盖记录值 → 派生数量（存活/剩余/完成比例）实时反映编辑结果，
+  //   与提交时的计算共用同一份 merged，避免 UI 展示与落库值出现两套口径
+  const merged = useMemo(() => ({ ...record, ...formData }), [record, formData]);
+
   // 方案2.7: combogrid种源选择器状态
   const [sourceSearch, setSourceSearch] = useState('');
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
@@ -107,10 +116,18 @@ export function EditModal({
   }, [seedSources, sourceSearch]);
 
   // 2026-10-17：名称口径与下拉表格一致，显示品种而非作物名（cropName 如"草莓"无法区分品种）
-  const selectedSourceLabel = useMemo(() => {
-    const source = seedSources.find(s => s.id === formData.sourceId);
-    return source ? `${source.seedCode} - ${getSeedSourceVarietyName(source)}` : '';
-  }, [seedSources, formData.sourceId]);
+  const selectedSource = useMemo(
+    () => seedSources.find(s => s.id === formData.sourceId) || null,
+    [seedSources, formData.sourceId]
+  );
+  const selectedSourceLabel = useMemo(
+    () => selectedSource ? `${selectedSource.seedCode} - ${getSeedSourceVarietyName(selectedSource)}` : '',
+    [selectedSource]
+  );
+  // 2026-10-17：种源单位与育苗单位不同口径时，初始数量变化不自动换算种源消耗，
+  //   需在下方"种源消耗量（种源单位）"中单独维护
+  const sourceRequiresExplicitConsumption = !!selectedSource
+    && !isSameUnitDimension(selectedSource.unit, formData.unit);
 
   const sourcePopoverRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -150,6 +167,8 @@ export function EditModal({
       expectedEndDate: record.expectedEndDate || '',
       endDate: record.endDate || '',
       initialCount: record.initialCount,
+      // 2026-10-17：种源已扣减量（单位=种源单位），整体重置时必须带回
+      sourceConsumedQuantity: record.sourceDeductedQuantity ?? 0,
       survivalCount: record.survivalCount,
       // 2026-06-28：前端不再使用 plantedCount（业务规则：种植管理不再从育苗取苗），
       //   但 state 声明中保留该键以兼容后端 PUT 白名单 → 整体替换时必须带回（原缺失导致 TS2345）
@@ -191,17 +210,34 @@ export function EditModal({
 
     // 2026-10-17：成苗率 / 损耗 / 损耗率统一由 seedlingPool 派生（原从死字段 survival_count 反推）
     //   存活 = 母株 + 补苗 − 损耗累计；分母为累计投入（初始 + 补苗），与详情弹窗/标签同口径
-    const mergedForCalc = { ...record, ...formData } as typeof record;
-    const survivalCount = getMotherAliveCount(mergedForCalc);
-    const lossCount = getMotherLossDisplayCount(mergedForCalc);
+    //   复用组件级 merged（与数量统计区实时展示同一份数据）
+    const survivalCount = getMotherAliveCount(merged);
+    const lossCount = getMotherLossDisplayCount(merged);
     const invested = (formData.initialCount || 0) + (formData.replantCount || 0);
     const survivalRate = invested > 0 ? Math.round((survivalCount / invested) * 100) : 0;
     const lossRate = invested > 0 ? Math.round((lossCount / invested) * 100) : 0;
+
+    // 2026-10-17 单位口径：种源与育苗单位不同时，种源消耗量单独维护，校验不得超过可用上限
+    //   可用上限 = 种源当前可用 + 本行已扣减（因为入参是"更新后的绝对消耗量"）
+    if (sourceRequiresExplicitConsumption && selectedSource) {
+      const consumed = Number(formData.sourceConsumedQuantity) || 0;
+      if (consumed < 0) {
+        await showAlert('种源消耗量不能为负数');
+        return;
+      }
+      const maxConsumed = (selectedSource.availableCount || 0) + (record.sourceDeductedQuantity || 0);
+      if (consumed > maxConsumed) {
+        await showAlert(`种源消耗量 ${consumed}${selectedSource.unit} 超过可用上限 ${maxConsumed}${selectedSource.unit}，请调整`);
+        return;
+      }
+    }
 
     try {
       await updateItem(String(record.id), {
         sourceId: formData.sourceId,
         sourceCode,
+        // 2026-10-17：异口径时提交种源消耗量（单位=种源单位）；同口径由初始数量差额自动处理
+        sourceConsumedQuantity: sourceRequiresExplicitConsumption ? (Number(formData.sourceConsumedQuantity) || 0) : undefined,
         cropName: formData.cropName,
         cropVariety: formData.cropVariety,
         cropCode: formData.selectedCropCode,
@@ -259,7 +295,9 @@ export function EditModal({
         sourceCode: source.seedCode,
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
-        cropVariety: source.cropVariety
+        cropVariety: source.cropVariety,
+        // 2026-10-17：换种源后单位可能变化，消耗量必须重新填写
+        sourceConsumedQuantity: 0
       });
     }
   };
@@ -287,25 +325,40 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 2026-06-14: 繁殖模式 banner（建档后锁定） */}
+        {/* 2026-06-14: 繁殖模式 banner（建档后锁定）
+            2026-10-17：补列表只读字段 —— 育苗批号 / 状态徽章 / 关联生产计划，口径与列表一致 */}
         <div className="col-span-2">
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-indigo-900">繁殖模式：</span>
-              <span className="text-sm text-indigo-700 font-medium">
-                {(() => {
-                  const map: Record<string, string> = {
-                    seed: '种子育苗',
-                    layering: '匍匐茎育苗',
-                    tissue_culture: '组培育苗',
-                    cutting: '扦插育苗',
-                    one_to_one: '1:1 育苗',
-                    one_to_many: '1:多 育苗',
-                  };
-                  return map[record.propagationMode || 'one_to_one'] || '1:1 育苗';
-                })()}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-indigo-900">
+                育苗批号：<span className="font-semibold text-indigo-700 font-mono">{record.seedlingCode || '-'}</span>
               </span>
-              <span className="text-xs text-gray-500 ml-2">（建档后不可修改）</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEEDLING_STATUS_BADGE_MAP[record.status]?.color || SEEDLING_STATUS_BADGE_MAP.transplanted.color}`}>
+                {SEEDLING_STATUS_BADGE_MAP[record.status]?.label || SEEDLING_STATUS_BADGE_MAP.transplanted.label}
+              </span>
+              {record.productionPlanCode && (
+                <span className="text-xs text-gray-500">
+                  关联生产计划：
+                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">{record.productionPlanCode}</span>
+                </span>
+              )}
+              <span className="text-sm font-semibold text-indigo-900">
+                繁殖模式：
+                <span className="text-sm text-indigo-700 font-medium">
+                  {(() => {
+                    const map: Record<string, string> = {
+                      seed: '种子育苗',
+                      layering: '匍匐茎育苗',
+                      tissue_culture: '组培育苗',
+                      cutting: '扦插育苗',
+                      one_to_one: '1:1 育苗',
+                      one_to_many: '1:多 育苗',
+                    };
+                    return map[record.propagationMode || 'one_to_one'] || '1:1 育苗';
+                  })()}
+                </span>
+                <span className="text-xs text-gray-500 ml-1">（建档后不可修改）</span>
+              </span>
             </div>
             <span className="text-xs text-amber-600">数量字段由「每日记录」自动累加</span>
           </div>
@@ -333,7 +386,7 @@ export function EditModal({
               <Button
                 type="button"
                 onClick={() => {
-                  setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', selectedCropCode: '', cropName: '', cropVariety: '' }));
+                  setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', selectedCropCode: '', cropName: '', cropVariety: '', sourceConsumedQuantity: 0 }));
                   setSourceSearch('');
                 }}
                 variant="ghost"
@@ -387,6 +440,36 @@ export function EditModal({
             )}
           </div>
         </div>
+
+        {/* 2026-10-17：种源与育苗单位不同口径时，种源消耗量单独维护（不随初始数量自动换算） */}
+        {sourceRequiresExplicitConsumption && (
+          <div className="col-span-2">
+            <Label className="text-gray-900">
+              种源消耗量（{selectedSource?.unit}）
+            </Label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                step="0.001"
+                value={formData.sourceConsumedQuantity || ''}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setFormData({ ...formData, sourceConsumedQuantity: v < 0 ? 0 : v });
+                }}
+                className={deepInputClass}
+                placeholder={`本次领用的种源数量（${selectedSource?.unit}）`}
+              />
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                当前可用 {selectedSource?.availableCount ?? 0} {selectedSource?.unit}
+              </span>
+            </div>
+            <p className="text-xs text-amber-600 mt-1">
+              种源按「{selectedSource?.unit}」计量，与育苗单位「{formData.unit}」不同；
+              初始数量的变化不会自动换算种源库存，请在此单独维护实际领用量
+            </p>
+          </div>
+        )}
 
         {/* 作物品种选择 */}
         <div className="col-span-2">
@@ -476,7 +559,9 @@ export function EditModal({
             value={formData.initialCount || ''}
             onChange={(e) => {
               const v = Number(e.target.value);
-              setFormData({ ...formData, initialCount: v < 0 ? 0 : v });
+              const nv = v < 0 ? 0 : v;
+              // 2026-10-17 不变量同步：母株池基数与初始数量恒等（后端 PUT 双向强制同口径）
+              setFormData({ ...formData, initialCount: nv, motherPlantCount: nv });
             }}
             className={deepInputClass}
           />
@@ -496,7 +581,12 @@ export function EditModal({
               value={formData.motherPlantCount || ''}
               title="母株池基数：母株存活 = 母株 + 补苗 − 母株损耗"
               className={deepInputClass}
-              onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, motherPlantCount: v < 0 ? 0 : v }); }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const nv = v < 0 ? 0 : v;
+                // 2026-10-17 不变量同步：与「初始数量」恒等（后端 PUT 双向强制同口径）
+                setFormData({ ...formData, motherPlantCount: nv, initialCount: nv });
+              }}
             />
           </div>
         )}
@@ -505,28 +595,39 @@ export function EditModal({
       业务规则变更：种植管理不再从育苗管理取苗（统一从内部种源页面），育苗小苗全部先入库作物库存再出库。
       因此"已定植数量"无业务含义，留着只会误导。*/}
 
-        {/* 2026-06-16: 5 业务字段 + 补苗累计（数量体系重构后字段） */}
-        {/* 2026-07-21 修复：添加 onChange，让这些字段可以编辑保存（之前只读无法写入 DB） */}
+        {/* 2026-06-16: 5 业务字段 + 补苗累计（数量体系重构后字段）
+            2026-07-21 修复：添加 onChange，让这些字段可以编辑保存（之前只读无法写入 DB）
+            2026-10-17 重构：① 按 1:1 / 1:多 分模式显示（与列表口径一致：1:1 无小苗产出池）
+            ② 补派生只读字段（存活/剩余/完成比例 —— 列表有而弹窗无，实时计算）
+            ③ 每行 3 个字段 */}
         <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-sm font-semibold text-amber-900">数量统计（自动累加，可手动纠错）</span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          {/* 累计字段（可编辑纠错） — 每行 3 个 */}
+          <div className="grid grid-cols-3 gap-3">
+            {/* 母株/植株累计损耗：1:1 口径为"植株损耗"（列表合并损耗列的基础项） */}
             <div>
-              <Label className="text-gray-700">母株累计损耗</Label>
+              <Label className="text-gray-700">{isOneToOneMode(record) ? '植株累计损耗（母株）' : '母株累计损耗'}</Label>
               <Input type="number" min={0} value={formData.motherLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
                 className={deepInputClass}
                 onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, motherLossCount: v < 0 ? 0 : v }); }} />
             </div>
+            {/* 小苗累计产出 — 仅 1:多（1:1 无产出池：列表显示 —，弹窗同步隐藏） */}
+            {!isOneToOneMode(record) && (
+              <div>
+                <Label className="text-gray-700">小苗累计产出</Label>
+                <Input type="number" min={0} value={formData.expandedPlantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                  className={deepInputClass}
+                  onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, expandedPlantCount: v < 0 ? 0 : v }); }} />
+              </div>
+            )}
+            {/* 小苗累计损耗 — 1:1 下为"历史小苗损耗"（列表已并入植株损耗列，保留编辑入口以纠错历史数据） */}
             <div>
-              <Label className="text-gray-700">小苗累计产出</Label>
-              <Input type="number" min={0} value={formData.expandedPlantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={deepInputClass}
-                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, expandedPlantCount: v < 0 ? 0 : v }); }} />
-            </div>
-            <div>
-              <Label className="text-gray-700">小苗累计损耗</Label>
-              <Input type="number" min={0} value={formData.seedlingLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+              <Label className="text-gray-700">{isOneToOneMode(record) ? '历史小苗损耗' : '小苗累计损耗'}</Label>
+              <Input type="number" min={0} value={formData.seedlingLossCount || ''}
+                title={isOneToOneMode(record) ? '1:1 历史数据：已计入「植株累计损耗」列' : '从每日记录累加（手动修改仅用于纠错）'}
                 className={deepInputClass}
                 onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, seedlingLossCount: v < 0 ? 0 : v }); }} />
             </div>
@@ -544,18 +645,50 @@ export function EditModal({
                 onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, replantCount: v < 0 ? 0 : v }); }} />
             </div>
           </div>
+
+          {/* 派生数量（实时计算，只读） — 每行 3 个，与列表派生列同口径 */}
+          {(() => {
+            const alive = getMotherAliveCount(merged);
+            const remaining = getSeedlingRemainingCount(merged);
+            const target = formData.targetSurvivalCount || 0;
+            const stocked = Math.max(0, formData.harvestStockedCount || 0);
+            // 与列表"完成比例"列同口径：封顶 999%（min(ratio, 9.99)），避免超目标 100 倍时显示 10040% 这类值
+            const ratioText = target > 0 ? `${Math.round(Math.max(0, Math.min(stocked / target, 9.99)) * 100)}%` : '-';
+            const derivedValueClass = 'px-3 py-2 bg-white border border-amber-200 rounded-lg text-sm font-semibold text-gray-800';
+            return (
+              <div className="grid grid-cols-3 gap-3 mt-3">
+                <div>
+                  <Label className="text-gray-600">
+                    {isOneToOneMode(record) ? '存活数' : '母株存活数'}<span className="text-xs text-gray-400 ml-1">（实时计算）</span>
+                  </Label>
+                  <div className={derivedValueClass} title={getMotherAliveFormula(merged)}>{alive.toLocaleString()}</div>
+                </div>
+                {!isOneToOneMode(record) && (
+                  <div>
+                    <Label className="text-gray-600">母株池剩余<span className="text-xs text-gray-400 ml-1">（母株 + 补苗 − 损耗）</span></Label>
+                    <div className={derivedValueClass}>{getMotherLossCapacity(merged).toLocaleString()}</div>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-gray-600">
+                    {isOneToOneMode(record) ? '可出圃数量' : '小苗池剩余'}
+                    <span className="text-xs text-gray-400 ml-1">（{isOneToOneMode(record) ? '存活 − 已入库' : '产出 − 损耗 − 已入库'}）</span>
+                  </Label>
+                  <div className={derivedValueClass}>{remaining.toLocaleString()}</div>
+                </div>
+                <div>
+                  <Label className="text-gray-600">完成比例<span className="text-xs text-gray-400 ml-1">（已入库 ÷ 目标）</span></Label>
+                  <div className={derivedValueClass}>{ratioText}</div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 公式说明 — 固定口径（派生字段已带实时数字，此处只留公式） */}
           <p className="text-xs text-gray-500 mt-2">
-            {/* 2026-10-17：统一走 seedlingPool 单一真理源（此前这里是第三套独立算式） */}
-            {/* 1:1：单池 —— 存活 = 初始 + 补苗 − 损耗；可出圃 = 存活 − 已入库 */}
-            {/* 1:多：双池 —— 母株池 = 母株 + 补苗 − 母株损耗；小苗池 = 产出 − 损耗 − 已入库 */}
-            {(() => {
-              // 用表单当前值覆盖记录值，编辑时实时反映
-              const merged = { ...record, ...formData } as typeof record;
-              if (isOneToOneMode(merged)) {
-                return `存活 = ${getMotherAliveCount(merged).toLocaleString()} 株 | 可出圃 = ${getSeedlingRemainingCount(merged).toLocaleString()} 株（1:1：苗即母株，单池计算）`;
-              }
-              return `母株池剩余 = ${getMotherLossCapacity(merged).toLocaleString()} 株 | 小苗池剩余 = ${getSeedlingRemainingCount(merged).toLocaleString()} 株（两池独立，不合并）`;
-            })()}
+            {isOneToOneMode(record)
+              ? '1:1 单池：存活 = 初始 + 补苗 − 损耗累计；可出圃 = 存活 − 已入库（苗即母株）'
+              : '1:多 双池：母株池剩余 = 母株 + 补苗 − 母株损耗；小苗池剩余 = 产出 − 损耗 − 已入库（两池独立，不合并）'}
           </p>
           {/* 2026-08-14 H3 修复：手动修改累加字段的风险提示（与入库记录聚合/每日记录历史会不一致） */}
           <p className="text-xs text-amber-600 mt-1">

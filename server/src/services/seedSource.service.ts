@@ -5,9 +5,9 @@
 
 import { z } from 'zod';
 import { seedSourceRepository, SeedSourceRepository } from '../repositories/seedSource.repository';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 // 2026-07-14：时区铁律合规——业务日期严禁用 toISOString()（中国早上 0-8 点会带前一天日期）
-import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 import {
   SeedSourceQuery,
   CreateSeedSourceDTO,
@@ -306,6 +306,32 @@ export class SeedSourceService {
     }
     const newAvailable = current - safeCount;
     await this.repository.update(id, { remaining_quantity: newAvailable });
+    // 2026-10-17 台账加固：手工扣减必须写库存流水，否则时间线/出库区与余额脱节。
+    // 当前 UI 已改用 /with-deduct 原子端点，此接口仅作兼容；仍保证账实一致。
+    try {
+      const db = getDatabase();
+      const now = new Date().toISOString();
+      const txId = `TXN-DEC-${Date.now()}`;
+      db.run(
+        `INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, 'seed', 'outbound', ?, ?, ?, ?, 'manual_adjust', ?, '', 'system', ?, ?, ?)`,
+        [
+          txId, txId, `seed_source:${id}`, -safeCount, current, newAvailable,
+          id, (existing as any).source_code || id,
+          formatLocalDateISO(), '手工扣减可用数量（decrease-available 兼容接口）', now,
+        ],
+      );
+      saveDatabase();
+    } catch (e: any) {
+      // Fail Loud：余额已扣但流水写入失败，抛出并提示（调用方会得到错误）
+      throw new BusinessError(
+        SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+        `库存已扣减但流水写入失败，请检查数据库状态：${e.message}`,
+      );
+    }
     return await this.repository.findById(id);
   }
 

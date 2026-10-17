@@ -508,6 +508,17 @@ export interface Seedling {
   seedlingCode: string;        // 育苗批号
   sourceId: string;           // 关联种源ID
   sourceCode: string;          // 关联种源批号
+  sourceMode?: 'internal' | 'external'; // 来源模式（内部种源/外部）
+  /**
+   * 已从种源扣减的数量（单位 = 种源单位）
+   * 2026-10-17：单位同口径时=育苗初始数量；不同口径（如千克→株）时为用户显式填写的种源消耗量
+   */
+  sourceDeductedQuantity?: number;
+  /**
+   * 更新时提交的种源消耗量（单位 = 种源单位）—— 写侧别名
+   * 2026-10-17：仅用于异口径时调整种源库存，不落库到此列（实际落库字段为 source_deducted_quantity）
+   */
+  sourceConsumedQuantity?: number;
   cropName: string;            // 作物名称
   cropVariety: string;         // 作物品种
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
@@ -683,6 +694,14 @@ export interface Planting {
   sourceCode: string;         // 来源批号
   // 2026-06-25: 关联种源的 source_type（badge 显示用，内部来源时是种源真实类型）
   sourceSeedSourceType?: string;
+  /**
+   * 2026-10-17：关联种源单位 + 已扣减量（单位=种源单位）
+   * 异口径（如种源千克、种植株）时，编辑弹窗据此显示「种源消耗量」字段并回显
+   */
+  sourceUnit?: string;
+  sourceDeductedQuantity?: number;
+  /** 2026-10-17：更新时提交的种源消耗量（写侧别名，不落 planting 表） */
+  sourceConsumedQuantity?: number;
   cropName: string;           // 作物名称
   cropVariety: string;         // 作物品种
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)

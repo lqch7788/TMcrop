@@ -287,6 +287,17 @@ export class SeedSourceController {
         res.status(400).json({ success: false, error: '请求体不能为空' });
         return;
       }
+      // 2026-10-17 加固：库存数量只能通过入库/领用/退库/冲销等台账动作变更。
+      //   HTTP PUT 直接改 quantity/remaining/used 会绕过流水，造成三本账分叉。
+      const forbiddenQtyFields = ['quantity', 'remainingQuantity', 'remaining_quantity', 'usedQuantity', 'used_quantity'];
+      const hitForbidden = forbiddenQtyFields.find(f => (data as any)[f] !== undefined);
+      if (hitForbidden) {
+        res.status(400).json({
+          success: false,
+          error: `不允许直接修改 ${hitForbidden}，请通过入库/领用/退库/冲销等操作变更库存`,
+        });
+        return;
+      }
       // 2026-07-01 P0-6：从请求头/用户上下文自动注入 update_by（如果客户端没传）
       // 优先取 req.user（auth middleware），其次取 body.operatorName，最后兜底 'system'
       const operatorName = (req as any).user?.name || (req as any).user?.username

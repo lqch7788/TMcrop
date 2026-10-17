@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui';
 import { BaseZoneSelect } from '../../../common/BaseZoneSelect';
 import { showAlert } from '@/lib/dialogService';
 import { generatePlantCode } from '../../../../services/apiPlantingService';
+// 2026-10-17：单位口径判断 —— 种源单位 ≠ 种植单位时，不能按种植数量扣减种源
+import { isSameUnitDimension } from '@/constants/units';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -57,6 +59,8 @@ export function AddModal({
     areaName: '',
     rootName: '',
     plantingCount: 0,
+    // 2026-10-17：种源消耗量（单位=种源单位）—— 种源单位与种植单位不同时必填
+    sourceConsumedQuantity: 0,
     // 2026-06-25: 种植单位（从数据词典 unit 选；DB plantings.unit 已有，默认 '株'）
     unit: '株',
     plantingDate: todayLocal(),
@@ -111,6 +115,8 @@ export function AddModal({
         areaName: '',
         rootName: '',
         plantingCount: 0,
+        // 2026-10-17：重置时一并清零种源消耗量（否则上次填写值残留）
+        sourceConsumedQuantity: 0,
         unit: '株',
         plantingDate: todayLocal(),
         soilPH: 6.5,
@@ -182,8 +188,16 @@ export function AddModal({
     return s?.unit || ''
   }, [formData.sourceId, seedSources])
 
+  // 2026-10-17：种源单位与种植单位不同口径（如 千克→株）时，不可按种植数量扣减，
+  //   必须由用户填写「种源消耗量（种源单位）」
+  const sourceRequiresExplicitConsumption = !!formData.sourceId
+    && !isSameUnitDimension(selectedSourceUnit, formData.unit);
+
   // 2026-06-18: 数量超限标记（用于提交拦截 + 红框提示）
-  const overLimit = availableAmount !== null && formData.plantingCount > availableAmount
+  // 2026-10-17：异口径时不比较种植数量与种源可用量（维度不同），改校验种源消耗量
+  const overLimit = !sourceRequiresExplicitConsumption
+    && availableAmount !== null
+    && formData.plantingCount > availableAmount
 
   // 加载种源列表（默认加载全部，搜索词变化时按关键词查询）
   useEffect(() => {
@@ -218,6 +232,14 @@ export function AddModal({
     if (!formData.areaId) newErrors.areaId = '请选择种植区域';
     if (!formData.plantingCount || formData.plantingCount <= 0) newErrors.plantingCount = '请输入种植数量';
     if (overLimit) newErrors.plantingCount = `超过可定植数量 ${availableAmount}`;
+    // 2026-10-17 单位口径：异口径必须填写种源消耗量且不超可用
+    if (sourceRequiresExplicitConsumption) {
+      if (!formData.sourceConsumedQuantity || formData.sourceConsumedQuantity <= 0) {
+        newErrors.sourceConsumedQuantity = `请填写种源消耗量（${selectedSourceUnit}）`;
+      } else if (availableAmount !== null && formData.sourceConsumedQuantity > availableAmount) {
+        newErrors.sourceConsumedQuantity = `超过种源可用数量 ${availableAmount}${selectedSourceUnit}`;
+      }
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -269,6 +291,8 @@ export function AddModal({
         areaName,
         rootName,
         plantingCount: formData.plantingCount,
+        // 2026-10-17：异口径时提交种源消耗量（单位=种源单位）；同口径由种植数量自动扣减
+        sourceConsumedQuantity: sourceRequiresExplicitConsumption ? formData.sourceConsumedQuantity : undefined,
         // 2026-06-25: 单位从数据词典选（DB plantings.unit 列已有）
         unit: formData.unit,
         plantingDate: formData.plantingDate,
@@ -341,6 +365,8 @@ export function AddModal({
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
         cropVariety: source.cropVariety,
+        // 2026-10-17：换种源后单位可能变化，消耗量必须重新填写
+        sourceConsumedQuantity: 0,
       });
     }
   };
@@ -694,6 +720,39 @@ export function AddModal({
             </p>
           )}
         </div>
+
+        {/* 2026-10-17：种源单位与种植单位不同口径时，必须显式填写种源消耗量 */}
+        {sourceRequiresExplicitConsumption && (
+          <div>
+            <Label className="text-gray-900">
+              种源消耗量（{selectedSourceUnit}）<span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.001"
+              value={formData.sourceConsumedQuantity || ''}
+              onChange={(e) => {
+                clearError('sourceConsumedQuantity');
+                setFormData({ ...formData, sourceConsumedQuantity: Number(e.target.value) });
+              }}
+              className={`${deepInputClass} ${errors.sourceConsumedQuantity ? 'border-red-500 ring-1 ring-red-200' : ''}`}
+              placeholder={`本次领用的种源数量（${selectedSourceUnit}）`}
+            />
+            <p className="text-xs text-amber-600 mt-1">
+              种源按「{selectedSourceUnit}」计量，与种植单位「{formData.unit}」不同，
+              不能按种植数量自动扣减，请填写本次实际领用量
+            </p>
+            {availableAmount !== null && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                可用：{availableAmount} {selectedSourceUnit}
+              </p>
+            )}
+            {errors.sourceConsumedQuantity && (
+              <p className="mt-1 text-xs text-red-600">{errors.sourceConsumedQuantity}</p>
+            )}
+          </div>
+        )}
 
         {/* 种植日期 */}
         <div>

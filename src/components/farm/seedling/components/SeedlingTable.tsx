@@ -9,10 +9,10 @@ import { Edit2, Trash2, Printer, Image, Download, Plus, Calendar, StopCircle, Ta
 import { Button } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
-import { Seedling, SeedlingStatus } from '../../../../types/crop';
+import { Seedling } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
-import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
+import { SEEDLING_STATUS_BADGE_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
@@ -256,18 +256,9 @@ export function SeedlingTable({
   // 判断是否需要显示复选框列
   const showCheckbox = operationMode !== 'normal' || exportMode || printMode;
 
-  // 2026-07-04 v2：6 态对齐 PlantingStatus
+  // 2026-07-04 v2：6 态对齐 PlantingStatus（2026-10-17 提取到 cropConstants 与编辑弹窗共用）
   // 未知/孤儿值 fallback：「已出圃」（保留显示，避免空白）
-  const statusMap: Record<string, { label: string; color: string }> = {
-    [SeedlingStatus.SOWN]: { label: '已播种', color: 'text-blue-600 bg-blue-50' },
-    [SeedlingStatus.IN_PROGRESS]: { label: '生长中', color: 'text-amber-600 bg-amber-50' },
-    [SeedlingStatus.TRANSPLANT_READY]: { label: '待出圃', color: 'text-emerald-600 bg-emerald-50' },
-    [SeedlingStatus.COMPLETED]: { label: '已出圃', color: 'text-green-600 bg-green-50' },
-    [SeedlingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-100' },
-    [SeedlingStatus.ABNORMAL]: { label: '异常结束', color: 'text-red-600 bg-red-50' },
-    // 历史孤儿值兼容（不应再出现，但安全网）
-    transplanted: { label: '已出圃', color: 'text-green-600 bg-green-50' },
-  };
+  const statusMap = SEEDLING_STATUS_BADGE_MAP;
 
   // 获取选中的第一条记录
   const getFirstSelectedRecord = () => {
