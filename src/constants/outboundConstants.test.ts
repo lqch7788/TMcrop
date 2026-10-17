@@ -7,8 +7,11 @@ import {
 
 describe('OutboundBusinessType enum', () => {
   // 2026-07-16：删除 internal_planting/internal_seedling/internal_seed_source/return_inbound 4 项后剩 6 项
-  it('应包含 6 个值', () => {
-    expect(Object.values(OutboundBusinessType)).toHaveLength(6);
+  // 2026-09-27：用户要求并入 material 类型（领料出库/撤销退料回收）→ 增至 8 项
+  it('应包含 8 个值（含 2026-09-27 新增的 2 个 material 类型）', () => {
+    expect(Object.values(OutboundBusinessType)).toHaveLength(8);
+    expect(Object.values(OutboundBusinessType)).toContain('material_execute');
+    expect(Object.values(OutboundBusinessType)).toContain('material_return');
   });
 
   it('所有值应是字符串且唯一', () => {

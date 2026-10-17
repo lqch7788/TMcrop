@@ -4,7 +4,7 @@
  * 所有模块统一从作物品种库读取数据
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, ChevronDown, ChevronRight, Leaf, Plus } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -17,7 +17,56 @@ import {
   getVarietyByCode,
   findOrCreateVarietyByName
 } from '../../../services/cropVarietyService';
+import * as apiCropVarietyService from '../../../services/apiCropVarietyService';
 import { CropVarietyOption } from '../../../types/cropVariety';
+
+/**
+ * 2026-10-17 修复：品种数据源改为 API 品种库（数据库 9 位编码）
+ *
+ * 原实现只用 localStorage 旧品种库（11 位编码），而数据库 crop_code 全是 9 位
+ * （种源/育苗/库存实测均为 9 位，零条 11 位）→
+ *   - 预填 cropCode 解析失败：编辑弹窗「作物品种」显示空白占位符
+ *   - 下拉选出的 11 位编码与数据库品种库对不上，后续无法匹配
+ * 现改为：API 品种库为主（与列表/详情/导出同源），旧库仅作兜底（历史 11 位编码仍可显示）。
+ * 模块级缓存：多个表单共用，只请求一次。
+ */
+let apiVarietyCache: CropVariety[] | null = null;
+let apiVarietyLoading: Promise<CropVariety[]> | null = null;
+
+async function loadApiVarieties(): Promise<CropVariety[]> {
+  if (apiVarietyCache) return apiVarietyCache;
+  if (!apiVarietyLoading) {
+    apiVarietyLoading = apiCropVarietyService.getAllVarieties()
+      .then((list) => { apiVarietyCache = list; return list; })
+      .catch((e) => {
+        // 网络失败不阻断表单（V2.1：不用缓存兜底，但选择器退回旧库只读展示）
+        console.warn('[CropCodeSelector] 加载 API 品种库失败，回退本地旧库', e);
+        apiVarietyCache = [];
+        return [];
+      })
+      .finally(() => { apiVarietyLoading = null; });
+  }
+  return apiVarietyLoading;
+}
+
+/** API 品种 → 选择器选项（字段口径与旧库 getVarietyOptions 保持一致） */
+function toCropVarietyOption(v: CropVariety): CropVarietyOption {
+  return {
+    value: v.cropCode,
+    label: v.detailVarietyName || v.subVariety1Name || v.varietyName,
+    category: v.categoryName,
+    categoryCode: v.categoryCode,
+    typeName: v.typeName,
+    typeCode: v.typeCode,
+    varietyCode: v.varietyCode,
+    subVariety1Name: v.subVariety1Name,
+    subVariety1Code: v.subVariety1Code,
+    detailVarietyCode: v.detailVarietyCode,
+    detailVarietyName: v.detailVarietyName,
+    alias: v.alias,
+    fullPath: `${v.categoryName} > ${v.typeName} > ${v.varietyName}${v.subVariety1Name ? ` > ${v.subVariety1Name}` : ''}${v.detailVarietyName ? ` > ${v.detailVarietyName}` : ''}`,
+  };
+}
 
 interface CropCodeSelectorProps {
   value?: string;                    // 选中的 cropCode
@@ -42,14 +91,48 @@ export function CropCodeSelector({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // 初始化品种库
+  // 2026-10-17：API 品种库（主数据源）加载 + 缓存
+  const [apiVarieties, setApiVarieties] = useState<CropVariety[] | null>(apiVarietyCache);
+  useEffect(() => {
+    if (apiVarieties) return;
+    let cancelled = false;
+    loadApiVarieties().then((list) => { if (!cancelled) setApiVarieties(list); });
+    return () => { cancelled = true; };
+  }, [apiVarieties]);
+
+  // cropCode → 品种（API 库）
+  const apiMap = useMemo(() => {
+    const m = new Map<string, CropVariety>();
+    (apiVarieties || []).forEach((v) => {
+      if (v.cropCode && !m.has(v.cropCode)) m.set(v.cropCode, v);
+    });
+    return m;
+  }, [apiVarieties]);
+
+  // 初始化品种库（API 库为主；未加载/失败时回退旧库）
   const allOptions = useMemo(() => {
+    if (apiVarieties && apiVarieties.length > 0) {
+      return apiVarieties
+        .filter((v) => !v.status || v.status === 'active')
+        .map(toCropVarietyOption);
+    }
     initVarieties();
     return getVarietyOptions();
-  }, []);
+  }, [apiVarieties]);
 
-  // 类别选项
-  const categoryOptions = useMemo(() => getCategoryOptions(), []);
+  // 类别选项（从当前数据源派生，避免旧库类别与 API 库不一致）
+  const categoryOptions = useMemo(() => {
+    if (apiVarieties && apiVarieties.length > 0) {
+      const seen = new Map<string, string>();
+      apiVarieties.forEach((v) => {
+        if (v.categoryCode && !seen.has(v.categoryCode)) {
+          seen.set(v.categoryCode, v.categoryName || v.categoryCode);
+        }
+      });
+      return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
+    }
+    return getCategoryOptions();
+  }, [apiVarieties]);
 
   // 根据搜索关键词和类别筛选
   const filteredOptions = useMemo(() => {
@@ -79,11 +162,11 @@ export function CropCodeSelector({
     return searchVarieties(searchKeyword).slice(0, 10);
   }, [searchKeyword]);
 
-  // 选中的品种信息
+  // 选中的品种信息（API 库优先 → 旧库兜底，兼容历史 11 位编码）
   const selectedVariety = useMemo(() => {
     if (!value) return null;
-    return getVarietyByCode(value) || null;
-  }, [value]);
+    return apiMap.get(value) || getVarietyByCode(value) || null;
+  }, [value, apiMap]);
 
   // 显示文本
   const displayText = useMemo(() => {
@@ -95,13 +178,13 @@ export function CropCodeSelector({
     return '';
   }, [selectedVariety, showFullPath]);
 
-  // 处理选择
+  // 处理选择（API 库优先 → 旧库兜底）
   const handleSelect = useCallback((option: CropVarietyOption) => {
-    const variety = getVarietyByCode(option.value);
-    onChange(option.value, variety || null);
+    const variety = apiMap.get(option.value) || getVarietyByCode(option.value) || null;
+    onChange(option.value, variety);
     setIsOpen(false);
     setSearchKeyword('');
-  }, [onChange]);
+  }, [onChange, apiMap]);
 
   // 尺寸样式
   const sizeClasses = {

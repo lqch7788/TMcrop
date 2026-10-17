@@ -85,6 +85,12 @@ vi.mock('@/services/cropVarietyService', () => ({
   findOrCreateVarietyByName: vi.fn().mockReturnValue(null),
 }));
 
+// 2026-10-17：CropCodeSelector 主数据源改为 API 品种库（9 位编码），需 mock 该服务
+//   （原先只 mock 旧库；组件现在优先查 API 库，再回退旧库兜底）
+vi.mock('@/services/apiCropVarietyService', () => ({
+  getAllVarieties: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@/services/addStockFormAdapter', () => ({
   toPayload: vi.fn().mockImplementation((formData, sourceType) => ({ sourceType, ...formData })),
   buildOperatorInfo: vi.fn().mockReturnValue({ operatorName: '测试员A' }),
@@ -138,24 +144,7 @@ function unmountInteractive(root: ReturnType<typeof createRoot>) {
   document.body.innerHTML = '';
 }
 
-// 测试用品种（与 CropVariety 类型字段对齐）
-const fakeVariety: any = {
-  id: 'CV-001',
-  cropCode: 'FR010100101',
-  categoryCode: 'FR',
-  categoryName: '水果类',
-  typeCode: '01',
-  typeName: '浆果类',
-  varietyCode: '01',
-  varietyName: '草莓',
-  subVariety1Code: '001',
-  subVariety1Name: '红颜',
-  detailVarietyCode: '01',
-  detailVarietyName: '大叶红颜',
-  status: 'active',
-  createTime: '2026-01-01T00:00:00Z',
-  updateTime: '2026-01-01T00:00:00Z',
-};
+// 2026-10-17：删除未再使用的 fakeVariety（源行带出场景已改为只读展示，不再依赖品种库解析）
 
 // ---- 测试 ----
 
@@ -197,10 +186,10 @@ describe('AddStockModal CropCodeSelector 接入（T4）', () => {
     unmountInteractive(root);
   });
 
-  it('sourceRecord 预填 cropCode 后触发器显示完整品种路径', () => {
-    // mock getVarietyByCode 返回测试品种
-    (cropVarietyService.getVarietyByCode as any).mockReturnValue(fakeVariety);
-
+  it('sourceRecord 预填 cropCode 后作物由源行自动带出（只读展示，不再出现选择器）', () => {
+    // 2026-10-17 更新：2026-10-09 起，self_produced + cropCode 有值时作物改为只读展示
+    //   （作物由源种植/育苗行唯一决定，避免作物与源行不一致的脏数据），
+    //   原测试仍按 7 月的旧行为断言"触发器显示完整品种路径"，已不符合当前设计。
     const html = renderStatic({
       sourceRecord: {
         module: 'planting',
@@ -213,13 +202,11 @@ describe('AddStockModal CropCodeSelector 接入（T4）', () => {
       } as any,
     });
 
-    // 触发器显示完整路径：水果类 > 浆果类 > 草莓 > 红颜
-    // 注：CropCodeSelector 的 showFullPath 不包含 detailVarietyName（最细分品种名）
-    expect(html).toContain('水果类');
-    expect(html).toContain('浆果类');
+    // 只读展示源行带出的作物信息
+    expect(html).toContain('源行自动带出');
     expect(html).toContain('草莓');
-    expect(html).toContain('红颜');
-    // 编码 FR010100101 也会显示在触发器上
-    expect(html).toContain('FR010100101');
+    expect(html).toContain('大叶红颜');
+    // 不再出现可选择的品种选择器
+    expect(html).not.toContain('搜索或选择作物品种');
   });
 });
