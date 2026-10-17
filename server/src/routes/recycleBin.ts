@@ -33,7 +33,8 @@ function getUserRoles(req: Request): string[] {
         `SELECT r.role_code FROM user_roles ur
          JOIN roles r ON r.oid = ur.role_oid
          JOIN users u ON u.oid = ur.user_oid
-         WHERE u.id = ?`,
+         -- 2026-10-17：JWT 的 userId 是 users.oid，此前误用 u.id 导致恢复/彻底删除永远 403
+         WHERE u.oid = ?`,
         [userId],
       );
       for (const row of rows[0]?.values || []) roles.add(String(row[0]).toLowerCase());

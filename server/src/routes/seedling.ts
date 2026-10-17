@@ -324,6 +324,19 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const cropCode = crop_code ?? seedling.cropCode;
   // 2026-06-15: 负责人字段兼容 camelCase
   const chargePerson = (seedling as any).charge_person ?? (seedling as any).chargePerson ?? null;
+  // 2026-10-17：补齐新增弹窗已提交、但此前 with-deduct 未落库的业务字段
+  //   （品质等级 / 计算模式 / 扩繁倍数 / 理论产量 / 图片 / 累计字段）
+  const qualityGrade = (seedling as any).quality_grade ?? (seedling as any).qualityGrade ?? null;
+  const calculateMode = (seedling as any).calculate_mode ?? (seedling as any).calculateMode ?? 'single';
+  const propagationMultiple = Number((seedling as any).propagation_multiple ?? (seedling as any).propagationMultiple ?? 0);
+  const customMultiple = Number((seedling as any).custom_multiple ?? (seedling as any).customMultiple ?? 0);
+  const theoreticalYield = Number((seedling as any).theoretical_yield ?? (seedling as any).theoreticalYield ?? 0);
+  const motherLossCount = Number((seedling as any).mother_loss_count ?? (seedling as any).motherLossCount ?? 0);
+  const seedlingLossCount = Number((seedling as any).seedling_loss_count ?? (seedling as any).seedlingLossCount ?? 0);
+  const harvestStockedCount = Number((seedling as any).harvest_stocked_count ?? (seedling as any).harvestStockedCount ?? 0);
+  const picturesValue = seedling.pictures == null || typeof seedling.pictures === 'string'
+    ? (seedling.pictures ?? null)
+    : JSON.stringify(seedling.pictures);
   const propagationMode = propagation_mode ?? 'one_to_one';  // 2026-06-15: 默认 1:1
   // 2026-06-15: 6 种模式 → 2 种模式
   const validModes = ['one_to_one', 'one_to_many'];
@@ -460,6 +473,12 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       'source_deducted_quantity',
       'charge_person',
       'seedling_form',
+      // 2026-10-17：补齐新增弹窗提交的业务字段（此前被 with-deduct 静默丢弃）
+      'unit',
+      'quality_grade',
+      'calculate_mode', 'propagation_multiple', 'custom_multiple', 'theoretical_yield',
+      'mother_loss_count', 'seedling_loss_count', 'harvest_stocked_count',
+      'pictures',
       // 2026-07-03 v5：无性繁殖母株溯源列
       'mother_source_type', 'mother_source_id', 'mother_source_code',
       'propagation_method', 'inoculation_count', 'survival_count',
@@ -480,6 +499,12 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       deductCount,
       chargePerson,
       seedling.seedling_form || null, // 2026-06-27：种苗形态
+      // 2026-10-17：补齐新增弹窗提交的业务字段
+      seedlingUnitForDeduct,
+      qualityGrade,
+      calculateMode, propagationMultiple, customMultiple, theoreticalYield,
+      motherLossCount, seedlingLossCount, harvestStockedCount,
+      picturesValue,
       // 2026-07-03 v5：无性繁殖母株溯源
       seedling.mother_source_type || null,
       seedling.mother_source_id || null,
@@ -944,6 +969,7 @@ router.get('/transplant-ready', (req: Request, res: Response) => {
         COALESCE(cv.variety_name, '') AS varietyName,
         COALESCE(cv.sub_variety1_name, '') AS subVarietyName,
         COALESCE(ss.source_code, '') AS sourceCode,
+        COALESCE(ss.unit, '') AS sourceUnit,
         COALESCE(pp.plan_code, '') AS productionPlanCode
       FROM seedlings s
       LEFT JOIN crop_varieties cv ON (
@@ -1052,6 +1078,7 @@ router.get('/', (req: Request, res: Response) => {
         COALESCE(cv.variety_name, '') AS varietyName,
         COALESCE(cv.sub_variety1_name, '') AS subVarietyName,
         COALESCE(ss.source_code, '') AS sourceCode,
+        COALESCE(ss.unit, '') AS sourceUnit,
         COALESCE(pp.plan_code, '') AS productionPlanCode
       FROM seedlings s
       LEFT JOIN crop_varieties cv ON s.crop_name = cv.sub_variety1_name
@@ -1136,7 +1163,17 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
             work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
             source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
             propagation_mode, mother_plant_count, expanded_plant_count, scion_count, source_deducted_quantity,
-            charge_person, seedling_form, unit } = req.body;
+            charge_person, seedling_form, unit, quality_grade } = req.body;
+    // 2026-10-17：品质等级在新增时也可录入（此前仅编辑弹窗支持）
+    const qualityGrade = quality_grade ?? req.body.qualityGrade ?? null;
+    // 2026-10-17：补齐新增弹窗提交但此前 POST 未落库的业务字段
+    const calculateMode = req.body.calculate_mode ?? req.body.calculateMode ?? 'single';
+    const propagationMultiple = Number(req.body.propagation_multiple ?? req.body.propagationMultiple ?? 0);
+    const customMultiple = Number(req.body.custom_multiple ?? req.body.customMultiple ?? 0);
+    const theoreticalYield = Number(req.body.theoretical_yield ?? req.body.theoreticalYield ?? 0);
+    const picturesValue = req.body.pictures == null || typeof req.body.pictures === 'string'
+      ? (req.body.pictures ?? null)
+      : JSON.stringify(req.body.pictures);
     // 2026-07-01: 兜底单位
     const seedlingUnit = unit || req.body.unit || '株';
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
@@ -1224,6 +1261,11 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       'charge_person',
       'seedling_form',
       'unit',
+      // 2026-10-17：品质等级（新增入口）
+      'quality_grade',
+      // 2026-10-17：计算模式/扩繁参数/图片（此前 POST 未落库）
+      'calculate_mode', 'propagation_multiple', 'custom_multiple', 'theoretical_yield',
+      'pictures',
       // 2026-07-03 v5：无性繁殖母株溯源列
       'mother_source_type', 'mother_source_id', 'mother_source_code',
       'propagation_method', 'inoculation_count', 'survival_count',
@@ -1244,6 +1286,9 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       chargePerson,
       seedlingForm, // 2026-07-23：已校验必填，不再 `|| null`
       seedlingUnit, // 2026-07-01: 单位
+      qualityGrade, // 2026-10-17：品质等级（新增入口）
+      calculateMode, propagationMultiple, customMultiple, theoreticalYield,
+      picturesValue,
       // 2026-07-03 v5：无性繁殖母株溯源
       req.body.mother_source_type || null,
       req.body.mother_source_id || null,

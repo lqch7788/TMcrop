@@ -10,7 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { Seedling, DailyRecord, SeedlingStatus } from '../types/crop';
+import { Seedling, DailyRecord, SeedlingStatus, SeedlingCalculateMode } from '../types/crop';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendSeedling {
@@ -43,8 +43,10 @@ interface BackendSeedling {
   printedCount?: number;
   lossCount?: number;
   lossRate?: number;
-  isFinished?: number;
   chargePerson?: string;
+  // 2026-10-17：计算模式 / 种源单位（详情与导出展示用）
+  calculateMode?: string;
+  sourceUnit?: string;
   categoryName?: string;
   typeName?: string;
   varietyName?: string;
@@ -132,9 +134,11 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     id: item.id,
     seedlingCode: item.seedlingCode,
     sourceId: item.sourceId || '',
-    sourceCode: item.sourceCode || '',
-    // 2026-10-17：透传种源来源模式与已扣减量（编辑弹窗异口径消耗量回显依赖）
+    // 2026-10-17：种源被删除/外部种源时 JOIN 取不到 source_code，回退到记录自身的 source_name
+    sourceCode: item.sourceCode || item.sourceName || '',
+    // 2026-10-17：透传种源来源模式、种源单位与已扣减量（编辑/详情/导出展示依赖）
     sourceMode: item.sourceMode,
+    sourceUnit: item.sourceUnit || '',
     sourceDeductedQuantity: item.sourceDeductedQuantity ?? 0,
     productionPlanCode: item.productionPlanCode || '',
     cropName: item.cropName,
@@ -155,7 +159,6 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     unit: item.unit || '株',
     lossCount: item.lossCount || 0,
     lossRate: item.lossRate || 0,
-    isFinished: item.isFinished === 1,
     status: status,
     dailyRecords: [],
     pictures: pictures,
@@ -175,9 +178,9 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     orderCode: undefined,
     orgName: undefined,
     seedlingTaskTime: typeof item.work_hours === 'number' ? item.work_hours : undefined,
-    planType: undefined,
     productionPlanId: undefined,
-    calculateMode: undefined,
+    // 2026-10-17：此前恒为 undefined，编辑弹窗回落 SINGLE 并写回，会把扩繁模式覆盖成单株
+    calculateMode: (item.calculateMode as SeedlingCalculateMode) || undefined,
     categoryName: item.categoryName,
     typeName: item.typeName,
     varietyName: item.varietyName,
@@ -295,6 +298,10 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     crop_name: s.cropName,
     crop_variety: s.cropVariety,
     seedling_type: s.seedlingType,
+    // 2026-10-17：新增弹窗提交的单位/品质等级/计算模式此前未映射，with-deduct 落库为空
+    unit: s.unit || '株',
+    quality_grade: s.qualityGrade ?? null,
+    calculate_mode: s.calculateMode ?? 'single',
     greenhouse_name: s.greenhouseName || s.siteName,
     area_name: s.areaName || s.siteId,
     seedling_date: s.seedlingDate || s.startDate,
