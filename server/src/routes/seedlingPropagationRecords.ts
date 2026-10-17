@@ -11,6 +11,7 @@ import { getDatabase, saveDatabase } from '../db';
 import { authenticate } from '../middleware/auth';
 // 2026-07-22：追溯修复 - 繁殖记录操作写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
+import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 
 const router = Router();
 router.use(authenticate);
@@ -269,9 +270,19 @@ router.delete('/:id/propagation-records/:recordId', (req: Request, res: Response
   try {
     const { id, recordId } = req.params;
     const db = getDatabase();
-    const del = db.prepare(`DELETE FROM propagation_records WHERE id = ? AND seedling_id = ?`);
-    del.run([recordId, id]);
-    del.free();
+    // 2026-10-17：删除前归档到回收站
+    const archiveId = archiveBeforeDelete('propagation_record', recordId, {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop/seedling',
+    });
+    try {
+      const del = db.prepare(`DELETE FROM propagation_records WHERE id = ? AND seedling_id = ?`);
+      del.run([recordId, id]);
+      del.free();
+    } catch (delErr) {
+      markArchiveFailed(archiveId, delErr);
+      throw delErr;
+    }
     saveDatabase();
     // 2026-07-22：追溯修复 - 写入 audit_log
     writeAuditLog({

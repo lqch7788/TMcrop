@@ -18,6 +18,7 @@ import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 // 2026-07-15：显式挂载认证中间件（统一所有 GET/POST/PUT/DELETE 都走 auth）
 import { authenticate } from '../middleware/auth';
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
+import { archiveBeforeDelete } from '../services/recycleBin.service';
 
 const router = Router();
 router.use(authenticate);
@@ -364,6 +365,11 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
       && !!instanceId;
     db.exec('BEGIN');  // 2026-07-21 修复：回填库存 + 删流水加事务包裹
     try {
+    // 2026-10-17：删除前归档到回收站（流水类只归档查看，不提供恢复）
+    archiveBeforeDelete('inventory_transaction', id, {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop/outbound-records',
+    });
     if (shouldRollback) {
       const stockStmt = db.prepare('SELECT id, current_quantity, frozen_quantity FROM inventory_stock WHERE instance_id = ?');
       stockStmt.bind([instanceId]);

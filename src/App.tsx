@@ -211,6 +211,8 @@ const MyTasksPage = lazy(() => import('./components/labor/myTasks/MyTasksPage'))
 const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
 const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
+// 2026-10-17：作物管理通用回收站
+const RecycleBin = lazy(() => import('./pages/crop/RecycleBin'));
 const Order = lazy(() => import('./pages/crop/Order'));
 const Customer = lazy(() => import('./components/farm/customer/CustomerPage'));
 
@@ -495,6 +497,8 @@ function AppContent() {
             <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
             {/* 2026-09-20：从"农事管理 → 其他管理"迁到"系统设置 → 运营管理" */}
             <Route path="operations" element={<OtherManagementPage />} />
+            {/* 2026-10-17：作物管理回收站迁入系统设置 → 基础数据 */}
+            <Route path="recycle-bin" element={<RecycleBin />} />
           </Route>
         </Routes>
       </SimpleLayout>
@@ -513,6 +517,8 @@ function AppContent() {
           <Route path="/crop/seed-source" element={<SeedSource />} />
           <Route path="/crop/seedling" element={<Seedling />} />
           <Route path="/crop/planting" element={<Planting />} />
+          {/* 2026-10-17：作物管理回收站已迁到系统设置 → 基础数据（旧地址保留重定向） */}
+          <Route path="/crop/recycle-bin" element={<Navigate to="/settings/recycle-bin" replace />} />
 
           <Route path="/crop/material-flow" element={<MaterialFlow />} />
 <Route path="/crop/fertilizer" element={<Fertilizer />} />

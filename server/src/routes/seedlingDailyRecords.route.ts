@@ -12,6 +12,7 @@ import { seedLog } from "../lib/seedLogger";
 import { validateSeedlingDailyChange, normalizeSeedlingChange, applyDailyChangeToSeedling } from "../services/seedlingDailyChange";
 // 2026-07-22：追溯修复 - 日常记录操作写入 audit_log
 import { writeAuditLog } from "../services/auditLog.service";
+import { archiveBeforeDelete, markArchiveFailed } from "../services/recycleBin.service";
 
 const router = Router({ mergeParams: true });
 /**
@@ -433,6 +434,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
  * 2026-06-05: 新增（之前缺失）
  */
 router.delete("/:recordId", (req: Request, res: Response) => {
+  let archiveId: string | null = null;
   try {
     const { id, recordId } = req.params;
     const db = getDatabase();
@@ -446,6 +448,12 @@ router.delete("/:recordId", (req: Request, res: Response) => {
       try { oldData = row.data ? JSON.parse(row.data) : {}; } catch { oldData = {}; }
     }
     oldStmt.free();
+
+    // 2026-10-17：删除前归档（含同步生成的肥料/防治记录快照）
+    archiveId = archiveBeforeDelete('daily_record', recordId, {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop/seedling',
+    });
 
     db.run(
       'DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?',
@@ -483,6 +491,7 @@ router.delete("/:recordId", (req: Request, res: Response) => {
       opinion: `删除日常记录 ${req.params.recordId}`,
     });
   } catch (error) {
+    markArchiveFailed(archiveId, error);
     console.error('删除每日记录失败:', error);
     res.status(500).json({ success: false, error: '删除每日记录失败' });
   }

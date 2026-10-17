@@ -270,6 +270,7 @@ export default function PestControlPage() {
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={selectedIds.length}
+        impactHint="删除后记录会移入「作物管理 > 回收站」，可随时恢复；恢复时会重新扣减药剂库存并校验可用量。"
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
       />

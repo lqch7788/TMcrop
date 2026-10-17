@@ -25,6 +25,7 @@ import { recomputeAndUpdateStockStatus, recomputeAllStockStatus } from '../lib/i
 import { authenticate } from '../middleware/auth';
 // 2026-07-22：追溯修复 - 库存 CRUD 写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
+import { archiveBeforeDelete } from '../services/recycleBin.service';
 
 const router = Router();
 router.use(authenticate);
@@ -1498,6 +1499,13 @@ router.delete('/batch', (req: Request, res: Response) => {
         blocked: details,
       });
     }
+    // 2026-10-17：删除前逐条归档到回收站（作物库存）
+    for (const stockId of idArray) {
+      archiveBeforeDelete('inventory_stock', stockId, {
+        operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+        sourcePage: '/crop-inventory',
+      });
+    }
     // 同时按 id 和 instance_id 匹配（兼容两种形态）
     const conditions = idArray.map(() => '(id = ? OR instance_id = ?)').join(' OR ');
     const params: any[] = [];
@@ -1533,6 +1541,11 @@ router.delete('/:id', (req: Request, res: Response) => {
       });
     }
     const db = getDatabase();
+    // 2026-10-17：删除前归档到回收站（作物库存）
+    archiveBeforeDelete('inventory_stock', id, {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop-inventory',
+    });
     db.run('DELETE FROM inventory_stock WHERE id = ? OR instance_id = ?', [id, id]);
     saveDatabase();
     // 2026-07-22：追溯修复 - 必须在 res.json 之前

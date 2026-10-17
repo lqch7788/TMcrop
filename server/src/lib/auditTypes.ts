@@ -30,7 +30,10 @@ export type AuditBusinessType =
   // 库存级
   | 'inventory_stock.create'
   | 'inventory_stock.update'
-  | 'inventory_stock.delete';
+  | 'inventory_stock.delete'
+  // 2026-10-17：作物管理通用回收站
+  | 'recycle_bin.restore'
+  | 'recycle_bin.purge';
 
 export type AuditAction =
   | 'create'
@@ -46,6 +49,7 @@ export type AuditAction =
   | 'decrease_available'
   | 'propagation_stage'
   | 'complete_propagation'
+  | 'restore'
   | 'end'
   | 'harvest_create'
   | 'harvest_update'

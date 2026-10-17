@@ -829,10 +829,20 @@ export default function SeedlingPage() {
         selectedCount={selectedRows.length}
       />
 
-      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致）
+          2026-10-17：强化为高风险操作警示 —— 删除会破坏种源→育苗→采收/入库的完整追溯链，
+          且当前无回收站/恢复入口，必须在确认前明确告知用户不可恢复的后果 */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={pendingDeleteIds.length}
+        title="删除育苗记录（高风险操作）"
+        description={`确定要删除选中的 ${pendingDeleteIds.length} 条育苗记录吗？此操作不可撤销。`}
+        impactHint={
+          '删除后：① 该育苗单将移入「作物管理 > 回收站」，可从回收站恢复；'
+          + '② 在恢复前，种源追溯链、时间线、出入库记录中无法定位该育苗单，历史对账会出现断点；'
+          + '③ 恢复时会重新扣减种源，若种源可用量不足则恢复失败。'
+          + '请确认确无保留价值后再删除。'
+        }
         onClose={() => { setShowDeleteModal(false); setPendingDeleteIds([]); }}
         onConfirm={handleDeleteConfirm}
       />

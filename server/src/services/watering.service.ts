@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { BusinessError } from '../services/fertilizer.service';
 import { nowLocalTimestamp } from '../lib/timeUtils';
 import { wateringRepository, WateringRecord } from '../repositories/watering.repository';
+import { archiveBeforeDelete, markArchiveFailed } from './recycleBin.service';
 
 const WateringErrorCode = {
   NOT_FOUND: 'WATERING_NOT_FOUND',
@@ -149,7 +150,7 @@ class WateringService {
    * 删除单条浇水记录
    * recordType !== 'manual' 的记录禁止删除
    */
-  async remove(id: string): Promise<{ id: string }> {
+  async remove(id: string, operator?: { name?: string; id?: string }): Promise<{ id: string }> {
     const existing = wateringRepository.findById(id);
     if (!existing) {
       throw new BusinessError(WateringErrorCode.NOT_FOUND, '浇水记录不存在', 404);
@@ -161,14 +162,21 @@ class WateringService {
         403,
       );
     }
-    wateringRepository.deleteById(id);
+    // 2026-10-17：删除前归档到回收站
+    const archiveId = archiveBeforeDelete('watering_record', id, { operator, sourcePage: '/crop/fertilizer' });
+    try {
+      wateringRepository.deleteById(id);
+    } catch (e) {
+      markArchiveFailed(archiveId, e);
+      throw e;
+    }
     return { id };
   }
 
   /**
    * 批量删除（最多 200 条，跳过非 manual 类型）
    */
-  async removeBatch(ids: string[]): Promise<{ deleted: number; skipped: number }> {
+  async removeBatch(ids: string[], operator?: { name?: string; id?: string }): Promise<{ deleted: number; skipped: number }> {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new BusinessError(WateringErrorCode.INVALID_INPUT, '请提供要删除的记录 ID 数组');
     }
@@ -190,7 +198,14 @@ class WateringService {
         skipped++;
         continue;
       }
-      wateringRepository.deleteById(id);
+      // 2026-10-17：删除前归档
+      const archiveId = archiveBeforeDelete('watering_record', id, { operator, sourcePage: '/crop/fertilizer' });
+      try {
+        wateringRepository.deleteById(id);
+      } catch (e) {
+        markArchiveFailed(archiveId, e);
+        throw e;
+      }
       deleted++;
     }
     return { deleted, skipped };

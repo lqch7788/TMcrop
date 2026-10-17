@@ -923,6 +923,7 @@ export default function PlantingPage() {
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={selectedRows.length}
+        impactHint="删除后记录会移入「作物管理 > 回收站」，可随时恢复；恢复涉及种源库存时会重新扣减并校验可用量。"
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
       />

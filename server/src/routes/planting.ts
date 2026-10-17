@@ -24,6 +24,74 @@ import { writeAuditLog } from '../services/auditLog.service';
 import { isSameUnitDimension } from '../lib/unitCategories';
 // 2026-07-21：每日记录子路由提取（planting.ts 2316 行 → 拆分为独立文件）
 import plantingDailyRecordsRouter from './plantingDailyRecords.route';
+import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
+import { asyncHandler } from '../middleware/errorHandler';
+
+/**
+ * 2026-10-17：删除种植时退回种源扣减（单条/批量共用）
+ * - 仅 source_type='seed' 涉及种源库存；育苗来源不在此处理
+ * - 余额 + 库存流水 + 纠错流转 三件套，保证批量删除后账实一致
+ */
+async function refundPlantingSourceOnDelete(
+  db: any,
+  row: any,
+  now: string,
+  operator: { name?: string; id?: string },
+): Promise<void> {
+  // 注意：queryToObjects 返回 camelCase（不是表字段 snake_case）
+  const stype = String(row?.sourceType ?? row?.source_type ?? '').toLowerCase();
+  const sid = row?.sourceId ?? row?.source_id;
+  const qty = Number(row?.sourceDeductedQuantity ?? row?.source_deducted_quantity)
+    || Number(row?.plantingQuantity ?? row?.planting_quantity) || 0;
+  if (!row || stype !== 'seed' || !sid || qty <= 0) return;
+
+  const ssRows = queryToObjects<any>(
+    db,
+    'SELECT source_code, unit, remaining_quantity FROM seed_sources WHERE id = ?',
+    [sid],
+  );
+  const ss = ssRows[0];
+  if (!ss) return; // 种源已硬删：跳过库存调整（历史孤儿数据）
+
+  // queryToObjects 返回 camelCase：remainingQuantity / sourceCode / unit
+  const before = Number(ss.remainingQuantity ?? ss.remaining_quantity) || 0;
+  const after = before + qty;
+  db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?', [after, now, sid]);
+
+  const ymd = now.slice(0, 10).replace(/-/g, '');
+  const txId = await generateTransactionId(ymd);
+  const transactionId = await generateTransactionId(ymd);
+  const code = row.plantingCode ?? row.planting_code ?? row.id;
+  db.run(
+    `INSERT INTO inventory_transaction (
+      id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+      balance_before, balance_after, business_id, business_type, business_code,
+      operator_id, operator_name, operate_date, remarks, create_time
+    ) VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, 'internal_planting', ?, ?, ?, ?, ?, ?)`,
+    [
+      txId, transactionId, `seed_source:${sid}`, 'seed',
+      qty, before, after,
+      row.id, code,
+      operator.id || '', operator.name || 'system', now.slice(0, 10),
+      `删除种植 ${code} 退回种源 ${qty}${ss.unit || ''}`,
+      now,
+    ],
+  );
+  writeCorrection({
+    flow_type: 'seed_source→planting',
+    source_type: 'seed_source',
+    source_id: sid,
+    source_code: String(ss.sourceCode ?? ss.source_code ?? ''),
+    target_type: 'planting',
+    target_id: row.id,
+    target_code: code,
+    source_quantity_delta: -qty,
+    source_unit: String(ss.unit || ''),
+    crop_name: String(row.cropName ?? row.crop_name ?? ''),
+    crop_variety: String(row.cropVariety ?? row.crop_variety ?? ''),
+    created_by: operator.name || 'system',
+  });
+}
 const router = Router();
 
 // C1：全局应用 auth 中间件（演示模式自动放行）
@@ -748,6 +816,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
  * DELETE /api/plantings/:id/harvest-records/:recordId
  */
 router.delete('/:id/harvest-records/:recordId', (req, res) => {
+  let archiveId: string | null = null;
   try {
     const { id, recordId } = req.params;
     const db = getDatabase();
@@ -767,6 +836,12 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
     const old = oldStmt.step() ? oldStmt.getAsObject() : null;
     oldStmt.free();
     if (!old) return res.status(404).json({ success: false, error: '采收记录不存在' });
+
+    // 2026-10-17：删除前归档到回收站（含采收/库存/凭证/流水/回流快照）
+    archiveId = archiveBeforeDelete('planting_harvest_record', String(recordId), {
+      operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
+      sourcePage: '/crop/planting',
+    });
 
     // 反向补偿：删除下游副作用（2026-07-03：补齐 transaction 级联清理）
     // 2026-07-03 v3：兼容老数据（harvest_record_id 为 null 时，通过 planting_id 反向查找）
@@ -840,6 +915,7 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
+    markArchiveFailed(archiveId, error);
     console.error('删除采收记录失败:', error);
     res.status(500).json({ success: false, error: '删除失败' });
   }
@@ -1463,34 +1539,56 @@ router.put('/batch', (req: Request, res: Response) => {
  * 批量删除种植记录
  * DELETE /api/plantings/batch?ids=id1,id2,id3
  */
-router.delete('/batch', (req: Request, res: Response) => {
-  try {
-    const { ids } = req.query;
-    if (!ids || typeof ids !== 'string') {
-      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
-    }
-    const idArray = ids.split(',').filter(id => id.trim() !== '');
-    if (idArray.length === 0) {
-      return res.json({ success: true, data: { deletedCount: 0 } });
-    }
-    const db = getDatabase();
-    const now = new Date().toISOString();
-    const placeholders = idArray.map(() => '?').join(',');
-    db.run(`UPDATE plantings SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...idArray]);
-    // 2026-06-26: cascade 标记回流记录为撤销，避免软删种植后产生孤儿引用阻断种源删除
-    const circPlaceholders = idArray.map(() => '?').join(',');
-    db.run(
-      `UPDATE crop_circulation_records
-       SET is_revoked = 1, revoked_at = ?, revoked_by = ?, notes = COALESCE(notes, '') || ?
-       WHERE source_module = 'planting' AND source_id IN (${circPlaceholders}) AND is_revoked = 0`,
-      [now, 'planting_soft_delete', ' [cascade: 种植已软删]', ...idArray]
-    );
-    saveDatabase();
-    res.json({ success: true, data: { deletedCount: idArray.length } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '批量删除种植记录失败' });
+router.delete('/batch', asyncHandler(async (req: Request, res: Response) => {
+  const { ids } = req.query;
+  if (!ids || typeof ids !== 'string') {
+    return res.status(400).json({ success: false, error: '缺少 ids 参数' });
   }
-});
+  const idArray = ids.split(',').filter(id => id.trim() !== '');
+  if (idArray.length === 0) {
+    return res.json({ success: true, data: { deletedCount: 0 } });
+  }
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
+  const placeholders = idArray.map(() => '?').join(',');
+  const rows = queryToObjects<any>(
+    db,
+    `SELECT * FROM plantings WHERE id IN (${placeholders}) AND deleted_at IS NULL`,
+    idArray,
+  );
+
+  const archiveIds: Array<string | null> = [];
+  const deletedIds: string[] = [];
+  db.run('BEGIN');
+  try {
+    for (const row of rows) {
+      // 2026-10-17：删除前归档到回收站
+      archiveIds.push(archiveBeforeDelete('planting', row.id, { operator, sourcePage: '/crop/planting' }));
+      // 2026-10-17：批量删除补退款（与单条删除一致）
+      await refundPlantingSourceOnDelete(db, row, now, operator);
+      db.run('UPDATE plantings SET deleted_at = ? WHERE id = ?', [now, row.id]);
+      deletedIds.push(row.id);
+    }
+    if (deletedIds.length > 0) {
+      // 2026-06-26: cascade 标记回流记录为撤销，避免软删种植后产生孤儿引用阻断种源删除
+      const circPlaceholders = deletedIds.map(() => '?').join(',');
+      db.run(
+        `UPDATE crop_circulation_records
+         SET is_revoked = 1, revoked_at = ?, revoked_by = ?, notes = COALESCE(notes, '') || ?
+         WHERE source_module = 'planting' AND source_id IN (${circPlaceholders}) AND is_revoked = 0`,
+        [now, 'planting_soft_delete', ' [cascade: 种植已软删]', ...deletedIds],
+      );
+    }
+    db.run('COMMIT');
+  } catch (error) {
+    try { db.run('ROLLBACK'); } catch { /* 保持原错误 */ }
+    for (const archiveId of archiveIds) markArchiveFailed(archiveId, error);
+    throw error;
+  }
+  saveDatabase();
+  res.json({ success: true, data: { deletedCount: deletedIds.length } });
+}));
 
 /**
  * 检查种植记录是否可删除（是否被标签引用）
@@ -1511,138 +1609,65 @@ router.get('/:id/check-deletable', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
+
+  const rows = queryToObjects<any>(db, 'SELECT * FROM plantings WHERE id = ? AND deleted_at IS NULL', [id]);
+  const row = rows[0];
+  if (!row) return res.status(404).json({ success: false, error: '种植记录不存在或已删除' });
+
+  let archiveId: string | null = null;
+  db.run('BEGIN');
   try {
-    const { id } = req.params;
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    // 2026-06-14: 删除前先取 source_type/source_id/planting_quantity 用于反向累加
-    // 2026-10-17：补 source_deducted_quantity —— 异口径时实际扣减量 ≠ 种植数量，必须按实际值归还
-    const stmt = db.prepare('SELECT source_type, source_id, planting_quantity, source_deducted_quantity FROM plantings WHERE id = ?');
-    stmt.bind([id]);
-    let row: any = null;
-    if (stmt.step()) row = stmt.getAsObject();
-    stmt.free();
-
-    // 软删除：标记 deleted_at 而非物理删除
+    // 2026-10-17：删除前归档到回收站
+    archiveId = archiveBeforeDelete('planting', id, { operator, sourcePage: '/crop/planting' });
     db.run('UPDATE plantings SET deleted_at = ? WHERE id = ?', [now, id]);
 
-    // 2026-06-26: cascade 标记回流记录为撤销，避免软删种植后产生孤儿引用阻断种源删除
-    // sql.js 是内存数据库，必须 saveDatabase() 才能持久化到磁盘（saveDatabase 在下方调用）
+    // 2026-06-26: cascade 标记回流记录为撤销（恢复时由回收站处理器写回）
     try {
       db.run(
         `UPDATE crop_circulation_records
          SET is_revoked = 1, revoked_at = ?, revoked_by = ?, notes = COALESCE(notes, '') || ?
          WHERE source_module = 'planting' AND source_id = ? AND is_revoked = 0`,
-        [now, 'planting_soft_delete', ' [cascade: 种植已软删]', id]
+        [now, 'planting_soft_delete', ' [cascade: 种植已软删]', id],
       );
     } catch (e) {
       console.error('[DELETE /:id] cascade ERROR:', e);
     }
 
-    // 2026-07-18 P0-C4 修复：软删种植后，置空关联的防治记录的 planting_id/planting_code
-    // - 保留防治历史，但断关联（避免跳转 404 / 孤儿数据）
+    // 2026-07-18 P0-C4：软删种植后置空防治记录关联（恢复时由回收站处理器写回）
     try {
       db.run(
-        `UPDATE pesticide_records
-         SET planting_id = NULL, planting_code = NULL
-         WHERE planting_id = ?`,
-        [id]
+        `UPDATE pesticide_records SET planting_id = NULL, planting_code = NULL WHERE planting_id = ?`,
+        [id],
       );
     } catch (e) {
       console.error('[planting DELETE] 清理关联防治记录 ERROR:', e);
     }
 
-    // 2026-06-14: 反向累加到上游
-    // 2026-10-17：归还量优先取 source_deducted_quantity（异口径时为显式种源消耗量）；
-    //   历史行该列为 0，回退到 planting_quantity 保持旧行为
-    const deleteDeductQty = row ? (Number(row.source_deducted_quantity) || Number(row.planting_quantity) || 0) : 0;
-    if (row) {
-      try {
-        const qty = deleteDeductQty;
-        const stype = String(row.source_type || '').toLowerCase();
-        const sid = row.source_id;
-        if (qty > 0 && sid) {
-          if (stype === 'seedling') {
-            // 2026-06-28：移除 seedlings.auto_planted_count 回滚（业务已停用）
-          } else if (stype === 'seed') {
-            // 种源 → 回滚 seed_sources.remaining_quantity
-            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ? WHERE id = ?', [qty, sid]);
-          }
-        }
-      } catch (e) {
-        // 反向累加失败不影响主流程（删除已生效）
-        console.error('[planting DELETE] 反向累加失败:', e);
-      }
-    }
+    // 2026-10-17：退回种源扣减（余额 + 库存流水 + 纠错流转，单条/批量共用）
+    await refundPlantingSourceOnDelete(db, row, now, operator);
 
-    // 2026-08-21 修复：软删种植写 material_flow_log correction（反向回流到上游种源/育苗）
-    if (row && deleteDeductQty > 0 && row.source_id) {
-      const qty = deleteDeductQty;
-      const stype = String(row.source_type || '').toLowerCase();
-      try {
-        const { writeFlowLog } = require('../services/flowLogService');
-        // 查种植编码（target_code）+ 上游编码（source_code）+ 作物名
-        const pRows = db.exec(
-          `SELECT planting_code, crop_name, crop_variety, unit FROM plantings WHERE id = ?`,
-          [id]
-        );
-        const pCode = pRows[0]?.values?.[0]?.[0] || `PL${id}`;
-        const pCrop = pRows[0]?.values?.[0]?.[1] || '';
-        const pVariety = pRows[0]?.values?.[0]?.[2] || '';
-        const pUnit = pRows[0]?.values?.[0]?.[3] || '';
-        let upstreamCode = '';
-        let upstreamType = stype;
-        let upstreamUnit = pUnit;
-        if (stype === 'seed') {
-          // 2026-10-17：回流单位必须用种源真实单位（原用种植单位 pUnit，异口径时错误）
-          const ssRows = db.exec(`SELECT source_code, unit FROM seed_sources WHERE id = ?`, [row.source_id]);
-          upstreamCode = String(ssRows[0]?.values?.[0]?.[0] || '');
-          upstreamUnit = String(ssRows[0]?.values?.[0]?.[1] || pUnit);
-        } else if (stype === 'seedling') {
-          // 育苗无编码字段，用 ID
-          upstreamCode = row.source_id;
-        } else {
-          upstreamCode = row.source_id;
-        }
-        writeFlowLog({
-          flow_type: 'correction',
-          crop_name: pCrop,
-          crop_variety: pVariety,
-          source_type: upstreamType || 'seed',
-          source_id: row.source_id,
-          source_code: upstreamCode,
-          source_quantity: qty,           // 上游数量回流（增加）
-          source_unit: upstreamUnit,
-          source_category: '手动',  // 2026-08-21：改为中文持久化
-          target_type: 'planting',
-          target_id: id,
-          target_code: pCode,
-          target_quantity: -qty,          // 种植数量被取消（减少）
-          target_unit: pUnit,
-          business_code: `PL-DELETE-${id}`,
-          created_by: (req as any).user?.name || '',
-        });
-      } catch (flowErr: any) {
-        console.warn('[planting DELETE] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
-      }
-    }
-
-    saveDatabase();
-    // 2026-07-22：追溯修复 - planting 删除补 audit_log
-    writeAuditLog({
-      businessType: 'planting.delete',
-      businessId: id,
-      action: 'delete',
-      operatorName: (req as any).user?.name,
-      opinion: `软删种植 ${id}`,
-    });
-    res.json({ success: true, data: { id } });
+    db.run('COMMIT');
   } catch (error) {
-    res.status(500).json({ success: false, error: '删除种植记录失败' });
+    try { db.run('ROLLBACK'); } catch { /* 保持原错误 */ }
+    markArchiveFailed(archiveId, error);
+    throw error;
   }
-});
+
+  saveDatabase();
+  writeAuditLog({
+    businessType: 'planting.delete',
+    businessId: id,
+    action: 'delete',
+    operatorName: (req as any).user?.name,
+    opinion: `软删种植 ${id}（已移入回收站）`,
+  });
+  res.json({ success: true, data: { id, recycleId: archiveId } });
+}));
 
 // 采收路由 - 更新种植记录的采收状态和采收数量
 // 2026-06-25: 接收前端算好的 attrition_rate（产出后实际损耗率），写回 plantings.attrition_rate

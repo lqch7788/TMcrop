@@ -268,7 +268,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await pesticideService.remove(id);
+    await pesticideService.remove(id, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: { id } });
   } catch (error) {
     handleServiceError(res, error);
@@ -293,7 +296,10 @@ router.post('/batch-delete', async (req: Request, res: Response) => {
       res.status(400).json({ success: false, error: 'ids 必须全部为非空字符串' });
       return;
     }
-    const result = await pesticideService.removeBatch(ids);
+    const result = await pesticideService.removeBatch(ids, {
+      name: (req as any).user?.name,
+      id: (req as any).user?.userId,
+    });
     res.json({ success: true, data: result });
   } catch (error) {
     handleServiceError(res, error);

@@ -77,8 +77,12 @@ export function writeCorrection(params: {
   flow_type: string;
   source_type?: string;
   source_id?: string;
+  /** 2026-10-17：补种源业务编码，时间线按 source_code 才能查到该纠错流水 */
+  source_code?: string;
   target_type: string;
   target_id: string;
+  /** 2026-10-17：补目标业务编码（默认回退 target_id，保持旧行为） */
+  target_code?: string;
   source_quantity_delta: number;
   source_unit?: string;
   crop_name: string;
@@ -91,12 +95,13 @@ export function writeCorrection(params: {
     crop_variety: params.crop_variety,
     source_type: params.source_type ?? null,
     source_id: params.source_id ?? null,
+    source_code: params.source_code ?? null,
     source_category: '手动',  // 2026-08-21：改为中文持久化
     source_quantity: params.source_quantity_delta,
     source_unit: params.source_unit ?? null,
     target_type: params.target_type,
     target_id: params.target_id,
-    target_code: params.target_id,
+    target_code: params.target_code ?? params.target_id,
     target_quantity: null,
     created_by: params.created_by ?? null,
   });
