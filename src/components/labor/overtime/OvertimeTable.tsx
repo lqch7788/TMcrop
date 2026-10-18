@@ -4,6 +4,14 @@ import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { STATUS_LABELS as OVERTIME_STATUS_LABELS } from '@/services/apiOvertimeService';
+
+// 2026-10-19：加班类型/状态英文枚举 → 中文
+const OVERTIME_TYPE_LABELS: Record<string, string> = {
+  workday: '工作日加班',
+  weekend: '休息日加班',
+  holiday: '节假日加班',
+};
 
 /**
  * 加班记录表格组件
@@ -230,7 +238,7 @@ export function OvertimeTable({
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{record.date}</TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeBadgeClass(record.type)}`}>
-                    {record.type}
+                    {OVERTIME_TYPE_LABELS[record.type] || record.type}
                   </span>
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.hours}</TableCell>
@@ -239,7 +247,7 @@ export function OvertimeTable({
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(record.status)}`}>
-                    {record.status}
+                    {OVERTIME_STATUS_LABELS[record.status] || record.status}
                   </span>
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{record.reason}</TableCell>

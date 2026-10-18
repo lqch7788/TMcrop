@@ -770,6 +770,14 @@ export interface Planting {
   targetYield?: number;            // 目标产量（用于完成比例 = 采收入库量 / 目标产量）
   targetYieldUnit?: string;        // 目标产量单位（从数据词典 unit 选）
   unit?: string;                   // 数量单位
+  // 2026-10-19：后端已返回但前端此前未声明的字段（详情/导出用）
+  plantedQuantity?: number;        // 定植数量（历史字段）
+  survivalQuantity?: number;       // 存活数量（历史字段）
+  survivalRate?: number;           // 存活率（历史字段）
+  growthStatus?: string;           // 生长状态（历史字段）
+  expectedHarvestDate?: string;    // 预计采收日期
+  actualHarvestDate?: string;      // 实际采收日期
+  createById?: string;             // 创建人 ID
   // 2026-06-17: 种植采收记录 (Phase 1)
   isHarvestLocked?: boolean            // 软锁标志
   harvestToInventoryQty?: number       // 采收入库累计

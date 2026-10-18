@@ -130,6 +130,12 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     item.subVarietyName
   ].filter(Boolean).join(' > ');
 
+  // 2026-10-18：品种库命中时以其为准（后端已按 crop_code 优先 JOIN）。
+  // 品种库语义：variety_name = 作物名称（草莓/苹果/黑色玫瑰），
+  // sub_variety1_name = 细分品种（红颜/章姬，可能为空，如黑色玫瑰无细分）。
+  const cvName = item.varietyName || '';
+  const cvSubVariety = item.subVarietyName || '';
+
   return {
     id: item.id,
     seedlingCode: item.seedlingCode,
@@ -141,8 +147,14 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     sourceUnit: item.sourceUnit || '',
     sourceDeductedQuantity: item.sourceDeductedQuantity ?? 0,
     productionPlanCode: item.productionPlanCode || '',
-    cropName: item.cropName,
-    cropVariety: item.varietyName || item.cropName || '',
+    // 2026-10-18：作物名称/品种以品种库 JOIN 结果为权威。
+    // 育苗表新老记录字段语义相反：
+    //   老记录（2026-06）：crop_name=品种名（章姬/红富士）、crop_variety=作物名（草莓/苹果）
+    //   新记录（2026-10）：crop_name=作物名（草莓）、crop_variety=品种名（红颜）
+    // 品种库命中时：名称取 varietyName，品种取 subVarietyName（无细分则用 varietyName，如黑色玫瑰）。
+    // 未命中（新记录）时回退到表内字段（语义正常）。
+    cropName: cvName || item.cropName,
+    cropVariety: cvSubVariety || cvName || item.cropVariety || item.cropName || '',
     cropCode: item.cropCode || '',
     seedlingType: item.seedlingType || '',
     seedlingForm: item.seedlingForm || '', // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）

@@ -1,6 +1,8 @@
 import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import type { TaskStatus } from '../../../../types/task';
+// 2026-10-19：状态统一用全局任务状态映射（避免弹窗内英文状态直出）
+import { TASK_STATUS_CONFIG } from '@/hooks/useTasks';
 
 /**
  * 批量编辑用到的任务字段形状
@@ -194,11 +196,7 @@ export function BatchEditModal({
                 currentTask.status === 'pending' ? 'bg-gray-100 text-gray-700' :
                 'bg-amber-100 text-amber-700'
               }`}>
-                {currentTask.status === 'completed' ? '已完成' :
-                 currentTask.status === 'in_progress' ? '进行中' :
-                 currentTask.status === 'pending' ? '待执行' :
-                 currentTask.status === 'waiting_acceptance' ? '待验收' :
-                 currentTask.status === 'rejected' ? '已驳回' : currentTask.status}
+                {TASK_STATUS_CONFIG[currentTask.status as TaskStatus]?.label || currentTask.status}
               </span>
             </div>
 

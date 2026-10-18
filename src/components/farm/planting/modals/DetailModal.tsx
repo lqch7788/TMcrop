@@ -9,8 +9,19 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
-import { PLANTING_STATUS_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+import { PLANTING_STATUS_MAP, SOURCE_TYPE_MAP, PLANTING_END_TYPE_MAP } from '../../../../constants/cropConstants';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+
+// 2026-10-19：育种方法英文枚举 → 中文
+const BREEDING_METHOD_LABELS: Record<string, string> = {
+  crossbreeding: '杂交育种',
+  selection: '选择育种',
+  backcross: '回交',
+  heterosis: '杂种优势',
+  open_pollination: '开放授粉',
+  mutation: '诱变',
+  other: '其他',
+};
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -71,6 +82,14 @@ function ImageViewer({ images, selectedIndex, onClose, onPrev, onNext }: {
 /** 基本信息面板（含图片查看器） */
 function PlantingBasicInfo({ record }: { record: Planting }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  // 2026-10-18：新建种植不再录入父本/母本/世代等育种字段（改由「育种记录」维护），
+  // 主表无育种明细时展示引导文案；历史数据仍按原字段展示。
+  const hasBreedingDetail = Boolean(
+    record.parentMaleCode || record.parentFemaleCode || record.generation ||
+    record.breedingMethod || record.targetTraits
+  );
+  // 2026-10-19：采收统一以「采收入库量」为准（旧 is_harvest 标志不再作为数据源）
+  const hasHarvested = (record.harvestToInventoryQty || 0) > 0;
 
   // 2026-10-11：补全 PlantingStatus 全部枚举值（原缺 harvesting/ended →
   //   索引报 TS7053，且这两种状态会落回默认「生长期」显示错误文案）
@@ -126,6 +145,14 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
             <span className="text-sm text-gray-500 w-24">区域：</span>
             <span className="text-sm text-gray-900">{record.areaName}</span>
           </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">生产计划：</span>
+            <span className="text-sm text-gray-900">{record.productionPlanCode || '-'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">单位：</span>
+            <span className="text-sm text-gray-900">{record.unit || '-'}</span>
+          </div>
         </div>
       </div>
 
@@ -161,6 +188,54 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
             <span className="text-sm text-gray-500 w-24">状态：</span>
             <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>{status.label}</span>
           </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">目标产量：</span>
+            <span className="text-sm text-gray-900">
+              {record.targetYield ? `${record.targetYield.toLocaleString()}${record.targetYieldUnit || ''}` : '-'}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">剩余数量：</span>
+            <span className="text-sm text-blue-600 font-medium">{(record.availableQuantity ?? 0).toLocaleString()}{record.unit || ''}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">损耗数量：</span>
+            <span className="text-sm text-gray-900">{record.lossCount || 0}{record.unit || ''}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">补栽数量：</span>
+            <span className="text-sm text-gray-900">{record.supplementCount || 0}{record.unit || ''}</span>
+          </div>
+          {record.transplantCount ? (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">移栽数量：</span>
+              <span className="text-sm text-gray-900">{record.transplantCount}{record.unit || ''}</span>
+            </div>
+          ) : null}
+          {record.transplantDate && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">移栽日期：</span>
+              <span className="text-sm text-gray-900">{record.transplantDate}</span>
+            </div>
+          )}
+          {record.expectedHarvestDate && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">预计采收日期：</span>
+              <span className="text-sm text-gray-900">{record.expectedHarvestDate}</span>
+            </div>
+          )}
+          {record.actualHarvestDate && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">实际采收日期：</span>
+              <span className="text-sm text-gray-900">{record.actualHarvestDate}</span>
+            </div>
+          )}
+          {record.growthStatus && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">生长状态：</span>
+              <span className="text-sm text-gray-900">{record.growthStatus}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -170,8 +245,8 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">是否采收：</span>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${record.isHarvest ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
-              {record.isHarvest ? '已采收' : '未采收'}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${hasHarvested ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
+              {hasHarvested ? '已采收' : '未采收'}
             </span>
           </div>
           {record.harvestDate && (
@@ -180,6 +255,18 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
               <span className="text-sm text-gray-900">{record.harvestDate}</span>
             </div>
           )}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">采收入库量：</span>
+            <span className="text-sm text-blue-600 font-medium">
+              {(record.harvestToInventoryQty || 0).toLocaleString()}{record.harvestToInventoryUnit || record.unit || ''}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">种植自留种量：</span>
+            <span className="text-sm text-emerald-600 font-medium">
+              {(record.selfKeptToSourceQty || 0).toLocaleString()}{record.selfKeptToSourceUnit || record.unit || ''}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -198,6 +285,7 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
           {record.isBreeding && (
             <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
               <div className="text-xs font-semibold text-emerald-800 mb-2">🌱 育种计划设置</div>
+              {hasBreedingDetail ? (
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 w-24">父本编码：</span>
@@ -213,7 +301,7 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 w-24">育种方法：</span>
-                  <span className="text-sm text-gray-900">{record.breedingMethod || '-'}</span>
+                  <span className="text-sm text-gray-900">{record.breedingMethod ? (BREEDING_METHOD_LABELS[record.breedingMethod] || record.breedingMethod) : '-'}</span>
                 </div>
                 {record.targetTraits && (
                   <div className="col-span-2 flex items-start">
@@ -222,6 +310,11 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
                   </div>
                 )}
               </div>
+              ) : (
+                <div className="text-sm text-emerald-800">
+                  育种过程信息（父本 / 母本 / 世代 / 育种方法 / 目标性状）请在「育种记录」中查看。
+                </div>
+              )}
             </div>
           )}
           {record.isSeedSaving && (
@@ -258,6 +351,24 @@ function PlantingBasicInfo({ record }: { record: Planting }) {
             <span className="text-sm text-gray-500 w-24">打印次数：</span>
             <span className="text-sm text-gray-900">{record.printCount} 次</span>
           </div>
+          {record.endType && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">结束类型：</span>
+              <span className="text-sm text-gray-900">{PLANTING_END_TYPE_MAP[record.endType] || record.endType}</span>
+            </div>
+          )}
+          {record.endTime && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">结束时间：</span>
+              <span className="text-sm text-gray-900">{record.endTime}</span>
+            </div>
+          )}
+          {record.updateTime && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">更新时间：</span>
+              <span className="text-sm text-gray-900">{record.updateTime}</span>
+            </div>
+          )}
           {record.remarks && (
             <div className="col-span-2 flex items-start">
               <span className="text-sm text-gray-500 w-24 flex-shrink-0">备注：</span>

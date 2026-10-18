@@ -2,6 +2,14 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { OvertimeDetailModalProps, OvertimeType } from './types';
+import { STATUS_LABELS as OVERTIME_STATUS_LABELS } from '@/services/apiOvertimeService';
+
+// 2026-10-19：加班类型英文枚举 → 中文（原 switch 使用中文值，与实际 workday/weekend/holiday 不匹配）
+const OVERTIME_TYPE_INFO: Record<string, { label: string; multiplier: string; color: string }> = {
+  workday: { label: '工作日加班', multiplier: '1.5倍', color: 'blue' },
+  weekend: { label: '休息日加班', multiplier: '2倍', color: 'purple' },
+  holiday: { label: '节假日加班', multiplier: '3倍', color: 'red' },
+};
 
 /**
  * 加班详情弹窗组件
@@ -9,19 +17,8 @@ import type { OvertimeDetailModalProps, OvertimeType } from './types';
 export function OvertimeDetailModal({ record, open, onClose }: OvertimeDetailModalProps) {
   if (!open || !record) return null;
 
-  // 获取加班类型信息
-  const getTypeInfo = (type: OvertimeType) => {
-    switch (type) {
-      case '普通加班':
-        return { label: '普通加班', multiplier: '1.5倍', color: 'blue' };
-      case '周末加班':
-        return { label: '周末加班', multiplier: '2倍', color: 'purple' };
-      case '节假日加班':
-        return { label: '节假日加班', multiplier: '3倍', color: 'red' };
-    }
-  };
-
-  const typeInfo = getTypeInfo(record.type);
+  // 获取加班类型信息（2026-10-19：按实际枚举 workday/weekend/holiday 映射）
+  const typeInfo = OVERTIME_TYPE_INFO[record.type] || { label: record.type, multiplier: '-', color: 'gray' };
 
   // 获取状态样式
   const getStatusStyle = (status: string) => {
@@ -71,7 +68,7 @@ export function OvertimeDetailModal({ record, open, onClose }: OvertimeDetailMod
           <p className="text-sm text-gray-500">审批状态</p>
           <p className="mt-1">
             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(record.status)}`}>
-              {record.status}
+              {OVERTIME_STATUS_LABELS[record.status] || record.status}
             </span>
           </p>
         </div>

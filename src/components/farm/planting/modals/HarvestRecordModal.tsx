@@ -50,6 +50,8 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useInventoryStore } from '@/stores/useInventoryStore'
 import { useSeedSourceStore } from '@/stores/useSeedSourceStore'
 import { todayLocal } from '@/lib/dateUtils'
+// 2026-10-19：作物名称/品种以品种库为权威（修复历史字段反置导致入库记录串字段）
+import * as apiCropVarietyService from '@/services/apiCropVarietyService'
 // 2026-06-19: 采收入库（destination='harvest'）走库存主链路
 // 字段集参照行级采收入库弹窗 UnifiedRowHarvestInboundModal（种源/育苗/种植 3 页面共用一致）
 // 提交到 POST /api/inventory/inbound-from-source → 4 表写入 + 跨页刷新
@@ -178,11 +180,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [products, setProducts] = useState<InboundProduct[]>([
     {
       cropCode: record.cropCode || '',
-      // 2026-06-19: 修复品种/作物品种绑定反的 bug
-      // 数据库 crop_name 实际存"品种"（如"红富士"），crop_variety 实际存"类型"（如"苹果"）
-      // 与字段名意图相反 — 前端绑定时交换，让"品种"列显示类型名、"作物品种"列显示品种名
-      cropName: record.cropVariety || '',
-      cropVariety: record.cropName || '',
+      // 2026-10-19：不再对 cropName/cropVariety 做盲交换（种植表新老数据语义混用）。
+      // 品种库命中时由下方 useEffect 用权威值覆盖；未命中保留种植单原值。
+      cropName: record.cropName || '',
+      cropVariety: record.cropVariety || '',
       plantingMode: '',
       harvestQuantity: 0,
       unit: record.unit || '克',
@@ -254,6 +255,26 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     setProducts((prev) => prev.map((p, i) => (i === 0 ? { ...p, productForm: sourceForm } : p)))
   }, [sourceForm])
 
+  // 2026-10-19：作物名称/品种以品种库为权威（品种库语义：variety_name=作物名称、sub_variety1_name=品种）。
+  // 命中时覆盖产品明细初始值；未命中保留种植单原值（新数据语义正常）。
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+    apiCropVarietyService.getAllVarieties()
+      .then((list) => {
+        if (cancelled) return
+        const v = list.find((x) => x.cropCode === record.cropCode)
+        if (!v) return
+        const cropName = v.varietyName || record.cropName || ''
+        const cropVariety = v.subVariety1Name || v.varietyName || record.cropVariety || ''
+        setProducts((prev) => prev.map((p) => ({ ...p, cropName, cropVariety })))
+      })
+      .catch((error) => {
+        console.error('[HarvestRecordModal] 加载品种库失败:', error)
+      })
+    return () => { cancelled = true }
+  }, [isOpen, record.cropCode, record.cropName, record.cropVariety])
+
   const hasSeedSource = !!record.sourceId
   const requiresWarehouse = destination === 'harvest'
   // 2026-06-29: 合并 planting_self_kept 替代 circulate + self_seed
@@ -284,9 +305,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     setHarvesterNames([])
     setProducts([{
       cropCode: record.cropCode || '',
-      // 同上：交换品种/作物品种绑定（数据库语义与字段名反）
-      cropName: record.cropVariety || '',
-      cropVariety: record.cropName || '',
+      // 2026-10-19：不再盲交换，品种库命中时由 useEffect 覆盖为权威值
+      cropName: record.cropName || '',
+      cropVariety: record.cropVariety || '',
       plantingMode: '',
       harvestQuantity: 0,
       unit: record.unit || '克',

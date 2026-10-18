@@ -111,10 +111,11 @@ export default function AlertInfo() {
       '告警ID': a.id,
       '告警标题': a.title,
       '告警内容': a.message,
-      '类型': a.type,
+      // 2026-10-19：类型/状态统一中文，避免导出英文枚举
+      '类型': a.typeName || a.type,
       '级别': levelText(a.level),
       '告警时间': a.time,
-      '处理状态': a.status,
+      '处理状态': ALERT_STATUS_LABEL[a.status as keyof typeof ALERT_STATUS_LABEL] || a.status,
     }));
     const filename = `预警记录_${todayLocal()}`;
     if (exportFormat === 'csv') {

@@ -61,6 +61,25 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   // 2026-07-23：种植管理调拨（planting_move_records.operation_type）
   move_in: '区域调入',
   move_out: '区域调出',
+  // 2026-10-19：补全 inventory_transaction.business_type / source_type 实际出现的英文值
+  // （用户反馈追溯时间线「来源」列存在英文）
+  adjust: '库存调整',
+  supplementary: '补录入库',
+  system: '系统操作',
+  planting_self_kept: '种植自留种入库',
+  material_execute: '领料出库',
+  material_inbound: '物料入库',
+  material_outbound: '物料出库',
+  material_outbound_retroactive: '物料补出库',
+  material_return: '物料退料',
+  material_return_in: '物料退料入库',
+  material_return_undo: '撤消退料',
+  material_restore: '物料恢复',
+  material_reverse_inbound: '物料入库冲销',
+  reverse_inbound: '入库作废',
+  reverse_circulation: '撤销回流',
+  inbound_record: '入库记录',
+  circulation_record: '回流记录',
 };
 
 /**
@@ -98,6 +117,23 @@ const ACTION_LABELS: Record<string, string> = {
   adjustment: '库存调整',
   harvest: '采收',
   manual: '手动操作',
+  // 2026-10-19：补全库存流水/物料相关 action 英文值
+  adjust: '库存调整',
+  correction: '数量修正',
+  supplementary: '补录入库',
+  system: '系统操作',
+  planting_self_kept: '种植自留种',
+  material_execute: '领料出库',
+  material_inbound: '物料入库',
+  material_outbound: '物料出库',
+  material_outbound_retroactive: '物料补出库',
+  material_return: '物料退料',
+  material_return_in: '物料退料入库',
+  material_return_undo: '撤消退料',
+  material_restore: '物料恢复',
+  material_reverse_inbound: '物料入库冲销',
+  reverse_inbound: '入库作废',
+  reverse_circulation: '撤销回流',
 };
 
 function fmtAction(action?: string): string {

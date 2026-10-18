@@ -11,7 +11,10 @@ import { X, Upload, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource } from '../../../../types/crop';
 import { getSeedSources, searchSeedSources } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
-import * as cropVarietyService from '../../../../services/cropVarietyService';
+// 2026-10-18：改用 API 品种库（原 cropVarietyService 读 localStorage，
+// 默认数据编码为 11 位，与种源 crop_code（9 位）不匹配，品种路径永远为空）
+import * as apiCropVarietyService from '../../../../services/apiCropVarietyService';
+import type { CropVariety } from '../../../../types/cropVariety';
 import { todayLocal } from '@/lib/dateUtils';
 import { useProductionPlanStore, usePlantingStore, useZoneStore, getGreenhouseByOid } from '../../../../stores';
 import { PlanType } from '../../../../types';
@@ -67,7 +70,7 @@ export function AddModal({
     soilPH: 6.5,
     soilEC: 1.0,
     // 2026-06-18: 目标产量（完成比例 = harvestToInventoryQty / target_yield）
-    // 2026-06-25: 移除 attritionRate 字段（采收后由 HarvestModal 自动计算并写回）
+    // 2026-06-25: 移除 attritionRate 字段（采收后按实际采收量自动计算并写回）
     targetYield: 0,
     targetYieldUnit: '克',
     remarks: '',
@@ -170,6 +173,8 @@ export function AddModal({
   // 2026-06-25: 所有种植来源都从种源管理选择（外部来源必须先录入种源）
   // 种源列表状态 + 搜索关键词
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
+  // 2026-10-18：品种库（API）— 用于按 cropCode 生成品种路径
+  const [varieties, setVarieties] = useState<CropVariety[]>([]);
   const [seedSourceKeyword, setSeedSourceKeyword] = useState('');
   const seedSourceSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -198,6 +203,16 @@ export function AddModal({
   const overLimit = !sourceRequiresExplicitConsumption
     && availableAmount !== null
     && formData.plantingCount > availableAmount
+
+  // 2026-10-18：弹窗打开时加载 API 品种库（品种路径展示依赖）
+  useEffect(() => {
+    if (!isOpen) return;
+    apiCropVarietyService.getAllVarieties()
+      .then(setVarieties)
+      .catch((error) => {
+        console.error('[AddModal] 加载品种库失败:', error);
+      });
+  }, [isOpen]);
 
   // 加载种源列表（默认加载全部，搜索词变化时按关键词查询）
   useEffect(() => {
@@ -248,21 +263,8 @@ export function AddModal({
     // 通过校验，清空旧 errors
     setErrors({});
 
-    // 2026-06-25: 育种计划校验（2026-07-20 修订：父本选填，可能未知或多父本）
-    if (formData.isBreeding) {
-      if (!formData.parentFemaleCode.trim()) {
-        await showAlert('标记为育种计划时，母本编码必填');
-        return;
-      }
-      if (formData.parentMaleCode.trim() && formData.parentMaleCode.trim() === formData.parentFemaleCode.trim()) {
-        await showAlert('父本和母本编码不能相同（避免自交）');
-        return;
-      }
-      if (!formData.generation) {
-        await showAlert('标记为育种计划时，世代必填');
-        return;
-      }
-    }
+    // 2026-10-18：育种计划不再在新建时强制填写父本/母本/世代 ——
+    // 新建时这些信息通常未知，统一在行操作的「育种记录」弹窗中逐次记录。
 
     // 溯源码 (用 todayLocal 替代 toISOString 避免 UTC 时区 bug)
     const dateStr = todayLocal().replace(/-/g, '');
@@ -315,16 +317,13 @@ export function AddModal({
         // 2026-06-25: 移除外部来源逻辑（外部来源必须先录入种源管理）
         // 2026-06-25: 育种计划字段（移除 breedingLocation — 与种植区域语义重叠）
         isBreeding: formData.isBreeding,
-        parentMaleCode: formData.isBreeding ? formData.parentMaleCode : undefined,
-        parentFemaleCode: formData.isBreeding ? formData.parentFemaleCode : undefined,
-        generation: formData.isBreeding ? formData.generation : undefined,
-        breedingMethod: formData.isBreeding ? formData.breedingMethod : undefined,
-        targetTraits: formData.isBreeding ? formData.targetTraits : undefined,
+        // 2026-10-18：父本/母本/世代/育种方法/目标性状不再在新建时录入，
+        // 统一由「育种记录」弹窗逐次记录（主表字段保留，兼容历史数据）。
         // 2026-06-24: 种植留种字段
         isSeedSaving: formData.isSeedSaving,
         seedPlantMarker: formData.isSeedSaving ? formData.seedPlantMarker : undefined,
         // 2026-10-11：补 attritionRate 初值 0（Planting 必填字段）——
-        //   表单无该输入项，采收时由 HarvestModal 按 (1 - 采收量/种植数) 重算写回
+        //   表单无该输入项，采收时按 (1 - 采收量/种植数) 重算写回
         attritionRate: 0,
       });
 
@@ -345,14 +344,14 @@ export function AddModal({
     onSuccess?.();
   };
 
-  // 完整品种路径: 参照育苗新增弹窗, 用 cropCode 查品种库获取四段路径
+  // 完整品种路径: 用 cropCode 在 API 品种库中查四段路径
   const fullVarietyPath = useMemo(() => {
     if (!formData.selectedCropCode) return null;
-    const variety = cropVarietyService.getVarietyByCode(formData.selectedCropCode);
+    const variety = varieties.find(v => v.cropCode === formData.selectedCropCode);
     if (!variety) return null;
     return [variety.categoryName, variety.typeName, variety.varietyName, variety.subVariety1Name]
       .filter(Boolean).join(' - ');
-  }, [formData.selectedCropCode]);
+  }, [formData.selectedCropCode, varieties]);
 
   // 处理来源选择变化（种源）
   const handleSeedSourceChange = (sourceId: string) => {
@@ -494,12 +493,13 @@ export function AddModal({
           {errors.sourceId && <p className="mt-1 text-xs text-red-600">{errors.sourceId}</p>}
         </div>
 
-        {/* 作物品种 */}
+        {/* 作物品种 — 2026-10-18 修复：此前绑定 cropName（作物名称，如"草莓"），
+            导致选择种源后显示作物名称而非品种（如"红颜"） */}
         <div>
           <Label className="text-gray-900">作物品种</Label>
           <Input
             type="text"
-            value={formData.cropName}
+            value={formData.cropVariety}
             readOnly
             className={`${deepInputClass} bg-gray-50`}
             placeholder="选择来源后自动填充"
@@ -542,92 +542,10 @@ export function AddModal({
             </div>
 
             {formData.isBreeding && (
-              <>
-                {/* 父母本 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-gray-900">父本编码</Label>
-                    <Input
-                      value={formData.parentMaleCode}
-                      onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
-                      placeholder="例: ZZ20250601-001"
-                      className={deepInputClass}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-900">
-                      <span className="text-red-500">*</span> 母本编码
-                    </Label>
-                    <Input
-                      value={formData.parentFemaleCode}
-                      onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
-                      placeholder="例: ZZ20250515-002"
-                      className={deepInputClass}
-                    />
-                  </div>
-                </div>
-
-                {/* 世代 + 育种方法 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-gray-900">
-                      <span className="text-red-500">*</span> 世代
-                    </Label>
-                    <Select
-                      value={formData.generation}
-                      onValueChange={(v) => setFormData({ ...formData, generation: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择世代" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="F1">F1（一代杂交）</SelectItem>
-                        <SelectItem value="F2">F2（二代）</SelectItem>
-                        <SelectItem value="F3">F3（三代）</SelectItem>
-                        <SelectItem value="BC1">BC1（回交一代）</SelectItem>
-                        <SelectItem value="BC2">BC2（回交二代）</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-gray-900">育种方法</Label>
-                    <Select
-                      value={formData.breedingMethod}
-                      onValueChange={(v) => setFormData({ ...formData, breedingMethod: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择育种方法" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="crossbreeding">杂交育种</SelectItem>
-                        <SelectItem value="selection">选择育种</SelectItem>
-                        <SelectItem value="backcross">回交</SelectItem>
-                        <SelectItem value="heterosis">杂种优势</SelectItem>
-                        <SelectItem value="open_pollination">开放授粉</SelectItem>
-                        <SelectItem value="mutation">诱变</SelectItem>
-                        <SelectItem value="other">其他</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* 2026-06-25: 移除「育种地点」字段 — 与上方「种植区域」语义重叠，统一用种植区域表示 */}
-                {/* 目标性状 */}
-                <div>
-                  <Label className="text-gray-900">目标性状</Label>
-                  <TextArea
-                    value={formData.targetTraits}
-                    onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
-                    rows={2}
-                    placeholder="例: 抗病性强 / 产量提高20% / 糖度提升"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                  />
-                </div>
-
-                <p className="text-xs text-amber-600">
-                  ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
-                </p>
-              </>
+              <p className="text-xs text-amber-600">
+                ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
+                父本、母本、世代、育种方法等过程信息，请在行操作的「育种记录」中逐次记录。
+              </p>
             )}
           </div>
         </div>
@@ -793,7 +711,7 @@ export function AddModal({
         </div>
 
         {/* 2026-06-25: 损耗率字段移除 — 属于采收后计算的实际值，不在创建时填写 */}
-        {/* 原 attritionRate 字段由 HarvestModal 采收时按 (1 - 采收产量/种植数量) × 100% 计算后写回 */}
+        {/* 原 attritionRate 字段由采收流程按 (1 - 采收产量/种植数量) × 100% 计算后写回 */}
 
 
         {/* 目标产量 */}

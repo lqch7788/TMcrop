@@ -15,7 +15,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Badge } from '@/components/ui';
+import { Tooltip } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+
+/**
+ * 表头列说明（参照育苗列表 SeedlingTable）
+ * 虚线 + 问号标记，鼠标悬浮显示该列的计算方式与用途说明。
+ * 使用 portal 模式：表头位于 overflow-x-auto 容器内，普通绝对定位会被容器裁剪。
+ */
+function HeaderHint({ label, maxWidth = 280, children }: {
+  label: string;
+  maxWidth?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip position="bottom" multiline maxWidth={maxWidth} portal content={children}>
+      <span className="cursor-help border-b border-dotted border-white/50">
+        {label}<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span>
+      </span>
+    </Tooltip>
+  );
+}
 
 // 操作模式类型
 type PlantingOperationMode = 'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export';
@@ -417,42 +437,12 @@ export function PlantingTable({
         width: 120
       },
       {
-        title: '土壤PH',
-        dataIndex: 'soilPH',
-        width: 90,
-        render: (value: number) => (
-          <span className={`font-mono ${value != null && value > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
-            {value != null && value > 0 ? value.toFixed(1) : '-'}
-          </span>
-        )
-      },
-      {
-        title: '土壤EC',
-        dataIndex: 'soilEC',
-        width: 90,
-        render: (value: number) => (
-          <span className={`font-mono ${value != null && value > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
-            {value != null && value > 0 ? value.toFixed(1) : '-'}
-          </span>
-        )
-      },
-      {
         title: '损耗率',
         dataIndex: 'attritionRate',
         width: 85,
         render: (value: number) => (
           <span className={value != null && value > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
             {value != null && value > 0 ? `${value.toFixed(1)}%` : '-'}
-          </span>
-        )
-      },
-      {
-        title: '已采收',
-        dataIndex: 'harvestQuantity',
-        width: 100,
-        render: (quantity: number, record: Planting) => (
-          <span className="text-blue-600 font-medium">
-            {quantity ? `${quantity.toLocaleString()}${record.unit || ''}` : '0'}
           </span>
         )
       },
@@ -938,21 +928,36 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">品种路径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植区域</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植日期</TableHead>
               {/* 2026-07-23：删除"种植数量"列（创建总量），避免与"剩余数量"语义重复让用户混淆 */}
               {/* 2026-06-28: 每日记录累加 3 列 */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">损耗数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">补栽数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">剩余数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植日期</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">土壤PH</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">土壤EC</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">损耗率</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">已采收</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">采收入库量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">
+                <HeaderHint label="损耗数量">每日记录中「损耗」的累计值，记录植株死亡、拔除等减少的数量。</HeaderHint>
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">
+                <HeaderHint label="补栽数量">每日记录中「补栽」的累计值，记录补种、补苗等新增的数量。</HeaderHint>
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">
+                <HeaderHint label="剩余数量">当前区域库存合计（Σ 各区域库存数量），随损耗、补栽、调入/调出实时变化。</HeaderHint>
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">
+                <HeaderHint label="损耗率">损耗率 = 累计损耗 ÷（种植数量 + 累计补栽）× 100%，由每日记录的损耗/补栽自动计算。</HeaderHint>
+              </TableHead>
+              {/* 2026-10-19：土壤PH / 土壤EC 从列表隐藏（详情弹窗与导出仍保留） */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-emerald-600/30 text-center">
+                <HeaderHint label="目标产量">新建种植时填写的目标产量，用于计算完成比例（单位见数值）。</HeaderHint>
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-emerald-600/30 text-center">
+                <HeaderHint label="采收入库量">所有采收以此为准：实际进入作物库存的数量；自留种、直接销售等未入库部分不计入。</HeaderHint>
+              </TableHead>
               {/* 2026-06-29: 合并残株回种源 + 自交种子入种源 + 种植自留种 为 1 列「种植自留种量」 */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="自留种入库到内部种源">种植自留种量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-emerald-600/30">
+                <HeaderHint label="种植自留种量">留种/自交种子入库到内部种源的数量，该部分不进入作物库存。</HeaderHint>
+              </TableHead>
               {/* 2026-07-09：移除"废弃量"表头（dispose 功能已下线） */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">完成比例</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-emerald-600/30 text-center">
+                <HeaderHint label="完成比例">完成比例 = 采收入库量 ÷ 目标产量 × 100%（两者需同一单位）。</HeaderHint>
+              </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">状态</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
               <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20 text-center">操作</TableHead>
@@ -961,7 +966,7 @@ export function PlantingTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 24 : 23} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -997,7 +1002,9 @@ export function PlantingTable({
                       {record.isBreeding && (
                         <Badge
                           className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0"
-                          title={`育种计划 · 世代 ${record.generation || '-'}${record.parentMaleCode ? ' · 父本 ' + record.parentMaleCode : ''}${record.parentFemaleCode ? ' · 母本 ' + record.parentFemaleCode : ''}`}
+                          title={record.generation || record.parentMaleCode || record.parentFemaleCode
+                            ? `育种计划 · 世代 ${record.generation || '-'}${record.parentMaleCode ? ' · 父本 ' + record.parentMaleCode : ''}${record.parentFemaleCode ? ' · 母本 ' + record.parentFemaleCode : ''}`
+                            : '育种计划 · 详情见育种记录'}
                         >
                           🌱 育种{record.generation ? ' ' + record.generation : ''}
                         </Badge>
@@ -1044,6 +1051,7 @@ export function PlantingTable({
                     {getVarietyPath(record)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">{record.areaName}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{record.plantingDate}</TableCell>
                   {/* 2026-07-23：删除"种植数量"列（创建总量），避免与"剩余数量"语义重复让用户混淆 */}
                   {/* 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余） */}
                   <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
@@ -1064,35 +1072,31 @@ export function PlantingTable({
                       {(record.availableQuantity ?? 0).toLocaleString()}{record.unit || ''}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{record.plantingDate}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">
-                    {record.soilPH != null && record.soilPH > 0 ? record.soilPH.toFixed(1) : '-'}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">
-                    {record.soilEC != null && record.soilEC > 0 ? record.soilEC.toFixed(1) : '-'}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
+                  {/* 2026-10-19：损耗率与损耗/补栽/剩余归为一类，统一底色 */}
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     {record.attritionRate != null && record.attritionRate > 0 ? (
                       <span className="text-amber-600 font-medium">{record.attritionRate.toFixed(1)}%</span>
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap text-center">
-                    {(record.harvestQuantity || 0).toLocaleString()}{record.unit || ''}
+                  {/* 2026-10-19：土壤PH / 土壤EC 从列表隐藏（详情弹窗与导出仍保留） */}
+                  <TableCell className="px-4 py-3 text-sm bg-emerald-50/40 text-gray-700 whitespace-nowrap text-center">
+                    {record.targetYield ? `${record.targetYield.toLocaleString()}${record.targetYieldUnit || ''}` : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
+                  <TableCell className="px-4 py-3 text-sm bg-emerald-50/40 whitespace-nowrap text-center">
                     <span className={(record.harvestToInventoryQty || 0) > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}>
                       {record.harvestToInventoryQty ? `${record.harvestToInventoryQty.toLocaleString()}${record.harvestToInventoryUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
+                  <TableCell className="px-4 py-3 text-sm bg-emerald-50/40 whitespace-nowrap text-center">
                     <span className={(record.selfKeptToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
                       {record.selfKeptToSourceQty ? `${record.selfKeptToSourceQty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   {/* 2026-07-09：移除"废弃量"单元格（dispose 功能已下线） */}
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
+                  <TableCell className="px-4 py-3 text-sm bg-emerald-50/40 whitespace-nowrap text-center">
                     {(() => {
-                      const harvestQty = record.harvestQuantity || 0;
+                      // 2026-10-19：完成比例统一以「采收入库量」为准
+                      const harvestQty = record.harvestToInventoryQty || 0;
                       const target = record.targetYield;
                       if (!target || target === 0) return <span className="text-gray-400">-</span>;
                       const rate = harvestQty / target;

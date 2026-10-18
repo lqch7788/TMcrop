@@ -972,10 +972,10 @@ router.get('/transplant-ready', (req: Request, res: Response) => {
         COALESCE(ss.unit, '') AS sourceUnit,
         COALESCE(pp.plan_code, '') AS productionPlanCode
       FROM seedlings s
-      LEFT JOIN crop_varieties cv ON (
-        s.crop_name = cv.sub_variety1_name
-        OR (s.crop_name = cv.variety_name AND cv.sub_variety1_name IS NULL)
-        OR (s.crop_name = cv.variety_name AND cv.sub_variety1_name = '')
+      LEFT JOIN crop_varieties cv ON cv.id = COALESCE(
+        (SELECT id FROM crop_varieties WHERE crop_code = s.crop_code LIMIT 1),
+        (SELECT id FROM crop_varieties WHERE sub_variety1_name = s.crop_name LIMIT 1),
+        (SELECT id FROM crop_varieties WHERE variety_name = s.crop_name AND (sub_variety1_name IS NULL OR sub_variety1_name = '') LIMIT 1)
       )
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
@@ -1081,7 +1081,13 @@ router.get('/', (req: Request, res: Response) => {
         COALESCE(ss.unit, '') AS sourceUnit,
         COALESCE(pp.plan_code, '') AS productionPlanCode
       FROM seedlings s
-      LEFT JOIN crop_varieties cv ON s.crop_name = cv.sub_variety1_name
+      -- 2026-10-18：优先按 crop_code 精确关联品种库（作物名/品种以品种库为准），
+      -- 名称匹配仅作老数据兜底；子查询限定单条，避免 OR 连接导致行重复。
+      LEFT JOIN crop_varieties cv ON cv.id = COALESCE(
+        (SELECT id FROM crop_varieties WHERE crop_code = s.crop_code LIMIT 1),
+        (SELECT id FROM crop_varieties WHERE sub_variety1_name = s.crop_name LIMIT 1),
+        (SELECT id FROM crop_varieties WHERE variety_name = s.crop_name AND (sub_variety1_name IS NULL OR sub_variety1_name = '') LIMIT 1)
+      )
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
       WHERE s.deleted_at IS NULL
