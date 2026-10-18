@@ -211,6 +211,9 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     const modified = db.getRowsModified();
     updateStmt.free();
     if (modified === 0) {
+      // 2026-10-18 P0 修复：本分支在 BEGIN 之后，直接 return 会让事务悬挂在 sql.js 单连接上，
+      // 后续所有 BEGIN 都会报 "cannot start a transaction within a transaction"。
+      try { db.exec('ROLLBACK'); } catch {}
       console.warn(`[inventoryTransactions POST] 乐观锁冲突: instance=${body.instanceId} version=${version}`);
       return res.status(409).json({
         success: false,
@@ -359,9 +362,15 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
     // 2026-10-10 修复：freeze/unfreeze 流水也满足"qty<0 + businessType='other'"（冻结算 other），
     //   之前会被误回填 current_quantity（冻结根本不改 current，删除冻结流水却给库存加量——实测把 1700 抬到 1710）；
     //   按 transaction_type 显式排除冻结/解冻，并保持 rolledBack 为布尔
+    // 2026-10-18 P1 修复：调拨类流水（transfer / transfer_out / inventory_transfer）不回填 ——
+    //   调拨已同时改变源/目标两侧库存，只回填源库存会让总量凭空增加（目标侧不会回退），
+    //   删除流水仅移除记录，不自动改变库存（需要撤销调拨请走调拨审批/反向流程）。
+    const isTransferFlow = ['transfer', 'transfer_out', 'inventory_transfer'].includes(String(txBusinessType))
+      || ['transfer', 'transfer_out'].includes(String(txType));
     const shouldRollback = txQty < 0
       && VALID_OUTBOUND_TYPES.has(txBusinessType)
       && !['freeze', 'unfreeze'].includes(String(txType))
+      && !isTransferFlow
       && !!instanceId;
     db.exec('BEGIN');  // 2026-07-21 修复：回填库存 + 删流水加事务包裹
     try {

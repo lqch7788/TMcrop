@@ -62,6 +62,8 @@ export default function InventoryV3Page() {
   const stocks = useInventoryStore((s) => s.items);
   // 2026-10-10 死代码清理：删除未使用的 stats 选择器（低库存徽章一直是本地重算）
   const loading = useInventoryStore((s) => s.loading);
+  // 2026-10-18 P1 修复：消费 store.error —— 加载失败此前被伪装成"暂无库存数据"
+  const loadError = useInventoryStore((s) => s.error);
   const loadAll = useInventoryStore((s) => s.loadAll);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
 
@@ -424,6 +426,8 @@ export default function InventoryV3Page() {
       sourceType: '',
       keyword: '',
     });
+    // 2026-10-18 P2 修复：重置时同时关闭"只看低库存"，否则重置后列表仍被旧开关过滤
+    setShowLowStockOnly(false);
     setPagination({ ...pagination, current: 1 });
   };
 
@@ -438,9 +442,16 @@ export default function InventoryV3Page() {
   };
 
   // 打开出库弹窗
+  // 2026-10-18 P1 修复：允许集合与 InventoryTable 的 canOutbound 对齐 ——
+  //   原实现拒绝 frozen_partial/frozen，但表格对这两类显示出库按钮（现库中有 6 条 frozen_partial 可复现）
+  const OUTBOUND_ALLOWED_STATUS = new Set([
+    InventoryStatus.IN_STOCK,
+    InventoryStatus.LOW_STOCK,
+    'active', 'frozen_partial', 'frozen',
+  ]);
   const handleOpenOutbound = (stock: InventoryStock) => {
-    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
-      showAlert('只有库存中或低库存状态的物品可以出库');
+    if (!OUTBOUND_ALLOWED_STATUS.has(stock.status as string)) {
+      showAlert('只有库存中、低库存或部分冻结（仍有可用量）的物品可以出库');
       return;
     }
     setSelectedOutboundStock(stock);
@@ -518,6 +529,19 @@ export default function InventoryV3Page() {
         noCard={true}
       />
 
+      {/* 2026-10-18 P1：加载失败提示（此前 store.error 无人消费，失败显示为空列表） */}
+      {loadError && !loading && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm flex items-center justify-between">
+          <span>加载失败：{loadError}</span>
+          <button
+            className="text-red-700 underline hover:no-underline"
+            onClick={() => { void loadAll(); }}
+          >
+            重试
+          </button>
+        </div>
+      )}
+
       {/* 数据表格 */}
       <InventoryTable
         data={filteredStocks}
@@ -584,7 +608,9 @@ export default function InventoryV3Page() {
           isOpen={outboundModalOpen}
           onClose={() => setOutboundModalOpen(false)}
           stock={selectedOutboundStock}
-          onSuccess={handleOutboundSuccess}
+          // 2026-10-18 P2：出库的跨页刷新由 store.addTransaction 内部 notifyChange 完成，
+          // 此处不再重复触发（冻结弹窗仍走 handleOutboundSuccess）。
+          onSuccess={() => {}}
         />
       )}
 

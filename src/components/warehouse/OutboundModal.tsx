@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { InventoryStock } from '../../types/inventory';
 import { useInventoryTransactionStore } from '../../stores/useInventoryTransactionStore';
-import { useInventoryStore } from '../../stores/useInventoryStore';
 // 2026-10-10：出库操作人改取登录用户（原硬编码"系统操作员"）
 import { useAuthStore } from '../../stores/useAuthStore';
 import { OutboundBusinessType, OUTBOUND_BUSINESS_TYPE_META } from '../../constants/outboundConstants';
@@ -76,8 +75,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       // 2026-06-08 修复：addTransaction 现在按 Fail Loud 铁律 throw 真实错误（不再吞掉返回 null），
       // 成功路径才走这里；失败时抛错被下方 catch (err) 接手显示真实 message
       if (result) {
-        // 防御性兜底：Store action 内部已调 notifyChange，但若未生效则手动调一次
-        useInventoryStore.getState().notifyChange();
+        // 2026-10-18 P2 修复：addTransaction 内部已 notifyChange，此处不再重复调用（避免一次出库刷新 2-3 次）
         onSuccess();
         handleClose();
       }
@@ -148,7 +146,10 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
           </div>
           <div>
             <span className="text-gray-500 block">入库日期</span>
-            <span className="text-gray-900">{new Date(stock.inboundDate).toLocaleDateString('zh-CN')}</span>
+            {/* 2026-10-18 P2 修复：inboundDate 为空时 new Date(undefined) 会显示 Invalid Date */}
+            <span className="text-gray-900">
+              {stock.inboundDate ? new Date(stock.inboundDate).toLocaleDateString('zh-CN') : '-'}
+            </span>
           </div>
         </div>
       </div>

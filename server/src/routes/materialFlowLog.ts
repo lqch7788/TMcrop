@@ -237,14 +237,16 @@ router.delete('/:id', (req: Request, res: Response) => {
       operator: { name: req.user?.name, id: req.user?.userId },
       sourcePage: '/crop/material-flow',
     });
-    const result = db.run('DELETE FROM material_flow_log WHERE id = ?', [id]);
-    if ((result as any).changes === 0) {
+    db.run('DELETE FROM material_flow_log WHERE id = ?', [id]);
+    // 2026-10-18：sql.js 的 db.run 返回 Database 对象（无 changes 属性），必须用 getRowsModified()
+    const deletedCount = db.getRowsModified();
+    if (deletedCount === 0) {
       return res.status(404).json({ success: false, error: '流转记录不存在' });
     }
     saveDatabase();
     // 2026-07-16：审计日志（成功也记录）
     console.log(`[audit] material-flow-log DELETE id=${id} by user=${req.user?.userId} (${req.user?.name})`);
-    res.json({ success: true, data: { deletedCount: (result as any).changes } });
+    res.json({ success: true, data: { deletedCount } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -286,13 +288,15 @@ router.delete('/', (req: Request, res: Response) => {
       });
     }
     const placeholders = ids.map(() => '?').join(',');
-    const result = db.run(
+    db.run(
       `DELETE FROM material_flow_log WHERE id IN (${placeholders})`,
       ids
     );
+    // 2026-10-18：按实际受影响行数返回（sql.js 用 getRowsModified，而非 db.run 的返回值）
+    const deletedCount = db.getRowsModified();
     saveDatabase();
-    console.log(`[audit] material-flow-log BATCH DELETE count=${ids.length} by user=${req.user?.userId} (${req.user?.name})`);
-    res.json({ success: true, data: { deletedCount: (result as any).changes } });
+    console.log(`[audit] material-flow-log BATCH DELETE count=${deletedCount}/${ids.length} by user=${req.user?.userId} (${req.user?.name})`);
+    res.json({ success: true, data: { deletedCount } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }

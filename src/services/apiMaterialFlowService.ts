@@ -29,6 +29,29 @@ export async function getFlowLogs(params: {
   return enhancedApiClient.get(`/material-flow-log${query ? `?${query}` : ''}`);
 }
 
+/**
+ * 2026-10-18 P1 修复：按当前筛选拉取全部流转记录（用于"导出全部"）。
+ * 后端 pageSize 上限 100，这里循环分页；超过 MAX_EXPORT_ROWS 时截断并显式返回 truncated。
+ */
+export async function getAllFlowLogs(params: {
+  flowType?: string; cropName?: string; batchCode?: string;
+  startDate?: string; endDate?: string;
+}): Promise<{ list: FlowRow[]; total: number; truncated: boolean }> {
+  const PAGE_SIZE = 100;
+  const MAX_EXPORT_ROWS = 5000;
+  const all: FlowRow[] = [];
+  let total = 0;
+  for (let page = 1; page <= Math.ceil(MAX_EXPORT_ROWS / PAGE_SIZE); page++) {
+    const res = await getFlowLogs({ ...params, page, pageSize: PAGE_SIZE });
+    const list = res.list || [];
+    total = res.total || all.length + list.length;
+    all.push(...list);
+    if (list.length < PAGE_SIZE || all.length >= total) break;
+  }
+  const truncated = all.length > MAX_EXPORT_ROWS;
+  return { list: truncated ? all.slice(0, MAX_EXPORT_ROWS) : all, total, truncated };
+}
+
 export async function traceFlow(code: string): Promise<FlowRow[]> {
   return enhancedApiClient.get(`/material-flow-log/trace?code=${encodeURIComponent(code)}`);
 }

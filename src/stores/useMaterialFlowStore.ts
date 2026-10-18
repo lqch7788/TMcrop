@@ -11,6 +11,10 @@ interface MaterialFlowState {
   loading: boolean;
   traceData: any[];
   statsData: any[];
+  // 2026-10-18 P2 修复：三个统计 tab 分桶存储 —— 原共用 statsData，切 tab 时会先渲染上一 tab 的数据
+  seedlingStats: any[];
+  plantingStats: any[];
+  annualStats: any[];
   // 2026-07-28 审核 H-8：error 状态（修复吞错，"Fail Loud"原则）
   error: string | null;
 
@@ -31,6 +35,9 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
   loading: false,
   traceData: [],
   statsData: [],
+  seedlingStats: [],
+  plantingStats: [],
+  annualStats: [],
   error: null,
 
   loadLogs: async (params) => {
@@ -57,7 +64,7 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await flowService.getCropStats(year);
-      set({ statsData: data || [], loading: false });
+      set({ statsData: data || [], seedlingStats: data || [], loading: false });
     } catch (e: any) {
       set({ loading: false, error: e?.message || '加载作物统计失败' });
     }
@@ -67,7 +74,7 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await flowService.getSourceStats(year);
-      set({ statsData: data || [], loading: false });
+      set({ statsData: data || [], plantingStats: data || [], loading: false });
     } catch (e: any) {
       set({ loading: false, error: e?.message || '加载来源统计失败' });
     }
@@ -77,7 +84,7 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await flowService.getAnnualStats(year);
-      set({ statsData: data || [], loading: false });
+      set({ statsData: data || [], annualStats: data || [], loading: false });
     } catch (e: any) {
       set({ loading: false, error: e?.message || '加载年度统计失败' });
     }
@@ -96,9 +103,11 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
 
   batchDeleteLogs: async (ids) => {
     try {
-      await flowService.batchDeleteFlowLogs(ids);
+      const res = await flowService.batchDeleteFlowLogs(ids);
+      // 2026-10-18 P2 修复：用后端实际 deletedCount（部分 id 不存在时不再按 ids.length 多减）
+      const deleted = Number(res?.deletedCount ?? ids.length) || 0;
       const idSet = new Set(ids);
-      set({ logs: get().logs.filter((l: any) => !idSet.has(l.id)), total: Math.max(0, get().total - ids.length) });
+      set({ logs: get().logs.filter((l: any) => !idSet.has(l.id)), total: Math.max(0, get().total - deleted) });
       return true;
     } catch (e: any) {
       set({ error: e?.message || '批量删除失败' });

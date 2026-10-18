@@ -206,5 +206,10 @@ export function fieldsToResetOnSourceTypeChange(): string[] {
     'baseName',
     'plantingMode',
     'greenhouseName',
+    // 2026-10-18 P2 修复：补录专属字段切换来源时必须清空，避免残留旧源行/旧原因
+    'sourceId',
+    'sourceModule',
+    'sourceCode',
+    'supplementaryReason',
   ];
 }

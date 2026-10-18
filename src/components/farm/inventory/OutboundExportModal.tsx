@@ -29,8 +29,9 @@ interface OutboundExportModalProps {
 //   word  → 前端 docx（与种源一致，备用）
 const exportFormats = [
   { value: 'excel' as const, label: 'Excel (.xlsx)', desc: '前端生成，明细 + 汇总双 sheet' },
-  { value: 'csv' as const, label: 'CSV (.csv)', desc: '后端生成，适用于数据交换' },
-  { value: 'word' as const, label: 'Word (.docx)', desc: '前端生成，适用于文档编辑和分享' },
+  { value: 'csv' as const, label: 'CSV (.csv)', desc: '前端生成，适用于数据交换' },
+  // 2026-10-18 P3：文案与实际行为对齐（选择 Word 目前只会提示改用 Excel/CSV）
+  { value: 'word' as const, label: 'Word (.docx)', desc: '暂不支持，选择后将提示改用 Excel/CSV' },
 ];
 
 export function OutboundExportModal({ isOpen, onClose, selectedCount, onConfirm }: OutboundExportModalProps) {

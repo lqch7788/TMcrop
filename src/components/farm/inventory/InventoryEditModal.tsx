@@ -88,6 +88,12 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       showAlert('请输入有效的数量（非负整数）');
       return;
     }
+    // 2026-10-18 P1 修复：数量不得低于已冻结数量（否则出现 current < frozen 的非法状态）
+    const frozen = Number(stock.frozenQuantity ?? 0);
+    if (qty < frozen) {
+      showAlert(`数量不能低于已冻结数量（${frozen}）`);
+      return;
+    }
     try {
       // 2026-07-28 审核 H-4：改用 Store 的 updateItem action（自动 notifyChange 跨页刷新 + 乐观更新）
       const result = await updateItem(stock.instanceId, {

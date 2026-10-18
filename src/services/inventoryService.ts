@@ -268,8 +268,11 @@ export async function getInventoryByInstanceId(
     );
     return data ? toCamelStock(data) : null;
   } catch (e) {
-    console.warn('[inventoryService] 查询失败，返回 null:', e);
-    return null;
+    // 2026-10-18 P1 修复：仅"确实不存在"（404）返回 null；网络/服务端错误必须抛出，
+    // 否则调用方会把"加载失败"误判为"库存不存在"（详情弹窗空白无提示）。
+    const status = (e as { status?: number })?.status;
+    if (status === 404) return null;
+    throw e;
   }
 }
 
@@ -480,8 +483,13 @@ function toCamelStock(row: any): InventoryStock {
     stocktakeNo: row.stocktake_no ?? row.stocktakeNo ?? null,
     // baseId/baseName 已在行 471-472 定义（基础字段块），此处不再重复
     cropForm: row.crop_form ?? row.cropForm ?? null,
-    // operatorName/createBy/createTime/updateTime 已在 InventoryStock 类型定义，但 toCamelStock 未映射
+    // operatorName/createBy/createTime/updateTime 已在 InventoryStock 类型定义
     operatorName: row.operator_name ?? row.operatorName ?? null,
+    // 2026-10-18 P1 修复：补映射创建/更新时间 —— 此前 toCamelStock 白名单丢弃这两个字段，
+    // 导致详情弹窗「创建时间 / 更新时间」恒为 '-'（表里实际有 create_time/update_time）
+    createBy: row.create_by ?? row.createBy ?? null,
+    createTime: row.create_time ?? row.createTime ?? null,
+    updateTime: row.update_time ?? row.updateTime ?? null,
     // ========== 2026-07-13：补录入库字段（is_supplementary / supplementary_reason / source_module / source_id / source_code）==========
     isSupplementary: Number(row.is_supplementary ?? row.isSupplementary ?? 0),
     supplementaryReason: row.supplementary_reason ?? row.supplementaryReason ?? null,

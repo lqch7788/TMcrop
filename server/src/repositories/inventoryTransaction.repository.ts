@@ -101,13 +101,13 @@ export class InventoryTransactionRepository {
     if (stockType)    { where.push(`t.stock_type = ?`);     whereParams.push(stockType); }
     if (operatorName) { where.push(`t.operator_name LIKE ?`); whereParams.push(`%${operatorName}%`); }
     if (businessType) { where.push(`t.business_type = ?`);  whereParams.push(businessType); }
+    // 2026-10-18 P0 修复：仓库/品种必须放在 WHERE —— 原写法放进 LEFT JOIN 的 ON 子句，
+    // LEFT JOIN 不会因 ON 不匹配而排除左表行 → 这两个筛选永远不生效；
+    // 且原参数按 where→on 顺序 push，与 SQL 占位符（ON 在前）顺序相反，会造成参数错位。
+    if (warehouseId)  { where.push(`s.warehouse_id = ?`);   whereParams.push(warehouseId); }
+    if (cropName)     { where.push(`s.crop_name LIKE ?`);   whereParams.push(`%${cropName}%`); }
 
-    // ON 子句过滤（针对 inventory_stock 字段，LEFT JOIN 不退化为 INNER JOIN）
-    const onClauses: string[] = [];
-    if (warehouseId) { onClauses.push(`s.warehouse_id = ?`);  whereParams.push(warehouseId); }
-    if (cropName)    { onClauses.push(`s.crop_name LIKE ?`);  whereParams.push(`%${cropName}%`); }
-
-    const onSql = onClauses.length ? `AND ${onClauses.join(' AND ')}` : '';
+    const onSql = '';
 
     // 列表查询
     const listSql = `
@@ -175,11 +175,10 @@ export class InventoryTransactionRepository {
     if (stockType)    { where.push(`t.stock_type = ?`);     whereParams.push(stockType); }
     if (operatorName) { where.push(`t.operator_name LIKE ?`); whereParams.push(`%${operatorName}%`); }
     if (businessType) { where.push(`t.business_type = ?`);  whereParams.push(businessType); }
-
-    const onClauses: string[] = [];
-    if (warehouseId) { onClauses.push(`s.warehouse_id = ?`);  whereParams.push(warehouseId); }
-    if (cropName)    { onClauses.push(`s.crop_name LIKE ?`);  whereParams.push(`%${cropName}%`); }
-    const onSql = onClauses.length ? `AND ${onClauses.join(' AND ')}` : '';
+    // 2026-10-18 P0 修复：同 findOutbound —— 仓库/品种放 WHERE，参数顺序与 SQL 一致
+    if (warehouseId)  { where.push(`s.warehouse_id = ?`);   whereParams.push(warehouseId); }
+    if (cropName)     { where.push(`s.crop_name LIKE ?`);   whereParams.push(`%${cropName}%`); }
+    const onSql = '';
     const whereSql = where.join(' AND ');
 
     // 总数 + 总量

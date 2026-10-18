@@ -45,6 +45,8 @@ import { translateForm, translateArea } from '../../../constants/formDictionary'
 import { useInventoryStore } from '../../../stores/useInventoryStore';
 // 2026-10-10：组件内直连 API 抽到 service 层（调拨申请单详情查询）
 import { getTransferApplicationById } from '../../../services/apiInventoryTransfer';
+// 2026-10-18 P2：导出文件名改用本地日期（避免 UTC 时区 0-8 点显示昨天）
+import { todayLocal } from '@/lib/dateUtils';
 
 type TabKey = 'basic' | 'history' | 'trace';
 
@@ -116,6 +118,14 @@ const BUSINESS_TYPE_META: Record<string, { label: string; bg: string; text: stri
  * 货币格式化：null/undefined → "-"
  * 2026-07-08 T7：财务信息"单价/总金额"专用
  */
+/** 2026-10-18：时间本地化（ISO 字符串 → 本地日期时间；无法解析时原样返回） */
+function formatDateTime(value?: string | null): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 function formatCurrency(value?: number | null): string {
   if (value == null) return '-';
   return `¥ ${value.toFixed(2)}`;
@@ -139,6 +149,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   const [resolving, setResolving] = useState(false);
   // 2026-07-14：加载失败时显示具体错误（之前失败时弹窗永远 skeleton）
   const [resolveError, setResolveError] = useState<string | null>(null);
+  // 2026-10-18 P1 修复：重试计数 —— 原重试按钮只清 state，effect 依赖未变，不会重新请求
+  const [resolveRetryKey, setResolveRetryKey] = useState(0);
 
   useEffect(() => {
     if (!isOpen || !stock?.instanceId) return;
@@ -146,9 +158,14 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     const isIncomplete = !stock.cropName && !stock.stockType;
     if (isIncomplete) {
       setResolving(true);
+      setResolveError(null);
       // 2026-07-10 P0-6 修复：catch(() => {}) → catch(e) { console.error(...) }（之前失败时弹窗永远 skeleton）
       // 2026-07-14 修复：失败时设置 resolveError 状态，让 UI 不再永远 skeleton
       getInventoryByInstanceId(stock.instanceId).then((data) => {
+        if (!data) {
+          // 2026-10-18 P1：404 由 service 返回 null，必须明确提示而非渲染空弹窗
+          setResolveError(`未找到库存 ${stock.instanceId}`);
+        }
         setResolvedStock(data);
         setResolving(false);
       }).catch((e) => {
@@ -160,7 +177,7 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
       setResolvedStock(null); // 使用 prop 数据
       setResolveError(null);
     }
-  }, [isOpen, stock?.instanceId, stock?.cropName, stock?.stockType]);
+  }, [isOpen, stock?.instanceId, stock?.cropName, stock?.stockType, resolveRetryKey]);
 
   // 优先用 prop 完整数据，其次用 API 加载的数据
   const effectiveStock: InventoryStock | null = (!stock?.cropName && !stock?.stockType)
@@ -197,16 +214,25 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     setLoading(true);
     setError(null);
     try {
-      const [txs, fzs, ups, downs] = await Promise.all([
+      // 2026-10-18 P2 修复：改用 allSettled —— 上下游追溯失败不再拖垮操作历史/冻结记录加载
+      const [txRes, fzRes, upRes, downRes] = await Promise.allSettled([
         getTransactions(stock.instanceId),
         getFreezes(stock.instanceId),
         traceUpstream(stock.instanceId, 5),
         traceDownstream(stock.instanceId, 5),
       ]);
-      setTransactions(txs);
-      setFreezes(fzs);
-      setUpstream(ups);
-      setDownstream(downs);
+      const failed: string[] = [];
+      if (txRes.status === 'fulfilled') setTransactions(txRes.value); else failed.push('操作历史');
+      if (fzRes.status === 'fulfilled') setFreezes(fzRes.value); else failed.push('冻结记录');
+      if (upRes.status === 'fulfilled') setUpstream(upRes.value); else failed.push('上游追溯');
+      if (downRes.status === 'fulfilled') setDownstream(downRes.value); else failed.push('下游追溯');
+      if (failed.length > 0) {
+        const first = [txRes, fzRes, upRes, downRes]
+          .find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+        const detail = first?.reason instanceof Error ? first.reason.message : '';
+        setError(`部分数据加载失败：${failed.join('、')}${detail ? `（${detail}）` : ''}`);
+        console.error('[InventoryDetailModal] loadAllData partial failure:', failed, first?.reason);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : '加载失败';
       setError(msg);
@@ -263,8 +289,9 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               onClick={() => {
                 setResolveError(null);
-                // 重置 stock prop 让 useEffect 重新触发加载
                 setResolvedStock(null);
+                // 2026-10-18 P1：触发 resolve effect 重新请求
+                setResolveRetryKey((k) => k + 1);
               }}
             >
               重试
@@ -627,8 +654,9 @@ function BasicTab({
       items: [
         ['操作员',   stock.operatorName || '-'],
         ['创建人',   stock.createBy || '-'],
-        ['创建时间', stock.createTime || '-'],
-        ['更新时间', stock.updateTime || '-'],
+        // 2026-10-18：时间字段本地化显示（此前直接输出 ISO 字符串）
+        ['创建时间', formatDateTime(stock.createTime)],
+        ['更新时间', formatDateTime(stock.updateTime)],
       ],
     },
     // 2026-07-13：补录信息区块（仅 isSupplementary=1 的记录显示）
@@ -842,7 +870,7 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '操作历史');
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocal();
     XLSX.writeFile(wb, `库存操作历史_${today}.xlsx`);
   };
 
@@ -990,7 +1018,8 @@ function TraceTab({
               const isCINode = item.instanceId?.startsWith('CI');
               return (
                 <div
-                  key={idx}
+                  // 2026-10-18 P3：优先用实例ID作 key（索引 key 在刷新时可能复用错位）
+                  key={item.instanceId ?? `up-${depth}-${idx}`}
                   className={`relative pl-3 border-l-2 rounded-r transition-colors ${
                     isCINode
                       ? 'border-amber-300 bg-amber-50/30 cursor-default'
@@ -1052,7 +1081,8 @@ function TraceTab({
               const isOutboundTx = item.stockType === 'outbound';
               return (
                 <div
-                  key={idx}
+                  // 2026-10-18 P3：优先用实例ID作 key
+                  key={item.instanceId ? `${item.instanceId}-${depth}-${idx}` : `down-${depth}-${idx}`}
                   className={`relative pl-3 border-l-2 rounded-r transition-colors ${isOutboundTx ? 'border-orange-300 bg-orange-50/50' : 'border-blue-300 hover:bg-blue-50 cursor-pointer'}`}
                   style={{ marginLeft: `${(depth - 1) * 12}px` }}
                   onClick={() => !isOutboundTx && onSelectChild?.(item.instanceId)}
