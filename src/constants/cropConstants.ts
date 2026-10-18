@@ -28,6 +28,22 @@ export const SOURCE_TYPE_MAP: Record<string, string> = {
   bulb: '种球/球根',
   spore: '孢子/菌种',
   other: '其他',
+  // 2026-10-19：补全实际数据中出现的来源类型（避免列表/详情/导出直出英文）
+  external_seed: '外部种子',
+  transfer: '调拨',
+  seedling_planting: '种苗种植',
+};
+
+// 2026-10-19：种植结束类型英文枚举 → 中文（列表/详情/导出共用）
+export const PLANTING_END_TYPE_MAP: Record<string, string> = {
+  normal: '正常结束',
+  abnormal: '异常结束',
+  harvest: '采收入库',
+  circulate: '残株回种源',
+  circulate_to_inventory: '残株回库存',
+  self_seed: '自交种子入种源',
+  disposal: '废弃',
+  cancelled: '已取消',
 };
 
 // ========== 种苗形态映射（@deprecated 2026-07-07 — 迁移至 src/constants/seedFormDict.ts）==========

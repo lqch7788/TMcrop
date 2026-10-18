@@ -362,14 +362,19 @@ export async function executeInboundFromSource(
         const tableName = input.sourceModule === 'planting' ? 'plantings' : 'seedlings';
         if (input.sourceModule === 'planting') {
           // 种植：累加数量 + 记录最近一次入库单位（列表"已入库量"列显示单位用）
+          // 2026-10-19：同步累加 harvest_quantity（列表「已采收」列与「完成比例」数据源）。
+          // 行级采收入库本质上同时完成了采收登记，此前只写 harvest_to_inventory_qty，
+          // 导致采收后「已采收」仍为 0、完成比例不变。
           const updateStmt = db.prepare(
-            `UPDATE plantings SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?, harvest_to_inventory_unit = ?, update_time = ? WHERE id = ?`,
+            `UPDATE plantings SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?,
+                harvest_quantity = COALESCE(harvest_quantity, 0) + ?,
+                harvest_to_inventory_unit = ?, update_time = ? WHERE id = ?`,
           );
-          updateStmt.bind([totalQuantity, input.unit || null, now, input.sourceRecordId]);
+          updateStmt.bind([totalQuantity, totalQuantity, input.unit || null, now, input.sourceRecordId]);
           updateStmt.step();
           updateStmt.free();
           console.log(
-            `[种植入库回写] plantings[${input.sourceRecordId}].harvest_to_inventory_qty += ${totalQuantity}`,
+            `[种植入库回写] plantings[${input.sourceRecordId}].harvest_to_inventory_qty / harvest_quantity += ${totalQuantity}`,
           );
         } else {
           const updateStmt = db.prepare(

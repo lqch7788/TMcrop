@@ -152,6 +152,16 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     targetYield: item.targetYield || 0,
     targetYieldUnit: item.targetYieldUnit || '克',
     unit: item.unit || '',
+    // 2026-10-19：补齐此前被丢弃的后端字段（列表 SELECT 已返回 / 详情 SELECT * 返回）
+    greenhouseName: item.greenhouseName || '',
+    areaOid: item.areaOid || '',
+    plantedQuantity: item.plantedQuantity || 0,
+    survivalQuantity: item.survivalQuantity || 0,
+    survivalRate: item.survivalRate || 0,
+    growthStatus: item.growthStatus || '',
+    expectedHarvestDate: item.expectedHarvestDate ? String(item.expectedHarvestDate).split('T')[0] : '',
+    actualHarvestDate: item.actualHarvestDate ? String(item.actualHarvestDate).split('T')[0] : '',
+    createById: item.createById || '',
     originPath: (item.originPath as 'direct_from_seed' | 'via_seedling') || undefined,
     // 2026-06-17: 种植结束字段（5 种结束方式标记）
     endType: (item.endType as Planting['endType']) || undefined,
@@ -336,29 +346,8 @@ export async function deletePlantings(ids: string[]): Promise<boolean> {
   return true;
 }
 
-/**
- * 采收种植记录
- * 数据流：API → SQLite DB
- *
- * 2026-06-06: 修复 ZP-2 数据静默丢失 bug
- * 后端 POST /:id/harvest 路由解构 `harvest_quantity, harvest_date` (snake_case)
- * 之前 payload 用 camelCase 导致后端读到 undefined, harvest_quantity 永远为 0
- * 这里把 UI 字段（camelCase 入参）翻译成后端期望的 snake_case
- */
-export async function harvestPlanting(
-  id: string,
-  harvestDate: string,
-  harvestCount?: number,
-  // 2026-06-25: 损耗率（采收后自动计算并写回 plantings.attrition_rate）
-  attritionRate?: number
-): Promise<boolean> {
-  await enhancedApiClient.post(`/plantings/${id}/harvest`, {
-    harvest_date: harvestDate,
-    harvest_quantity: harvestCount,
-    attrition_rate: attritionRate,
-  });
-  return true;
-}
+// 2026-10-19：删除旧「采收登记」API（POST /plantings/:id/harvest）。
+// 所有采收统一走行级「采收」弹窗 + 入库主链路，口径以 harvest_to_inventory_qty 为准。
 
 /**
  * 获取未采收的种植记录

@@ -17,6 +17,7 @@ import { Button, DeleteConfirmModal } from '@/components/ui';
 import { useToast } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { QUALITY_GRADE_MAP } from '@/constants/cropConstants';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 // 2026-07-28 审核 C-3：CSV 也改用前端 selectedData 生成（与 XLSX 对齐），修复"勾选无效"bug
 import { exportCsv } from '@/services/exporters';
@@ -215,7 +216,8 @@ export default function OutboundRecordsPage() {
           '品种':       r.varietyName || '',
           '种植模式':   r.plantingMode || '',
           '采收区域':   r.greenhouseName || '',
-          '品质等级':   r.grade || '',
+          // 2026-10-19：品质等级统一中文
+          '品质等级':   QUALITY_GRADE_MAP[r.grade || '']?.label || r.grade || '',
           '出库数量':   r.quantityOut,
           '单位':       r.unit || '',
           '余额前':     r.balanceBefore,

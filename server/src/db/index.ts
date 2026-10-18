@@ -178,6 +178,21 @@ export async function initDatabase(): Promise<Database> {
   db.run('PRAGMA foreign_keys = ON');
   console.log('[db-safety] PRAGMA foreign_keys = ON');
 
+  // 2026-10-19 P0 修复：数据库曾被 better-sqlite3 脚本设为 WAL 并持久化到文件头。
+  // sql.js 的 export() 只读取主数据库文件，不包含 WAL 中已提交但未 checkpoint 的数据，
+  // 导致 saveDatabase() 写盘的是旧快照 —— 服务重启后新写入的数据全部丢失。
+  // 启动时切回 DELETE 模式（切换过程会把 WAL 合并回主文件），保证 export 完整。
+  try {
+    const jmRow = db.exec('PRAGMA journal_mode');
+    const currentMode = String(jmRow[0]?.values?.[0]?.[0] || '').toLowerCase();
+    if (currentMode === 'wal') {
+      db.exec('PRAGMA journal_mode = DELETE');
+      console.log('[db-safety] journal_mode 已从 WAL 切换为 DELETE（修复落盘丢数据）');
+    }
+  } catch (e: any) {
+    console.error('[db-safety] journal_mode 切换失败（落盘可能丢数据）:', e?.message || e);
+  }
+
   console.log('[db-safety] db 加载完成,已启动写盘保护（只允许 /api/admin/db-commit）');
 
   return db;
@@ -241,6 +256,11 @@ export function saveDatabase(): void {
   isSaving = true;
   const tmpPath = DB_PATH + '.save.tmp';
   try {
+    // 2026-10-19 P0：export 前强制 WAL checkpoint（幂等；非 WAL 模式无副作用），
+    // 确保已提交数据全部合并进主文件后再导出，避免写盘旧快照。
+    try {
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch { /* 非 WAL 模式忽略 */ }
     const data = db.export();
     const buffer = Buffer.from(data);
 
@@ -270,7 +290,8 @@ export function saveDatabase(): void {
     //   真正的错误反而被淹没。需要观察写盘时设环境变量 DB_LOG_VERBOSE=1 即可恢复。
     //   失败日志（下方 catch）始终打印，不受开关影响 —— 保持 Fail Loud。
     if (process.env.DB_LOG_VERBOSE === '1') {
-      console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes`);
+      // 2026-10-19：诊断落盘路径（E2E 数据可靠性验证）
+      console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes → ${DB_PATH}`);
     }
   } catch (e: any) {
     lastSaveError = e;

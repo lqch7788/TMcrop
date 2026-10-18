@@ -23,6 +23,7 @@
  */
 
 import { getDatabase } from '../db';
+import { queryToObjects } from '../utils/queryHelper';
 
 /**
  * 校验每日记录的损耗/补栽是否合法
@@ -72,7 +73,90 @@ export function normalizeChangeData(raw: any): { lossChange: number; supplementC
 }
 
 /**
- * 应用每日记录的 delta 到 plantings 主表
+ * 同步区域库存（planting_area_stocks）
+ *
+ * 列表「剩余数量」= Σ planting_area_stocks.quantity（见 planting.ts 列表 SELECT），
+ * 损耗/补栽若只改主表 loss_count/supplement_count，剩余数量不会变化。
+ *
+ * @param delta >0：补栽（或回滚损耗），加入主区域库存
+ *              <0：损耗（或回滚补栽），主区域优先扣减，不足再按数量降序扣其它区域
+ */
+function applyAreaStockDelta(plantingId: string, delta: number, now: string): void {
+  if (delta === 0) return;
+  const db = getDatabase();
+
+  if (delta > 0) {
+    // 优先加到种植单的主区域（plantings.area_id），否则加到数量最大的区域
+    const primary = queryToObjects<any>(
+      db,
+      `SELECT s.id
+       FROM planting_area_stocks s
+       JOIN plantings p ON p.id = s.planting_id
+       WHERE s.planting_id = ?
+       ORDER BY CASE WHEN s.area_id = p.area_id THEN 0 ELSE 1 END, s.quantity DESC
+       LIMIT 1`,
+      [plantingId],
+    );
+    if (primary.length > 0) {
+      db.run(
+        `UPDATE planting_area_stocks SET quantity = quantity + ?, update_time = ? WHERE id = ?`,
+        [delta, now, primary[0].id],
+      );
+      return;
+    }
+    // 无区域库存行（历史数据）：按主表区域补建一条
+    const planting = queryToObjects<any>(
+      db,
+      `SELECT area_id, area_name, planting_code, planting_date FROM plantings WHERE id = ?`,
+      [plantingId],
+    );
+    if (planting.length === 0) return;
+    const p = planting[0];
+    db.run(
+      `INSERT INTO planting_area_stocks
+        (id, planting_id, area_id, area_name, quantity, source_type, source_code, operation_date, create_time, update_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        `STK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        plantingId,
+        p.areaId || 'UNASSIGNED',
+        p.areaName || '未分配',
+        delta,
+        'daily_record',
+        p.plantingCode || '',
+        now.slice(0, 10),
+        now,
+        now,
+      ],
+    );
+    return;
+  }
+
+  // 扣减：主区域优先，其余按数量降序；库存不足时扣到 0 为止（不产生负数）
+  let remaining = -delta;
+  const stocks = queryToObjects<any>(
+    db,
+    `SELECT s.id, s.quantity
+     FROM planting_area_stocks s
+     JOIN plantings p ON p.id = s.planting_id
+     WHERE s.planting_id = ? AND s.quantity > 0
+     ORDER BY CASE WHEN s.area_id = p.area_id THEN 0 ELSE 1 END, s.quantity DESC`,
+    [plantingId],
+  );
+  for (const s of stocks) {
+    if (remaining <= 0) break;
+    const take = Math.min(Number(s.quantity || 0), remaining);
+    if (take <= 0) continue;
+    db.run(
+      `UPDATE planting_area_stocks SET quantity = quantity - ?, update_time = ? WHERE id = ?`,
+      [take, now, s.id],
+    );
+    remaining -= take;
+  }
+}
+
+/**
+ * 应用每日记录的 delta 到 plantings 主表 + 区域库存
  * @param sign +1 表示新增/编辑正向；-1 表示删除/编辑反向补偿
  */
 export function applyDailyChangeToPlanting(
@@ -85,6 +169,7 @@ export function applyDailyChangeToPlanting(
   if (lc === 0 && rc === 0) return;
 
   const db = getDatabase();
+  const now = new Date().toISOString();
   // MAX(0, col + delta) 累加（保证不会出现负数）
   db.run(
     `UPDATE plantings
@@ -92,6 +177,26 @@ export function applyDailyChangeToPlanting(
          supplement_count = MAX(0, supplement_count + ? * ?),
          update_time = ?
      WHERE id = ?`,
-    [lc, sign, rc, sign, new Date().toISOString(), plantingId]
+    [lc, sign, rc, sign, now, plantingId]
   );
+
+  // 2026-10-19：同步区域库存，保证列表「剩余数量」随损耗/补栽变化
+  applyAreaStockDelta(plantingId, (rc - lc) * sign, now);
+
+  // 2026-10-19：同步计算损耗率 = 累计损耗 ÷（种植数量 + 累计补栽）× 100%
+  // 说明：行级采收入库的数量是产物重量（如千克），与植株数量不同量纲，
+  // 不能用于损耗率计算，因此损耗率以每日记录的损耗/补栽为口径。
+  const rows = queryToObjects<any>(
+    db,
+    `SELECT planting_quantity, loss_count, supplement_count FROM plantings WHERE id = ?`,
+    [plantingId],
+  );
+  if (rows.length > 0) {
+    const qty = Number(rows[0].plantingQuantity ?? rows[0].planting_quantity ?? 0);
+    const loss = Number(rows[0].lossCount ?? rows[0].loss_count ?? 0);
+    const supp = Number(rows[0].supplementCount ?? rows[0].supplement_count ?? 0);
+    const base = qty + supp;
+    const rate = base > 0 ? Math.round((loss / base) * 1000) / 10 : 0;
+    db.run('UPDATE plantings SET attrition_rate = ? WHERE id = ?', [rate, plantingId]);
+  }
 }

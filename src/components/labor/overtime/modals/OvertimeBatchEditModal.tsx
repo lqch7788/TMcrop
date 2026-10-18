@@ -6,6 +6,13 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 
+// 2026-10-19：加班类型英文枚举 → 中文
+const OVERTIME_TYPE_LABELS: Record<string, string> = {
+  workday: '工作日加班',
+  weekend: '休息日加班',
+  holiday: '节假日加班',
+};
+
 interface OvertimeBatchEditModalProps {
   isOpen: boolean;
   selectedRows: string[];
@@ -93,7 +100,7 @@ export function OvertimeBatchEditModal({
             <option value="">请选择记录</option>
             {selectedRecords.map(record => (
               <option key={record.id} value={record.id.toString()}>
-                {record.date} - {record.staffName} - {record.type}{' '}
+                {record.date} - {record.staffName} - {OVERTIME_TYPE_LABELS[record.type] || record.type}{' '}
                 {editedRecordIds.includes(record.id.toString()) && '✅ 已编辑'}
               </option>
             ))}

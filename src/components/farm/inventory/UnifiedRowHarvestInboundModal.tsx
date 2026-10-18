@@ -36,6 +36,7 @@ import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
 // 2026-07-01: 行级采收入库成功后需要同步写 planting_harvest_records，让 HarvestRecordModal 历史表能显示
 import { usePlantingStore } from '@/stores/usePlantingStore'
 import { todayLocal } from '@/lib/dateUtils'
+import { MEASURABLE_UNIT_CODES } from '@/constants/units'
 import { getSeedlingRemainingCount } from '@/lib/seedlingPool'
 import { showAlert, showConfirm } from '@/lib/dialogService'
 // 2026-07-07：HARVEST_FORMS / SOURCE_FORMS 字面量迁移至统一字典 seedFormDict
@@ -83,6 +84,14 @@ const SOURCE_FORMS = SEED_FORM_OPTIONS
 
 const deepInputClass =
   'px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner'
+
+// 2026-10-18：采收入库单位白名单已抽到 constants/units.ts（MEASURABLE_UNIT_CODES），
+// 与留种记录共用同一份"可明确计量单位"规则。
+
+// 2026-10-18：同义单位规范化，避免历史数据直接回退默认单位造成数量级错误
+const HARVEST_UNIT_ALIASES: Record<string, string> = {
+  '公斤': '千克',
+}
 
 // ============ Props ============
 
@@ -144,19 +153,23 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [remarks, setRemarks] = useState<string>('')
   // 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal，本弹窗不再处理补录
   // 2026-07-06：删除单价字段（用户需求），后端 unit_price 默认为 0
-  const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
+  // 2026-10-18：源记录单位先做同义规范化（公斤→千克），
+  // 若为模糊包装单位（如"袋"）不在白名单内，则回退默认"克"
+  const normalizedSourceUnit = HARVEST_UNIT_ALIASES[sourceRecord.unit || ''] || (sourceRecord.unit || '')
+  const initialUnit = normalizedSourceUnit && MEASURABLE_UNIT_CODES.has(normalizedSourceUnit)
+    ? normalizedSourceUnit
+    : '克'
+  const [unit, setUnit] = useState<string>(initialUnit)
   // 2026-06-19: 种源形态（仅种源行入库必填）— 2026-06-30 Bug 21 删：用户选 B，
   //   改为统一从产品明细 sourceForm（= inventory_stock.source_form）读形态
   // 2026-06-27：成品形态（仅种植行入库时使用）
   const [harvestForm, setHarvestForm] = useState<string>('')
 
-  // 2026-07-01: 字段绑定交换（与种植 HarvestRecordModal 一致）
-  // 历史 bug：seedlings/seed_sources/plantings 等主表的 crop_name 字段实际存"品种"（如"红富士"），
-  // crop_variety 字段实际存"类型/名称"（如"苹果"）—— 字段名与值语义相反。
-  // 入库时需要把字段名交换，让"作物名称"列显示苹果、"作物品种"列显示红富士。
-  // 弹窗顶部 "源记录" 区域也保持原值（让用户能看到原始数据），只在入库产品明细里做交换。
-  const initialCropName = sourceRecord.cropVariety || ''  // "苹果"（取 seedlings.crop_variety）
-  const initialCropVariety = sourceRecord.cropName || ''  // "红富士"（取 seedlings.crop_name）
+  // 2026-10-19：不再按模块盲交换 cropName/cropVariety。
+  // 种植表新老数据字段语义混用（旧数据反置、新数据正常），盲交换会让新数据入库后串字段。
+  // 直接使用调用方传入的字段值（种植列表已通过品种库解析展示，来源值可信）。
+  const initialCropName = sourceRecord.cropName || ''
+  const initialCropVariety = sourceRecord.cropVariety || ''
 
   // products: 种源/育苗 lock 1 条，种植允许多条
   const [products, setProducts] = useState<InboundProduct[]>([
@@ -166,7 +179,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       cropVariety: initialCropVariety,
       plantingMode: sourceRecord.plantingMode || '',
       harvestQuantity: 0,
-      unit: sourceRecord.unit || '克',
+      unit: initialUnit,
       grade: '',
       sourceForm: '',  // 采收形态（果实/籽/枝条等）
       // 2026-06-30 Bug 12 修复：成品形态（写入 inventory_stock.product_form）
@@ -218,7 +231,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setHarvesterNames([])
       setOperator(currentUser?.realName || '')
       setRemarks('')
-      setUnit(sourceRecord.unit || '克')
+      setUnit(initialUnit)
       setProducts([
         {
           cropCode: sourceRecord.cropCode || '',
@@ -226,7 +239,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           cropVariety: initialCropVariety,  // 2026-07-01: 字段绑定交换（红富士）
           plantingMode: sourceRecord.plantingMode || '',
           harvestQuantity: 0,
-          unit: sourceRecord.unit || '克',
+          unit: initialUnit,
           grade: '',
           sourceForm: '',  // 采收形态
           productForm: '',  // 2026-06-30 Bug 12 修复：成品形态重置
@@ -251,11 +264,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const unitOptions = useMemo(() => {
     // getDictItems 只接收类别码一个参数（内部自取 store），第二参传了也会被忽略
     const items = getDictItems?.('unit') || []
-    if (items.length > 0) {
-      return items.map((it: any) => ({ value: it.dictCode, label: it.dictValue || it.dictCode }))
-    }
-    // 字典未加载时使用全量单位 fallback（按类型分组，覆盖种源/育苗/种植常见场景）
-    return [
+    const rawOptions = items.length > 0
+      ? items.map((it: any) => ({ value: it.dictCode, label: it.dictValue || it.dictCode }))
+      // 字典未加载时使用全量单位 fallback（按类型分组，覆盖种源/育苗/种植常见场景）
+      : [
       // === 重量类 ===
       { value: '克', label: '克（g）' },
       { value: 'kg', label: '千克（kg）' },
@@ -301,6 +313,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       { value: '亩', label: '亩' },
       { value: '公顷', label: '公顷（ha）' },
     ]
+    // 2026-10-18：过滤掉箱/筐/盘/袋等模糊包装单位，只保留可明确计量的单位
+    return rawOptions.filter((u) => MEASURABLE_UNIT_CODES.has(u.value))
   }, [dictionaries])
 
   const productsLocked = stockType !== 'product'
@@ -319,7 +333,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         cropVariety: initialCropVariety,  // 2026-07-01: 字段绑定交换
         plantingMode: sourceRecord.plantingMode || '',
         harvestQuantity: 0,
-        unit: sourceRecord.unit || '克',
+        unit: initialUnit,
         grade: '',
         sourceForm: '',  // 采收形态
         productForm: '',  // 2026-06-30 Bug 12 修复：成品形态初始值
@@ -634,7 +648,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             </div>
             <div className="text-xs text-emerald-700">
               {sourceRecord.cropName || '-'} {sourceRecord.cropVariety ? `(${sourceRecord.cropVariety})` : ''}
-              {sourceRecord.unit ? ` · 单位 ${sourceRecord.unit}` : ''}
+              {` · 单位 ${initialUnit}`}
             </div>
           </div>
         </div>
@@ -658,7 +672,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         )}
 
         {/* 基础字段单行布局：4 个字段（采收日期 / 目标仓库 / 采收员 / 操作员）同行展示。
-            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 10。
+            2026-10-18：按 2/3/4/3 分配 12 列，合计 12 列，整行铺满弹窗宽度。
             2026-07-13：只读模式下隐藏所有表单字段，仅显示采收历史记录。 */}
         {!isReadOnly && (
         <>
@@ -672,7 +686,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
               />
             </FormField>
           </div>
-          <div className="col-span-2">
+          <div className="col-span-3">
             <FormField label="目标仓库" required>
               <Select value={warehouseId} onValueChange={(v) => {
                 setWarehouseId(v)
@@ -765,7 +779,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
               </div>
             </FormField>
           </div>
-          <div className="col-span-2">
+          <div className="col-span-3">
             <FormField label="操作员">
               <Input
                 value={operator}
@@ -815,6 +829,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
               // 2026-07-01：所有产品明细字段同一行展示。
               // 种源行（sourceModule === 'seed_source'）不显示"采收形态"，列宽自动补齐。
               const showSourceForm = sourceModule !== 'seed_source'
+              // 2026-10-18：删除按钮不常驻时，由「品质」吃掉剩余列宽，保证输入框整体铺满弹窗宽度
+              const showDelete = !productsLocked && products.length > 1
               return (
                 <div key={idx} className="border rounded-lg p-3 bg-gray-50">
                   <div className="grid grid-cols-12 gap-2">
@@ -884,7 +900,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                         </Select>
                       </div>
                     )}
-                    <div className={showSourceForm ? 'col-span-2' : 'col-span-3'}>
+                    <div className={showSourceForm ? (showDelete ? 'col-span-2' : 'col-span-3') : (showDelete ? 'col-span-3' : 'col-span-4')}>
                       <div className="text-xs text-gray-500 mb-1">品质</div>
                       <Select
                         value={p.grade || ''}
@@ -900,13 +916,13 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-1 flex items-end">
-                      {!productsLocked && products.length > 1 && (
+                    {showDelete && (
+                      <div className="col-span-1 flex items-end">
                         <Button size="sm" variant="ghost" onClick={() => removeProduct(idx)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )

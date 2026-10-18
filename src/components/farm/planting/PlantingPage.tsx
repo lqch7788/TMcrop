@@ -33,12 +33,24 @@ import PlantingLabelManageModal from './modals/PlantingLabelManageModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
 import PlantingMoveRecordsModal from './modals/PlantingMoveRecordsModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
+import { SOURCE_TYPE_MAP, PLANTING_END_TYPE_MAP } from '../../../constants/cropConstants';
 // 2026-07-01 P2-8 修复：useAuthPermission 是死代码（已 hardcode 全部 true），删除
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
+
+// 2026-10-19：导出/展示统一中文映射（避免英文枚举直出）
+const BREEDING_METHOD_LABELS: Record<string, string> = {
+  crossbreeding: '杂交育种',
+  selection: '选择育种',
+  backcross: '回交',
+  heterosis: '杂种优势',
+  open_pollination: '开放授粉',
+  mutation: '诱变',
+  other: '其他',
+};
 
 export default function PlantingPage() {
   // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage）
@@ -555,46 +567,86 @@ export default function PlantingPage() {
 
     // 导出表头（2026-07-21：补全所有列表字段）
     // 2026-07-21 修复：补全"关联生产计划"列
-    const headers = ['种植批号', '关联生产计划', '作物编码', '来源类型', '来源批号', '作物品种', '品种', '品种路径', '种植区域', '大棚名称', '种植数量', '单位', '种植日期', '土壤PH', '土壤EC', '目标产量', '移栽数量', '移栽日期', '是否采收', '采收日期', '已采收数量', '采收入库量', '种植自留种量', '损耗率', '损耗数量', '补栽数量', '剩余数量', '完成比例', '溯源码', '状态', '创建人', '创建时间', '备注'];
+    // 2026-10-19：导出字段全量化 — 覆盖列表显示与隐藏的全部业务字段
+    const headers = [
+      '种植批号', '关联生产计划', '来源类型', '来源批号', '来源种源类型',
+      '作物编码', '作物名称', '作物品种', '品种路径',
+      '种植区域', '区域OID', '大棚名称',
+      '种植数量', '单位', '种植日期', '移栽数量', '移栽日期',
+      '预计采收日期', '实际采收日期',
+      '目标产量', '目标产量单位', '土壤PH', '土壤EC',
+      '是否采收', '采收日期', '采收入库量', '采收入库单位',
+      '种植自留种量', '自留种单位', '自留种形态明细',
+      '损耗率', '损耗数量', '补栽数量', '剩余数量', '完成比例',
+      '是否育种', '父本编码', '母本编码', '世代', '育种方法', '目标性状', '育种地点',
+      '是否留种', '留种株号',
+      '定植数量', '存活数量', '存活率', '生长状态',
+      '结束类型', '结束时间',
+      '溯源码', '状态', '打印次数', '创建人', '创建时间', '更新时间', '备注',
+    ];
 
     // 生成导出数据
     const exportData = selectedData.map(record => {
-      const remaining = Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0));
-      // 2026-07-21 修复：完成比例计算与列表一致（用 harvestQuantity 而非 harvestToInventoryQty）
-      const completionRate = record.targetYield && record.targetYield > 0 ? `${Math.round((record.harvestQuantity || 0) / record.targetYield * 100)}%` : '-';
+      const remaining = record.availableQuantity ?? Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0));
+      // 2026-10-19：完成比例统一以「采收入库量」为准（与列表一致）
+      const completionRate = record.targetYield && record.targetYield > 0 ? `${Math.round((record.harvestToInventoryQty || 0) / record.targetYield * 100)}%` : '-';
       return {
         '种植批号': record.plantCode,
         '关联生产计划': record.productionPlanCode || '-',
-        '作物编码': record.cropCode || '',
-        '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
+        '来源类型': SOURCE_TYPE_MAP[record.sourceType] || (record.sourceType === SourceType.SEED ? '种子' : '种苗'),
         '来源批号': record.sourceCode,
-        '作物品种': record.cropName,
-        '品种': record.cropVariety,
+        '来源种源类型': SOURCE_TYPE_MAP[record.sourceSeedSourceType || ''] || record.sourceSeedSourceType || '',
+        '作物编码': record.cropCode || '',
+        '作物名称': record.cropName,
+        '作物品种': record.cropVariety,
         '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVariety1Name].filter(Boolean).join(' > ') || '-',
         '种植区域': record.areaName,
+        '区域OID': record.areaOid || '',
         '大棚名称': record.rootName,
         '种植数量': record.plantingCount,
         '单位': record.unit || '',
         '种植日期': record.plantingDate,
-        '土壤PH': record.soilPH || '',
-        '土壤EC': record.soilEC || '',
-        '目标产量': record.targetYield || '',
         '移栽数量': record.transplantCount || '',
         '移栽日期': record.transplantDate || '',
-        '是否采收': record.isHarvest ? '是' : '否',
+        '预计采收日期': record.expectedHarvestDate || '',
+        '实际采收日期': record.actualHarvestDate || '',
+        '目标产量': record.targetYield || '',
+        '目标产量单位': record.targetYieldUnit || '',
+        '土壤PH': record.soilPH || '',
+        '土壤EC': record.soilEC || '',
+        '是否采收': (record.harvestToInventoryQty || 0) > 0 ? '是' : '否',
         '采收日期': record.harvestDate || '',
-        '已采收数量': record.harvestQuantity || '',
         '采收入库量': record.harvestToInventoryQty || '',
+        '采收入库单位': record.harvestToInventoryUnit || '',
         '种植自留种量': record.selfKeptToSourceQty || '',
+        '自留种单位': record.selfKeptToSourceUnit || '',
+        '自留种形态明细': (record.selfKeptByForm || []).map((it) => `${it.seedForm} ${it.quantity}${it.unit}`).join('；') || '',
         '损耗率': `${record.attritionRate}%`,
         '损耗数量': record.lossCount || '',
         '补栽数量': record.supplementCount || '',
         '剩余数量': remaining,
         '完成比例': completionRate,
+        '是否育种': record.isBreeding ? '是' : '否',
+        '父本编码': record.parentMaleCode || '',
+        '母本编码': record.parentFemaleCode || '',
+        '世代': record.generation || '',
+        '育种方法': BREEDING_METHOD_LABELS[record.breedingMethod || ''] || record.breedingMethod || '',
+        '目标性状': record.targetTraits || '',
+        '育种地点': record.breedingLocation || '',
+        '是否留种': record.isSeedSaving ? '是' : '否',
+        '留种株号': record.seedPlantMarker || '',
+        '定植数量': record.plantedQuantity ?? '',
+        '存活数量': record.survivalQuantity ?? '',
+        '存活率': record.survivalRate != null && record.survivalRate > 0 ? `${record.survivalRate}%` : '',
+        '生长状态': record.growthStatus || '',
+        '结束类型': PLANTING_END_TYPE_MAP[record.endType || ''] || record.endType || '',
+        '结束时间': record.endTime || '',
         '溯源码': record.traceabilityCode,
         '状态': record.status === PlantingStatus.PLANTED ? '已定植' : record.status === PlantingStatus.GROWING ? '生长期' : record.status === PlantingStatus.HARVESTING ? '采收中' : record.status === PlantingStatus.HARVESTED ? '已采收' : record.status === PlantingStatus.ENDED ? '已结束' : record.status === PlantingStatus.CANCELLED ? '已取消' : '-',
+        '打印次数': record.printCount ?? '',
         '创建人': record.createBy,
         '创建时间': record.createTime,
+        '更新时间': record.updateTime || '',
         '备注': record.remarks || ''
       };
     });

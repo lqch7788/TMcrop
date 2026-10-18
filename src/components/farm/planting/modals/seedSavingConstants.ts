@@ -51,6 +51,8 @@ export const PURPOSE_OPTIONS = [
 ]
 
 // ============ 处理方式 ============
+// 2026-10-18：原「种子处理」字段并入处理方式（两字段语义重叠）：
+// 包衣/引发处理/层积处理/破休眠/破皮/杀菌处理 均保留在此，历史数据的 seedTreatment 字段仍兼容展示。
 export const PROCESSING_OPTIONS = [
   { value: 'air_dry', label: '晾晒' },
   { value: 'oven_dry', label: '烘干' },
@@ -60,6 +62,11 @@ export const PROCESSING_OPTIONS = [
   { value: 'sand_storage', label: '沙藏' },
   { value: 'cold_treatment', label: '低温处理' },
   { value: 'sprouting', label: '催芽' },
+  { value: 'coating', label: '包衣' },
+  { value: 'priming', label: '引发处理' },
+  { value: 'stratification', label: '层积处理' },
+  { value: 'scarification', label: '破休眠/破皮' },
+  { value: 'fungicide', label: '杀菌处理' },
   { value: 'none', label: '无处理' },
   { value: 'other', label: '其他' },
 ]

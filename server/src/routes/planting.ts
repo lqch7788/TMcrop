@@ -143,7 +143,11 @@ function buildWhitelistedUpdate(
   const cols: string[] = [];
   const vals: any[] = [];
   const rejected: string[] = [];
-  for (const [k, v] of Object.entries(updates)) {
+  // 2026-10-19：前端 areaId 存的是 zone.oid，更新区域时同步 area_oid，避免两列口径不一致
+  const normalized = (updates.areaId !== undefined && updates.areaOid === undefined && updates.area_oid === undefined)
+    ? { ...updates, area_oid: updates.areaId }
+    : updates;
+  for (const [k, v] of Object.entries(normalized)) {
     if (k === 'id') continue;
     // 优先匹配原 key（snake_case），fallback camelCase 转 snake_case
     const matchedKey = allowed.has(k) ? k : (allowed.has(toSnake(k)) ? toSnake(k) : null);
@@ -238,6 +242,10 @@ router.get('/', (req: Request, res: Response) => {
       p.target_yield AS targetYield,
       p.target_yield_unit AS targetYieldUnit,
       p.unit,
+      -- 2026-10-19：补齐列表缺失字段（originPath / areaOid / createById），与详情/导出字段对齐
+      p.origin_path AS originPath,
+      p.area_oid AS areaOid,
+      p.create_by_id AS createById,
       -- 2026-10-17：种源单位 + 已扣减量（编辑弹窗异口径消耗量回显/校验）
       ss.unit AS sourceUnit,
       p.source_deducted_quantity AS sourceDeductedQuantity,
@@ -262,8 +270,13 @@ router.get('/', (req: Request, res: Response) => {
       p.target_traits AS targetTraits,
       p.is_seed_saving AS isSeedSaving,
       p.seed_plant_marker AS seedPlantMarker,
-      -- 2026-06-17: 4 列聚合（LEFT JOIN + SUM(CASE WHEN destination=...) GROUP BY p.id）
-      COALESCE(SUM(CASE WHEN phr.destination = 'harvest' THEN phr.quantity END), 0) AS harvestToInventoryQty,
+      -- 2026-10-19：采收入库量统一以主表快照为主口径（行级入库/结束种植均写），
+      -- 子表聚合仅作历史数据兜底（此前存在只写子表或只写主表的路径）
+      COALESCE(
+        NULLIF(p.harvest_to_inventory_qty, 0),
+        (SELECT SUM(quantity) FROM planting_harvest_records WHERE planting_id = p.id AND destination = 'harvest'),
+        0
+      ) AS harvestToInventoryQty,
       -- 2026-06-29: 合并残株回种源(circulate)+自交种子入种源(self_seed)+种植自留种(planting_self_kept) 为一个 selfKeptToSourceQty
       -- 老数据和老端点的历史值都被合并展示在「种植自留种」列
       COALESCE(SUM(CASE WHEN phr.destination IN ('circulate', 'self_seed', 'planting_self_kept') THEN phr.quantity END), 0) AS selfKeptToSourceQty,
@@ -273,10 +286,13 @@ router.get('/', (req: Request, res: Response) => {
       -- 2026-07-09: dispose 聚合移除（dispose 功能已下线，与每日记录"损耗"语义重叠）
       -- 历史数据保留在 planting_harvest_records 表，列表不再聚合展示 disposeQty
       -- 2026-06-19: 最近一次"采收入库"记录的单位（用户实际入库时选择的单位）
-      -- 解决"列表显示单位与入库单位不一致"的 bug（如入库 kg 但显示 株）
-      (SELECT unit FROM planting_harvest_records
-        WHERE planting_id = p.id AND destination = 'harvest'
-        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS harvestToInventoryUnit,
+      -- 2026-10-19：主表单位优先，子表最近记录兜底
+      COALESCE(
+        p.harvest_to_inventory_unit,
+        (SELECT unit FROM planting_harvest_records
+          WHERE planting_id = p.id AND destination = 'harvest'
+          ORDER BY record_date DESC, create_time DESC LIMIT 1)
+      ) AS harvestToInventoryUnit,
       -- 2026-06-29: 合并 3 个 destination 的最近单位（保留老字段名 residualToSourceUnit/selfSeedToSourceUnit 兼容）
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination IN ('circulate', 'self_seed', 'planting_self_kept')
@@ -663,8 +679,10 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
 
     if (destination === 'harvest') {
       // 同 POST 路由 harvest 分支（行 950-1008）
-      const whRow = db.prepare('SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1').get([warehouseId, warehouseId]) as any;
-      const realWarehouseName = whRow?.name || warehouseName || warehouseId;
+      // 2026-10-19：sql.js 的 Statement.get() 返回的是「列值数组」，不是对象；
+      // 原 `whRow?.name` 永远 undefined → 仓库名回退成 ID。改用 queryToObjects。
+      const whRows = queryToObjects<any>(db, 'SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1', [warehouseId, warehouseId]);
+      const realWarehouseName = whRows[0]?.name || warehouseName || warehouseId;
       const dateStr = recordDate || now.split('T')[0];
       generatedHarvestId = `HV${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
       const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`;
@@ -984,9 +1002,12 @@ router.post('/', async (req: Request, res: Response) => {
     const finalAreaId = body.area_id || body.areaId || '';
     const finalAreaName = body.area_name || body.areaName || '';
     // 2026-07-25: 区域外键字段（关联 zones.oid），area_name 继续冗余保留以兼容旧查询
-    const finalAreaOid = body.area_oid || body.areaOid || null;
+    // 2026-10-19：前端 areaId 本身存的就是 zone.oid，未显式传 areaOid 时用它兜底，避免 area_oid 恒为空
+    const finalAreaOid = body.area_oid || body.areaOid || body.area_id || body.areaId || null;
     const finalRootName = body.root_name || body.rootName || '';
     const finalGreenhouseName = body.greenhouse_name || body.greenhouseName || '';
+    // 2026-10-19：来源路径（此前未写入，DB 列恒为空）
+    const finalOriginPath = body.origin_path || body.originPath || 'direct_from_seed';
 
     const finalPlantingDate = body.planting_date || body.plantingDate || '';
     const finalPlantingQuantity = body.planting_quantity || body.plantingCount || 0;
@@ -1114,7 +1135,7 @@ router.post('/', async (req: Request, res: Response) => {
                   id, transaction_id, instance_id, stock_type, transaction_type, quantity,
                   balance_before, balance_after, business_id, business_type, business_code,
                   operator_id, operator_name, operate_date, remarks, create_time
-                ) VALUES (?, ?, ?, 'seed', 'outbound', ?, ?, ?, ?, 'internal_planting', ?, '', ?, ?, ?, ?)`,
+                ) VALUES (?, ?, ?, 'seed', 'outbound', ?, ?, ?, ?, 'internal_planting', ?, ?, ?, ?, ?, ?)`,
                 [
                   txId, txId, `seed_source:${finalSourceId}`,
                   -sourceDeductQuantity, remaining, remaining - sourceDeductQuantity,
@@ -1184,8 +1205,8 @@ router.post('/', async (req: Request, res: Response) => {
           is_seed_saving, seed_plant_marker,
           loss_count, supplement_count,
           unit, source_deducted_quantity,
-          area_oid
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          area_oid, origin_path
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -1204,6 +1225,8 @@ router.post('/', async (req: Request, res: Response) => {
         finalUnit, sourceDeductQuantity,
         // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
         finalAreaOid,
+        // 2026-10-19：来源路径（direct_from_seed / via_seedling）
+        finalOriginPath,
       ]);
 
       // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
@@ -1669,36 +1692,9 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { id, recycleId: archiveId } });
 }));
 
-// 采收路由 - 更新种植记录的采收状态和采收数量
-// 2026-06-25: 接收前端算好的 attrition_rate（产出后实际损耗率），写回 plantings.attrition_rate
-router.post('/:id/harvest', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { harvest_quantity, harvest_date, attrition_rate } = req.body;
-    const now = new Date().toISOString();
-    const db = getDatabase();
-
-    // 检查种植记录是否存在
-    const stmt = db.prepare('SELECT id FROM plantings WHERE id = ?');
-    stmt.bind([id]);
-    const exists = stmt.step();
-    stmt.free();
-
-    if (!exists) {
-      return res.status(404).json({ success: false, error: '种植记录不存在' });
-    }
-
-    // 更新采收状态、采收数量、损耗率（2026-06-25 新增损耗率写回）
-    db.run(
-      `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, attrition_rate = ?, status = 'harvested', update_time = ? WHERE id = ?`,
-      [harvest_date || now, harvest_quantity || 0, attrition_rate ?? 0, now, id]
-    );
-    saveDatabase();
-    res.json({ success: true, data: { id } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '采收操作失败' });
-  }
-});
+// 2026-10-19：删除旧「采收登记」路由 POST /:id/harvest（只写 harvest_quantity、不入库）。
+// 所有采收统一走行级「采收」弹窗（HarvestRecordModal）+ 入库主链路 submitUnifiedInbound，
+// 数据口径以 plantings.harvest_to_inventory_qty 为准。
 
 // ========== 辅助查询 API ==========
 
@@ -2049,9 +2045,9 @@ router.post('/:id/end', async (req, res) => {
         return res.status(400).json({ success: false, error: '采收入库必须选择仓库' })
       }
 
-      // 查仓库名称
-      const whRow = db.prepare(`SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1`).get([warehouseId, warehouseId]) as any
-      const warehouseName = whRow?.name || warehouseId
+      // 查仓库名称（sql.js 的 get() 返回列值数组，须用 queryToObjects 取对象）
+      const whRows = queryToObjects<any>(db, 'SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1', [warehouseId, warehouseId])
+      const warehouseName = whRows[0]?.name || warehouseId
 
       // 生成 instance_id（库存实例编码）
       const dateStr = formatLocalDateYYYYMMDD(new Date())
@@ -2115,6 +2111,26 @@ router.post('/:id/end', async (req, res) => {
         ])
         stockStmt.free()
 
+        // 2026-10-19：同步写采收明细（planting_harvest_records）——
+        // 结束种植采收入库此前只写 harvest_records + inventory_stock，
+        // 导致采收记录历史表与列表聚合缺失该笔，关联字段无法闭环。
+        const phrId = `PHR${Date.now()}`
+        const phrStmt = db.prepare(`
+          INSERT INTO planting_harvest_records (
+            id, record_type, record_date, planting_id, planting_code,
+            destination, warehouse_id, warehouse_name,
+            quantity, unit, notes, operator_name, create_by, create_time, update_time,
+            harvest_record_id, inventory_stock_id, is_supplementary
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        `)
+        phrStmt.run([
+          phrId, 'planting', harvestDate, id, planting.planting_code,
+          'harvest', warehouseId, warehouseName,
+          harvestQty, harvestUnit, notes || null, operator, operator, now, now,
+          harvestId, stockId,
+        ])
+        phrStmt.free()
+
         db.exec('COMMIT')
       } catch (txErr) {
         try { db.exec('ROLLBACK') } catch {}
@@ -2124,10 +2140,17 @@ router.post('/:id/end', async (req, res) => {
       saveDatabase()
 
       // 收尾：更新种植记录
+      // 2026-10-19：同步回写「采收入库量」——结束种植采收入库同样把数量写入了 inventory_stock，
+      // 此前只写 harvest_quantity，导致列表「采收入库量」列漏记（两列口径不一致）。
       db.run(
-        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, is_harvest_locked = 0, update_time = ? WHERE id = ?`,
+        `UPDATE plantings SET is_harvest = 1, harvest_date = ?,
+             harvest_quantity = COALESCE(harvest_quantity, 0) + ?,
+             harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?,
+             harvest_to_inventory_unit = ?,
+             status = 'harvested', end_type = 'harvest', end_time = ?, is_harvest_locked = 0, update_time = ? WHERE id = ?`,
         // 2026-07-09 v5 阶段一：is_harvest_locked 强制 0 — 已结束仍允许补录（补录标志走 planting_harvest_records.is_supplementary）
-        [now, harvestQty, now, now, id]
+        // 2026-10-19：入库量改累加（此前覆盖，会丢失此前的行级入库数量）
+        [now, harvestQty, harvestQty, harvestUnit, now, now, id]
       )
       saveDatabase()
 

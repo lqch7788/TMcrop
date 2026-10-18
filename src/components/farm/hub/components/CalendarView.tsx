@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Task } from '../../../../hooks/useTasks';
+import { Task, TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import {
   format,
   isSameDay,
@@ -129,7 +129,7 @@ function DayView({
                 <span className={`px-2 py-1 rounded-full text-xs ${
                   statusColors[task.status]?.bg || 'bg-gray-100'
                 } ${statusColors[task.status]?.text || 'text-gray-600'}`}>
-                  {task.status}
+                  {TASK_STATUS_CONFIG[task.status]?.label || task.status}
                 </span>
               </div>
               <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">

@@ -12,18 +12,16 @@ import { Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectV
 import { OPERATORS } from '@/data/cropData'
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { todayLocal } from '@/lib/dateUtils'
+import { MEASURABLE_UNIT_CODES } from '@/constants/units'
 import {
   HARVEST_PART_LABELS,
   SEED_HARVEST_PARTS,
   VEGETATIVE_HARVEST_PARTS,
   PURPOSE_OPTIONS,
   PROCESSING_OPTIONS,
-  SEED_TREATMENT_OPTIONS,
-  MATURITY_OPTIONS,
   SIZE_GRADE_OPTIONS,
   HEALTH_STATUS_OPTIONS,
   DORMANCY_OPTIONS,
-  CONTAINER_OPTIONS,
   getSeedSavingRateColor,
 } from './seedSavingConstants'
 import type { SeedSavingFormState } from './seedSavingConstants'
@@ -40,10 +38,22 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
   const dictionaries = useDictionaryStore((s) => s.dictionaries)
   const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries)
   if (dictionaries.length === 0) { loadDictionaries() } // 惰性加载
-  const unitOptions = useMemo(
-    () => getDictItems('unit').map((d) => ({ value: d.dictCode, label: d.dictLabel })),
-    [dictionaries],
-  )
+  // 2026-10-18：种子保存模式只保留重量单位（克 / kg / 吨），不再读取数据词典；
+  // 营养体保存仍走数据词典
+  const unitOptions = useMemo(() => {
+    if ((form.preservationMode || 'seed') === 'seed') {
+      return [
+        { value: '克', label: '克（g）' },
+        { value: 'kg', label: '千克（kg）' },
+        { value: '吨', label: '吨（t）' },
+      ]
+    }
+    // 2026-10-18：营养体保存同样只保留可明确计量的单位，剔除箱/筐/盘/捆等模糊包装单位，
+    // 并剔除与"千克"重复的"公斤"
+    return getDictItems('unit')
+      .map((d) => ({ value: d.dictCode, label: d.dictLabel }))
+      .filter((u) => MEASURABLE_UNIT_CODES.has(u.value))
+  }, [dictionaries, form.preservationMode])
 
   const mode: 'seed' | 'vegetative' = form.preservationMode || 'seed'
   const switchMode = (newMode: 'seed' | 'vegetative') => {
@@ -51,6 +61,8 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
     onChange({
       ...form,
       preservationMode: newMode,
+      // 2026-10-18：切到种子保存时单位回到"克"，避免残留营养体单位不在新选项内
+      unit: newMode === 'seed' ? '克' : form.unit,
       harvestPart: newMode === 'vegetative' ? 'tuber' : 'seed',
       // 清空种子字段
       germinationRate: undefined, thousandSeedWeight: undefined, purity: undefined,
@@ -139,7 +151,7 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
           <Select value={form.unit ?? ''}
             onValueChange={(v) => onChange({ ...form, unit: v })}>
             <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder={mode === 'seed' ? '如 克 / 千克 / 粒' : '如 个 / 株 / 公斤'} />
+              <SelectValue placeholder={mode === 'seed' ? '如 克 / kg / 吨' : '如 个 / 株 / 公斤'} />
             </SelectTrigger>
             <SelectContent>
               {unitOptions.length === 0 ? (
@@ -152,34 +164,22 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
             </SelectContent>
           </Select>
           <div className="mt-1 text-xs text-gray-400 leading-relaxed">
-            源自数据词典 · 如需新增请前往数据词典管理
+            {mode === 'seed' ? '种子保存固定使用重量单位（克 / kg / 吨）' : '源自数据词典 · 如需新增请前往数据词典管理'}
           </div>
         </div>
-        <div>
-          {mode === 'seed' ? (
-            <>
-              <Label className="text-gray-700" title="采收时果实的成熟程度">成熟度</Label>
-              <Select value={form.maturityStage ?? undefined}
-                onValueChange={(v) => onChange({ ...form, maturityStage: v })}>
-                <SelectTrigger className={deepInputClass}><SelectValue placeholder="选择成熟度" /></SelectTrigger>
-                <SelectContent>
-                  {MATURITY_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </>
-          ) : (
-            <>
-              <Label className="text-gray-700" title="营养体的规格等级">规格等级</Label>
-              <Select value={form.sizeGrade ?? undefined}
-                onValueChange={(v) => onChange({ ...form, sizeGrade: v })}>
-                <SelectTrigger className={deepInputClass}><SelectValue placeholder="选择规格" /></SelectTrigger>
-                <SelectContent>
-                  {SIZE_GRADE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-        </div>
+        {/* 2026-10-18：去掉种子保存模式的「成熟度」字段；营养体模式保留「规格等级」 */}
+        {mode === 'vegetative' && (
+          <div>
+            <Label className="text-gray-700" title="营养体的规格等级">规格等级</Label>
+            <Select value={form.sizeGrade ?? undefined}
+              onValueChange={(v) => onChange({ ...form, sizeGrade: v })}>
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="选择规格" /></SelectTrigger>
+              <SelectContent>
+                {SIZE_GRADE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Row 3：用途 | 处理方式 | 存储位置 | 容器类型 */}
         <div>
@@ -208,16 +208,7 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
             onChange={(e) => onChange({ ...form, storageLocation: e.target.value })}
             placeholder="如 冷库A-3 / 冰箱2号" className={deepInputClass} />
         </div>
-        <div>
-          <Label className="text-gray-700" title="存储容器的类型">容器类型</Label>
-          <Select value={form.containerType ?? undefined}
-            onValueChange={(v) => onChange({ ...form, containerType: v })}>
-            <SelectTrigger className={deepInputClass}><SelectValue placeholder="选择容器" /></SelectTrigger>
-            <SelectContent>
-              {CONTAINER_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* 2026-10-18：去掉「容器类型」字段 */}
 
         {/* 模式特有字段 */}
         {mode === 'seed' ? (
@@ -264,16 +255,7 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
                 种子含水量（安全贮藏一般 &lt; 13%）
               </div>
             </div>
-            <div className="col-span-2">
-              <Label className="text-gray-700" title="种子贮藏前的处理方式">种子处理</Label>
-              <Select value={form.seedTreatment ?? undefined}
-                onValueChange={(v) => onChange({ ...form, seedTreatment: v })}>
-                <SelectTrigger className={deepInputClass}><SelectValue placeholder="选择种子处理方式" /></SelectTrigger>
-                <SelectContent>
-                  {SEED_TREATMENT_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* 2026-10-18：原「种子处理」字段已并入上方「处理方式」下拉 */}
             <div className="col-span-2">
               {/* derived: 预估可存储月数（含水率越低越长） */}
               <Label className="text-gray-700" title="根据含水率推算的预估安全贮藏期（仅供参考）">预估贮藏期（派生）</Label>

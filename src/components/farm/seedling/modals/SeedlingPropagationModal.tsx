@@ -3,7 +3,7 @@
  *
  * 与种植/RecordModal 的 asexual 分支 100% 对齐：
  * - 顶部繁殖模式切换 banner（默认无性）
- * - 完整繁殖字段：操作人 / 操作类型 / 世代 / 母株编码 / 繁殖方式
+ * - 完整繁殖字段：操作人 / 操作类型 / 世代 / 母株编码
  * - 目标性状（多选）
  * - 无性繁殖指标：接种数 / 成活数 / 繁殖系数（派生）
  * - 通用字段：日期 / 温度 / 湿度 / 子苗状态 / 移栽位置 / 备注
@@ -29,7 +29,6 @@ import {
 import {
   ASEXUAL_OPERATION_TYPES,
   OPERATION_TYPE_LABELS,
-  PROPAGATION_METHOD_LABELS,
   GENERATION_OPTIONS,
   TARGET_TRAIT_OPTIONS,
   getRateColor,
@@ -51,13 +50,56 @@ interface SeedlingPropagationModalProps {
 // 继承 BreedingFields 的 deepInputClass 样式
 const deepInputClass = inputClass;
 
+// 育苗繁殖属于无性繁殖：世代只保留「无性世代」分组（G0-G10），
+// 剔除亲本/杂交/回交/自交/特殊/种子生产级别等有性繁殖相关选项。
+// 注意：不能改 GENERATION_OPTIONS 常量本身，种植模块的繁殖记录仍在使用完整选项。
+const ASEXUAL_GENERATION_OPTIONS = GENERATION_OPTIONS.filter(
+  (o) => o.group === '无性世代'
+);
+
+// 2026-10-18：删除「繁殖方式」字段，其独有值（球茎/块茎/匍匐茎）并入操作类型。
+// 不动共享的 ASEXUAL_OPERATION_TYPES，避免影响种植模块和既有测试。
+type SeedlingOperationType = AsexualOperationType | 'bulb' | 'tuber' | 'runner';
+
+const SEEDLING_OPERATION_TYPES: SeedlingOperationType[] = [
+  // 共享常量声明为 BreedingOperationType[]（含无性值），此处按无性类型使用
+  ...(ASEXUAL_OPERATION_TYPES as AsexualOperationType[]),
+  'bulb',
+  'tuber',
+  'runner',
+];
+
+const SEEDLING_OPERATION_LABELS: Record<string, string> = {
+  ...OPERATION_TYPE_LABELS,
+  bulb: '球茎',
+  tuber: '块茎',
+  runner: '匍匐茎',
+};
+
+// 操作类型 → 繁殖方式（tissue 对应 tissue_culture），提交时自动派生，
+// 保持后端 propagation_method 列有值且与操作类型一致；clonal 无对应方式则为空。
+const OPERATION_TO_PROPAGATION_METHOD: Partial<Record<SeedlingOperationType, string>> = {
+  cutting: 'cutting',
+  grafting: 'grafting',
+  layering: 'layering',
+  tissue: 'tissue_culture',
+  division: 'division',
+  bulb: 'bulb',
+  tuber: 'tuber',
+  runner: 'runner',
+};
+
+/** 由操作类型派生繁殖方式，写入后端冗余列 */
+function derivePropagationMethod(operationType: string | null | undefined): string | null {
+  return OPERATION_TO_PROPAGATION_METHOD[operationType as SeedlingOperationType] ?? null;
+}
+
 const EMPTY_FORM: PropagationRecordInput = {
   recordDate: todayLocal(),
   operationType: 'cutting',
   reproductionMode: 'asexual',
   generation: '',
   motherPlantCode: '',
-  propagationMethod: undefined,
   inoculationCount: undefined,
   survivalCountAsexual: undefined,
   targetTraits: [],
@@ -113,7 +155,11 @@ export function SeedlingPropagationModal({
       return;
     }
     try {
-      await apiSeedlingPropagationService.create(String(record.id), form);
+      // 繁殖方式不再单独录入，由操作类型派生后写入后端冗余列
+      await apiSeedlingPropagationService.create(String(record.id), {
+        ...form,
+        propagationMethod: derivePropagationMethod(form.operationType),
+      });
       await loadHistory();
       setForm({ ...EMPTY_FORM, recordDate: todayLocal() });
       onSuccess?.();
@@ -132,7 +178,6 @@ export function SeedlingPropagationModal({
       reproductionMode: (r.reproductionMode ?? 'asexual') as ReproductionMode,
       generation: r.generation ?? '',
       motherPlantCode: r.motherPlantCode ?? '',
-      propagationMethod: r.propagationMethod ?? undefined,
       inoculationCount: r.inoculationCount ?? undefined,
       survivalCountAsexual: r.survivalCountAsexual ?? undefined,
       targetTraits: r.targetTraits ?? [],
@@ -150,7 +195,10 @@ export function SeedlingPropagationModal({
   const handleSaveEdit = async () => {
     if (readOnly || !editingId) return;
     try {
-      await apiSeedlingPropagationService.update(String(record.id), editingId, form);
+      await apiSeedlingPropagationService.update(String(record.id), editingId, {
+        ...form,
+        propagationMethod: derivePropagationMethod(form.operationType),
+      });
       setEditingId(null);
       await loadHistory();
       onSuccess?.();
@@ -196,11 +244,10 @@ export function SeedlingPropagationModal({
       const reproductionRate = inoc > 0 ? ((surv / inoc) * 100).toFixed(1) + '%' : '';
       return {
         '日期': r.recordDate,
-        '操作类型': OPERATION_TYPE_LABELS[r.operationType as keyof typeof OPERATION_TYPE_LABELS] || r.operationType || '',
+        '操作类型': SEEDLING_OPERATION_LABELS[r.operationType ?? ''] || r.operationType || '',
         '繁殖模式': r.reproductionMode === 'asexual' ? '无性' : '有性',
         '世代': r.generation || '',
         '母株编码': r.motherPlantCode || '',
-        '繁殖方式': r.propagationMethod ? (PROPAGATION_METHOD_LABELS[r.propagationMethod as keyof typeof PROPAGATION_METHOD_LABELS] || r.propagationMethod) : '',
         '接种数': inoc || '',
         '成活数': surv || '',
         '繁殖系数': reproductionRate,
@@ -258,8 +305,9 @@ export function SeedlingPropagationModal({
               )}
             </h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Row 1：日期 / 操作人 / 操作类型 / 世代 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Row 1：日期 / 操作人 / 操作类型 */}
+              {/* 2026-10-18：改为每行 3 个字段 */}
               <div>
                 <Label className="text-gray-700">记录日期 <span className="text-red-500">*</span></Label>
                 <DatePicker className="w-full"
@@ -293,8 +341,8 @@ export function SeedlingPropagationModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ASEXUAL_OPERATION_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>{OPERATION_TYPE_LABELS[t]}</SelectItem>
+                    {SEEDLING_OPERATION_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{SEEDLING_OPERATION_LABELS[t]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -310,13 +358,13 @@ export function SeedlingPropagationModal({
                   </SelectTrigger>
                   <SelectContent className="max-h-80">
                     {(() => {
-                      const groups = Array.from(new Set(GENERATION_OPTIONS.map((o) => o.group)));
+                      const groups = Array.from(new Set(ASEXUAL_GENERATION_OPTIONS.map((o) => o.group)));
                       return groups.map((g) => (
                         <div key={g}>
                           <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-100">
                             {g}
                           </div>
-                          {GENERATION_OPTIONS.filter((o) => o.group === g).map((o) => (
+                          {ASEXUAL_GENERATION_OPTIONS.filter((o) => o.group === g).map((o) => (
                             <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                           ))}
                         </div>
@@ -326,7 +374,7 @@ export function SeedlingPropagationModal({
                 </Select>
               </div>
 
-              {/* Row 2：母株编码 / 繁殖方式 / 温度 / 湿度 */}
+              {/* Row 2：世代 / 母株编码 / 温度 */}
               <div>
                 <Label className="text-gray-700">
                   母株编码 <span className="text-red-500">*</span>
@@ -337,24 +385,6 @@ export function SeedlingPropagationModal({
                   placeholder="母株编号（单亲来源：本株是克隆源）"
                   className={deepInputClass}
                 />
-              </div>
-              <div>
-                <Label className="text-gray-700">
-                  繁殖方式 <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={form.propagationMethod ?? undefined}
-                  onValueChange={(v) => setForm({ ...form, propagationMethod: v as any })}
-                >
-                  <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="请选择繁殖方式" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROPAGATION_METHOD_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label className="text-gray-700">温度（℃）</Label>
@@ -369,7 +399,7 @@ export function SeedlingPropagationModal({
                   placeholder="环境湿度" className={deepInputClass} />
               </div>
 
-              {/* Row 3：移栽位置 / 子苗状态 / 占位 */}
+              {/* Row 3：湿度 / 移栽位置 / 子苗状态 */}
               <div>
                 <Label className="text-gray-700">移栽位置</Label>
                 <Input value={form.transplantPosition ?? ''}
@@ -392,10 +422,8 @@ export function SeedlingPropagationModal({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2"></div>
-
               {/* Row 4：目标性状（多选 chip） */}
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <Label className="text-gray-700">目标性状（多选）</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {TARGET_TRAIT_OPTIONS.map((trait) => {
@@ -431,7 +459,7 @@ export function SeedlingPropagationModal({
                 </div>
               </div>
 
-              {/* Row 5：接种数 / 成活数 / 繁殖系数（派生） */}
+              {/* Row 5：接种数 / 成活数 / 繁殖系数（派生）—— 3 列正好一行 */}
               <div>
                 <Label className="text-gray-700" title="接种的插穗/接芽/外植体/球茎等数量">
                   接种数（个）
@@ -492,10 +520,8 @@ export function SeedlingPropagationModal({
                   <span className="ml-1 text-gray-400">（≥ 80% 优良，50-80% 一般，&lt; 50% 偏低）</span>
                 </div>
               </div>
-              <div className="col-span-1"></div>
-
-              {/* Row 6：备注 */}
-              <div className="col-span-4">
+              {/* Row 6：备注（整行） */}
+              <div className="col-span-3">
                 <Label className="text-gray-700">备注</Label>
                 <TextArea
                   value={form.remarks ?? ''}
@@ -534,7 +560,6 @@ export function SeedlingPropagationModal({
                     <th className="px-2 py-2 text-left">操作类型</th>
                     <th className="px-2 py-2 text-left">世代</th>
                     <th className="px-2 py-2 text-left">母株编码</th>
-                    <th className="px-2 py-2 text-left">繁殖方式</th>
                     <th className="px-2 py-2 text-left">接种数</th>
                     <th className="px-2 py-2 text-left">成活数</th>
                     <th className="px-2 py-2 text-left">繁殖系数</th>
@@ -554,10 +579,9 @@ export function SeedlingPropagationModal({
                     return (
                       <tr key={r.id} className="hover:bg-gray-50">
                         <td className="px-2 py-1.5 whitespace-nowrap">{r.recordDate}</td>
-                        <td className="px-2 py-1.5">{OPERATION_TYPE_LABELS[r.operationType as keyof typeof OPERATION_TYPE_LABELS] || r.operationType || '-'}</td>
+                        <td className="px-2 py-1.5">{SEEDLING_OPERATION_LABELS[r.operationType ?? ''] || r.operationType || '-'}</td>
                         <td className="px-2 py-1.5">{r.generation || '-'}</td>
                         <td className="px-2 py-1.5 font-mono text-emerald-700">{r.motherPlantCode || '-'}</td>
-                        <td className="px-2 py-1.5">{r.propagationMethod ? (PROPAGATION_METHOD_LABELS[r.propagationMethod as keyof typeof PROPAGATION_METHOD_LABELS] || r.propagationMethod) : '-'}</td>
                         <td className="px-2 py-1.5">{inoc || '-'}</td>
                         <td className="px-2 py-1.5 text-emerald-600 font-medium">{surv || '-'}</td>
                         <td className="px-2 py-1.5">

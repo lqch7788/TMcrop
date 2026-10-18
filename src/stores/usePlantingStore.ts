@@ -28,8 +28,6 @@ interface PlantingState {
   updateItem: (id: string, updates: Partial<Planting>) => Promise<Planting | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
-  // 2026-06-25: attritionRate 透传（采收后自动计算写回 plantings.attrition_rate）
-  harvestPlanting: (id: string, harvestDate: string, harvestCount?: number, attritionRate?: number) => Promise<boolean>;
 
   // 2026-06-17: 采收记录 actions
   loadHarvestRecords: (plantingId: string) => Promise<void>;
@@ -129,25 +127,7 @@ export const usePlantingStore = create<PlantingState>()(
       }
     },
 
-    harvestPlanting: async (id, harvestDate, harvestCount, attritionRate) => {
-      try {
-        const result = await plantingService.harvestPlanting(id, harvestDate, harvestCount, attritionRate);
-        if (result) {
-          set((s) => ({
-            items: s.items.map((i) =>
-              i.id === id
-                // 2026-10-11：status 是 enum 类型，必须用枚举成员（值仍是 'harvested'，运行时等价）
-                ? { ...i, harvestDate, harvestQuantity: harvestCount, status: PlantingStatus.HARVESTED }
-                : i
-            ),
-          }));
-        }
-        return result;
-      } catch (error) {
-        set({ error: (error as Error).message || '采收种植失败' });
-        return false;
-      }
-    },
+    // 2026-10-19：删除旧 harvestPlanting action（对应 API 已下线，采收统一走入库主链路）
 
     // 2026-06-17: 采收记录
     loadHarvestRecords: async (plantingId) => {

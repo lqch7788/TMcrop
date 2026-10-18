@@ -688,7 +688,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       '作物': row.cropName,
       '问题描述': row.issueText,
       '严重程度': row.issueSeverity,
-      '状态': row.status,
+      // 2026-10-19：状态统一中文（与列表同一真相源），避免导出英文枚举
+      '状态': getStatusCN(row.status),
       '处理人': row.handler || row.handlerName || (row as any).assigneeName || '-',
       '巡检日期': row.checkDate,
       '巡检时间': row.checkTime,

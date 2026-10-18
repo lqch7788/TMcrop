@@ -20,6 +20,7 @@ import {
   INVENTORY_SOURCE_FILTER_OPTIONS,
   INVENTORY_STATUS_MAP,
   LOW_STOCK_THRESHOLD,
+  QUALITY_GRADE_MAP,
 } from '../constants/cropConstants';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
@@ -355,7 +356,8 @@ export default function InventoryV3Page() {
         '作物编码': s.cropCode || '-',
         '类型': stockTypeLabel,
         '作物信息': s.cropName || '-',
-        '品质': s.grade || '-',
+        // 2026-10-19：品质等级统一中文（special/excellent/... → 特优/优/...）
+        '品质': QUALITY_GRADE_MAP[s.grade || '']?.label || s.grade || '-',
         '采收区域': s.greenhouseName || s.areaName || '-',
         '形态': formLabel,
         '数量': `${s.currentQuantity} ${s.unit}`,

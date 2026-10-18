@@ -4,6 +4,15 @@ import { Button } from '@/components/ui';
 import type { LeaveDetailModalProps } from './types';
 import { Label } from '@/components/ui';
 
+// 2026-10-19：请假状态英文枚举 → 中文
+const LEAVE_STATUS_LABELS: Record<string, string> = {
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已拒绝',
+  cancelled: '已取消',
+  withdrawn: '已撤回',
+};
+
 /**
  * 请假详情弹窗组件
  */
@@ -49,8 +58,8 @@ export function LeaveDetailModal({ record, open, onClose }: LeaveDetailModalProp
       {/* 状态 */}
       <div>
         <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
-        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(record.status)}`}>
-          {record.status}
+        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(LEAVE_STATUS_LABELS[record.status] || record.status)}`}>
+          {LEAVE_STATUS_LABELS[record.status] || record.status}
         </span>
       </div>
 

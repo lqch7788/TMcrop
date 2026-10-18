@@ -102,10 +102,18 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
   );
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { color: string; icon: typeof Clock }> = {
   '待入职': { color: 'bg-amber-100 text-amber-700', icon: Clock },
   '办理中': { color: 'bg-blue-100 text-blue-700', icon: AlertCircle },
   '已入职': { color: 'bg-green-100 text-green-700', icon: CheckCircle },
+};
+
+// 2026-10-19：后端状态英文枚举 → 中文（与 statusConfig 键对齐）
+const ONBOARDING_STATUS_LABELS: Record<string, string> = {
+  pending: '待入职',
+  processing: '办理中',
+  completed: '已入职',
+  onboarded: '已入职',
 };
 
 export function OnboardingPage() {
@@ -547,7 +555,8 @@ export function OnboardingPage() {
                 </TableRow>
               ) : (
                 data.map((record) => {
-                  const StatusIcon = statusConfig[record.status].icon;
+                  const statusCn = ONBOARDING_STATUS_LABELS[record.status] || record.status;
+                  const StatusIcon = (statusConfig[statusCn] || statusConfig['待入职']).icon;
                   return (
                     <TableRow key={record.id} className="hover:bg-emerald-50 transition-colors">
                       {(exportMode || batchEditMode || batchDeleteMode) && (
@@ -571,9 +580,9 @@ export function OnboardingPage() {
                       <TableCell className="px-4 py-3 text-gray-600 whitespace-nowrap">{record.contractType}</TableCell>
                       <TableCell className="px-4 py-3 text-gray-600 whitespace-nowrap">{record.joinDate}</TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig[record.status].color}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${(statusConfig[statusCn] || statusConfig['待入职']).color}`}>
                           <StatusIcon className="w-3 h-3" />
-                          {record.status}
+                          {statusCn}
                         </span>
                       </TableCell>
                       <TableCell className="px-4 py-3 whitespace-nowrap">
@@ -676,8 +685,8 @@ export function OnboardingPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">状态</p>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig[selectedRecord.status].color}`}>
-                    {selectedRecord.status}
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${(statusConfig[ONBOARDING_STATUS_LABELS[selectedRecord.status] || selectedRecord.status] || statusConfig['待入职']).color}`}>
+                    {ONBOARDING_STATUS_LABELS[selectedRecord.status] || selectedRecord.status}
                   </span>
                 </div>
               </div>

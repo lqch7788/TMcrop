@@ -11,6 +11,7 @@ import { AlertTriangle, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import type { User } from '../../../../types/authority';
 import { useUserStore } from '../../../../stores';
+import { TASK_STATUS_CONFIG } from '@/hooks/useTasks';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -107,7 +108,7 @@ export function ReassignTaskModal({
             <p>任务类型：{task.typeName}</p>
             <p>当前状态：
               <span className="text-red-600 font-medium">
-                {task.status === 'failed' ? '任务失败' : task.status === 'rejected' ? '已拒绝' : '已放弃'}
+                {TASK_STATUS_CONFIG[task.status]?.label || task.status}
               </span>
             </p>
             {task.rejectReason && (
