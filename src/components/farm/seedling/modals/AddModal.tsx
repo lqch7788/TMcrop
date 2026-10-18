@@ -7,12 +7,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { SEEDLING_FORM_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 // 2026-10-17：单位口径判断 —— 种源单位 ≠ 育苗单位时，不能按育苗数量扣减种源
 import { isSameUnitDimension } from '@/constants/units';
-import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
-import { getSeedSourceVarietyName, getSeedSourceOriginOrSupplier } from '../../../../constants/seedSourceDict';
-import { X, Upload, RefreshCw } from 'lucide-react';
+import { getSeedSourceVarietyName } from '../../../../constants/seedSourceDict';
+import { RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
@@ -28,13 +26,17 @@ import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
-import { DictSelect } from '../../../common/settings/DictSelect';
-import { Input, NumberInput } from '@/components/ui';
-import { DatePicker } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-18：大组件拆分 —— 四个 JSX 区段移入 ./add-modal/*（纯移动，无逻辑变更）
+import { SeedlingSourceSection } from './add-modal/SeedlingSourceSection';
+import { QuantityQualitySection } from './add-modal/QuantityQualitySection';
+import { SitePlanSection } from './add-modal/SitePlanSection';
+import { RemarkAttachmentSection } from './add-modal/RemarkAttachmentSection';
+import { deepInputClass } from './add-modal/helpers';
+import type { AddFormData } from './add-modal/types';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -43,22 +45,6 @@ interface AddModalProps {
   seedSources: SeedSource[];
   seedlingTypes: Array<{ value: string; label: string }>;
   sites: Array<{ value: string; label: string }>;
-}
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
-/**
- * 种源形态兜底翻译（2026-07-23）
- * - DB 可能是中文（product_form「花朵/果实/种子」12 选）或英文（stock_type fallback「seed/seedling/...」）
- * - 已在 SEED_FORM_OPTIONS 中文词典 → 原样返回
- * - 英文 → 走 SOURCE_TYPE_MAP 翻译
- * - 无匹配 → 原样回显（保留透明度）
- */
-function formatSeedFormDisplay(sf: string | null | undefined): string {
-  if (!sf) return '';
-  if (SEED_FORM_OPTIONS.some(opt => opt.value === sf)) return sf;
-  return SOURCE_TYPE_MAP[sf] || sf;
 }
 
 export function AddModal({
@@ -106,7 +92,7 @@ export function AddModal({
   }, [dictionaries]);
 
   // 初始表单数据（弹窗每次打开时重置）
-  const INITIAL_FORM_DATA = {
+  const INITIAL_FORM_DATA: AddFormData = {
     sourceId: '',
     sourceCode: '',
     sourceType: '',
@@ -851,675 +837,54 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           </div>
         </div>
 
-        {/* ========== 关联种源信息区 ==========
-            V3.4 UI 统一：去掉 blue 背景色块，改为 h3 + 灰下边框分组 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">关联种源信息</h3>
-          <p className="text-xs text-gray-500 mb-3">种源必须先在种源管理中录入</p>
-          {/* combogrid 种源选择器 */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
-              <div>
-                <Label className="text-gray-900">
-                  关联种源 <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
-                    placeholder="搜索种源批号或作物品种..."
-                    onFocus={() => {
-                      setSourcePopoverOpen(true);
-                      setSourceSearch('');
-                    }}
-                    onChange={(e) => {
-                      setSourceSearch(e.target.value);
-                      setSourcePopoverOpen(true);
-                    }}
-                    className={deepInputClass}
-                  />
-                  {/* 清除按钮 */}
-                  {formData.sourceId && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', seedForm: '' }));
-                        setSourceSearch('');
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                  {/* 下拉表格 Popover */}
-                  {sourcePopoverOpen && (
-                    <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
-                      style={{ minWidth: '500px', left: 0 }}
-                    >
-                      {/* 表头 — 2026-10-17：删「采购数量」列（选种源只需看可用数量）；
-                          「作物名称」→「作物品种」（作物级名称无法区分品种，如草莓/红颜）；
-                          列顺序：种源批号在前（用户主要按批号找），品种其次；
-                          列宽按内容分配：种源批号最宽（如 SRC-SS-20261016-001 需完整显示） */}
-                      <div className="grid grid-cols-[1.6fr_0.85fr_0.7fr_0.95fr] gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-                        <div>种源批号</div>
-                        <div>作物品种</div>
-                        <div>形态</div>
-                        <div>可用数量</div>
-                      </div>
-                      {/* 表格行 */}
-                      <div className="overflow-y-auto max-h-48">
-                        {filteredSeedSources.length === 0 ? (
-                          <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-2">
-                            <div>
-                              {productionPlanVarietyFilterFromPlan
-                                ? `所选生产计划 [${productionPlanVarietyFilterFromPlan}] 暂无对应种源`
-                                : '未找到匹配的种源'}
-                            </div>
-                            <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>
-                            <Button
-                              type="button"
-                              variant="default"
-                              size="sm"
-                              onClick={() => navigate('/crop/seed-source')}
-                            >
-                              去种源管理添加
-                            </Button>
-                          </div>
-                        ) : (
-                          filteredSeedSources.map(s => {
-                            // 2026-06-16: failed / 无可用余量的种源不可选（前端友好提示，避免后端 500）
-                            const isFailed = (s as any).propagationStatus === 'failed';
-                            const isUnavailable = s.availableCount <= 0;
-                            const isDisabled = isFailed || isUnavailable;
-                            const disabledReason = isFailed
-                              ? '该种源已标记为失败，不能用于育苗'
-                              : isUnavailable
-                                ? '该种源可用余量为 0'
-                                : '';
-                            return (
-                              <div
-                                key={s.id}
-                                onClick={() => {
-                                  if (isDisabled) {
-                                    showAlert(disabledReason);
-                                    return;
-                                  }
-                                  handleSourceChange(s.id);
-                                  setSourcePopoverOpen(false);
-                                  setSourceSearch('');
-                                }}
-                                className={`grid grid-cols-[1.6fr_0.85fr_0.7fr_0.95fr] gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
-                                  ${isDisabled
-                                    ? 'bg-gray-100 cursor-not-allowed opacity-60'
-                                    : `cursor-pointer hover:bg-emerald-50 ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}`}
-                                title={disabledReason}
-                              >
-                                <div className={`truncate ${isDisabled ? 'text-gray-400' : 'text-emerald-700'}`}>{s.seedCode}</div>
-                                <div className={`truncate font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-800'}`}>
-                                  {getSeedSourceVarietyName(s)}
-                                  {isFailed && <span className="ml-1 text-xs text-red-500">[已失败]</span>}
-                                </div>
-                                <div className="text-gray-600 truncate">{formatSeedFormDisplay((s as any).seedForm) || '—'}</div>
-                                <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
-                                  {s.availableCount} {s.unit}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                      {/* 底部提示 */}
-                      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
-                        共 {filteredSeedSources.length} 条 | 点击行选择 | 点击外部关闭
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 种源形态（只读自动带入） — 2026-07-23：原"来源类型"改名"种源形态"，数据源改为种源 seedForm */}
-              <div>
-                <Label className="text-gray-700">种源形态</Label>
-                <Input
-                  type="text"
-                  value={formatSeedFormDisplay(formData.seedForm) || '请先选择种源'}
-                  readOnly
-                  className={`${deepInputClass} bg-gray-100 text-gray-600`}
-                />
-              </div>
-
-              {/* 种源来源/原始供应商（只读自动带入）
-                  2026-10-17：原「供应商」列改名并改为口径展示 —— 有原始供应商显示供应商，
-                  没有（如种植留种回流）显示来源途径中文，与内部种源列表两列口径一致 */}
-              <div>
-                <Label className="text-gray-700">种源来源/原始供应商</Label>
-                <Input
-                  type="text"
-                  value={selectedSource ? getSeedSourceOriginOrSupplier(selectedSource) : '请先选择种源'}
-                  readOnly
-                  className={`${deepInputClass} bg-gray-100 text-gray-600`}
-                />
-              </div>
-
-              {/* 作物品种：与种源列表"作物品种"列一致；2026-06-16 兜底：种源未填 cropVariety 时回退到 cropName（品种名） */}
-              <div>
-                <Label className="text-gray-900">
-                  作物品种 <span className="text-red-500">*</span>
-                </Label>
-                <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center min-h-[46px]`}>
-                  {formData.cropVariety || formData.cropName ? (
-                    <span>{formData.cropVariety || formData.cropName}</span>
-                  ) : (
-                    <span className="text-gray-400">请先选择种源</span>
-                  )}
-                </div>
-              </div>
-
-              {/* 品种路径：与种源列表/育苗列表"品种路径"列 4 段格式保持一致 */}
-              <div className="col-span-2">
-                <Label className="text-gray-700">品种路径</Label>
-                <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center gap-1 flex-wrap min-h-[46px]`}>
-                  {fullVarietyPath ? (
-                    <>
-                      <span className="text-gray-400">{fullVarietyPath.categoryName}</span>
-                      <span className="text-gray-400">-</span>
-                      <span className="text-gray-700">{fullVarietyPath.typeName}</span>
-                      <span className="text-gray-400">-</span>
-                      <span className="text-gray-700">{fullVarietyPath.varietyName}</span>
-                      {fullVarietyPath.subVariety1Name && (
-                        <>
-                          <span className="text-gray-400">-</span>
-                          <span className="text-gray-900 font-medium">{fullVarietyPath.subVariety1Name}</span>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">请先选择种源</span>
-                  )}
-                </div>
-              </div>
-            </div>
-        </div>
-
-        {/* ========== 数量与品质区（2026-06-16: 移到批次号上方） ==========
-            V3.4 UI 统一：去掉 amber 背景色块，改为 h3 + 灰下边框分组 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">数量与品质</h3>
-
-          {/* 2026-06-16: 育苗计算模式取消 UI 选择（propagationMode 自动联动，避免前后矛盾）
-              字段保留在 state 中（calculateMode）以兼容 EditModal/apiSeedlingService/历史数据 */}
-
-          {/* 单株育苗模式 */}
-          {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
-            <div className="grid grid-cols-2 gap-4">
-              {/* 2026-06-15: 数量体系重构 — 1:多 模式显示母株数量输入框 */}
-              {formData.propagationMode === 'one_to_many' ? (
-                /* 1:多 模式：母株数量 */
-                <div>
-                  <Label className="text-gray-900">
-                    母株数量 <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 ml-2">（匍匐茎/组培/扦插/分株）</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.motherPlantCount}
-                    onChange={(val) => setFormData({ ...formData, motherPlantCount: parseFloat(val) || 0 })}
-                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder="请输入母株数量（>0）"
-                    decimals={0}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    子苗通过每日记录"新出苗数"累加；母株可继续产苗或一次性分出
-                  </p>
-                </div>
-              ) : (
-                /* 1:1 模式：初始数量 */
-                <div>
-                  <Label className="text-gray-900">
-                    初始数量 <span className="text-red-500">*</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.initialCount}
-                    onChange={(val) => setFormData({ ...formData, initialCount: parseFloat(val) || 0 })}
-                    className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder="请输入播种数量（1:1 模式）"
-                    decimals={0}
-                  />
-                  {initialCountExceeds && (
-                    <p className="text-xs text-red-500 mt-1">
-                      超过种源可用数量（{sourceAvailableCount}）
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 2026-10-17：种源单位与育苗单位不同口径时，必须显式填写种源消耗量 */}
-              {sourceRequiresExplicitConsumption && (
-                <div>
-                  <Label className="text-gray-900">
-                    种源消耗量（{selectedSource?.unit}）<span className="text-red-500">*</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.sourceConsumedQuantity}
-                    onChange={(val) => setFormData({ ...formData, sourceConsumedQuantity: parseFloat(val) || 0 })}
-                    className={`${deepInputClass} ${formData.sourceConsumedQuantity > sourceAvailableCount ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder={`请输入本次领用的种源数量（${selectedSource?.unit}）`}
-                    decimals={3}
-                  />
-                  <p className="text-xs text-amber-600 mt-1">
-                    种源按「{selectedSource?.unit}」计量，与育苗单位「{formData.unit}」不同，
-                    不能按育苗数量自动扣减，请填写本次实际领用量
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    可用：{sourceAvailableCount} {selectedSource?.unit}
-                  </p>
-                </div>
-              )}
-
-              {/* 目标成苗率 */}
-              <div>
-                <Label className="text-gray-900">
-                  目标成苗率（%）<span className="text-red-500">*</span>
-                </Label>
-                <NumberInput
-                  value={formData.targetSurvivalRate}
-                  onChange={(val) => setFormData({ ...formData, targetSurvivalRate: parseFloat(val) || 0 })}
-                  className={deepInputClass}
-                  placeholder="0-100%"
-                  decimals={2}
-                />
-              </div>
-
-              {/* 目标成苗数（自动计算） */}
-              <div>
-                <Label className="text-gray-700">目标成苗数</Label>
-                <Input
-                  type="text"
-                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
-                  readOnly
-                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                />
-                <p className="text-xs text-gray-500 mt-1">初始数量 × 目标成苗率</p>
-              </div>
-
-              {/* 负责人（与目标成苗数配对，2 个一排） */}
-              <div>
-                <Label className="text-gray-900">负责人</Label>
-                <Select
-                  value={formData.chargePerson}
-                  onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
-                >
-                  <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="请选择" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPERATORS.map(op => (
-                      <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 品质等级（2026-10-17 新增：此前只能在编辑弹窗补录） */}
-              <div>
-                <Label className="text-gray-900">品质等级</Label>
-                <DictSelect
-                  category="quality_level"
-                  value={formData.qualityGrade}
-                  onChange={(value) => setFormData({ ...formData, qualityGrade: value })}
-                  placeholder="请选择品质等级"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 扩繁育苗模式 */}
-          {formData.calculateMode === SeedlingCalculateMode.PROPAGATION && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* 母株数量 */}
-                <div>
-                  <Label className="text-gray-900">
-                    母株数量 <span className="text-red-500">*</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.motherPlantCount}
-                    onChange={(val) => setFormData({ ...formData, motherPlantCount: parseFloat(val) || 0 })}
-                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder="投入的基础种苗数量"
-                    decimals={0}
-                  />
-                  {motherCountExceeds && (
-                    <p className="text-xs text-red-500 mt-1">
-                      超过种源可用数量（{sourceAvailableCount}）
-                    </p>
-                  )}
-                </div>
-
-                {/* 扩繁倍数 */}
-                <div>
-                  <Label className="text-gray-900">
-                    扩繁倍数 <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={String(formData.propagationMultiple)}
-                    onValueChange={(val) => handlePropagationMultipleChange(Number(val))}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择扩繁倍数" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {propagationMultiples.map(p => (
-                        // 2026-07-28 审核 M：propagationMultiple 字典项只有 value/label，没有 description，移除以避免 "undefined"
-                        <SelectItem key={p.value} value={String(p.value)}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* 自定义扩繁倍数输入（当选择"其他"时显示） */}
-              {formData.propagationMultiple === 0 && (
-                <div>
-                  <Label className="text-gray-900">
-                    自定义扩繁倍数 <span className="text-red-500">*</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.customMultiple}
-                    onChange={(val) => setFormData({ ...formData, customMultiple: parseFloat(val) || 0 })}
-                    className={deepInputClass}
-                    placeholder="请输入扩繁倍数"
-                    decimals={2}
-                  />
-                </div>
-              )}
-
-              {/* 理论产量（自动计算） */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700">理论产量</Label>
-                  <Input
-                    type="text"
-                    value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
-                    readOnly
-                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
-                </div>
-
-                {/* 目标成苗率 */}
-                <div>
-                  <Label className="text-gray-900">
-                    目标成苗率（%）<span className="text-red-500">*</span>
-                  </Label>
-                  <NumberInput
-                    value={formData.targetSurvivalRate}
-                    onChange={(val) => setFormData({ ...formData, targetSurvivalRate: parseFloat(val) || 0 })}
-                    className={deepInputClass}
-                    placeholder="0-100%"
-                    decimals={2}
-                  />
-                </div>
-              </div>
-
-              {/* 目标成苗数（自动计算） */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700">目标成苗数</Label>
-                  <Input
-                    type="text"
-                    value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
-                    readOnly
-                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
-                </div>
-
-                {/* 负责人（与目标成苗数配对，2 个一排） */}
-                <div>
-                  <Label className="text-gray-900">负责人</Label>
-                  <Select
-                    value={formData.chargePerson}
-                    onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPERATORS.map(op => (
-                        <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 品质等级（2026-10-17 新增：此前只能在编辑弹窗补录） */}
-                <div>
-                  <Label className="text-gray-900">品质等级</Label>
-                  <DictSelect
-                    category="quality_level"
-                    value={formData.qualityGrade}
-                    onChange={(value) => setFormData({ ...formData, qualityGrade: value })}
-                    placeholder="请选择品质等级"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2026-06-16: 负责人已迁移到"数量与品质"区与目标成苗数配对 */}
-        </div>
-        {/* ========== 场地与计划区 ==========
-            V3.4 UI 统一：去掉 emerald 背景色块，改为 h3 + 灰下边框分组 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">场地与计划</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {/* 育苗区域 */}
-            <div>
-              <Label className="text-gray-900">
-                育苗区域 <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.siteId}
-                onValueChange={(val) => handleSiteChange(val)}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 育苗方式 */}
-            <div>
-              <Label className="text-gray-900">
-                育苗方式 <span className="text-red-500">*</span>
-              </Label>
-              <DictSelect
-                category="seedling_type"
-                value={formData.seedlingType}
-                onChange={(value) => handleSeedlingTypeChange(value)}
-                placeholder="请选择育苗方式"
-              />
-            </div>
-
-            {/* 2026-07-23：必填 — 描述"这次育苗产出的种苗是什么形态"（花朵/枝条/裸根苗/穴盘苗 等），入库后写入详情弹窗"种苗类型"列 */}
-            <div>
-              <Label className="text-gray-900">
-                育苗后形态 <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.seedlingForm || '__none__'}
-                onValueChange={(v) => setFormData({ ...formData, seedlingForm: v === '__none__' ? '' : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择育苗后形态（必填）" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SEEDLING_FORM_MAP).map(([k, label]) => (
-                    <SelectItem key={k} value={k}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 其他育苗方式输入框（占满整行） */}
-            {formData.seedlingType === '其他' && (
-              <div className="col-span-2">
-                <Label className="text-gray-900">
-                  其他方式说明 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  value={formData.seedlingTypeOther}
-                  onChange={(e) => setFormData({ ...formData, seedlingTypeOther: e.target.value })}
-                  className={deepInputClass}
-                  placeholder="请输入具体的育苗方式"
-                />
-              </div>
-            )}
-
-            {/* 2026-07-01 P1-6 修复：单位选择器改为 DictSelect（category="unit"），跨页统一 */}
-            <div>
-              <Label className="text-gray-900">
-                单位 <span className="text-red-500">*</span>
-              </Label>
-              <DictSelect
-                category="unit"
-                value={formData.unit}
-                onChange={(value) => setFormData({ ...formData, unit: value })}
-                placeholder="选择单位"
-              />
-            </div>
-
-            {/* 2026-07-23：删除计划类型字段（业务上不需要，育苗计划类型由生产计划批次决定） */}
-
-            {/* 开始日期 */}
-            <div>
-              <Label className="text-gray-900">
-                开始日期 <span className="text-red-500">*</span>
-              </Label>
-              <DatePicker className="w-full"
-                selected={formData.startDate ? new Date(formData.startDate) : undefined}
-                onChange={(date) => {
-                  const startDate = todayLocal(date);
-                  // 2026-10-17：开始日期后移导致已选结束日期不再晚于开始日期时，自动清空，避免留下非法区间
-                  setFormData(prev => ({
-                    ...prev,
-                    startDate,
-                    expectedEndDate: prev.expectedEndDate && prev.expectedEndDate <= startDate ? '' : prev.expectedEndDate,
-                  }));
-                }}
-              />
-            </div>
-
-            {/* 预计结束日期 */}
-            <div>
-              <Label className="text-gray-900">预计结束日期</Label>
-              <DatePicker className="w-full"
-                selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
-                // 2026-10-17：日历层面禁选「开始日期及更早」的日期，从根上避免选到不合理的结束日期
-                disabledDays={formData.startDate
-                  ? (date: Date) => date <= new Date(`${formData.startDate}T00:00:00`)
-                  : undefined}
-                onChange={(date) => setFormData({ ...formData, expectedEndDate: todayLocal(date) })}
-              />
-            </div>
-
-            {/* 育苗周期（自动计算） */}
-            <div>
-              <Label className="text-gray-700">育苗周期（天）</Label>
-              <Input
-                type="text"
-                value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
-                readOnly
-                className={`${deepInputClass} bg-gray-100 text-gray-600`}
-              />
-            </div>
-
-            {/* 2026-07-23：删除育苗工时字段（业务上不需要，估时数据由生产环节跟踪） */}
-          </div>
-        </div>
-
-
-        {/* ========== 备注与附件区 ==========
-            V3.4 UI 统一：去掉 gray 背景色块，改为 h3 + 灰下边框分组 */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">备注与附件</h3>
-          <div className="space-y-4">
-            {/* 备注 */}
-            <div>
-              <Label className="text-gray-900">备注</Label>
-              <TextArea
-                value={formData.remarks}
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                placeholder="请输入备注信息"
-              />
-            </div>
-
-            {/* 图片上传 */}
-            <div>
-              <Label className="text-gray-900">图片上传</Label>
-              <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
-                {/* 已上传的图片预览 */}
-                {pictures.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {pictures.map((pic, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={pic}
-                          alt={`预览${index + 1}`}
-                          className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPictures(pictures.filter((_, i) => i !== index))}
-                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* 上传按钮 */}
-                <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 rounded-lg py-4">
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">点击上传图片</span>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (files) {
-                        Array.from(files).forEach(file => {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const result = event.target?.result as string;
-                            setPictures([...pictures, result]);
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-                </Label>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* ========== 关联种源信息区（2026-10-18 拆分为子组件） ========== */}
+        <SeedlingSourceSection
+          formData={formData}
+          setFormData={setFormData}
+          filteredSeedSources={filteredSeedSources}
+          productionPlanVarietyFilterFromPlan={productionPlanVarietyFilterFromPlan}
+          sourcePopoverOpen={sourcePopoverOpen}
+          setSourcePopoverOpen={setSourcePopoverOpen}
+          sourceSearch={sourceSearch}
+          setSourceSearch={setSourceSearch}
+          sourcePopoverRef={sourcePopoverRef}
+          selectedSourceLabel={selectedSourceLabel}
+          selectedSource={selectedSource}
+          fullVarietyPath={fullVarietyPath}
+          handleSourceChange={handleSourceChange}
+          navigate={navigate}
+        />
+        {/* ========== 数量与品质区（2026-10-18 拆分为子组件） ========== */}
+        <QuantityQualitySection
+          formData={formData}
+          setFormData={setFormData}
+          OPERATORS={OPERATORS}
+          propagationMultiples={propagationMultiples}
+          sourceRequiresExplicitConsumption={sourceRequiresExplicitConsumption}
+          sourceAvailableCount={sourceAvailableCount}
+          selectedSource={selectedSource}
+          initialCountExceeds={initialCountExceeds}
+          motherCountExceeds={motherCountExceeds}
+          targetSurvivalCount={targetSurvivalCount}
+          theoreticalYield={theoreticalYield}
+          handlePropagationMultipleChange={handlePropagationMultipleChange}
+        />
+        {/* ========== 场地与计划区（2026-10-18 拆分为子组件） ========== */}
+        <SitePlanSection
+          formData={formData}
+          setFormData={setFormData}
+          sites={sites}
+          seedlingCycle={seedlingCycle}
+          handleSiteChange={handleSiteChange}
+          handleSeedlingTypeChange={handleSeedlingTypeChange}
+        />
+        {/* ========== 备注与附件区（2026-10-18 拆分为子组件） ========== */}
+        <RemarkAttachmentSection
+          formData={formData}
+          setFormData={setFormData}
+          pictures={pictures}
+          setPictures={setPictures}
+        />
       </div>
     </UnifiedModal>
   );
