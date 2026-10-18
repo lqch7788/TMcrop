@@ -21,8 +21,8 @@ import { QUALITY_GRADE_MAP } from '@/constants/cropConstants';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 // 2026-07-28 审核 C-3：CSV 也改用前端 selectedData 生成（与 XLSX 对齐），修复"勾选无效"bug
 import { exportCsv } from '@/services/exporters';
-import type { OutboundQuery as ServiceOutboundQuery, OutboundRow as ServiceOutboundRow, OutboundSummary as ServiceOutboundSummary } from '@/services/inventoryTransactionService';
-import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
+import type { OutboundQuery as ServiceOutboundQuery, OutboundSummary as ServiceOutboundSummary } from '@/services/inventoryTransactionService';
+import { useInventoryTransactionStore, type OutboundQuery, type OutboundRow } from '@/stores/useInventoryTransactionStore';
 // 2026-06-04 紧急修复：跨页刷新订阅（任何写操作 → useInventoryStore.notifyChange()
 // → version 自增 → 此 useEffect 重跑 → 重新加载最新数据）
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -35,15 +35,36 @@ import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetai
 import { exportOutboundPDF, exportOutboundXLSX } from '@/utils/outboundPdfExporter';
 // 2026-07-15：移除 ActionToolbar import（改为直接渲染按钮组）
 
-/** 默认本月 1 号到今天（V3.1 关键：useEffect 同步设值避免 400） */
-export function getThisMonthRange(): { from: string; to: string } {
-  const now = new Date();
-  // 用本地时间格式化（不用 toISOString，避免 UTC 时区漂移）
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
-  const to = fmt(now);
-  return { from, to };
+/**
+ * 2026-10-18 P1 修复：按"实际导出的明细行"重算汇总。
+ * 此前 Excel 汇总 sheet 直接用列表筛选后的全局 summary，与"只导出选中行/当前页"的明细不一致。
+ */
+function buildSummaryFromRows(rows: OutboundRow[]): ServiceOutboundSummary {
+  const byStockType: Record<string, { count: number; quantity: number }> = {};
+  const byBusinessType: Record<string, { count: number; quantity: number }> = {};
+  let totalQuantity = 0;
+  let todayCount = 0;
+  const today = todayLocal();
+  for (const r of rows) {
+    const qty = Math.abs(Number(r.quantityOut ?? r.quantity) || 0);
+    totalQuantity += qty;
+    const st = r.stockType || 'unknown';
+    if (!byStockType[st]) byStockType[st] = { count: 0, quantity: 0 };
+    byStockType[st].count += 1;
+    byStockType[st].quantity += qty;
+    const bt = r.businessType || 'other';
+    if (!byBusinessType[bt]) byBusinessType[bt] = { count: 0, quantity: 0 };
+    byBusinessType[bt].count += 1;
+    byBusinessType[bt].quantity += qty;
+    if (String(r.operateDate || '').slice(0, 10) === today) todayCount += 1;
+  }
+  return {
+    totalQuantity,
+    totalCount: rows.length,
+    todayCount,
+    byStockType,
+    byBusinessType,
+  };
 }
 
 export default function OutboundRecordsPage() {
@@ -57,7 +78,7 @@ export default function OutboundRecordsPage() {
   // 2026-06-04 V2.1 铁律改造：持久化数据从 useState 迁到 Store
   const rows = useInventoryTransactionStore((s) => s.rows);
   const total = useInventoryTransactionStore((s) => s.total);
-  const summary = useInventoryTransactionStore((s) => s.summary);
+  // 2026-10-18：页面不再直接展示全局 summary；导出汇总按实际明细重算（见 buildSummaryFromRows）
   const loading = useInventoryTransactionStore((s) => s.loading);
   const loadOutbound = useInventoryTransactionStore((s) => s.loadOutbound);
   const deleteTransactions = useInventoryTransactionStore((s) => s.deleteTransactions);
@@ -246,16 +267,8 @@ export default function OutboundRecordsPage() {
             operateDate: r.operateDate ?? r.operatorDate ?? r.outboundDate ?? '',
             createTime: r.createdAt,
           })),
-          // summary 同样是两套定义：store 版的可选字段与命名（count vs totalCount）转为 exporter 期望形状
-          summary
-            ? {
-                totalCount: summary.totalCount ?? summary.count,
-                totalQuantity: summary.totalQuantity,
-                todayCount: summary.todayCount ?? 0,
-                byStockType: summary.byStockType ?? {},
-                byBusinessType: summary.byBusinessType ?? {},
-              }
-            : null
+          // 2026-10-18 P1 修复：汇总按实际导出明细重算（不再用全局 summary，避免与选中行不一致）
+          buildSummaryFromRows(selectedData)
         );
         toast.success(`Excel 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'word') {
@@ -364,7 +377,12 @@ export default function OutboundRecordsPage() {
         loading={loading}
         pagination={{ current: query.page ?? 1, pageSize: query.limit ?? 50 }}
         total={total}
-        onChange={(p) => setQuery((q) => ({ ...q, page: p.current, limit: p.pageSize }))}
+        onChange={(p) => {
+          setQuery((q) => ({ ...q, page: p.current, limit: p.pageSize }));
+          // 2026-10-18 P1 修复：rows 只含当前页，切换页码/每页条数后旧页选中行无法导出/删除
+          // （但计数仍显示）→ 切换分页时清空选中，与"全选仅当前页"的口径一致。
+          setSelectedRows([]);
+        }}
         onViewDetail={handleViewDetail}
         exportMode={exportMode}
         deleteMode={deleteMode}

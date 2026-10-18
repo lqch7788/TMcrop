@@ -610,10 +610,11 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   // 2026-07-13 v6：sourceId 按 stockType 动态加载（种源/育苗/种植 三选一）
   // 历史版本 v5 同时拉种植+育苗两个列表 — 现改为按 prefillStockType 选 endpoint
   // 2026-07-13 方案 B：弹窗 open 时无条件并行加载 三类源记录（合并到一个下拉）
-  // 依赖 only isOpen — 弹窗关闭重新打开会重新加载（用户场景罕见，正常不会重复开）
+  // 2026-10-18 P1 修复：去掉 `if (sourceIdOptions.length > 0) return` ——
+  //   原逻辑只在首次打开时加载，之后新结束的育苗/种植行永远不会出现在下拉中（须刷新整页）。
+  //   现在每次打开弹窗都重新拉取。
   useEffect(() => {
     if (!isOpen) return;
-    if (sourceIdOptions.length > 0) return;
     (async () => {
       try {
         // 2026-10-10：改走 service 层（sourceRecordLookup.fetchEndedSourceRows）——
@@ -840,6 +841,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           operatorName: operator.operatorName,
         });
         await showAlert(`已提交补录审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「库存审批 → 补录审批」tab 查看`);
+        // 2026-10-18 P2：提交即写 pending 占位库存，触发列表刷新让用户立即看到"审核中"行
+        notifyChange();
         onSuccess?.();
         onClose();
       } else if (sourceType === 'transfer') {
@@ -891,6 +894,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           operatorName: operator.operatorName,
         });
         await showAlert(`已提交调拨审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「库存审批 → 作物调拨审批」tab 查看`);
+        // 2026-10-18 P2：调拨申请可能产生占位行，触发列表刷新
+        notifyChange();
         onSuccess?.();
         onClose();
       } else {

@@ -128,9 +128,18 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     try {
       // 2026-06-04 紧急修复：enhancedApiClient.get 不支持 params（options 只有 retryCount），
       // 必须手拼 query string 到 URL，否则后端 service 收到无 from/to 抛 500
+      // 2026-10-18 P0 修复：后端 /inventory/transactions 只读 snake_case 参数，
+      //   此前直接发送 camelCase（stockType/cropName/...）→ 5 个筛选条件全部被静默丢弃。
+      const PARAM_MAP: Record<string, string> = {
+        stockType: 'stock_type',
+        warehouseId: 'warehouse_id',
+        cropName: 'crop_name',
+        operatorName: 'operator_name',
+        businessType: 'business_type',
+      };
       const params = new URLSearchParams();
       for (const [k, v] of Object.entries(mergedQuery)) {
-        if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
+        if (v !== undefined && v !== null && v !== '') params.set(PARAM_MAP[k] || k, String(v));
       }
       const qs = params.toString();
       const url = qs ? `/inventory/transactions?${qs}` : '/inventory/transactions';

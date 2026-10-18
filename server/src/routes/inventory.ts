@@ -1041,7 +1041,25 @@ import { toCSV } from '../utils/csvExporter';
 // 返回 rows + total + summary（一次拿到列表+统计，前端不用发两次请求）
 router.get('/transactions', async (req: Request, res: Response) => {
   try {
-    const { from, to, stock_type, warehouse_id, crop_name, operator_name, business_type, page, limit } = req.query as any;
+    // 2026-10-18 P0 修复：同时兼容 snake_case（前端 Store）与 camelCase（历史调用方），
+    // 避免任一侧字段名不一致导致筛选条件被静默丢弃。
+    const q = req.query as any;
+    const pick = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = q[k];
+        if (v !== undefined && v !== null && v !== '') return v;
+      }
+      return undefined;
+    };
+    const from = pick('from');
+    const to = pick('to');
+    const stock_type = pick('stock_type', 'stockType');
+    const warehouse_id = pick('warehouse_id', 'warehouseId');
+    const crop_name = pick('crop_name', 'cropName');
+    const operator_name = pick('operator_name', 'operatorName');
+    const business_type = pick('business_type', 'businessType');
+    const page = pick('page');
+    const limit = pick('limit');
     const query = {
       from, to,
       stockType: stock_type,
@@ -1393,9 +1411,20 @@ router.put('/:id', (req: Request, res: Response) => {
     // 2026-10-10 修复：编辑了 current_quantity 但未显式改 available_quantity 时，联动重算
     // available = max(0, 新数量 - frozen)——此前编辑只改数量，available 列残留旧值（列表"可用"列虚高）
     const curQtyUpd = fields.findIndex(f => f.startsWith('current_quantity'));
-    if (curQtyUpd >= 0 && !fields.some(f => f.startsWith('available_quantity'))) {
-      fields.push('available_quantity = ?');
-      values.push(Math.max(0, Number(values[curQtyUpd]) - (Number(oldStockObj.frozen_quantity) || 0)));
+    if (curQtyUpd >= 0) {
+      // 2026-10-18 P1 修复：禁止把当前数量改到低于已冻结数量（否则 current < frozen，可用量被 max(0) 掩盖成 0）
+      const frozenQty = Number(oldStockObj.frozen_quantity) || 0;
+      const nextQty = Number(values[curQtyUpd]);
+      if (!Number.isFinite(nextQty) || nextQty < frozenQty) {
+        return res.status(400).json({
+          success: false,
+          error: `数量不能低于已冻结数量（${frozenQty}）`,
+        });
+      }
+      if (!fields.some(f => f.startsWith('available_quantity'))) {
+        fields.push('available_quantity = ?');
+        values.push(Math.max(0, nextQty - frozenQty));
+      }
     }
     fields.push('update_time = ?', 'version = version + 1');
     values.push(new Date().toISOString());
@@ -1511,6 +1540,9 @@ router.delete('/batch', (req: Request, res: Response) => {
     const params: any[] = [];
     idArray.forEach(id => params.push(id, id));
     db.run(`DELETE FROM inventory_stock WHERE ${conditions}`, params);
+    // 2026-10-18 P1 修复：按实际受影响行数返回删除数（此前恒报 idArray.length，删除 0 条也提示成功）。
+    // sql.js 的 db.run 返回 Database 对象，没有 changes 属性；必须用 getRowsModified()。
+    const deletedCount = db.getRowsModified();
     saveDatabase();
     // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
@@ -1518,9 +1550,9 @@ router.delete('/batch', (req: Request, res: Response) => {
       businessId: idArray.join(','),
       action: 'delete',
       operatorName: (req as any).user?.name,
-      opinion: `批量删除 ${idArray.length} 条库存`,
+      opinion: `批量删除 ${deletedCount} 条库存`,
     });
-    res.json({ success: true, data: { deletedCount: idArray.length } });
+    res.json({ success: true, data: { deletedCount } });
   } catch (error) {
     console.error('[inventory] 批量 DELETE /batch 失败:', error);
     res.status(500).json({ success: false, error: '批量删除库存失败' });

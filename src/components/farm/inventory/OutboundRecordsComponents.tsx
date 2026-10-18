@@ -1,15 +1,14 @@
 /**
- * 出库记录 4 个组件 (V3.1)
+ * 出库记录组件 (V3.1)
  * 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md §7
  *
  * 组件模式：每个组件独立 export，按 props 解耦
- * - OutboundRecordsStats:           4 个紧凑型统计卡
- * - (OutboundRecordsStockTypeCards 复用作物库存 InventoryStockTypeCards)
- * - OutboundRecordsFilter:          6 维筛选 + 时间范围
- * - OutboundRecordsTable:           15 列数据表（含操作）
+ * - OutboundRecordsFilter:          多条件筛选（日期 / 库存类型 / 业务类型 / 品种 / 出库人）
+ * - OutboundRecordsTable:           13 列数据表（+ 可选复选框列）
  *
  * 数据全部从 props 传入，**不硬编码**任何业务数据
  * 字典码 → 中文从 cropConstants.ts 复用映射
+ * 2026-10-18：更新过时文件头（原注释提及的统计卡/分类汇总组件已移除）
  */
 
 import React, { useMemo } from 'react';
@@ -125,6 +124,16 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
               <SelectItem value={OutboundBusinessType.OTHER}>
                 {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.OTHER].label}
               </SelectItem>
+              {/* 2026-10-18 P2 修复：补全物料领用/退料撤销与内部领用类型（库中均有真实流水） */}
+              <SelectItem value={OutboundBusinessType.MATERIAL_REQUISITION}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.MATERIAL_REQUISITION].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.MATERIAL_RETURN_UNDO}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.MATERIAL_RETURN_UNDO].label}
+              </SelectItem>
+              <SelectItem value="internal_planting">内部领用（种植）</SelectItem>
+              <SelectItem value="internal_seedling">内部领用（育苗）</SelectItem>
+              <SelectItem value="internal_seed_source">内部领用（种源）</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,17 +199,26 @@ export function OutboundRecordsTable({
   const stockLabel = (s?: string) => (s ? STOCK_TYPE_LABEL[s]?.label || s : '-');
   const stockColor = (s?: string) => (s ? STOCK_TYPE_LABEL[s]?.color || 'bg-gray-500' : 'bg-gray-500');
   const bizMeta = (b?: string) => {
+    // 2026-10-18 P2：内部领用类型不在前端枚举内，单独映射（库中有真实流水）
+    const INTERNAL_BIZ_LABEL: Record<string, string> = {
+      internal_planting: '内部领用（种植）',
+      internal_seedling: '内部领用（育苗）',
+      internal_seed_source: '内部领用（种源）',
+    };
+    if (b && INTERNAL_BIZ_LABEL[b]) {
+      return { label: INTERNAL_BIZ_LABEL[b], color: 'bg-cyan-100 text-cyan-700' };
+    }
     const normalized = mapLegacyBusinessType(b);
     return OUTBOUND_BUSINESS_TYPE_META[normalized];
   };
 
-  const colSpan = (exportMode || deleteMode) ? 16 : 15;
+  // 2026-10-18 P2 修复：colSpan 与实际列数对齐（13 数据列 + 可选复选框列）
+  const colSpan = (exportMode || deleteMode) ? 14 : 13;
   // 2026-09-27 用户要求：并入 material 类型后，删除模式下 material 行不可选
   // （物料账必须走领料出库模块操作；后端删除白名单同样不含 material 类型——双保险）
   const isDeleteLockedRow = (row: OutboundRow) => deleteMode && !exportMode && row.stockType === 'material';
   const selectableData = data.filter(r => !isDeleteLockedRow(r));
   const allSelected = selectableData.length > 0 && selectableData.every(r => selectedRows.includes(r.id));
-  const someSelected = selectedRows.length > 0 && !allSelected;
 
   // 用 row.id（流水唯一 ID）而非 row.instanceId（库存实例 ID）作为选中 key
   // — 同一库存实例可有多条出库流水，必须按行 ID 区分

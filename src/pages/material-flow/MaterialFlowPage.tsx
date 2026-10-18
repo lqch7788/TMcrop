@@ -14,6 +14,8 @@ import { useMaterialFlowStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
+// 2026-10-18 P1：导出全部时按筛选循环拉取全部分页
+import { getAllFlowLogs } from '../../services/apiMaterialFlowService';
 import * as XLSX from 'xlsx';
 
 const FLOW_TYPE_OPTIONS = [
@@ -26,7 +28,13 @@ const FLOW_TYPE_OPTIONS = [
   { value: 'correction', label: '修正' },
   { value: 'inventory→external', label: '库存→出库' },
   { value: 'inventory→freeze', label: '库存→冻结' },
+  { value: 'inventory→unfreeze', label: '库存→解冻' },
   { value: 'inventory→planting', label: '库存→种植' },
+  // 2026-10-18 P2：补全库中实际存在但下拉缺失的类型
+  { value: 'inventory→seed_source', label: '库存→种源' },
+  { value: 'harvest→inventory', label: '采收→入库' },
+  { value: 'planting→harvest', label: '种植→采收' },
+  { value: 'seedling→inventory', label: '育苗→库存' },
   { value: 'external→planting', label: '外部→种植' },
   { value: 'seedling→harvest', label: '育苗→采收' },
   { value: 'external→seedling', label: '外部→育苗' },
@@ -52,6 +60,7 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'inventory→freeze': '库存→冻结',
   'inventory→unfreeze': '库存→解冻',  // 2026-08-21：解冻流水补漏
   'harvest→inventory': '采收→入库',
+  'seedling→inventory': '育苗→库存',  // 2026-10-18：库中存在但此前未映射
   'other': '其他',
 };
 
@@ -75,7 +84,9 @@ const FLOW_TYPE_COLOR: Record<string, string> = {
   'plan→seed_source':     'bg-sky-500',
   'planting→seed_source': 'bg-teal-500',
   'inventory→freeze':     'bg-rose-500',
+  'inventory→unfreeze':   'bg-rose-400',
   'harvest→inventory':    'bg-orange-600',
+  'seedling→inventory':   'bg-emerald-700',
   'other':                'bg-slate-500',
 };
 
@@ -314,7 +325,12 @@ function ExportFormatModal({
 
 export default function MaterialFlowPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('logs');
-  const { logs, total, loading, statsData, loadLogs, loadCropStats, loadSourceStats, loadAnnualStats, batchDeleteLogs } = useMaterialFlowStore();
+  const {
+    logs, total, loading,
+    seedlingStats, plantingStats, annualStats,
+    error: loadError, clearError,
+    loadLogs, loadCropStats, loadSourceStats, loadAnnualStats, batchDeleteLogs,
+  } = useMaterialFlowStore();
 
   // 流转记录筛选
   const [page, setPage] = useState(1);
@@ -354,11 +370,13 @@ export default function MaterialFlowPage() {
     }
   }, [exportMode, deleteMode]);
 
-  // 各 tab 的原始数据
+  // 各 tab 的原始数据（2026-10-18 P2：按 tab 分桶，避免切换时短暂显示上一 tab 的数据）
   const currentRows = useMemo<any[]>(() => {
     if (activeTab === 'logs') return logs;
-    return statsData;
-  }, [activeTab, logs, statsData]);
+    if (activeTab === 'seedling') return seedlingStats;
+    if (activeTab === 'planting') return plantingStats;
+    return annualStats;
+  }, [activeTab, logs, seedlingStats, plantingStats, annualStats]);
 
   // 分页后展示的数据：logs 走服务端分页（数据已切好），其他 tab 走客户端切片
   const pagedData = useMemo<any[]>(() => {
@@ -408,6 +426,30 @@ export default function MaterialFlowPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, page, pageSize, flowType, cropName, batchCode, startDate, endDate, statYear]);
 
+  // 2026-10-18 P2 修复：深链初始化 —— 从库存页/追溯链带 ?instance_id= 进入时自动打开库存详情
+  // （原实现只写 URL 不读，刷新后上下文丢失）
+  useEffect(() => {
+    const iid = new URLSearchParams(window.location.search).get('instance_id');
+    if (iid) {
+      setDetailInstanceId(iid);
+      setDetailOpen(true);
+    }
+  }, []);
+
+  // 2026-10-18 P2：加载失败重试（按当前 tab 重新请求）
+  const reloadCurrent = () => {
+    clearError();
+    if (activeTab === 'logs') {
+      loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, batchCode: batchCode.trim() || undefined, startDate, endDate });
+    } else if (activeTab === 'seedling') {
+      loadCropStats(statYear);
+    } else if (activeTab === 'planting') {
+      loadSourceStats(statYear);
+    } else {
+      loadAnnualStats(statYear);
+    }
+  };
+
   const handleSearch = () => {
     setPage(1);
     cancelSelection();
@@ -442,10 +484,9 @@ export default function MaterialFlowPage() {
     setShowDeleteModal(true);
   };
   const handleConfirmExportClick = () => {
-    if (selectedIds.length === 0) {
-      showAlert('请先选择要导出的数据（点表格左侧 checkbox）');
-      return;
-    }
+    // 2026-10-18 P2 修复：未勾选时允许直接导出"当前筛选的全部数据"——
+    // 此前硬性要求勾选，导致统计 tab（无 checkbox）导出入口完全不可用，
+    // 且 handleDoExport 里"未选中=全部"的分支永远不可达。
     setShowExportModal(true);
   };
   const handleCancelSelection = () => {
@@ -464,7 +505,8 @@ export default function MaterialFlowPage() {
     }
     // 2026-07-28 审核 H-8：删除成功后重置 page=1，避免"幽灵页"（最后一页删完停在该页）
     setPage(1);
-    loadLogs({ page: 1, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
+    // 2026-10-18 P1 修复：补回 batchCode —— 此前删除后刷新丢失批次筛选，列表跳回全量
+    loadLogs({ page: 1, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, batchCode: batchCode.trim() || undefined, startDate, endDate });
   };
 
   // 点击库存实例ID → 打开库存详情弹窗
@@ -478,10 +520,37 @@ export default function MaterialFlowPage() {
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   };
 
-  const handleDoExport = (format: 'excel' | 'csv' | 'pdf') => {
-    const exportSource = selectedIds.length > 0
-      ? currentRows.filter((r, i) => selectedIds.includes(keyOf(r, i)))
-      : currentRows;
+  const handleDoExport = async (format: 'excel' | 'csv' | 'pdf') => {
+    setShowExportModal(false);
+    const selectedSnapshot = [...selectedIds];
+    const hasSelection = selectedSnapshot.length > 0;
+    cancelSelection();
+
+    let exportSource: any[];
+    try {
+      if (activeTab === 'logs' && !hasSelection) {
+        // 2026-10-18 P1 修复：logs 走服务端分页，原"全部导出"实际只有当前页。
+        // 未勾选任何行时按当前筛选循环拉取全部记录再导出。
+        const all = await getAllFlowLogs({
+          flowType: flowType === 'all' ? undefined : flowType,
+          cropName,
+          batchCode: batchCode.trim() || undefined,
+          startDate,
+          endDate,
+        });
+        exportSource = all.list;
+        if (all.truncated) {
+          await showAlert(`数据超过导出上限，本次仅导出前 ${all.list.length} 条（共 ${all.total} 条），请缩小筛选范围后重试`);
+        }
+      } else {
+        exportSource = hasSelection
+          ? currentRows.filter((r, i) => selectedSnapshot.includes(keyOf(r, i)))
+          : currentRows;
+      }
+    } catch (e) {
+      await showAlert(`导出失败：${e instanceof Error ? e.message : '加载导出数据失败'}`);
+      return;
+    }
 
     let headers: Record<string, string> = {};
     let title = '';
@@ -518,6 +587,8 @@ export default function MaterialFlowPage() {
       sourceCategory: it.sourceCategory || it.source_category ? labelCategory(it.sourceCategory || it.source_category) : it.sourceCategory,
     }));
 
+    // 2026-10-18 P2 修复：导出执行段加 try/catch，失败时明确提示（此前异常只进控制台）
+    try {
     if (format === 'excel') {
       const data = exportRows.map(r => { const o: any = {}; Object.entries(headers).forEach(([k,l]) => o[l] = r[k]); return o; });
       const ws = XLSX.utils.json_to_sheet(data);
@@ -542,6 +613,9 @@ export default function MaterialFlowPage() {
       if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); }
       // 2026-07-10 P0-6 修复：浏览器拦截弹窗时 silent failure 加 console.warn
       else { console.warn('[MaterialFlowPage] window.open 被浏览器拦截，PDF 导出失败'); }
+    }
+    } catch (e) {
+      await showAlert(`导出失败：${e instanceof Error ? e.message : '生成导出文件失败'}`);
     }
     setShowExportModal(false);
     cancelSelection();
@@ -699,8 +773,10 @@ export default function MaterialFlowPage() {
         <tbody className="divide-y divide-gray-300">
           {pagedData.map((item: any, i: number) => {
             const mapped = rowMapper(item);
+            // 2026-10-18 P3：不用纯索引 key —— 用业务字段组合，翻页/刷新时减少行复用错位
+            const rowKey = `${page}-${i}-${item.targetCode ?? item.target_code ?? item.flowType ?? item.flow_type ?? ''}`;
             return (
-              <tr key={i} className="hover:bg-emerald-50 transition-colors">
+              <tr key={rowKey} className="hover:bg-emerald-50 transition-colors">
                 {headers.map(h => (
                   <StdTd key={h.key} className={h.key === 'totalQty' || h.key === 'flowCount' || h.key === 'batchCount' ? 'font-medium text-emerald-600 tabular-nums' : 'text-gray-700'}>
                     {mapped[h.key] ?? '-'}
@@ -727,9 +803,10 @@ export default function MaterialFlowPage() {
         <Pagination
           currentPage={page}
           totalPages={totalPages}
-          onPageChange={setPage}
+          // 2026-10-18 P1 修复：切页后旧页选中行不在 currentRows 中，导出/删除会静默丢失 → 清空选中
+          onPageChange={(p) => { setPage(p); setSelectedIds([]); }}
           pageSize={pageSize}
-          onPageSizeChange={setPageSize}
+          onPageSizeChange={(s) => { setPageSize(s); setSelectedIds([]); }}
           showPageSize={true}
         />
       </div>
@@ -827,6 +904,19 @@ export default function MaterialFlowPage() {
             </div>
           </div>
         </div>
+
+        {/* 2026-10-18 P2：加载失败提示（此前 error 无人消费，失败显示"暂无数据"） */}
+        {loadError && !loading && (
+          <div className="mx-4 mt-3 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm flex items-center justify-between">
+            <span>加载失败：{loadError}</span>
+            <button
+              className="text-red-700 underline hover:no-underline"
+              onClick={reloadCurrent}
+            >
+              重试
+            </button>
+          </div>
+        )}
 
         <div className="py-4">
           {/* 流转记录 Tab */}

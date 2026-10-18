@@ -3,7 +3,7 @@
  * 样式与 OrderTable 保持一致（gradient header / sticky / hover emerald-50）
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -17,9 +17,11 @@ import {
   InventoryStatus,
   InventoryStock,
 } from '../../../types/inventory';
-import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
+// 2026-10-18 P2：作物编码反查改用 API 品种库 Store（原 localStorage 旧品种库与全站数据源不一致）
+import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
 // 2026-10-10：补 UNIT_MAP——单位列此前直接显示原始值（'kg' 等英文码未翻译）
-import { SOURCE_ORIGIN_MAP, UNIT_MAP } from '../../../constants/cropConstants';
+// 2026-10-18 P2：品质映射改用共享 QUALITY_GRADE_MAP（与导出/详情统一，删除组件内硬编码副本）
+import { SOURCE_ORIGIN_MAP, UNIT_MAP, QUALITY_GRADE_MAP } from '../../../constants/cropConstants';
 import { translateForm, translateArea } from '../../../constants/formDictionary';
 
 interface InventoryTableProps {
@@ -136,20 +138,36 @@ export function InventoryTable({
   showCheckboxes = false,
   onSelectAll,
 }: InventoryTableProps) {
-  // 作物名称 → 作物编码（11位）映射，从品种库反查（只读，不自动建）
-  // 与种源/育苗/种植管理页 CropCodeSelector 共享同一品种库
+  // 作物名称 → 作物编码（11位）映射，从 API 品种库反查（只读，不自动建）
+  // 与种源/育苗/种植管理页 CropCodeSelector 共享同一数据源
+  const varieties = useCropVarietyStore((s) => s.items);
+  const loadVarieties = useCropVarietyStore((s) => s.loadItems);
+  useEffect(() => {
+    if (varieties.length === 0) void loadVarieties();
+  }, [varieties.length, loadVarieties]);
+
+  const nameToCode = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const v of varieties) {
+      if (!v.cropCode) continue;
+      for (const n of [v.varietyName, v.subVariety1Name, v.detailVarietyName]) {
+        if (n && !map.has(n)) map.set(n, v.cropCode);
+      }
+    }
+    return map;
+  }, [varieties]);
+
   const cropCodeMap = useMemo(() => {
-    initVarieties();
     const map = new Map<string, string>();
     for (const stock of data) {
       const name = stock.cropName;
       if (name && !map.has(name)) {
-        const v = getVarietyByName(name);
-        if (v?.cropCode) map.set(name, v.cropCode);
+        const code = nameToCode.get(name);
+        if (code) map.set(name, code);
       }
     }
     return map;
-  }, [data]);
+  }, [data, nameToCode]);
 
   const paginatedData = data.slice(
     (pagination.current - 1) * pagination.pageSize,
@@ -168,7 +186,8 @@ export function InventoryTable({
 
   // 2026-06-30 Bug 12 二轮：去掉「种植模式」列，改为独立「形态」列
   // 形态列单独提出比嵌在「类型」列下方更醒目（用户反馈嵌在小灰字不显眼）
-  const colSpan = showCheckboxes ? 16 : 15;
+  // 2026-10-18 P2 修复：15 数据列 + 1 操作列（+1 可选复选框列）
+  const colSpan = showCheckboxes ? 17 : 16;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -232,8 +251,11 @@ export function InventoryTable({
                 // 2026-10-11：DB 实测存在 InventoryStatus 未收录的历史值（frozen_full/frozen_partial/pending），
                 //   故历史值比较走 string 视图；下面前两项已等价覆盖 'in_stock'/'low_stock' 字符串写法
                 const statusValue: string = status;
+                // 2026-10-18 P1：与页面 handleOpenOutbound 的允许集合完全对齐（含 active 历史值），
+                //   避免"按钮显示但点击被拒"。
                 const canOutbound = status === InventoryStatus.IN_STOCK
                   || status === InventoryStatus.LOW_STOCK
+                  || statusValue === 'active' /* 历史补录遗留 */
                   || statusValue === 'frozen_partial'
                   || statusValue === 'frozen' /* 兼容历史 */;
                 const isSelected = selectedRows.includes(stock.instanceId);
@@ -272,25 +294,13 @@ export function InventoryTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {stock.grade ? (() => {
-                        // 字典码（special/excellent/good/qualified/unqualified）→ 统一用 QUALITY_GRADE_MAP
-                        // 兼容 A/B/C/D 老数据
-                        const QUALITY_GRADE_BG: Record<string, { bg: string; label: string }> = {
-                          special:     { bg: 'bg-emerald-600', label: '特优' },
-                          excellent:   { bg: 'bg-emerald-500', label: '优' },
-                          good:        { bg: 'bg-blue-600',    label: '良' },
-                          qualified:   { bg: 'bg-amber-600',   label: '合格' },
-                          unqualified: { bg: 'bg-red-600',     label: '不合格' },
-                          A: { bg: 'bg-emerald-500', label: 'A级' },
-                          B: { bg: 'bg-blue-600',    label: 'B级' },
-                          C: { bg: 'bg-amber-600',   label: 'C级' },
-                          D: { bg: 'bg-red-600',     label: '次品' },
-                        };
-                        const info = QUALITY_GRADE_BG[stock.grade];
+                        // 2026-10-18 P2：统一使用共享 QUALITY_GRADE_MAP（含 special/excellent/... 与 A/B/C/D）
+                        const info = QUALITY_GRADE_MAP[stock.grade];
                         return (
-                          <span className={`px-2.5 py-0.5 text-xs rounded-full font-bold text-white shadow-sm ${
-                            info?.bg || 'bg-slate-600'
+                          <span className={`px-2.5 py-0.5 text-xs rounded-full font-bold shadow-sm ${
+                            info ? `${info.bg} ${info.text}` : 'bg-slate-600 text-white'
                           }`}>
-                            {/* 2026-10-10：未映射的品质码不再显示原始英文，统一显示「其他」 */}
+                            {/* 未映射的品质码不显示原始英文，统一显示「其他」 */}
                             {info?.label || '其他'}
                           </span>
                         );
