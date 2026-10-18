@@ -36,7 +36,6 @@ import { ExportFormatModal } from './modals/ExportFormatModal';
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
 import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useZoneStore, useGreenhouseStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
-import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 // 2026-07-01 P2-8 修复：useAuthPermission 是死代码（已 hardcode 全部 true），删除
 import { showAlert } from '@/lib/dialogService';
@@ -86,6 +85,10 @@ export default function SeedlingPage() {
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  // 2026-10-18 P2 修复：筛选即时生效，条件变化后回到第 1 页，避免停在空页
+  useEffect(() => {
+    setPagination((p) => ({ ...p, current: 1 }));
+  }, [filters]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -112,9 +115,6 @@ export default function SeedlingPage() {
     uniqueCrops.sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'));
     return uniqueCrops;
   }, [seedlings]);
-
-  // 作物品种数据（从品种库服务获取，供弹窗使用）
-  const cropVarietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
 
   // 字典数据转换（使用 Zustand store 获取）
   // 育苗方式选项
@@ -161,7 +161,8 @@ export default function SeedlingPage() {
       seen.add(s.value);
       return true;
     });
-  }, [zones]);
+    // 2026-10-18 P1 修复：内部使用 baseGhOids，漏依赖会导致温室数据后到时区域列表恒为空
+  }, [zones, baseGhOids]);
 
   // 2026-07-04 v2：6 状态筛选项（与种植对齐，不用字典）
   const seedlingStatusOptions = useMemo(() => [
@@ -178,18 +179,26 @@ export default function SeedlingPage() {
     return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
 
-  // 加载种源数据（通过 Store）
-  useEffect(() => {
-    const loadSeedSources = async () => {
-      try {
-        await useSeedSourceStore.getState().loadItems();
-        setSeedSources(useSeedSourceStore.getState().items);
-      } catch (error) {
-        // logger.error('获取种源数据失败:', error);
-      }
-    };
-    loadSeedSources();
+  // 加载/刷新种源数据（通过 Store）
+  // 2026-10-18 P1 修复：新增/编辑/入库/繁殖后会扣减种源，原实现只在 mount 加载一次，
+  // 再次打开弹窗仍显示旧可用量，可能放行超额输入。
+  const refreshSeedSources = useCallback(async () => {
+    try {
+      await useSeedSourceStore.getState().loadItems();
+      setSeedSources([...useSeedSourceStore.getState().items]);
+    } catch (error) {
+      console.warn('[SeedlingPage] 刷新种源数据失败:', error);
+    }
   }, []);
+  useEffect(() => {
+    void refreshSeedSources();
+  }, [refreshSeedSources]);
+
+  // 育苗写操作成功后：同时刷新育苗与种源
+  const refreshAfterWrite = useCallback(async () => {
+    await loadItems();
+    await refreshSeedSources();
+  }, [loadItems, refreshSeedSources]);
 
   // 初始化数据（从 Store 加载）
   useEffect(() => {
@@ -246,7 +255,8 @@ export default function SeedlingPage() {
     })();
 
     return () => { cancelled = true; };
-  }, []); // 仅在 mount 时执行一次
+    // 2026-10-18 P2：纳入 searchParams，同页导航到新的 ?labelNumber= 也能响应
+  }, [searchParams]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -313,7 +323,7 @@ export default function SeedlingPage() {
 
   // 每日记录保存成功后刷新数据
   const handleDailyRecordSuccess = async () => {
-    await loadItems();
+    await refreshAfterWrite();
     // 从最新 store 数据中找到对应的记录并更新 currentRecord
     if (currentRecord) {
       const updatedRecord = useSeedlingStore.getState().items.find(s => s.id === currentRecord.id);
@@ -337,11 +347,11 @@ export default function SeedlingPage() {
     setInboundModal({ open: true, record });
   };
 
-  // 2026-07-01 P0-5 修复：入库成功后立即刷新列表（与种植侧 onSuccess={loadItems} 对齐）
+  // 2026-07-01 P0-5 修复：入库成功后立即刷新列表（与种植侧 onSuccess={refreshAfterWrite} 对齐）
   // 原因：之前只弹 toast，列表的 harvestStockedCount 不刷新，要等下次进入页面才看到最新入库量
   const handleInboundSuccess = async () => {
     toast.success('入库成功');
-    await loadItems();
+    await refreshAfterWrite();
   };
 
   const handleImageClick = (images: string[]) => {
@@ -391,42 +401,39 @@ export default function SeedlingPage() {
 
     setEndConfirm({ record: null });
 
-    // 保留无 planCode 时不联动生产计划的逻辑
-    if (!planCode || planCode.trim() === '') {
-      const result = await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
-      if (result) {
+    try {
+      // 保留无 planCode 时不联动生产计划的逻辑
+      if (!planCode || planCode.trim() === '') {
+        await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
         await showAlert('育苗记录已结束');
-        await loadItems();
-      } else {
-        await showAlert('结束失败');
+        await refreshAfterWrite();
+        return;
       }
-      return;
-    }
 
-    const batch = await cropBatchService.getCropBatchByCode(planCode);
-    if (!batch) {
-      const result = await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
-      if (result) {
+      const batch = await cropBatchService.getCropBatchByCode(planCode);
+      if (!batch) {
+        await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
         await showAlert('育苗记录已结束（强结）');
-        await loadItems();
-      } else {
-        await showAlert('强结失败');
+        await refreshAfterWrite();
+        return;
       }
-      return;
-    }
 
-    if (batch.batchStatus === 'completed') {
-      await showAlert('该生产计划已完成结束，不能重复结束');
-      return;
-    }
+      if (batch.batchStatus === 'completed') {
+        await showAlert('该生产计划已完成结束，不能重复结束');
+        return;
+      }
 
-    const result = await cropBatchService.endCropBatch(batch.id, endType);
-    if (result) {
+      const result = await cropBatchService.endCropBatch(batch.id, endType);
+      if (!result) {
+        await showAlert('结束失败');
+        return;
+      }
       await updateItem(record.id, { endType, endTime: todayLocal(), endDate: todayLocal(), status: endStatus });
       await showAlert('生产计划已正常结束（育苗记录同步结束）');
-      loadItems();
-    } else {
-      await showAlert('结束失败');
+      await refreshAfterWrite();
+    } catch (e) {
+      // 2026-10-18：Store 已改为失败上抛，这里显示具体原因，避免静默失败
+      await showAlert(`结束失败：${(e as Error)?.message || '请重试'}`);
     }
   };
 
@@ -716,9 +723,8 @@ export default function SeedlingPage() {
       <AddModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        onSuccess={loadItems}
+        onSuccess={refreshAfterWrite}
         seedSources={seedSources}
-        cropVarietyOptions={cropVarietyOptions}
         seedlingTypes={seedlingTypes}
         sites={sites}
       />
@@ -727,10 +733,9 @@ export default function SeedlingPage() {
         <EditModal
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onSuccess={loadItems}
+          onSuccess={refreshAfterWrite}
           record={currentRecord}
           seedSources={seedSources}
-          cropVarietyOptions={cropVarietyOptions}
           seedlingTypes={seedlingTypes}
           sites={sites}
         />
@@ -766,7 +771,7 @@ export default function SeedlingPage() {
         <SeedlingPropagationModal
           isOpen={propagationModalOpen}
           onClose={() => setPropagationModalOpen(false)}
-          onSuccess={loadItems}
+          onSuccess={refreshAfterWrite}
           record={currentRecord}
           // 已结束的育苗 → 只读模式（保留查看+导出）
           readOnly={Boolean(

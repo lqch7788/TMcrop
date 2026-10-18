@@ -44,7 +44,25 @@ export default function PlantingMoveRecordsModal({ isOpen, onClose, planting }: 
     setLoading(true);
     try {
       const data = await getPlantingMoveRecords(planting.id);
-      setRecords(Array.isArray(data) ? data : []);
+      // 2026-10-18 P1 修复：queryToObjects/响应中间件已转 camelCase，
+      // 原实现直接读 snake_case 字段 → 类型恒"移出"、日期/区域/操作员全空。
+      // 这里统一归一化为本组件内部使用的 snake_case 视图，兼容两种来源。
+      const normalized = (Array.isArray(data) ? data : []).map((r: any) => ({
+        id: r.id,
+        planting_id: r.plantingId ?? r.planting_id,
+        planting_code: r.plantingCode ?? r.planting_code,
+        operation_type: r.operationType ?? r.operation_type,
+        from_area_id: r.fromAreaId ?? r.from_area_id,
+        from_area_name: r.fromAreaName ?? r.from_area_name,
+        to_area_id: r.toAreaId ?? r.to_area_id,
+        to_area_name: r.toAreaName ?? r.to_area_name,
+        quantity: Number(r.quantity) || 0,
+        operation_date: r.operationDate ?? r.operation_date,
+        operator_name: r.operatorName ?? r.operator_name,
+        remarks: r.remarks,
+        create_time: r.createTime ?? r.create_time,
+      }));
+      setRecords(normalized);
     } catch (e) {
       // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
       await showAlert(`加载移入/移出记录失败：${e instanceof Error ? e.message : '未知错误'}`);

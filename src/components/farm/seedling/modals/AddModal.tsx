@@ -23,7 +23,7 @@ import { todayLocal } from '@/lib/dateUtils';
 //   与种源的后端 cropCode（11 位标准码 / 9 位历史码，如 FR0101001）对不上 → 品种路径恒为空。
 //   改用 API 品种库（与育苗列表 SeedlingTable 同一数据源）。
 import * as apiCropVarietyService from '../../../../services/apiCropVarietyService';
-import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore } from '../../../../stores';
+import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore, useAuthStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
@@ -41,7 +41,6 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   seedSources: SeedSource[];
-  cropVarietyOptions: CropVarietyOption[];
   seedlingTypes: Array<{ value: string; label: string }>;
   sites: Array<{ value: string; label: string }>;
 }
@@ -67,7 +66,6 @@ export function AddModal({
   onClose,
   onSuccess,
   seedSources = [],
-  cropVarietyOptions,
   seedlingTypes,
   sites
 }: AddModalProps) {
@@ -338,12 +336,13 @@ export function AddModal({
     if (storeUsers.length === 0) loadUsers();
   }, [storePlans.length, fetchPlans, storeUsers.length, loadUsers]);
 
-  // 当前用户（从 Store 获取；2026-08-14 L1 修复：移除 localStorage 兜底，遵守 V2.1 缓存铁律）
+  // 当前用户（优先登录用户，其次用户列表首条；2026-10-18 移除 localStorage）
+  const authUser = useAuthStore((s) => s.currentUser);
   const currentUser = useMemo(() => ({
-    id: storeUsers[0]?.oid || '',
-    name: storeUsers[0]?.name || '未知用户',
-    department: storeUsers[0]?.orgOid || '生产部',
-  }), [storeUsers]);
+    id: authUser?.oid || storeUsers[0]?.oid || '',
+    name: authUser?.realName || authUser?.username || storeUsers[0]?.name || '未知用户',
+    department: authUser?.orgOid || storeUsers[0]?.orgOid || '生产部',
+  }), [authUser, storeUsers]);
 
   // 筛选可用的生产计划批次（已发布和执行中，且只显示育苗计划类型）
   const availableProductionPlans = useMemo(() => {
@@ -545,7 +544,8 @@ export function AddModal({
       pictures: pictures,
       printCount: 0,
       remarks: formData.remarks,
-      createBy: localStorage.getItem('username') || '未知用户',
+      // 2026-10-18 P2 修复：移除 localStorage 兜底，使用 Store 中的当前用户
+      createBy: currentUser.name,
       targetSurvivalRate: formData.targetSurvivalRate,
       targetSurvivalCount: targetSurvivalCount,
       chargePerson: formData.chargePerson || undefined,

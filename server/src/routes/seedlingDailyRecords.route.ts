@@ -33,6 +33,13 @@ router.post("/", (req: Request, res: Response) => {
       remarks,
       create_by
     } = req.body;
+    // 2026-10-18 P0 修复：前端 DailyRecordModal 发送 camelCase，原实现只读 snake_case，
+    // 导致用户选择的历史日期被丢弃、落库为服务器当天（编辑分支却读 recordDate，行为不一致）。
+    const recordDate = req.body.recordDate ?? record_date;
+    const cropName = req.body.cropName ?? crop_name;
+    const cropVariety = req.body.cropVariety ?? crop_variety;
+    const greenhouseName = req.body.greenhouseName ?? greenhouse_name;
+    const createBy = req.body.createBy ?? create_by;
 
     // 验证育苗记录是否存在
     const db = getDatabase();
@@ -46,6 +53,10 @@ router.post("/", (req: Request, res: Response) => {
 
     if (!seedling || Object.keys(seedling).length === 0) {
       return res.status(404).json({ success: false, error: '育苗记录不存在' });
+    }
+    // 2026-10-18 P2：服务端结束校验（前端只读可被绕过）
+    if ((seedling as any).end_time) {
+      return res.status(400).json({ success: false, error: '育苗已结束，无法新增每日记录' });
     }
 
     // 2026-06-15: 先做业务上限校验，越界直接 400 拒绝（避免先 INSERT daily_records 再发现越界）
@@ -78,18 +89,18 @@ router.post("/", (req: Request, res: Response) => {
       newId,
       newOid,
       'seedling',
-      record_date || formatLocalDateISO(),
+      recordDate || formatLocalDateISO(),
       id,
       (seedling as any).seedling_code,
       'seedling',
-      crop_name || (seedling as any).crop_name,
-      crop_variety || (seedling as any).crop_variety,
-      greenhouse_name || (seedling as any).greenhouse_name,
+      cropName || (seedling as any).crop_name,
+      cropVariety || (seedling as any).crop_variety,
+      greenhouseName || (seedling as any).greenhouse_name,
       quantity || 0,
       unit || '株',
       data ? JSON.stringify(data) : null,
       remarks,
-      create_by,
+      createBy,
       now,
       now
     ]);
@@ -186,13 +197,13 @@ router.post("/", (req: Request, res: Response) => {
           if (fertItems.length > 0) {
             syncFertilizerRecords(db, newId, fertItems, {
               relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
-              recordDate: record_date || formatLocalDateISO(),
-              cropName: crop_name || (seedling as any).crop_name || '',
-              cropVariety: crop_variety || (seedling as any).crop_variety || '',
+              recordDate: recordDate || formatLocalDateISO(),
+              cropName: cropName || (seedling as any).crop_name || '',
+              cropVariety: cropVariety || (seedling as any).crop_variety || '',
               // 2026-07-21：greenhouseName/areaName 优先用幼苗记录自身的字段（中文），请求体 greenhouse_name 仅兜底
-              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
+              greenhouseName: (seedling as any).greenhouse_name || greenhouseName || '',
               areaId: (seedling as any).area_id || '',
-              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouseName || '',
               operatorId: operatorId3, operatorName: operatorName3,
               primaryMethod: primaryFertMethod3,
             });
@@ -200,12 +211,12 @@ router.post("/", (req: Request, res: Response) => {
           if (pestItems.length > 0) {
             syncPesticideRecords(db, newId, pestItems, {
               relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
-              recordDate: record_date || formatLocalDateISO(),
-              cropName: crop_name || (seedling as any).crop_name || '',
-              cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
+              recordDate: recordDate || formatLocalDateISO(),
+              cropName: cropName || (seedling as any).crop_name || '',
+              cropVariety: cropVariety || (seedling as any).crop_variety || '',
+              greenhouseName: (seedling as any).greenhouse_name || greenhouseName || '',
               areaId: (seedling as any).area_id || '',
-              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouseName || '',
               operatorId: operatorId3, operatorName: operatorName3,
               primaryMethod: primaryPestMethod3,
               primaryTargetPest: primaryTargetPest3,
@@ -222,12 +233,12 @@ router.post("/", (req: Request, res: Response) => {
             const { syncWateringRecords } = require('../lib/syncDailyRecords');
             syncWateringRecords(db, newId, wateringData, {
               relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
-              recordDate: record_date || formatLocalDateISO(),
-              cropName: crop_name || (seedling as any).crop_name || '',
-              cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
+              recordDate: recordDate || formatLocalDateISO(),
+              cropName: cropName || (seedling as any).crop_name || '',
+              cropVariety: cropVariety || (seedling as any).crop_variety || '',
+              greenhouseName: (seedling as any).greenhouse_name || greenhouseName || '',
               areaId: (seedling as any).area_id || '',
-              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouseName || '',
               operatorId: operatorId3, operatorName: operatorName3,
             });
           }
@@ -278,7 +289,9 @@ router.get("/", (req: Request, res: Response) => {
       if (it.data) {
         try {
           const parsed = JSON.parse(it.data);
-          return { ...parsed, ...it };  // 业务字段优先，原始字段兜底
+          // 2026-10-18 P0 修复：data 保留为对象，前端编辑才能基于旧值合并；
+          // 原实现被 it.data（原始字符串）覆盖，编辑保存会清空施肥/用药/环境明细
+          return { ...parsed, ...it, data: parsed };
         } catch { /* ignore parse error */ }
       }
       return it;
@@ -301,9 +314,9 @@ router.get("/", (req: Request, res: Response) => {
  * 2026-06-05: 新增（之前缺失，导致前端编辑/删除失败）
  */
 router.put("/:recordId", (req: Request, res: Response) => {
+  const db = getDatabase();
   try {
     const { id, recordId } = req.params;
-    const db = getDatabase();
     const now = new Date().toISOString();
     // 2026-07-21：加载育苗记录（浇水同步需要 crop_name/greenhouse_name 等字段）
     const seedling = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM seedlings WHERE id = ?', [id])[0];
@@ -320,7 +333,21 @@ router.put("/:recordId", (req: Request, res: Response) => {
 
     // 业务字段打包成 data JSON（与 POST 一致：只 stringify data 字段内容，不要嵌套包装）
     const { recordDate, remarks, data } = req.body;
-    const dataJson = data ? JSON.stringify(data) : null;
+    // 2026-10-18 P0 修复：合并旧 data，防止部分字段提交把整列覆盖（丢失施肥/用药/浇水/环境）
+    let mergedData: any = null;
+    if (data) {
+      try {
+        const incoming = typeof data === 'string' ? JSON.parse(data) : data;
+        mergedData = {
+          ...(oldData && typeof oldData === 'object' ? oldData : {}),
+          ...(incoming && typeof incoming === 'object' ? incoming : {}),
+        };
+      } catch { mergedData = null; }
+    }
+    const dataJson = mergedData ? JSON.stringify(mergedData) : null;
+
+    // 2026-10-18 P1：反向补偿 + 正向应用 + 明细更新放同一事务
+    db.exec('BEGIN');
 
     // 2026-06-15: 编辑场景上限校验
     // 思路：先临时反向抵消旧值，让主表退回到"没有这条记录"的状态，再校验新值是否越界
@@ -328,7 +355,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
     // 兼容旧字段名：调用 normalizeSeedlingChange 把旧字段名映射为新字段名
     if (dataJson !== null) {
       try {
-        const newData = JSON.parse(dataJson);
+        const newData = mergedData;
         // 加载育苗记录以获取 propagation_mode
         const sStmt = db.prepare('SELECT propagation_mode FROM seedlings WHERE id = ?');
         sStmt.bind([id]);
@@ -352,10 +379,8 @@ router.put("/:recordId", (req: Request, res: Response) => {
           // 2) 校验新值（用 normalized 数据）
           const validateErr = validateSeedlingDailyChange(id, newDataNormalized);
           if (validateErr) {
-            // 3) 校验失败：旧值还原回去（避免数据不一致）
-            if (oldData && Object.keys(oldData).length > 0) {
-              applyDailyChangeToSeedling(id, oldDataNormalized, 1);
-            }
+            // 回滚整个事务（含临时反向补偿），恢复到编辑前状态
+            try { db.exec('ROLLBACK'); } catch { /* ignore */ }
             return res.status(400).json({ success: false, error: validateErr });
           }
           // 4) 校验通过：把新值应用上去（用 normalized 数据）
@@ -382,16 +407,59 @@ router.put("/:recordId", (req: Request, res: Response) => {
     // 2026-07-21：编辑场景浇水同步（参照 POST 浇水同步逻辑）
     if (data) {
       try {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        const wateringData = parsed?.watering != null ? {
-          watering: !!parsed.watering,
-          wateringMethod: parsed.wateringMethod,
-          wateringAmount: parsed.wateringAmount,
-          wateringUnit: parsed.wateringUnit,
-        } : null;
-        if (wateringData?.watering && wateringData.wateringAmount > 0) {
-          const { syncWateringRecords } = require('../lib/syncDailyRecords');
-          syncWateringRecords(db, recordId, wateringData, {
+        const parsed = mergedData;
+        // 2026-10-18 P0 修复：仅当 data 明确携带 watering 键时才处理浇水，
+        // 避免编辑其它字段时因缺少 wateringAmount 而误删浇水记录
+        const hasWateringKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'watering');
+        if (hasWateringKey) {
+          const wateringData = {
+            watering: !!parsed.watering,
+            wateringMethod: parsed.wateringMethod,
+            wateringAmount: parsed.wateringAmount,
+            wateringUnit: parsed.wateringUnit,
+          };
+          if (wateringData.watering && Number(wateringData.wateringAmount) > 0) {
+            const { syncWateringRecords } = require('../lib/syncDailyRecords');
+            syncWateringRecords(db, recordId, wateringData, {
+              relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
+              recordDate: recordDate || (seedling as any).seedling_date || formatLocalDateISO(),
+              cropName: (seedling as any).crop_name || '',
+              cropVariety: (seedling as any).crop_variety || '',
+              greenhouseName: (seedling as any).greenhouse_name || '',
+              areaId: (seedling as any).area_id || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              operatorId: (req as any).body?.operatorId || '',
+              operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
+            });
+          } else {
+            // 无浇水或水量为 0 → 删除旧同步记录
+            db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+          }
+        }
+      } catch (syncErr) {
+        console.error('[seedling daily-records PUT] 浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+      }
+    }
+
+    // 2026-10-18 P0 修复：编辑时重放施肥/用药同步（原 PUT 只处理浇水）
+    if (data) {
+      try {
+        const parsed = mergedData;
+        const hasFertKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'fertilizerRecords');
+        const hasPestKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'pesticideRecords');
+        if (hasFertKey || hasPestKey) {
+          const {
+            syncFertilizerRecords, syncPesticideRecords,
+            adjustFertilizerStock, adjustPesticideStock,
+            getOldFertilizerSync, getOldPesticideSync,
+          } = require('../lib/syncDailyRecords');
+          const fertItems: any[] = Array.isArray(parsed.fertilizerRecords) ? parsed.fertilizerRecords : [];
+          const pestItems: any[] = Array.isArray(parsed.pesticideRecords) ? parsed.pesticideRecords : [];
+          for (const o of getOldFertilizerSync(db, recordId)) adjustFertilizerStock(db, o.code, o.qty);
+          for (const o of getOldPesticideSync(db, recordId)) adjustPesticideStock(db, o.code, o.qty);
+          db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
+          db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+          const ctx = {
             relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
             recordDate: recordDate || (seedling as any).seedling_date || formatLocalDateISO(),
             cropName: (seedling as any).crop_name || '',
@@ -401,16 +469,27 @@ router.put("/:recordId", (req: Request, res: Response) => {
             areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || '',
             operatorId: (req as any).body?.operatorId || '',
             operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
-          });
-        } else {
-          // 无浇水或水量为 0 → 删除旧同步记录
-          db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+          };
+          if (fertItems.length > 0) {
+            syncFertilizerRecords(db, recordId, fertItems, {
+              ...ctx,
+              primaryMethod: fertItems.find((it: any) => it.applicationMethod)?.applicationMethod || '',
+            });
+          }
+          if (pestItems.length > 0) {
+            syncPesticideRecords(db, recordId, pestItems, {
+              ...ctx,
+              primaryMethod: pestItems.find((it: any) => it.applicationMethod)?.applicationMethod || '',
+              primaryTargetPest: pestItems.find((it: any) => it.targetPest)?.targetPest || '',
+            });
+          }
         }
       } catch (syncErr) {
-        console.error('[seedling daily-records PUT] 浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+        console.error('[seedling daily-records PUT] 编辑时施肥/用药同步失败:', (syncErr as Error)?.message || syncErr);
       }
     }
 
+    db.exec('COMMIT');
     saveDatabase();
     const updatedPut = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
     // 2026-07-22：追溯修复 - 必须在 res.json 之前
@@ -423,6 +502,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
     });
     res.json({ success: true, data: updatedPut[0] });
   } catch (error) {
+    try { db.exec('ROLLBACK'); } catch { /* 可能在校验分支已回滚 */ }
     console.error('更新每日记录失败:', error);
     res.status(500).json({ success: false, error: '更新每日记录失败' });
   }
@@ -469,6 +549,8 @@ router.delete("/:recordId", (req: Request, res: Response) => {
       for (const o of oldPest) adjustPesticideStock(db, o.code, o.qty);
       db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
       db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+      // 2026-10-18：同步清理浇水记录（原实现遗漏，删除每日记录后留下孤儿浇水行）
+      db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
     } catch (e) {
       console.error('[seedling daily-records DELETE] 恢复库存失败（不影响主流程）:', (e as Error)?.message || e);
     }

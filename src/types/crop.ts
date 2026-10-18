@@ -525,8 +525,10 @@ export interface Seedling {
   cropVariety: string;         // 作物品种
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   seedlingType: string;        // 育苗方式
-  siteId: string;             // 场地ID
+  siteId: string;             // 场地ID（历史字段，值为 area_name）
   siteName: string;            // 场地名称
+  /** 2026-10-18：育苗区域 oid（seedlings.area_oid，区域筛选 FK 权威） */
+  areaOid?: string;
   seedlingForm?: string;       // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
   startDate: string;          // 开始日期
   expectedEndDate?: string;   // 预计结束日期

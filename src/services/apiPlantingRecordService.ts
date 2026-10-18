@@ -42,6 +42,36 @@ export interface PlantingRecordQuery {
   year?: string;
 }
 
+/**
+ * 2026-10-18 P1 修复：/api 响应已由中间件深转 camelCase（queryToObjects 亦返回 camelCase），
+ * 原实现只读 snake_case，导致 facilityOid/startDate/yieldAmount 等全部 undefined。
+ * 统一归一化，兼容两种来源。
+ */
+function mapRecord(r: any): PlantingRecord {
+  return {
+    id: r.id,
+    oid: r.oid,
+    facilityOid: r.facilityOid ?? r.facility_oid,
+    blockOid: r.blockOid ?? r.block_oid ?? '',
+    seasonCode: r.seasonCode ?? r.season_code,
+    cropVarietyOid: r.cropVarietyOid ?? r.crop_variety_oid ?? '',
+    cropName: r.cropName ?? r.crop_name,
+    varietyName: r.varietyName ?? r.variety_name ?? '',
+    startDate: r.startDate ?? r.start_date,
+    endDate: r.endDate ?? r.end_date ?? null,
+    status: r.status,
+    yieldAmount: r.yieldAmount ?? r.yield_amount ?? null,
+    yieldUnit: r.yieldUnit ?? r.yield_unit ?? 'kg',
+    qualityGrade: r.qualityGrade ?? r.quality_grade ?? null,
+    notes: r.notes ?? '',
+    facilityName: r.facilityName ?? r.facility_name,
+    facilityCode: r.facilityCode ?? r.facility_code,
+    createdAt: r.createdAt ?? r.created_at,
+    updatedAt: r.updatedAt ?? r.updated_at,
+    deletedAt: r.deletedAt ?? r.deleted_at ?? null,
+  };
+}
+
 /** 获取种植季记录列表 */
 export async function getPlantingRecords(query?: PlantingRecordQuery): Promise<PlantingRecord[]> {
   const params = new URLSearchParams();
@@ -52,45 +82,13 @@ export async function getPlantingRecords(query?: PlantingRecordQuery): Promise<P
   const url = qs ? `/planting-records?${qs}` : '/planting-records';
   const records = await enhancedApiClient.get<any[]>(url);
   if (!records) return [];
-  // 后端返回 snake_case，转换为 camelCase
-  return records.map((r: any) => ({
-    id: r.id,
-    oid: r.oid,
-    facilityOid: r.facility_oid,
-    blockOid: r.block_oid || '',
-    seasonCode: r.season_code,
-    cropVarietyOid: r.crop_variety_oid || '',
-    cropName: r.crop_name,
-    varietyName: r.variety_name || '',
-    startDate: r.start_date,
-    endDate: r.end_date || null,
-    status: r.status,
-    yieldAmount: r.yield_amount ?? null,
-    yieldUnit: r.yield_unit || 'kg',
-    qualityGrade: r.quality_grade || null,
-    notes: r.notes || '',
-    facilityName: r.facility_name,
-    facilityCode: r.facility_code,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-    deletedAt: r.deleted_at || null,
-  }));
+  return records.map(mapRecord);
 }
 
 /** 获取单条记录 */
 export async function getPlantingRecord(oid: string): Promise<PlantingRecord> {
   const r = await enhancedApiClient.get<any>(`/planting-records/${oid}`);
-  return {
-    id: r.id, oid: r.oid,
-    facilityOid: r.facility_oid, blockOid: r.block_oid || '',
-    seasonCode: r.season_code, cropVarietyOid: r.crop_variety_oid || '',
-    cropName: r.crop_name, varietyName: r.variety_name || '',
-    startDate: r.start_date, endDate: r.end_date || null,
-    status: r.status, yieldAmount: r.yield_amount ?? null,
-    yieldUnit: r.yield_unit || 'kg', qualityGrade: r.quality_grade || null,
-    notes: r.notes || '', facilityName: r.facility_name, facilityCode: r.facility_code,
-    createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at || null,
-  };
+  return mapRecord(r);
 }
 
 /** 创建种植季记录 */
@@ -99,33 +97,13 @@ export async function createPlantingRecord(data: {
   crop_name: string; variety_name?: string; start_date?: string; notes?: string;
 }): Promise<PlantingRecord> {
   const r = await enhancedApiClient.post<any>('/planting-records', data);
-  return {
-    id: r.id, oid: r.oid,
-    facilityOid: r.facility_oid, blockOid: r.block_oid || '',
-    seasonCode: r.season_code, cropVarietyOid: r.crop_variety_oid || '',
-    cropName: r.crop_name, varietyName: r.variety_name || '',
-    startDate: r.start_date, endDate: r.end_date || null,
-    status: r.status, yieldAmount: r.yield_amount ?? null,
-    yieldUnit: r.yield_unit || 'kg', qualityGrade: r.quality_grade || null,
-    notes: r.notes || '', createdAt: r.created_at, updatedAt: r.updated_at,
-    deletedAt: r.deleted_at || null,
-  };
+  return mapRecord(r);
 }
 
 /** 更新种植季记录 */
 export async function updatePlantingRecord(oid: string, data: Record<string, any>): Promise<PlantingRecord> {
   const r = await enhancedApiClient.put<any>(`/planting-records/${oid}`, data);
-  return {
-    id: r.id, oid: r.oid,
-    facilityOid: r.facility_oid, blockOid: r.block_oid || '',
-    seasonCode: r.season_code, cropVarietyOid: r.crop_variety_oid || '',
-    cropName: r.crop_name, varietyName: r.variety_name || '',
-    startDate: r.start_date, endDate: r.end_date || null,
-    status: r.status, yieldAmount: r.yield_amount ?? null,
-    yieldUnit: r.yield_unit || 'kg', qualityGrade: r.quality_grade || null,
-    notes: r.notes || '', createdAt: r.created_at, updatedAt: r.updated_at,
-    deletedAt: r.deleted_at || null,
-  };
+  return mapRecord(r);
 }
 
 /** 结束种植季 */
@@ -134,17 +112,7 @@ export async function endPlantingSeason(oid: string, data: {
   quality_grade?: string; notes?: string;
 }): Promise<PlantingRecord> {
   const r = await enhancedApiClient.put<any>(`/planting-records/${oid}/end`, data);
-  return {
-    id: r.id, oid: r.oid,
-    facilityOid: r.facility_oid, blockOid: r.block_oid || '',
-    seasonCode: r.season_code, cropVarietyOid: r.crop_variety_oid || '',
-    cropName: r.crop_name, varietyName: r.variety_name || '',
-    startDate: r.start_date, endDate: r.end_date || null,
-    status: r.status, yieldAmount: r.yield_amount ?? null,
-    yieldUnit: r.yield_unit || 'kg', qualityGrade: r.quality_grade || null,
-    notes: r.notes || '', createdAt: r.created_at, updatedAt: r.updated_at,
-    deletedAt: r.deleted_at || null,
-  };
+  return mapRecord(r);
 }
 
 /** 删除种植季记录（软删除） */

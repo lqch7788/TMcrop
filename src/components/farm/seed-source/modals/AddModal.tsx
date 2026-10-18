@@ -495,10 +495,10 @@ export function AddModal({
           {formData.propagationType === PropagationType.TRANSFER_FROM_INVENTORY && (
             <div className="col-span-2">
               <InventoryTransferPanel
-                onConfirm={(items) => {
+                onConfirm={async (items) => {
                   setTransferItems(items);
-                  // P0-3 修复：直接传 items 给 handleSubmit（不再依赖陈旧闭包）
-                  void handleSubmit(items);
+                  // 2026-10-18 P1 修复：必须 await，否则面板 finally 立即释放提交锁 → 双击重复调拨/双倍扣库存
+                  await handleSubmit(items);
                 }}
               />
             </div>

@@ -19,7 +19,7 @@ const SEED_SOURCE_CONFIG: LabelPrintConfig = {
   areaField: 'supplierName',
   dateField: 'purchaseDate',
   linkField: 'seedSourceId',
-  route: '/crop/seed-sources',
+  route: '/crop/seed-source',
   exportTitle: '种源标签',
   qrType: 'seed-source',
   showLabelType: false,

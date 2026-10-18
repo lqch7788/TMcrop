@@ -101,7 +101,16 @@ export function SeedlingFilter({
           <Label className="text-gray-700">育苗区域</Label>
           <Select
             value={filters.areaOid || '__all__'}
-            onValueChange={(val) => onChange({ ...filters, areaOid: val === '__all__' ? '' : val, siteName: val })}
+            // 2026-10-18 P1 修复：areaOid 存 FK；siteName 存区域**名称**，
+            // 供无 area_oid 的历史数据按名称回退匹配（此前把 OID 写进 siteName 导致筛选恒空）
+            onValueChange={(val) => {
+              const siteLabel = sites.find((s) => s.value === val)?.label || '';
+              onChange({
+                ...filters,
+                areaOid: val === '__all__' ? '' : val,
+                siteName: val === '__all__' ? '' : siteLabel,
+              });
+            }}
           >
             <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />

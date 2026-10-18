@@ -44,6 +44,8 @@ export function useFilteredSeedSources(
       if (filters.cropType && filters.cropType !== '__all__' && item.cropCategory !== filters.cropType) return false;
       if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
       if (filters.sourceType && filters.sourceType !== '__all__' && item.sourceType !== filters.sourceType) return false;
+      // 2026-10-18 P1 修复：来源途径筛选此前只写 filters.sourceOrigin，Hook 从未读取 → 静默返回全量
+      if (filters.sourceOrigin && filters.sourceOrigin !== '__all__' && item.sourceOrigin !== filters.sourceOrigin) return false;
       if (filters.supplierName && filters.supplierName !== '__all__' && !item.supplierName.includes(filters.supplierName)) return false;
       // 2026-06-04: status 改为实时计算
       if (filters.status && filters.status !== '__all__' && computeStockStatus(item.availableCount, item.initialCount) !== filters.status) return false;

@@ -29,14 +29,15 @@ import { seedSourceTransferService } from '@/services/seedSourceTransferService'
 import { DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
 import {
   cropCategories,
-  suppliers,
   units,
   seedSourceStatusOptions
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
+import { useSupplierStore } from '../../../stores/useSupplierStore';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useInventoryStore } from '../../../stores/useInventoryStore';
 import { computeStockStatus, isAlertStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
@@ -93,6 +94,13 @@ export default function SeedSourcePage() {
   // 2026-07-14：提取删除逻辑到 useSeedSourceDelete hook（~77行 → 独立文件）
   const { handleDeleteConfirm: doDelete } = useSeedSourceDelete();
   // 2026-06-25 v3: 获取当前用户信息（用于调拨操作的操作人记录）
+  // 2026-10-18 P2 修复：供应商候选改用 Store 真值（原静态 mock 仅 SUP001-003，
+  // 与 EditModal 的真实供应商 ID 求交集后永远为空）
+  const supplierItems = useSupplierStore((s) => s.items);
+  const supplierOptions = useMemo(
+    () => supplierItems.map((s) => ({ value: String(s.id), label: s.name || s.supplierName || String(s.id) })),
+    [supplierItems],
+  );
   const authCurrentUser = useAuthStore((s) => s.currentUser);
   const currentUser = authCurrentUser
     ? { id: authCurrentUser.oid, name: authCurrentUser.realName || authCurrentUser.username || '' }
@@ -152,6 +160,11 @@ export default function SeedSourcePage() {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<SeedSource | null>(null);
+  // 2026-10-18：详情始终取 Store 最新记录（冲销/撤销后 loadItems 只更新 Store，页面快照不会变）
+  const liveCurrentRecord = useMemo(
+    () => (currentRecord ? seedSources.find((s) => s.id === currentRecord.id) || currentRecord : null),
+    [currentRecord, seedSources],
+  );
   const [currentImages, setCurrentImages] = useState<string[]>([]);
 
   // 导出状态
@@ -358,6 +371,8 @@ export default function SeedSourcePage() {
         );
         handleReturnClose();
         await loadItems();
+        // 2026-10-18 P1：跨页通知库存页刷新（退库改变了作物库存）
+        useInventoryStore.getState().notifyChange();
       } catch (e) {
         console.error('[SeedSourcePage] 退库失败:', e);
         const msg = e instanceof Error ? e.message : String(e);
@@ -388,6 +403,8 @@ export default function SeedSourcePage() {
         );
         handleTransferClose();
         await loadItems();
+        // 2026-10-18 P1：跨页通知库存页刷新（调拨扣减了作物库存）
+        useInventoryStore.getState().notifyChange();
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         await showAlert(`调拨失败：${msg}`);
@@ -411,7 +428,9 @@ export default function SeedSourcePage() {
       '种源批号': record.seedCode,
       '作物编码': record.cropCode || '-',
       '作物品种': record.cropName || record.cropVariety || '-',
-      '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVarietyName].filter(Boolean).join(' > ') || '-',
+      // 2026-10-18 P2 修复：SeedSource 无 categoryName/subVarietyName 字段（原实现永远 undefined），
+      // 改用后端实际返回的 cropCategory/typeName/varietyName/cropVariety 构造四段路径
+      '品种路径': [record.cropCategory, record.typeName, record.varietyName, record.cropVariety].filter(Boolean).join(' > ') || '-',
       // 2026-10-17：与列表列同口径解析（中文直通/英中翻译/其他兜底）——修复导出显示 'seedling' 等英文脏值
       '种源形态': resolveSeedFormLabel(record.seedForm && record.seedForm.trim() ? record.seedForm : record.sourceType) || '-',
       '来源途径': SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-',
@@ -444,23 +463,9 @@ export default function SeedSourcePage() {
           return { wch: 15 };
         });
         XLSX.utils.book_append_sheet(wb, ws, '种源记录');
+        // 2026-10-18 P2 修复：删除 writeFile 之后修改 worksheet 的死代码
+        //（文件已落盘，图片嵌入永远不会生效）
         XLSX.writeFile(wb, fileName);
-
-        // 如果有图片数据，尝试嵌入base64图片（xlsx原生图片支持）
-        selectedData.forEach((record, rowIdx) => {
-          if (record.pictures && record.pictures.length > 0) {
-            const imgData = record.pictures[0];
-            if (imgData.startsWith('data:image/')) {
-              try {
-                // 将base64图片嵌入到单元格（通过xlsx cell comment方式存储URL）
-                const cellRef = XLSX.utils.encode_cell({ r: rowIdx + 1, c: 0 });
-                if (ws[cellRef]) {
-                  ws[cellRef].l = { Target: imgData }; // 存储为超链接
-                }
-              } catch { /* 图片嵌入失败不影响导出 */ }
-            }
-          }
-        });
       } else if (exportFormat === 'csv') {
         // 2026-07-10 P1-1：抽到底层公共函数
         await exportCsv({ filename: fileName, headers, rows: exportData });
@@ -508,7 +513,7 @@ export default function SeedSourcePage() {
         onSearch={handleSearch}
         onReset={handleReset}
         cropCategories={cropCategories}
-        suppliers={suppliers}
+        suppliers={supplierOptions}
         statusOptions={seedSourceStatusOptions}
       />
 
@@ -563,7 +568,7 @@ export default function SeedSourcePage() {
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
           record={currentRecord}
-          suppliers={suppliers}
+          suppliers={supplierOptions}
         />
       )}
 
@@ -573,7 +578,7 @@ export default function SeedSourcePage() {
           key={currentRecord.id}
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
-          record={currentRecord}
+          record={liveCurrentRecord || currentRecord}
         />
       )}
 

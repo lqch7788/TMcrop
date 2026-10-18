@@ -127,6 +127,13 @@ export class SeedSourceService {
   }
 
   /**
+   * 2026-10-18：删除前引用校验（controller 单删/批删共用，避免绕过前端直接删）
+   */
+  async checkDeletable(id: string) {
+    return await this.repository.checkDeletable(id);
+  }
+
+  /**
    * 创建种源
    * P1 #4 修复: 返回完整记录而非仅 id（违反 CLAUDE.md 铁律）
    * @param data 创建数据
@@ -305,12 +312,17 @@ export class SeedSourceService {
       );
     }
     const newAvailable = current - safeCount;
-    await this.repository.update(id, { remaining_quantity: newAvailable });
-    // 2026-10-17 台账加固：手工扣减必须写库存流水，否则时间线/出库区与余额脱节。
-    // 当前 UI 已改用 /with-deduct 原子端点，此接口仅作兼容；仍保证账实一致。
+    // 2026-10-18 P1 修复：余额与流水必须同一事务。
+    // 原实现先 repository.update（内部 saveDatabase 落盘）再写流水，流水失败时余额已提交。
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.exec('BEGIN');
     try {
-      const db = getDatabase();
-      const now = new Date().toISOString();
+      db.run(
+        'UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
+        [newAvailable, now, id],
+      );
+      // 2026-10-17 台账加固：手工扣减必须写库存流水，否则时间线/出库区与余额脱节。
       const txId = `TXN-DEC-${Date.now()}`;
       db.run(
         `INSERT INTO inventory_transaction (
@@ -324,12 +336,14 @@ export class SeedSourceService {
           formatLocalDateISO(), '手工扣减可用数量（decrease-available 兼容接口）', now,
         ],
       );
+      db.exec('COMMIT');
       saveDatabase();
     } catch (e: any) {
-      // Fail Loud：余额已扣但流水写入失败，抛出并提示（调用方会得到错误）
+      try { db.exec('ROLLBACK'); } catch { /* 保持原错误 */ }
+      // Fail Loud：整体回滚后抛出，调用方能看到具体原因
       throw new BusinessError(
         SeedSourceErrorCode.INVALID_DECREASE_COUNT,
-        `库存已扣减但流水写入失败，请检查数据库状态：${e.message}`,
+        `扣减失败（余额与流水已回滚）：${e.message}`,
       );
     }
     return await this.repository.findById(id);

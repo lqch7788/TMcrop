@@ -17,7 +17,7 @@ import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 // 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
 // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
 // 2026-07-19 P0-8：generateInboundRecordId 改静态 import（避免 require() 运行时错误）
-import { generateTransactionId, generateInboundRecordId } from '../services/inventory.service';
+import { generateTransactionId, generateInboundRecordId, generateStockId, generateInstanceId } from '../services/inventory.service';
 import {
   executeReturnToInventory,
   listReturnableInboundRecords,
@@ -32,6 +32,8 @@ import { reverseInboundRecord } from '../services/inboundReverse.service';
 import { revokeCirculationRecord } from '../services/circulationRevoke.service';
 // 2026-07-22：追溯修复 - 打印/状态变更写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
+// 2026-10-18：改静态导入，修复 tsx 下 require('../services/flowLogService') 运行时找不到模块
+import { writeFlowLog } from '../services/flowLogService';
 // 2026-07-22：上游溯源 - 种源详情"溯源链" tab
 import { traceUpstream } from '../services/upstreamTrace.service';
 
@@ -527,13 +529,14 @@ router.post('/append-from-inventory', async (req, res) => {
         const sourceInstanceId = String(sourceObj.instance_id || '');
 
         // 3. 业务校验
-        if (sourceStatus === 'depleted' || sourceCurrent <= 0) {
-          throw new AppendBusinessError('STOCK_NOT_AVAILABLE', `源库存已耗尽: ${sourceInstanceId}`);
+        // 2026-10-18 P1 修复：调拨基于可用数量（current 含冻结量，冻结部分不可出库）
+        if (sourceStatus === 'depleted' || sourceAvailable <= 0) {
+          throw new AppendBusinessError('STOCK_NOT_AVAILABLE', `源库存可用数量为空: ${sourceInstanceId}`);
         }
-        if (sourceCurrent < item.transferQuantity) {
+        if (sourceAvailable < item.transferQuantity) {
           throw new AppendBusinessError(
             'INSUFFICIENT_QUANTITY',
-            `源库存 ${sourceInstanceId} 可用 ${sourceCurrent}${sourceUnit}，需调拨 ${item.transferQuantity}${item.unit}`
+            `源库存 ${sourceInstanceId} 可用 ${sourceAvailable}${sourceUnit}，需调拨 ${item.transferQuantity}${item.unit}`
           );
         }
         if (sourceUnit !== item.unit) {
@@ -553,7 +556,7 @@ router.post('/append-from-inventory', async (req, res) => {
         const updStock = db.prepare(
           `UPDATE inventory_stock
            SET current_quantity = ?, available_quantity = ?, update_time = ?
-           WHERE id = ? AND current_quantity >= ?`
+           WHERE id = ? AND available_quantity >= ?`
         );
         updStock.run([newSourceCurrent, newSourceAvailable, now, item.sourceStockId, item.transferQuantity]);
         updStock.free();
@@ -613,6 +616,48 @@ router.post('/append-from-inventory', async (req, res) => {
         updSS.run([item.transferQuantity, item.transferQuantity, sourceForm, now, targetSeedSourceId]);
         updSS.free();
 
+        // 2026-10-18 P0 修复：追加必须同步目标种源的 seed 库存行。
+        // 原实现只改 seed_sources，退库时无法定位/扣减种源库存，导致错扣其它作物库存。
+        let targetSeedStockId = '';
+        const esStmt = db.prepare(
+          `SELECT id FROM inventory_stock WHERE business_id = ? AND stock_type = 'seed' ORDER BY create_time ASC LIMIT 1`,
+        );
+        esStmt.bind([targetSeedSourceId]);
+        if (esStmt.step()) targetSeedStockId = String((esStmt.getAsObject() as any).id || '');
+        esStmt.free();
+        if (targetSeedStockId) {
+          db.run(
+            `UPDATE inventory_stock
+                SET current_quantity = current_quantity + ?, available_quantity = available_quantity + ?, update_time = ?
+              WHERE id = ?`,
+            [item.transferQuantity, item.transferQuantity, now, targetSeedStockId],
+          );
+          recomputeAndUpdateStockStatus(db, targetSeedStockId);
+        } else {
+          targetSeedStockId = await generateStockId(idDateStr);
+          const newSeedInstanceId = await generateInstanceId('INS', idDateStr);
+          db.run(
+            `INSERT INTO inventory_stock (
+              id, instance_id, stock_type, business_id, business_type, business_code,
+              source_type, source_instance_id,
+              crop_code, crop_name, variety_name,
+              current_quantity, available_quantity, frozen_quantity, unit,
+              warehouse_id, warehouse_name, inbound_date,
+              unit_price, status, version, create_time, update_time
+            ) VALUES (?, ?, 'seed', ?, 'seed_source', ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, 'in_stock', 1, ?, ?)`,
+            [
+              targetSeedStockId, newSeedInstanceId, targetSeedSourceId, targetCode,
+              sourceInstanceId,
+              String(sourceObj.crop_code || targetCropCode || ''),
+              targetCropName, String(sourceObj.variety_name || ''),
+              item.transferQuantity, item.transferQuantity, targetUnit,
+              String(sourceObj.warehouse_id || ''), String(sourceObj.warehouse_name || ''),
+              String(sourceObj.inbound_date || dateStr),
+              Number(sourceObj.unit_price || 0), now, now,
+            ],
+          );
+        }
+
         // 6.5. 写目标种源的 transfer_in 流水（2026-10-16 修复）
         // 根因：原追加模式只写源侧 outbound（第 5 步），从不写目标种源的 transfer_in —
         //   首次模式 executeTransferToSource 会写（inventoryTransfer.service.ts 步骤 5b），两条路径行为不一致。
@@ -670,13 +715,15 @@ router.post('/append-from-inventory', async (req, res) => {
             quantity, unit, unit_price, total_amount, quality_grade,
             supplier_id, supplier_name,
             production_plan_id, production_plan_code,
-            business_id, notes, operator_name, create_time
-          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            business_id, notes, operator_name, create_time, origin_stock_id
+          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         insIR.run([
           inRecId,
           dateStr,
-          item.sourceStockId, sourceInstanceId,
+          // 2026-10-18：source_id 指向目标种源的 seed 库存行（与首次调拨一致），
+          // 本次调拨的作物库存记录到 origin_stock_id，退库按它回补
+          targetSeedStockId, targetCode,
           String(sourceObj.stock_type || 'seed'),
           // 2026-10-16：source_origin = 源头库存的 source_type（外购入库/调拨入库/采收入库等），
           //   与 inventoryTransfer.service.ts:607 首次模式对齐。溯源链 Tab 显示「源头: X」
@@ -702,6 +749,7 @@ router.post('/append-from-inventory', async (req, res) => {
           remarks || `追加入库（从 ${sourceInstanceId} 入种源 ${targetCode}）`,
           operator.name,
           now,
+          item.sourceStockId,
         ]);
         insIR.free();
         writtenInboundRecordIds.push(inRecId);
@@ -710,7 +758,6 @@ router.post('/append-from-inventory', async (req, res) => {
         //   「追溯时间线」Tab 缺「库存→种源」记录，与首次模式 inventoryTransfer.service.ts:645 行为不一致）
         //   与首次模式一致：每次 append 一条 flow_log，flow_type='inventory→seed_source'
         try {
-          const { writeFlowLog } = require('../services/flowLogService');
           writeFlowLog({
             flow_type: 'inventory→seed_source',
             crop_name: targetCropName || String(sourceObj.crop_name || ''),
@@ -877,7 +924,6 @@ router.get('/:id/inbound-audit', asyncHandler(async (req, res) => {
  */
 router.get('/:id/history-inventory', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { getDatabase } = require('../db');
   const db = getDatabase();
   // 2026-07-19 P1：显式加括号修正 OR 优先级（避免 inventory_transfer 行混入非本种源流水）
   const stmt = db.prepare(`
@@ -905,7 +951,6 @@ router.get('/:id/history-inventory', asyncHandler(async (req, res) => {
  */
 router.get('/:id/history-circulation', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { getDatabase } = require('../db');
   const db = getDatabase();
   const stmt = db.prepare(`
     SELECT * FROM crop_circulation_records
@@ -926,7 +971,6 @@ router.get('/:id/history-circulation', asyncHandler(async (req, res) => {
  */
 router.get('/:id/history-audit', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { getDatabase } = require('../db');
   const db = getDatabase();
   const stmt = db.prepare(`
     SELECT * FROM audit_logs

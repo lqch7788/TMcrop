@@ -461,6 +461,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             // sourceForm 由固定形态下拉（SEED_FORM_OPTIONS / 硬编码 SelectItem）写入，
             // 取值域与 seedForm 一致；此处仅做类型断言，运行时值不变
             seedForm: sourceForm as AddHarvestRecordInput['seedForm'],
+            // 2026-10-18 P0 修复：回写入库记录/库存实例 ID，供后续删除/编辑精确回滚
+            harvestRecordId: result.data?.harvestRecordId,
+            inventoryStockId: result.data?.stockIds?.[0],
           })
           resetForm()
           onSuccess?.()

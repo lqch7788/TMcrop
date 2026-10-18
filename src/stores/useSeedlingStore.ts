@@ -66,12 +66,15 @@ export const useSeedlingStore = create<SeedlingState>()(
       try {
         const result = await seedlingService.updateSeedling(id, updates);
         if (result) {
-          set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
+          // 2026-10-18：用服务端返回的完整记录合并（含后端计算的 area_name 等），
+          // 原实现只用本地 updates，服务端规范化字段不会进 Store
+          set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates, ...result } : i) }));
         }
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 更新育苗失败:', error);
-        return null;
+        // 2026-10-18 P1 修复：错误上抛，避免弹窗关闭并提示成功（原实现返回 null 被调用方忽略）
+        throw error;
       }
     },
 
