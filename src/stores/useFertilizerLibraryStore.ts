@@ -15,6 +15,8 @@ export interface FertilizerSpec {
   fertilizerCode: string;
   fertilizerName: string;
   fertilizerType?: string;
+  /** 无机肥料中类（macro/medium/trace/compound），其他大类为空 */
+  fertilizerSubType?: string | null;
   applicationTiming?: string;
   functionDesc?: string;
   tabooDesc?: string;
@@ -48,6 +50,7 @@ const FIELD_MAP: Record<string, string> = {
   fertilizer_code: 'fertilizerCode',
   fertilizer_name: 'fertilizerName',
   fertilizer_type: 'fertilizerType',
+  fertilizer_sub_type: 'fertilizerSubType',
   application_timing: 'applicationTiming',
   function_desc: 'functionDesc',
   taboo_desc: 'tabooDesc',

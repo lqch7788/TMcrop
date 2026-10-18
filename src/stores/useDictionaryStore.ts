@@ -139,6 +139,26 @@ const DICT_FALLBACK: Record<string, Record<string, string>> = {
     manual: '人工浇水',
     manual_watering: '人工浇水',
   },
+  // 2026-10-18：肥料类型兜底（4 大类 + 无机中类；旧 7 类编码用于历史施肥记录显示）
+  fertilizer_type: {
+    organic: '有机肥料',
+    inorganic: '无机肥料',
+    microbial: '微生物肥料',
+    functional: '功能性肥料',
+    bio: '生物肥',
+    water_soluble: '水溶肥',
+    slow_release: '缓释肥',
+    trace: '微量元素肥',
+    compound: '复合肥',
+    foliar: '叶面肥',
+    other_fert: '其他',
+  },
+  fertilizer_sub_type: {
+    macro: '大量元素',
+    medium: '中量元素',
+    trace: '微量元素',
+    compound: '复合肥料',
+  },
   // 2026-07-20：施肥方式字典兜底（同步记录存 dict_code，DB 可能缺录入）
   fertilization_method: {
     foliar_spray: '叶面喷施',

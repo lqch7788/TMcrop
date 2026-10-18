@@ -283,8 +283,11 @@ const ENUM_VALUE_LABELS: Record<string, string> = {
   propagating: '繁育中', failed: '失败',
   normal: '正常', yes: '是', no: '否',
   plug: '穴盘育苗', ground: '地栽育苗',
-  // 水肥/药剂
-  water_soluble: '水溶肥', organic: '有机肥', compound: '复合肥', trace: '微量元素肥', foliar: '叶面肥',
+  // 水肥/药剂（2026-10-18：肥料改为 4 大类 + 无机中类，旧编码保留用于历史记录显示）
+  water_soluble: '水溶肥', organic: '有机肥料', compound: '复合肥料', trace: '微量元素', foliar: '叶面肥',
+  inorganic: '无机肥料', microbial: '微生物肥料', functional: '功能性肥料',
+  bio: '生物肥', slow_release: '缓释肥',
+  macro: '大量元素', medium: '中量元素',
   insecticide: '杀虫剂', fungicide: '杀菌剂', herbicide: '除草剂', acaricide: '杀螨剂',
   nematicide: '杀线虫剂', regulator: '调节剂',
   drip_irrigation: '滴灌', spray: '喷雾',

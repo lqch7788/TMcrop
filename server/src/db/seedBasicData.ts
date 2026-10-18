@@ -1948,14 +1948,17 @@ function seedFertilizerLibrary() {
     const code = `FG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${String(codeIndex).padStart(4, '0')}`;
     db.run(`
       INSERT INTO fertilizer_specs
-      (id, fertilizer_code, fertilizer_name, fertilizer_type, application_timing,
+      (id, fertilizer_code, fertilizer_name, fertilizer_type, fertilizer_sub_type, application_timing,
        function_desc, taboo_desc, shelf_life, storage_condition, supplier_info,
        brand_name, spec_content, manufacturer, suggested_dosage, suggested_ratio, dosage_unit,
        remark, unit_price, batch_number, production_date, expiration_date, stock_quantity,
        status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      id, code, fert.name, fert.type, fert.timing,
+      id, code, fert.name, fert.type,
+      // 2026-10-18：种子无机肥均为单质大量元素肥（氮/磷/钾），有机肥无中类
+      fert.type === 'inorganic' ? 'macro' : null,
+      fert.timing,
       fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage,
       '',           // supplier_info (无种子数据，留空)
       '主品牌',     // brand_name

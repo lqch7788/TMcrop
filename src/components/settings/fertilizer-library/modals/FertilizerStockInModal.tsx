@@ -10,11 +10,11 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { FertilizerSpec, useFertilizerLibraryStore, getDictItemName } from '@/stores';
+import { FertilizerSpec, useFertilizerLibraryStore } from '@/stores';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { showAlert } from '@/lib/dialogService';
 // 2026-08-15：施肥时期 Badge 配色从共享常量导入（原 Detail/StockIn 两处重复定义）
-import { TIMING_BADGE_OPTIONS } from '../constants';
+import { TIMING_BADGE_OPTIONS, getFertilizerTypeLabel } from '../constants';
 
 interface FertilizerStockInModalProps {
   isOpen: boolean;
@@ -115,7 +115,7 @@ export function FertilizerStockInModal({ isOpen, record, onClose, onSaved }: Fer
             <span className="font-bold text-gray-800 text-base">{record.fertilizerName}</span>
             {record.fertilizerType && (
               <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                {getDictItemName('fertilizer_type', record.fertilizerType) || record.fertilizerType}
+                {getFertilizerTypeLabel(record.fertilizerType, record.fertilizerSubType)}
               </span>
             )}
             {record.applicationTiming && (

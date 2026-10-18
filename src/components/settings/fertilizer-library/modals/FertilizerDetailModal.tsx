@@ -20,7 +20,7 @@ import { exportXlsx, exportCsv } from '@/services/exporters';
 import { showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-08-15：施肥时期 Badge 配色从共享常量导入（原 Detail/StockIn 两处重复定义）
-import { TIMING_BADGE_OPTIONS } from '../constants';
+import { TIMING_BADGE_OPTIONS, getFertilizerTypeLabel as getFertilizerTypeLabelFromConstants } from '../constants';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -52,11 +52,10 @@ const renderApplicationTiming = (timing?: string) => {
   );
 };
 
-// 肥料类型中文标签
-const getFertilizerTypeLabel = (type?: string) => {
-  if (!type) return '-';
-  return getDictItemName('fertilizer_type', type) || type;
-};
+// 肥料类型中文标签（2026-10-18：大类 + 无机中类，如「无机肥料 · 大量元素」）
+// 用 constants 权威映射，字典未刷新时也不会显示英文码
+const getFertilizerTypeLabel = (type?: string, subType?: string) =>
+  getFertilizerTypeLabelFromConstants(type, subType);
 
 // 库存颜色
 const getStockColor = (stock: number) => {
@@ -303,7 +302,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const fields: DetailField[] = [
     { label: '肥料编码', value: <span className="font-mono">{record.fertilizerCode || '-'}</span> },
     { label: '肥料名称', value: <span className="font-bold">{record.fertilizerName || '-'}</span> },
-    { label: '肥料类型', value: getFertilizerTypeLabel(record.fertilizerType) },
+    { label: '肥料类型', value: getFertilizerTypeLabel(record.fertilizerType, record.fertilizerSubType || undefined) },
     { label: '施肥时期', value: renderApplicationTiming(record.applicationTiming) },
     { label: '状态', value: record.status === 'active' ? <span className="text-green-600 font-medium">启用</span> : <span className="text-gray-400">停用</span> },
     { label: '品牌名称', value: record.brandName || '主品牌' },
