@@ -3679,7 +3679,10 @@ export function initializeDatabase() {
       -- source_type = 'transfer_inbound'（本次入库方式，恒为调拨入库）
       -- source_origin = 源头库存 inventory_stock.source_type（外购入库/采收入库/自产入库/调拨入库等）
       -- 溯源链 Tab 用 source_origin 显示「源头: X」，与 source_type 解耦
-      source_origin TEXT
+      source_origin TEXT,
+      -- 2026-10-18：调拨入库对应的原始库存行（退库回补目标）。
+      -- source_id 在首次/追加模式统一指向目标种源的 seed 库存行，origin_stock_id 记录本次调拨源库存。
+      origin_stock_id TEXT
     )
   `);
   // 3 索引(幂等)
@@ -4368,6 +4371,8 @@ export function initializeDatabase() {
       ['reverse_reason', 'TEXT'],
       // 2026-10-16：调拨入种源场景下区分 source_type（入库方式）与 source_origin（源头入库方式）
       ['source_origin', 'TEXT'],
+      // 2026-10-18：调拨入库的原始库存行 ID（退库回补目标，避免追加调拨退错库存）
+      ['origin_stock_id', 'TEXT'],
     ];
     for (const [col, type] of inboundCols) {
       if (!existing.has(col)) {

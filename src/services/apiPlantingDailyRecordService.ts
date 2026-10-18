@@ -21,8 +21,9 @@ export async function getPlantingDailyRecords(plantingId: string): Promise<Plant
     if (Array.isArray(payload?.items)) return payload.items;
     if (Array.isArray(payload?.data)) return payload.data;
     return [];
-  } catch {
-    return [];
+  } catch (e) {
+    // 2026-10-18 P2 修复：加载失败不再伪装成"暂无记录"
+    throw e instanceof Error ? e : new Error('加载每日记录失败');
   }
 }
 

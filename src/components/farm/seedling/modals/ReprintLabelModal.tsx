@@ -16,6 +16,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Printer, X } from 'lucide-react';
 import { UnifiedModal, Button } from '@/components/ui';
 import { enhancedApiClient } from '@/lib/apiClient';
+import { useAuthStore } from '@/stores';
 
 export interface ReprintLabelDetail {
   labelId: number;
@@ -134,8 +135,9 @@ export function ReprintLabelModal({
   // 当前预览的标签号（同一标签号，QR 一致）
   const currentQrCodeValue = buildQrValue(detail.labelNumber);
 
-  // 操作员
-  const operator = operatorName || localStorage.getItem('username') || '系统管理员';
+  // 操作员（2026-10-18：移除 localStorage 读取，使用登录用户）
+  const authUser = useAuthStore((s) => s.currentUser);
+  const operator = operatorName || authUser?.realName || authUser?.username || '系统管理员';
 
   // 处理打印：构建 N 份相同标签号列表
   const handlePrint = () => {

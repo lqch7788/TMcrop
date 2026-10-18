@@ -317,6 +317,15 @@ export async function getSeedSources(): Promise<SeedSource[]> {
 }
 
 /**
+ * 2026-10-18：上游溯源链（收敛组件内 enhancedApiClient 直调，保持分层）
+ */
+export async function getUpstreamTrace<T = unknown>(seedSourceId: string, maxDepth = 10): Promise<T> {
+  return await enhancedApiClient.get<T>(
+    `/seed-sources/${encodeURIComponent(seedSourceId)}/upstream-trace?maxDepth=${maxDepth}`,
+  );
+}
+
+/**
  * 多字段模糊搜索种源（2026-06-25: 前端 combogrid 用）
  * 搜索范围：种源批号 / 作物名称 / 作物编号 / 作物品种
  * 网络策略：API 直连（V2.1 铁律：无缓存）
@@ -385,15 +394,11 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
 
   const result = await enhancedApiClient.put<any>(`/seed-sources/${id}`, backendUpdates);
   if (!result) return null;
-  // 2026-07-21：后端响应含完整记录（不只 {id, update_time}）
-  // 兼容 purchasePrice → unitPrice（DB 列名 vs 前端字段名不一致）
-  const record: SeedSource = {
-    ...(updates as SeedSource),
-    id,
-    updateTime: result.update_time || result.updateTime || '',
-    unitPrice: result.unitPrice ?? result.purchasePrice ?? updates.unitPrice ?? 0,
-  };
-  return record;
+  // 2026-10-18 P1 修复：后端响应含完整记录，原实现只用本地 updates，
+  // 服务端规范化字段（编码/作物/供应商等）不会进入 Store。
+  // 保留 updates 兜底，再用服务端真值覆盖。
+  const serverRecord = transformSeedSourceFromBackend(result as BackendSeedSource);
+  return { ...(updates as SeedSource), ...serverRecord, id };
 }
 
 /**

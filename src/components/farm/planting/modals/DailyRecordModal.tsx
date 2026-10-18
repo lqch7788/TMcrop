@@ -63,7 +63,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       const list = await getPlantingDailyRecords(String(record.id));
       setDailyRecords(list || []);
     } catch (error) {
+      // 2026-10-18 P2 修复：加载失败必须告知用户，不能伪装成"暂无记录"
       setDailyRecords([]);
+      await showAlert(`加载每日记录失败：${(error as Error)?.message || '请稍后重试'}`);
     } finally {
       setLoadingHistory(false);
     }
@@ -337,19 +339,14 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       return;
     }
     try {
-      const data = editingRow.data && typeof editingRow.data === 'object'
-        ? editingRow.data
-        : (() => {
-            const biz: any = {};
-            ['temperature', 'humidity', 'watering', 'abnormality',
-             'lossChange', 'supplementChange',
-             'phValue', 'ecValue', 'operator'].forEach((k) => {
-              if (editingRow[k as keyof PlantingDailyRecord] !== undefined) {
-                biz[k] = editingRow[k as keyof PlantingDailyRecord];
-              }
-            });
-            return biz;
-          })();
+      // 2026-10-18 P0 修复：以旧 data 为基准合并本次编辑字段。
+      // 原实现用固定白名单重建 data，会清空 8 项环境参数、施肥/用药明细、浇水方式/水量。
+      const baseData = editingRow.data && typeof editingRow.data === 'object' ? editingRow.data : {};
+      const data: any = { ...baseData };
+      BUSINESS_FIELDS.forEach((k) => {
+        if (k === 'recordDate' || k === 'remarks') return;
+        if (editingRow[k] !== undefined) data[k] = editingRow[k];
+      });
       const payload: any = {
         recordDate: editingRow.recordDate,
         data,

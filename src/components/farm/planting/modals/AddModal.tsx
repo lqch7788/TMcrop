@@ -280,7 +280,7 @@ export function AddModal({
     const rootName = formData.rootName || '';
 
     try {
-      await usePlantingStore.getState().addItem({
+      const created = await usePlantingStore.getState().addItem({
         plantCode,
         sourceType: formData.sourceType as SourceType,
         originPath: formData.originPath,  // V2 改造 (任务 15): 传递 originPath 字段
@@ -327,6 +327,12 @@ export function AddModal({
         attritionRate: 0,
       });
 
+      // 2026-10-18 P1 修复：addItem 失败返回 null，原实现继续关闭弹窗当成功
+      if (!created) {
+        await showAlert(usePlantingStore.getState().error || '添加种植失败，请重试');
+        return;
+      }
+
       // 更新作物实例的定植数量（来源必为种源）
       const source = seedSources.find(s => s.id === formData.sourceId);
       const instanceId = source?.instanceId;
@@ -334,9 +340,8 @@ export function AddModal({
         await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
       }
     } catch (error) {
-      // 2026-06-28: 网络/服务错误的兜底提示（保留弹窗，提示用户刷新）
-      // logger.error('添加种植记录失败:', error);
-      showAlert('添加失败，请重试');
+      // 2026-10-18：显示具体失败原因（种源不足/编码重复等）
+      await showAlert(`添加失败：${(error as Error)?.message || '请重试'}`);
       return;
     }
 

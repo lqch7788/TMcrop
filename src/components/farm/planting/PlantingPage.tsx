@@ -8,7 +8,6 @@ import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine,
 // 2026-07-01 修复：endConfirm 弹窗里用了 <Button> 但未导入，触发 "Button is not defined"
 // 统一从 UI 库导入
 import { Button } from '@/components/ui';
-import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
 import { AddModal } from './modals/AddModal';
@@ -76,8 +75,6 @@ export default function PlantingPage() {
     }
   }, [dictionaries.length, loadDictionaries]);
 
-  // 产品编码生成器状态
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   const [filters, setFilters] = useState<PlantingFilters>({
     cropName: '',
     plantCode: '',
@@ -101,6 +98,10 @@ export default function PlantingPage() {
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  // 2026-10-18 P2 修复：筛选即时生效，条件变化后回到第 1 页，避免停在空页
+  useEffect(() => {
+    setPagination((p) => ({ ...p, current: 1 }));
+  }, [filters]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -283,7 +284,6 @@ export default function PlantingPage() {
 
   // 打印模式状态
   const [printMode, setPrintMode] = useState(false);
-  const [printRecords, setPrintRecords] = useState<Planting[]>([]);
 
   // 2026-08-16：原 useFilteredPlantings Hook 文件已删除但 import 未清理（调用 undefined()）
   // 改为 inline useMemo 实现筛选 + 去重（同一 id 重复行只保留第一条，避免 React key 冲突）
@@ -298,8 +298,11 @@ export default function PlantingPage() {
       if (srcKw && !(item.sourceCode || '').toLowerCase().includes(srcKw)) continue;
       if (filters.cropName && item.cropName !== filters.cropName) continue;
       if (filters.areaOid && item.areaOid !== filters.areaOid) continue;
-      if (filters.isHarvest === 'true' && !item.isHarvest) continue;
-      if (filters.isHarvest === 'false' && item.isHarvest) continue;
+      // 2026-10-18 P1 修复：采收状态统一以「采收入库量」为口径。
+      // is_harvest 只在结束种植时写，行级采收入库不会更新它。
+      const hasHarvested = (item.harvestToInventoryQty || 0) > 0;
+      if (filters.isHarvest === 'true' && !hasHarvested) continue;
+      if (filters.isHarvest === 'false' && hasHarvested) continue;
       if (filters.transplantDate && item.transplantDate !== filters.transplantDate) continue;
       seen.add(item.id);
       result.push(item);
@@ -307,32 +310,23 @@ export default function PlantingPage() {
     return result;
   }, [plantings, filters.plantCode, filters.sourceCode, filters.cropName, filters.areaOid, filters.isHarvest, filters.transplantDate]);
 
-  // 统计卡片数据
-  const statsData = useMemo(() => {
-    const total = plantings.length;
-    const growing = plantings.filter(p => p.status === PlantingStatus.PLANTED || p.status === PlantingStatus.GROWING).length;
-    const harvested = plantings.filter(p => p.status === PlantingStatus.HARVESTED).length;
-    const monthCount = plantings.filter(p => {
-      const date = new Date(p.createTime);
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
-    return { total, growing, harvested, monthCount };
-  }, [plantings]);
-
   // 处理操作
+  // 2026-10-18 P2 修复：统一从 Store 取最新快照，避免行级入库后弹窗显示旧的采收入库量
+  const latestPlanting = (record: Planting) =>
+    usePlantingStore.getState().items.find((i) => i.id === record.id) || record;
+
   const handleEdit = (record: Planting) => {
-    setCurrentRecord(record);
+    setCurrentRecord(latestPlanting(record));
     setEditModalOpen(true);
   };
 
   const handleDetail = (record: Planting) => {
-    setCurrentRecord(record);
+    setCurrentRecord(latestPlanting(record));
     setDetailModalOpen(true);
   };
 
   const handlePrint = (record: Planting) => {
-    setCurrentRecord(record);
+    setCurrentRecord(latestPlanting(record));
     setPrintModalOpen(true);
   };
 
@@ -409,9 +403,11 @@ export default function PlantingPage() {
     // 1. 删除前检查标签履历关联
     for (const id of ids) {
       try {
-        const res = await enhancedApiClient.get<{success: boolean; data: {deletable: boolean; labelCount: number}}>(`/plantings/${id}/check-deletable`);
-        if (res.data && !res.data.deletable) {
-          await showAlert(`种植记录已被 ${res.data.labelCount} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
+        // 2026-10-18 P1 修复：enhancedApiClient 已自动解包 data，
+        // 原写法 res.data 恒为 undefined → 删除保护从未生效
+        const res = await enhancedApiClient.get<{ deletable: boolean; labelCount: number }>(`/plantings/${id}/check-deletable`);
+        if (!res.deletable) {
+          await showAlert(`种植记录已被 ${res.labelCount} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
           return;
         }
       } catch {
@@ -441,7 +437,7 @@ export default function PlantingPage() {
 
   // 移入/移出 - 打开弹窗（整批级别，不依赖标签）
   const handleMove = (record: Planting) => {
-    setCurrentRecord(record);
+    setCurrentRecord(latestPlanting(record));
     setMoveModalOpen(true);
   };
 
@@ -554,7 +550,11 @@ export default function PlantingPage() {
       showAlert('请先选择要打印的记录');
       return;
     }
-    setPrintRecords(records);
+    // 2026-10-18 P1 修复：打印弹窗只支持单条，原实现会静默丢弃其余选择。
+    if (records.length > 1) {
+      void showAlert('批量打印暂仅支持单条：请只选择一条记录后重试。');
+      return;
+    }
     setCurrentRecord(records[0]);
     setPrintModalOpen(true);
     setPrintMode(false);

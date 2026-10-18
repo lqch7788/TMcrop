@@ -160,6 +160,8 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     seedlingForm: item.seedlingForm || '', // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
     siteId: item.areaName || '',
     siteName: item.greenhouseName || item.areaName || '',
+    // 2026-10-18：区域 oid（FK 权威），区域筛选依赖；后端列表 SELECT s.* 已包含 area_oid
+    areaOid: (item as any).areaOid || '',
     startDate: item.seedlingDate ? item.seedlingDate.split('T')[0] : '',
     expectedEndDate: item.expectedFinishDate ? item.expectedFinishDate.split('T')[0] : '',
     endDate: item.actualFinishDate ? item.actualFinishDate.split('T')[0] : '',
@@ -231,8 +233,9 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlings(): Promise<Seedling[]> {
-  // 2026-08-14 H1 修复：显式传 limit=500 — 后端默认 50 会静默截断列表（筛选/导出随之丢数据）
-  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings?limit=500');
+  // 2026-08-14 H1 修复：显式传 limit — 后端默认 50 会静默截断列表
+  // 2026-10-18 P2：上限从 500 提升到 10000，避免业务量增长后静默丢数据
+  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings?limit=10000');
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -315,7 +318,10 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     quality_grade: s.qualityGrade ?? null,
     calculate_mode: s.calculateMode ?? 'single',
     greenhouse_name: s.greenhouseName || s.siteName,
-    area_name: s.areaName || s.siteId,
+    // 2026-10-18：area_oid 存 FK（siteId 是 zone.oid），area_name 只存名称，
+    // 原来把 siteId（OID）写进 area_name，导致区域筛选与显示不一致
+    area_oid: s.areaOid ?? s.siteId ?? null,
+    area_name: s.areaName || s.siteName || null,
     seedling_date: s.seedlingDate || s.startDate,
     expected_finish_date: s.expectedFinishDate || s.expectedEndDate,
     seedling_quantity: s.seedlingQuantity ?? s.initialCount,
@@ -397,7 +403,9 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     greenhouseName: 'greenhouse_name',
     siteName: 'greenhouse_name',
     areaName: 'area_name',
-    siteId: 'area_name',
+    // 2026-10-18：siteId 承载 zone.oid → area_oid（原映射到 area_name 造成 OID 污染名称列）
+    siteId: 'area_oid',
+    areaOid: 'area_oid',
     startDate: 'seedling_date',
     expectedEndDate: 'expected_finish_date',
     endDate: 'actual_finish_date',
@@ -438,6 +446,13 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     const snake = FIELD_TO_SNAKE[k] ?? k;
     backendUpdates[snake] = v;
   }
+  // 2026-10-18：编辑只提交 siteId(OID)+siteName(名称)。area_oid 已映射，
+  // area_name 必须补名称（清空区域时同步清空），避免把 OID 写进名称列。
+  if (backendUpdates.area_oid !== undefined && !backendUpdates.area_name) {
+    backendUpdates.area_name = backendUpdates.area_oid
+      ? ((updates as any).areaName || (updates as any).siteName || null)
+      : null;
+  }
   const result = await enhancedApiClient.put<any>(`/seedlings/${id}`, backendUpdates);
   return result as Seedling;
 }
@@ -475,8 +490,9 @@ export async function getDailyRecords(seedlingId: string): Promise<DailyRecord[]
     if (Array.isArray(payload?.items)) return payload.items;
     if (Array.isArray(payload?.data)) return payload.data;
     return [];
-  } catch {
-    return [];
+  } catch (e) {
+    // 2026-10-18 P2 修复：加载失败不再伪装成"暂无记录"
+    throw e instanceof Error ? e : new Error('加载每日记录失败');
   }
 }
 

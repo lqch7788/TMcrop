@@ -30,7 +30,6 @@ interface EditModalProps {
   onSuccess?: () => void;
   record: Seedling;
   seedSources: SeedSource[];
-  cropVarietyOptions: CropVarietyOption[];
   seedlingTypes: Array<{ value: string; label: string }>;
   sites: Array<{ value: string; label: string }>;
 }
@@ -44,7 +43,6 @@ export function EditModal({
   onSuccess,
   record,
   seedSources,
-  cropVarietyOptions,
   seedlingTypes,
   sites
 }: EditModalProps) {
@@ -278,8 +276,9 @@ export function EditModal({
         replantCount: formData.replantCount,
       });
     } catch (error) {
-      // logger.error('更新育苗记录失败:', error);
-      await showAlert('更新失败，请重试');
+      // 2026-10-18 P1 修复：显示后端具体失败原因（种源不足/校验失败等），
+      // 原实现吞掉了错误详情且 Store 不抛错，弹窗会照常关闭
+      await showAlert(`更新失败：${(error as Error)?.message || '请重试'}`);
       return;
     }
 

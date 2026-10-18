@@ -66,8 +66,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       const list = await getDailyRecords(String(record.id));
       setDailyRecords(list || []);
     } catch (error) {
-      // logger.error('加载每日记录失败:', error);
+      // 2026-10-18 P2 修复：加载失败必须告知用户，不能伪装成"暂无记录"
       setDailyRecords([]);
+      await showAlert(`加载每日记录失败：${(error as Error)?.message || '请稍后重试'}`);
     } finally {
       setLoadingHistory(false);
     }
@@ -398,24 +399,21 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       // 2026-06-14: 与 POST addDailyRecord 保持一致结构 — 业务字段打包成 data 对象
       // 后端 PUT 路由：req.body.data = 业务字段对象 → JSON.stringify 存到 data 列
       // 这样写入的 data JSON 结构干净，下次 GET 能正常 spread 还原
-      const data = editingRow.data && typeof editingRow.data === 'object'
-        ? editingRow.data
-        : (() => {
-            const biz: any = {};
-            ['temperature', 'humidity', 'watering', 'abnormality',
-             'survivalCountChange', 'lossCountChange',
-             'runnerIncreaseCount', 'phValue', 'ecValue', 'operator'].forEach(k => {
-              if (editingRow[k] !== undefined) biz[k] = editingRow[k];
-            });
-            // 2026-10-17 修复：同步写新版字段名（与新增记录的 payload 一致）——
-            //   后端 PUT 归一化只认新名，此前只写旧名会导致"撤销旧值成功、应用新值变成 0"，
-            //   该记录的数量贡献被静默清零（实测：母株损耗 2 改成 4 → 主表变 0）
-            biz.motherLossChange = Number(editingRow.survivalCountChange) || 0;
-            biz.seedlingLossChange = Number(editingRow.lossCountChange) || 0;
-            biz.expandedChange = Number(editingRow.runnerIncreaseCount) || 0;
-            biz.replantChange = Number(editingRow.replantChange) || 0;
-            return biz;
-          })();
+      // 2026-10-18 P0 修复：以旧 data 为基准合并本次编辑字段。
+      // 原实现用固定白名单重建 data，会清空施肥/用药明细、浇水方式/水量。
+      const baseData = editingRow.data && typeof editingRow.data === 'object' ? editingRow.data : {};
+      const data: any = { ...baseData };
+      BUSINESS_FIELDS.forEach((k) => {
+        if (k === 'recordDate' || k === 'remarks') return;
+        if (editingRow[k as keyof typeof editingRow] !== undefined) {
+          data[k] = editingRow[k as keyof typeof editingRow];
+        }
+      });
+      // 兼容新版字段名（后端 PUT 归一化优先读新名）
+      data.motherLossChange = Number(editingRow.survivalCountChange) || 0;
+      data.seedlingLossChange = Number(editingRow.lossCountChange) || 0;
+      data.expandedChange = Number(editingRow.runnerIncreaseCount) || 0;
+      data.replantChange = Number(editingRow.replantChange) || 0;
       const payload: any = {
         recordDate: editingRow.recordDate,
         data,

@@ -49,12 +49,23 @@ export function validateDailyChange(
   const lossCount = Number(row.loss_count || 0);
   const supplementCount = Number(row.supplement_count || 0);
 
-  // 活体剩余 = planting_quantity + 补栽累计 - 损耗累计
+  // 2026-10-18 P1 修复：活体剩余以区域库存为权威（移入/移出只改 area_stocks，主表 planting_quantity 是创建总量）。
+  // 原公式在移入后仍按主表计算，导致损耗上限远小于实际剩余。
+  const areaRows = queryToObjects<any>(
+    db,
+    `SELECT COALESCE(SUM(quantity), 0) AS total, COUNT(*) AS cnt
+       FROM planting_area_stocks WHERE planting_id = ?`,
+    [plantingId],
+  );
+  const areaTotal = Number(areaRows[0]?.total ?? 0);
+  const hasAreaRows = Number(areaRows[0]?.cnt ?? 0) > 0;
   // 注意：本次损耗 lc 不参与"剩余可用"计算（避免重复扣减自己）
-  const available = Math.max(0, plantingQuantity + supplementCount - lossCount);
+  const available = hasAreaRows
+    ? Math.max(0, areaTotal)
+    : Math.max(0, plantingQuantity + supplementCount - lossCount);
 
   if (lc > available) {
-    return `损耗数量 ${lc} 超过当前活体剩余 ${available} 株（种植 ${plantingQuantity} + 补栽 ${supplementCount} − 损耗 ${lossCount}）`;
+    return `损耗数量 ${lc} 超过当前活体剩余 ${available} 株（区域库存 ${available}，种植 ${plantingQuantity} + 补栽 ${supplementCount} − 损耗 ${lossCount}）`;
   }
   return null;
 }
@@ -81,7 +92,7 @@ export function normalizeChangeData(raw: any): { lossChange: number; supplementC
  * @param delta >0：补栽（或回滚损耗），加入主区域库存
  *              <0：损耗（或回滚补栽），主区域优先扣减，不足再按数量降序扣其它区域
  */
-function applyAreaStockDelta(plantingId: string, delta: number, now: string): void {
+export function applyAreaStockDelta(plantingId: string, delta: number, now: string): void {
   if (delta === 0) return;
   const db = getDatabase();
 
@@ -186,17 +197,31 @@ export function applyDailyChangeToPlanting(
   // 2026-10-19：同步计算损耗率 = 累计损耗 ÷（种植数量 + 累计补栽）× 100%
   // 说明：行级采收入库的数量是产物重量（如千克），与植株数量不同量纲，
   // 不能用于损耗率计算，因此损耗率以每日记录的损耗/补栽为口径。
+  recalcAttritionRate(db, plantingId);
+}
+
+/**
+ * 2026-10-18：按「累计损耗 ÷（种植数量 + 累计补栽）」重算损耗率。
+ * 每日记录与编辑弹窗（直接改 lossCount/supplementCount）共用。
+ */
+export function recalcAttritionRate(db: any, plantingId: string): void {
   const rows = queryToObjects<any>(
     db,
-    `SELECT planting_quantity, loss_count, supplement_count FROM plantings WHERE id = ?`,
-    [plantingId],
+    `SELECT planting_quantity, loss_count, supplement_count,
+            (SELECT COUNT(*) FROM planting_area_stocks WHERE planting_id = ?) AS areaCnt,
+            (SELECT COALESCE(SUM(quantity), 0) FROM planting_area_stocks WHERE planting_id = ?) AS areaTotal
+       FROM plantings WHERE id = ?`,
+    [plantingId, plantingId, plantingId],
   );
-  if (rows.length > 0) {
-    const qty = Number(rows[0].plantingQuantity ?? rows[0].planting_quantity ?? 0);
-    const loss = Number(rows[0].lossCount ?? rows[0].loss_count ?? 0);
-    const supp = Number(rows[0].supplementCount ?? rows[0].supplement_count ?? 0);
-    const base = qty + supp;
-    const rate = base > 0 ? Math.round((loss / base) * 1000) / 10 : 0;
-    db.run('UPDATE plantings SET attrition_rate = ? WHERE id = ?', [rate, plantingId]);
-  }
+  if (rows.length === 0) return;
+  const qty = Number(rows[0].plantingQuantity ?? rows[0].planting_quantity ?? 0);
+  const loss = Number(rows[0].lossCount ?? rows[0].loss_count ?? 0);
+  const supp = Number(rows[0].supplementCount ?? rows[0].supplement_count ?? 0);
+  // 2026-10-18 P1：有区域库存时，投入基数 = 区域库存 + 累计损耗（含调入/调出净变化）；
+  // 无区域库存的历史行回退到「种植数量 + 补栽」。
+  const hasAreaRows = Number(rows[0].areaCnt ?? 0) > 0;
+  const areaTotal = Number(rows[0].areaTotal ?? 0);
+  const base = hasAreaRows ? areaTotal + loss : qty + supp;
+  const rate = base > 0 ? Math.round((loss / base) * 1000) / 10 : 0;
+  db.run('UPDATE plantings SET attrition_rate = ? WHERE id = ?', [rate, plantingId]);
 }

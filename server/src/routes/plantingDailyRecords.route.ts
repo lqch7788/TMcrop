@@ -50,7 +50,12 @@ router.get('/', (req: Request, res: Response) => {
     // 展开 data JSON 字段
     const expanded = items.map((it: any) => {
       if (it.data) {
-        try { return { ...JSON.parse(it.data), ...it }; } catch { /* ignore */ }
+        try {
+          const parsed = JSON.parse(it.data);
+          // 2026-10-18 P0 修复：data 保留为对象，供前端编辑时基于旧值合并；
+          // 原实现被 it.data（原始字符串）覆盖，导致编辑保存只能白名单重建、丢失明细
+          return { ...parsed, ...it, data: parsed };
+        } catch { /* ignore */ }
       }
       return it;
     });
@@ -199,13 +204,14 @@ router.post('/', (req: Request, res: Response) => {
 
 /** PUT /:recordId — 编辑每日记录（事务：反向补偿 + 正向重放 + 浇水同步） */
 router.put('/:recordId', (req: Request, res: Response) => {
+  const db = getDatabase();
   try {
     const { id, recordId } = req.params;
     const { recordDate, remarks, data } = req.body || {};
-    const db = getDatabase();
     const now = formatLocalDateISO();
 
-    const pStmt = db.prepare('SELECT id, end_time FROM plantings WHERE id = ?');
+    // 2026-10-18：取完整行，供施肥/用药/浇水同步构造上下文
+    const pStmt = db.prepare('SELECT * FROM plantings WHERE id = ?');
     pStmt.bind([id]);
     const planting = pStmt.step() ? pStmt.getAsObject() : null;
     pStmt.free();
@@ -221,10 +227,25 @@ router.put('/:recordId', (req: Request, res: Response) => {
     }
     oldStmt.free();
 
-    // 编辑场景：反向抵消旧值 → 校验新值 → 正向应用
+    // 2026-10-18 P0 修复：后端合并旧 data，防止部分字段提交把整列覆盖（丢失施肥/用药/浇水/环境）
+    let mergedData: any = null;
     if (data !== undefined) {
       try {
-        const newParsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const incoming = typeof data === 'string' ? JSON.parse(data) : data;
+        mergedData = {
+          ...(oldData && typeof oldData === 'object' ? oldData : {}),
+          ...(incoming && typeof incoming === 'object' ? incoming : {}),
+        };
+      } catch { mergedData = null; }
+    }
+
+    // 2026-10-18 P1：反向补偿 + 正向应用 + 明细更新放同一事务，避免中途失败留下半套数据
+    db.exec('BEGIN');
+
+    // 编辑场景：反向抵消旧值 → 校验新值 → 正向应用
+    if (mergedData !== null) {
+      try {
+        const newParsed = mergedData;
         const oldNormalized = normalizeChangeData(oldData);
         const newNormalized = normalizeChangeData(newParsed);
         const hasChange = oldNormalized.lossChange !== newNormalized.lossChange
@@ -233,7 +254,8 @@ router.put('/:recordId', (req: Request, res: Response) => {
           if (oldData && Object.keys(oldData).length > 0) applyDailyChangeToPlanting(id, oldNormalized, -1);
           const validateErr = validateDailyChange(id, newNormalized);
           if (validateErr) {
-            if (oldData && Object.keys(oldData).length > 0) applyDailyChangeToPlanting(id, oldNormalized, 1);
+            // 回滚整个事务（含临时反向补偿），恢复到编辑前状态
+            try { db.exec('ROLLBACK'); } catch { /* ignore */ }
             return res.status(400).json({ success: false, error: validateErr });
           }
           applyDailyChangeToPlanting(id, newNormalized, 1);
@@ -242,7 +264,7 @@ router.put('/:recordId', (req: Request, res: Response) => {
     }
 
     // UPDATE
-    const dataJson = data !== undefined ? JSON.stringify(data) : null;
+    const dataJson = mergedData !== null ? JSON.stringify(mergedData) : null;
     const fields = ['update_time = ?'];
     const values: any[] = [now];
     if (recordDate) { fields.push('record_date = ?'); values.push(recordDate); }
@@ -254,14 +276,58 @@ router.put('/:recordId', (req: Request, res: Response) => {
     // 浇水同步
     if (data) {
       try {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        const wateringData = parsed?.watering != null ? {
-          watering: !!parsed.watering, wateringMethod: parsed.wateringMethod,
-          wateringAmount: parsed.wateringAmount, wateringUnit: parsed.wateringUnit,
-        } : null;
-        if (wateringData?.watering && wateringData.wateringAmount > 0) {
-          const { syncWateringRecords } = require('../lib/syncDailyRecords');
-          syncWateringRecords(db, recordId, wateringData, {
+        const parsed = mergedData;
+        // 2026-10-18 P0 修复：仅当 data 明确携带 watering 键时才处理浇水。
+        // 原实现 data 中缺 wateringAmount 就 DELETE，编辑其它字段会误删浇水记录。
+        const hasWateringKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'watering');
+        if (hasWateringKey) {
+          const wateringData = {
+            watering: !!parsed.watering,
+            wateringMethod: parsed.wateringMethod,
+            wateringAmount: parsed.wateringAmount,
+            wateringUnit: parsed.wateringUnit,
+          };
+          if (wateringData.watering && Number(wateringData.wateringAmount) > 0) {
+            const { syncWateringRecords } = require('../lib/syncDailyRecords');
+            syncWateringRecords(db, recordId, wateringData, {
+              relatedId: id, relatedCode: (planting as any).planting_code || '', relatedType: 'planting' as const,
+              recordDate: recordDate || formatLocalDateISO(),
+              cropName: (planting as any).crop_name || '', cropVariety: (planting as any).crop_variety || '',
+              greenhouseName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              areaId: (planting as any).area_id || '', areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              operatorId: (req as any).body?.operatorId || '',
+              operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
+            });
+          } else {
+            db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+          }
+        }
+      } catch (syncErr) {
+        console.error('[plantingDailyRecords] 浇水同步失败:', (syncErr as Error)?.message || syncErr);
+      }
+    }
+
+    // 2026-10-18 P0 修复：编辑时重放施肥/用药同步（原 PUT 只处理浇水，
+    // 明细被编辑后 fertilizer_records/pesticide_records 与库存不会跟随）
+    if (data) {
+      try {
+        const parsed = mergedData;
+        const hasFertKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'fertilizerRecords');
+        const hasPestKey = parsed != null && Object.prototype.hasOwnProperty.call(parsed, 'pesticideRecords');
+        if (hasFertKey || hasPestKey) {
+          const {
+            syncFertilizerRecords, syncPesticideRecords,
+            adjustFertilizerStock, adjustPesticideStock,
+            getOldFertilizerSync, getOldPesticideSync,
+          } = require('../lib/syncDailyRecords');
+          const fertItems: any[] = Array.isArray(parsed.fertilizerRecords) ? parsed.fertilizerRecords : [];
+          const pestItems: any[] = Array.isArray(parsed.pesticideRecords) ? parsed.pesticideRecords : [];
+          // 先恢复旧同步记录扣减的库存，再删除旧记录
+          for (const o of getOldFertilizerSync(db, recordId)) adjustFertilizerStock(db, o.code, o.qty);
+          for (const o of getOldPesticideSync(db, recordId)) adjustPesticideStock(db, o.code, o.qty);
+          db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
+          db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+          const ctx = {
             relatedId: id, relatedCode: (planting as any).planting_code || '', relatedType: 'planting' as const,
             recordDate: recordDate || formatLocalDateISO(),
             cropName: (planting as any).crop_name || '', cropVariety: (planting as any).crop_variety || '',
@@ -269,15 +335,27 @@ router.put('/:recordId', (req: Request, res: Response) => {
             areaId: (planting as any).area_id || '', areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
             operatorId: (req as any).body?.operatorId || '',
             operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
-          });
-        } else {
-          db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+          };
+          if (fertItems.length > 0) {
+            syncFertilizerRecords(db, recordId, fertItems, {
+              ...ctx,
+              primaryMethod: fertItems.find((it: any) => it.applicationMethod)?.applicationMethod || '',
+            });
+          }
+          if (pestItems.length > 0) {
+            syncPesticideRecords(db, recordId, pestItems, {
+              ...ctx,
+              primaryMethod: pestItems.find((it: any) => it.applicationMethod)?.applicationMethod || '',
+              primaryTargetPest: pestItems.find((it: any) => it.targetPest)?.targetPest || '',
+            });
+          }
         }
       } catch (syncErr) {
-        console.error('[plantingDailyRecords] 浇水同步失败:', (syncErr as Error)?.message || syncErr);
+        console.error('[plantingDailyRecords] 编辑时施肥/用药同步失败:', (syncErr as Error)?.message || syncErr);
       }
     }
 
+    db.exec('COMMIT');
     saveDatabase();
     const updated = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
     res.json({ success: true, data: updated[0] || { id: recordId } });
@@ -290,6 +368,7 @@ router.put('/:recordId', (req: Request, res: Response) => {
       opinion: `编辑种植日常记录 ${recordId}`,
     });
   } catch (error) {
+    try { db.exec('ROLLBACK'); } catch { /* 可能在校验分支已回滚 */ }
     console.error('[plantingDailyRecords] 编辑失败:', error);
     res.status(500).json({ success: false, error: '编辑种植每日记录失败' });
   }
@@ -333,6 +412,8 @@ router.delete('/:recordId', (req: Request, res: Response) => {
       for (const o of getOldPesticideSync(db, recordId)) adjustPesticideStock(db, o.code, o.qty);
       db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
       db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+      // 2026-10-18：同步清理浇水记录（原实现遗漏，删除每日记录后留下孤儿浇水行）
+      db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
     } catch (e) {
       console.error('[plantingDailyRecords] 恢复库存失败:', (e as Error)?.message || e);
     }

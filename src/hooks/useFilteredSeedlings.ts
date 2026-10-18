@@ -17,7 +17,20 @@ export function useFilteredSeedlings(
       if (filters.cropName && filters.cropName !== '__all__' && !item.cropName.includes(filters.cropName)) return false;
       if (filters.seedlingCode && !item.seedlingCode.startsWith(filters.seedlingCode)) return false;
       if (filters.sourceCode && !item.sourceCode.startsWith(filters.sourceCode)) return false;
-      if (filters.siteName && filters.siteName !== '__all__' && item.siteName !== filters.siteName) return false;
+      // 2026-10-18 P1 修复：区域筛选按 area_oid（FK）比较；老数据无 oid 时回退名称匹配。
+      // 原实现把 OID 写进 siteName 再与中文名称比较，选中任何区域结果恒为空。
+      if (filters.areaOid && filters.areaOid !== '__all__') {
+        const itemOid = String((item as any).areaOid || '');
+        if (itemOid) {
+          if (itemOid !== filters.areaOid) return false;
+        } else if (item.siteId !== filters.areaOid && item.siteName !== filters.siteName) {
+          // 历史数据没有 area_oid：area_name 曾被写成 OID（映射到 item.siteId），
+          // 或记录只存了区域名称 → 两种都兼容
+          return false;
+        }
+      } else if (filters.siteName && filters.siteName !== '__all__' && item.siteName !== filters.siteName) {
+        return false;
+      }
       if (filters.seedlingType && filters.seedlingType !== '__all__' && item.seedlingType !== filters.seedlingType) return false;
       if (filters.status && filters.status !== '__all__' && item.status !== filters.status) return false;
       if (filters.startDate && item.startDate < filters.startDate) return false;
@@ -36,10 +49,15 @@ export function useFilteredSeedlings(
       const surplus = getSeedlingRemainingCount(item);
       if (filters.surplusMin !== undefined && surplus < filters.surplusMin) return false;
       if (filters.surplusMax !== undefined && surplus > filters.surplusMax) return false;
-      if (filters.survivalRateMin !== undefined && item.survivalRate < filters.survivalRateMin) return false;
-      if (filters.survivalRateMax !== undefined && item.survivalRate > filters.survivalRateMax) return false;
-      if (filters.lossRateMin !== undefined && item.lossRate < filters.lossRateMin) return false;
-      if (filters.lossRateMax !== undefined && item.lossRate > filters.lossRateMax) return false;
+      // 2026-10-18 P2：成活率/损耗率改按 seedlingPool 派生口径，与列表显示一致
+      //（原实现读 survivalRate/lossRate 存量字段，历史行常为 0，筛选失真）
+      const invested = (item.initialCount || 0) + (item.replantCount || 0);
+      const survivalRate = invested > 0 ? Math.round((alive / invested) * 100) : 0;
+      const lossRate = invested > 0 ? Math.round((lossDisplay / invested) * 100) : 0;
+      if (filters.survivalRateMin !== undefined && survivalRate < filters.survivalRateMin) return false;
+      if (filters.survivalRateMax !== undefined && survivalRate > filters.survivalRateMax) return false;
+      if (filters.lossRateMin !== undefined && lossRate < filters.lossRateMin) return false;
+      if (filters.lossRateMax !== undefined && lossRate > filters.lossRateMax) return false;
       return true;
     });
   }, [seedlings, filters]);

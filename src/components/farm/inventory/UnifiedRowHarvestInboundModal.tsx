@@ -458,6 +458,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             // 2026-06-30: harvest 形态（果实/种子/种苗/枝条…）
             // 顶部"采收形态"联动 productForm（弹窗内的对应字段）
             sourceForm: product?.productForm,
+            // 2026-10-18 P0 修复：回写本次入库的 harvest_records / inventory_stock ID，
+            // 否则后续删除/编辑只能按时间猜测，会误删其它批次
+            harvestRecordId: result.data?.harvestRecordId,
+            inventoryStockId: result.data?.stockIds?.[0],
           })
         } catch (e) {
           // 写 planting_harvest_records 失败不影响主流程（已成功入库）

@@ -381,6 +381,16 @@ export class SeedSourceController {
         res.status(404).json({ success: false, error: '种源不存在或已删除' });
         return;
       }
+      // 2026-10-18 P2 修复：后端兜底引用校验（前端检查可被绕过）
+      const deletableCheck = await this.service.checkDeletable(id);
+      if (!deletableCheck.deletable) {
+        res.status(409).json({
+          success: false,
+          error: `该种源被 ${deletableCheck.references.length} 条记录引用，无法删除`,
+          references: deletableCheck.references,
+        });
+        return;
+      }
       // 2026-10-17：删除前归档到回收站
       archiveBeforeDelete('seed_source', id, {
         operator: { name: (req as any).user?.name, id: (req as any).user?.userId },
@@ -436,6 +446,21 @@ export class SeedSourceController {
       }
 
       const idArray = (ids as string).split(',').filter((id) => id.trim() !== '');
+      // 2026-10-18 P2 修复：批量删除前逐条引用校验（fail-closed，必须在归档之前）
+      const blocked: string[] = [];
+      for (const id of idArray) {
+        const check = await this.service.checkDeletable(id);
+        if (!check.deletable) {
+          blocked.push(`${id}（${check.references.length} 条引用）`);
+        }
+      }
+      if (blocked.length > 0) {
+        res.status(409).json({
+          success: false,
+          error: `以下种源存在引用，无法删除：${blocked.join('、')}`,
+        });
+        return;
+      }
       // 2026-10-17：批量删除前逐条归档（已删除记录不重复归档）
       const operator = { name: (req as any).user?.name, id: (req as any).user?.userId };
       for (const id of idArray) {

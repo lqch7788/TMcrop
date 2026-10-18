@@ -155,7 +155,7 @@ export async function listTransferableSources(filters: {
       ist.source_form    -- 2026-07-16：种源/育苗库存形态字段（fixMissingSchema 注释：source_form=育苗/种植产物类型）
     FROM inventory_stock ist
     WHERE ist.stock_type IN (${placeholders})
-      AND ist.current_quantity > 0
+      AND ist.available_quantity > 0
       -- 2026-07-16 修复：与作物库存列表对齐，过滤已调拨的库存（status='transferred' 视为已消耗）
       AND (ist.status IS NULL OR ist.status != 'transferred')
   `;
@@ -323,16 +323,17 @@ export async function executeTransferToSource(
       const sourceStatus = sourceStock.status;
 
       // 业务校验
-      if (sourceStatus === 'depleted' || sourceCurrentQty <= 0) {
+      // 2026-10-18 P1 修复：调拨必须基于可用数量（current 含冻结量，冻结部分不可出库）
+      if (sourceStatus === 'depleted' || sourceAvailableQty <= 0) {
         throw new InventoryTransferBusinessError(
           InventoryTransferErrorCode.STOCK_NOT_AVAILABLE,
-          `库存已耗尽: ${sourceStock.instance_id}`,
+          `库存可用数量为空: ${sourceStock.instance_id}`,
         );
       }
-      if (sourceCurrentQty < item.transferQuantity) {
+      if (sourceAvailableQty < item.transferQuantity) {
         throw new InventoryTransferBusinessError(
           InventoryTransferErrorCode.INSUFFICIENT_QUANTITY,
-          `可用数量不足: ${sourceStock.instance_id} 当前 ${sourceCurrentQty}${sourceUnit}，需调拨 ${item.transferQuantity}${item.unit}`,
+          `可用数量不足: ${sourceStock.instance_id} 可用 ${sourceAvailableQty}${sourceUnit}，需调拨 ${item.transferQuantity}${item.unit}`,
         );
       }
       if (sourceUnit !== item.unit) {
@@ -355,7 +356,7 @@ export async function executeTransferToSource(
       const updateStmt = db.prepare(
         `UPDATE inventory_stock
          SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
-         WHERE id = ? AND current_quantity >= ?`
+         WHERE id = ? AND available_quantity >= ?`
       );
       updateStmt.bind([
         newSourceQty, newAvailableQty, newSourceStatus, now,
@@ -434,6 +435,10 @@ export async function executeTransferToSource(
       const transferGeneration = sourceStock.generation || null;
       const transferPropMethod = derivePropagationMethodFromSeedForm(transferSeedForm);
       let mergeTargetId: string | null = null;
+      // 2026-10-18 P0 修复：合并模式下库存/入库/流水/返回值必须挂在**已存在的目标种源**上，
+      // 原实现使用预生成但从未 INSERT 的 newSeedSourceId，产生不存在的"幽灵种源 ID"。
+      let effectiveSeedSourceId = newSeedSourceId;
+      let effectiveCode = newCode;
 
       if (transferCropCode && transferSeedForm && sourceUnit) {
         const repo = new SeedSourceRepository();
@@ -446,6 +451,10 @@ export async function executeTransferToSource(
         });
         if (mergeable) {
           mergeTargetId = mergeable.id;
+          effectiveSeedSourceId = mergeable.id;
+          effectiveCode = String(
+            (mergeable as any).source_code || (mergeable as any).sourceCode || '',
+          ) || newCode;
         }
       }
 
@@ -538,7 +547,7 @@ export async function executeTransferToSource(
           create_time, update_time
         ) VALUES (?, ?, ?, 'seed_source', ?, ?, ?, 'in_stock', ?, ?)`,
         [
-          newCropInstanceId, newCode, newSeedSourceId,
+          newCropInstanceId, effectiveCode, effectiveSeedSourceId,
           sourceStock.crop_name || '',
           item.transferQuantity, item.transferQuantity,
           now, now,
@@ -565,7 +574,7 @@ export async function executeTransferToSource(
           // 2026-07-15：调拨入种源后，新库存 stock_type 强制为 'seed'（不是原 stock_type 如 'product'）
           // 业务语义：种源页面只关心 seed 类型，调拨来源是 seed/seedling/product 都标准化为 seed
           // sourceStock.stock_type 通过 seed_sources.original_stock_type 字段保留（业务追溯用）
-          newStockId, newInstanceId, 'seed', newSeedSourceId, newCode,
+          newStockId, newInstanceId, 'seed', effectiveSeedSourceId, effectiveCode,
           'inventory_transfer', newCropInstanceId,
           sourceStock.crop_code || '', sourceStock.crop_name, sourceStock.variety_id, sourceStock.variety_name,
           item.transferQuantity, item.transferQuantity, 0, sourceUnit,
@@ -589,11 +598,12 @@ export async function executeTransferToSource(
           crop_id, crop_code, crop_name, variety_name,
           quantity, unit, unit_price, total_amount, quality_grade,
           supplier_id, supplier_name, production_plan_code,
-          business_id, notes, operator_name, create_by, create_time, update_time
-        ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          business_id, notes, operator_name, create_by, create_time, update_time,
+          origin_stock_id
+        ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           inbRecordId, now.slice(0, 10),
-          newStockId, newCode,
+          newStockId, effectiveCode,
           // 2026-07-15：与 inventory_stock 同步 — 调拨入种源后 stock_type 强制 'seed'，
           // 保留原 stock_type 在 notes 里（业务追溯）
           // 2026-10-16 修复：source_type 写死 'transfer_inbound'，不再复用源库存 source_type
@@ -612,9 +622,11 @@ export async function executeTransferToSource(
           null,
           sourceStock.supplier_id || null, sourceStock.supplier_name || null,
           sourceStock.production_plan_code || null,
-          newSeedSourceId,
-          `从库存 ${sourceStock.instance_id} 调拨入种源 ${newCode}`,
+          effectiveSeedSourceId,
+          `从库存 ${sourceStock.instance_id} 调拨入种源 ${effectiveCode}`,
           operator.name, operator.name, now, now,
+          // 2026-10-18：记录本次调拨的原始库存行，退库按此回补
+          item.sourceStockId,
         ]
       );
       // writtenInboundRecordIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
@@ -631,9 +643,9 @@ export async function executeTransferToSource(
         [
           inTxId, inTransactionId, newInstanceId, sourceStock.stock_type,
           item.transferQuantity, item.transferQuantity,
-          newSeedSourceId, newCode,
+          effectiveSeedSourceId, effectiveCode,
           operator.id || '', operator.name, now.slice(0, 10),
-          `从库存 ${sourceStock.instance_id} 调拨入种源 ${newCode}`,
+          `从库存 ${sourceStock.instance_id} 调拨入种源 ${effectiveCode}`,
           now,
         ]
       );
@@ -654,8 +666,8 @@ export async function executeTransferToSource(
           source_unit: sourceUnit,
           source_category: '调拨出库',  // 2026-08-21：改为中文持久化
           target_type: 'seed_source',
-          target_id: newSeedSourceId,
-          target_code: newCode,
+          target_id: effectiveSeedSourceId,
+          target_code: effectiveCode,
           target_quantity: item.transferQuantity,
           target_unit: sourceUnit,
           business_code: outTxId,
@@ -666,8 +678,8 @@ export async function executeTransferToSource(
       }
 
       results.push({
-        newSeedSourceId,
-        newSeedSourceCode: newCode,
+        newSeedSourceId: effectiveSeedSourceId,
+        newSeedSourceCode: effectiveCode,
         newInventoryStockId: newStockId,
         transferOutTxId: outTxId,
         transferInTxId: inTxId,

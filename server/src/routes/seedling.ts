@@ -211,6 +211,27 @@ router.delete('/batch', asyncHandler(async (req: Request, res: Response) => {
     idArray,
   );
 
+  // 2026-10-18 P1 修复：已入库或有关联采收记录的育苗单禁止删除
+  const blockedRows = rows.filter((r) => Number(r.harvest_stocked_count || 0) > 0);
+  if (blockedRows.length > 0) {
+    return res.status(409).json({
+      success: false,
+      error: `以下育苗单已入库，不能删除：${blockedRows.map((r) => r.seedling_code || r.id).join('、')}`,
+    });
+  }
+  const harvestRefRows = queryToObjects<any>(
+    db,
+    `SELECT DISTINCT source_id FROM harvest_records
+      WHERE source_module = 'seedling' AND deleted_at IS NULL AND source_id IN (${placeholders})`,
+    idArray,
+  );
+  if (harvestRefRows.length > 0) {
+    return res.status(409).json({
+      success: false,
+      error: `以下育苗单存在采收入库记录，不能删除：${harvestRefRows.map((r) => r.sourceId || r.source_id).join('、')}`,
+    });
+  }
+
   const archiveIds: Array<string | null> = [];
   const deletedIds: string[] = [];
   db.run('BEGIN');
@@ -1804,6 +1825,28 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const row = rows[0];
   if (!row) return res.status(404).json({ success: false, error: '育苗记录不存在或已删除' });
 
+  // 2026-10-18 P1 修复：已出圃入库的育苗单禁止直接删除。
+  // 否则库存/追溯链留下指向已软删育苗的孤儿引用，回收站恢复还需重新扣种源。
+  const stockedCount = Number((row as any).harvest_stocked_count || 0);
+  if (stockedCount > 0) {
+    return res.status(409).json({
+      success: false,
+      error: `该育苗单已入库 ${stockedCount}${(row as any).unit || ''}，不能直接删除。请先在库存管理中冲销/删除对应入库记录。`,
+    });
+  }
+  const harvestRefRows = queryToObjects<any>(
+    db,
+    `SELECT COUNT(*) AS cnt FROM harvest_records
+      WHERE source_id = ? AND source_module = 'seedling' AND deleted_at IS NULL`,
+    [id],
+  );
+  if (Number(harvestRefRows[0]?.cnt || 0) > 0) {
+    return res.status(409).json({
+      success: false,
+      error: '该育苗单存在关联采收入库记录，不能直接删除。请先在库存管理中处理对应入库记录。',
+    });
+  }
+
   let archiveId: string | null = null;
   db.exec('BEGIN');
   try {
@@ -1842,180 +1885,6 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: { id, deleted: true, recycleId: archiveId } });
 }));
 
-/**
- * 2026-06-15: 数量体系重构 — 统一校验函数（按 2 模式分支）
- * 1:1 模式（one_to_one）：母株+母株损耗 ≤ initial；expanded 自动 = mother
- * 1:多 模式（one_to_many）：母株存活 [0, initial]；expanded ≥ 0；planted+loss ≤ mother+expanded
- * @returns null 表示通过；string 表示错误消息
- */
-export function validateDailyChange(id: string, changeData: any): string | null {
-  const db = getDatabase();
-  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count, expanded_plant_count, seedling_loss_count FROM seedlings WHERE id = ?');
-  stmt.bind([id]);
-  let row: any = null;
-  if (stmt.step()) row = stmt.getAsObject();
-  stmt.free();
-  if (!row) return null;
-  const initial = Number(row.seedling_quantity) || 0;
-  if (initial <= 0) return null;
-  const mode = row.propagation_mode || 'one_to_one';
-  const is11 = mode === 'one_to_one';
-
-  // 2026-06-28：3 个 delta（移除 transplantedChange 业务字段，业务规则：种植管理不再从育苗取苗）
-  const mlc = Number(changeData?.motherLossChange) || 0;
-  const slc = Number(changeData?.seedlingLossChange) || 0;
-  const ec = Number(changeData?.expandedChange) || 0;
-  // 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
-  const rc = Number(changeData?.replantChange) || 0;
-  if (rc < 0) return '补苗数不能为负';
-
-  // 母株池 / 小苗池 严格分离校验
-  // 母株池：1:1 = 当前 + 补苗（无损耗）；1:多 = 当前 - 损耗 + 补苗
-  // 小苗池：1:1 = expanded（=母株同步）；1:多 = 当前产出 + 本次产出
-  const newMother = is11
-    ? (Number(row.mother_plant_count) || 0) + rc
-    : (Number(row.mother_plant_count) || 0) - mlc + rc;
-  const newMotherLoss = (Number(row.mother_loss_count) || 0) + mlc;
-  const newExpanded = is11 ? newMother : ((Number(row.expanded_plant_count) || 0) + ec);
-  const newSeedlingLoss = (Number(row.seedling_loss_count) || 0) + slc;
-  const newHarvestStocked = Number(row.harvest_stocked_count) || 0;  // 此字段由其他路径累加
-
-  // 母株池校验
-  if (newMother < 0) return `母株存活数 ${newMother} 不能为负（母株池独立计算）`;
-  if (newMotherLoss < 0) return '母株累计损耗不能为负';
-  if (mlc < 0) return '母株损耗不能为负';
-  if (rc < 0) return '补苗不能为负';
-
-  // 小苗池校验（与母株池严格分离）
-  if (newExpanded < 0) return '小苗产出累计越界';
-  if (newSeedlingLoss < 0) return '小苗累计损耗不能为负';
-  // 2026-06-28：移除 transplanted/autoPlanted 校验，小苗池消耗 = 损耗 + 采收入库
-  const smallAvailable = newExpanded - newSeedlingLoss - newHarvestStocked;
-  if (smallAvailable < 0) {
-    return `小苗池消耗超过产出：累计产出 ${newExpanded}，累计消耗 ${newSeedlingLoss + newHarvestStocked}`;
-  }
-  if (newSeedlingLoss > newExpanded) {
-    return `小苗损耗 ${newSeedlingLoss} 超过已产出 ${newExpanded}`;
-  }
-  return null;
-}
-
-/**
- * 2026-06-15: 数量体系重构 — 旧字段名 → 新字段名 兼容映射
- * daily_record.data 字段历史上存的是旧字段名（survivalCountChange/plantedCountChange/lossCountChange/runnerIncreaseCount）
- * 按 propagation_mode 路由到新字段：
- *   1:1 模式：survivalCountChange 视为 expandedChange（产出=存活=母株存活）
- *   1:多 模式：survivalCountChange 视为 motherLossChange（旧 "成活变化" UI 实际填的是母株损耗）
- *   其他字段：直接映射
- * @returns 转换后的对象（含新字段名）
- */
-function normalizeChangeData(raw: any, propagationMode: string): any {
-  if (!raw || typeof raw !== 'object') return raw || {};
-  const is11 = (propagationMode || 'one_to_one') === 'one_to_one';
-  const legacySc = Number(raw.survivalCountChange) || 0;
-  const legacyLc = Number(raw.lossCountChange) || 0;
-  const legacyRi = Number(raw.runnerIncreaseCount) || 0;
-  const legacyRc = Number(raw.replantChange) || 0;
-  return {
-    // 2026-06-28：移除 transplantedChange 字段映射（业务规则：种植管理不再从育苗取苗）
-    motherLossChange: is11 ? 0 : (Number(raw.motherLossChange) || legacySc),
-    seedlingLossChange: Number(raw.seedlingLossChange) || legacyLc,
-    expandedChange: Number(raw.expandedChange) || legacyRi || (is11 ? legacySc : 0),
-    // 补苗（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
-    replantChange: Math.max(0, Number(raw.replantChange) || legacyRc),
-    // 保留旧字段名（用于 daily_record.data 写回时的兼容性）
-    survivalCountChange: raw.survivalCountChange,
-    lossCountChange: raw.lossCountChange,
-    runnerIncreaseCount: raw.runnerIncreaseCount,
-  };
-}
-
-/**
- * 2026-06-15: 数量体系重构 — 每日记录变更应用到育苗主表
- * 累加到新 5 字段（mother_loss_count/seedling_loss_count/transplanted_count/expanded_plant_count/auto_planted_count 等）
- * @param id 育苗 ID
- * @param changeData 业务字段包（motherLossChange/seedlingLossChange/expandedChange/transplantedChange）
- * @param sign +1 表示新增/正向变更；-1 表示删除/反向补偿
- * @returns null 表示成功；string 表示业务校验失败的错误消息
- *
- * 反向补偿（sign=-1，删除每日记录）跳过业务校验，但保留字段非负兜底（MAX(0, ...)）
- */
-function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): string | null {
-  const db = getDatabase();
-  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, expanded_plant_count FROM seedlings WHERE id = ?');
-  stmt.bind([id]);
-  let row: any = null;
-  if (stmt.step()) row = stmt.getAsObject();
-  stmt.free();
-  if (!row) return null;
-  const initial = Number(row.seedling_quantity) || 0;
-  const mode = row.propagation_mode || 'one_to_one';
-  const is11 = mode === 'one_to_one';
-
-  // 4 个 delta（新字段名）
-  const mlc = Number(changeData?.motherLossChange) || 0;
-  const slc = Number(changeData?.seedlingLossChange) || 0;
-  const ec = Number(changeData?.expandedChange) || 0;
-  const tc = Number(changeData?.transplantedChange) || 0;
-  // 2026-06-16: 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
-  const rc = Number(changeData?.replantChange) || 0;
-
-  // sign=+1 时校验；sign=-1 反向补偿跳过校验（铁律：能修复脏数据）
-  if (sign > 0 && initial > 0) {
-    const err = validateDailyChange(id, changeData);
-    if (err) return err;
-  }
-
-  // 兜底：累加后任何字段不能为负
-  const safeAdd = (col: string, delta: number) => {
-    if (delta === 0) return;
-    db.run(
-      `UPDATE seedlings SET ${col} = MAX(0, ${col} + ?) WHERE id = ?`,
-      [delta, id]
-    );
-  };
-
-  // 累加到新字段
-  safeAdd('mother_loss_count', mlc * sign);
-  safeAdd('seedling_loss_count', slc * sign);
-  // 2026-06-28：移除 transplanted_count 累加（业务规则：种植管理不再从育苗取苗）
-  safeAdd('replant_count', rc * sign);  // 2026-06-16: 补苗累计（两种模式都加）
-
-  if (!is11) {
-    // 1:多 模式：母株损耗 mlc 同步扣减母株存活数；补苗 rc 同步累加母株存活数
-    safeAdd('mother_plant_count', -mlc * sign + rc * sign);
-    safeAdd('expanded_plant_count', ec * sign);
-  } else {
-    // 1:1 模式：补苗 rc 累加到母株池（1:1 没有"母株损耗"，只有补苗）
-    safeAdd('mother_plant_count', rc * sign);
-    // 1:1 模式：expanded_plant_count 由 mother_plant_count 派生（总投入数 = initial + replant）
-    db.run('UPDATE seedlings SET expanded_plant_count = mother_plant_count WHERE id = ?', [id]);
-  }
-
-  // 2026-06-28：同步旧字段（前端 UI 标签预览显示需要）— 修复"成活数量/成活率全是 0"bug
-  // 之前 bug：daily_records 累加只更新了新字段（mother_loss_count/seedling_loss_count 等），
-  // 但旧字段（survival_quantity/loss_count/survival_rate/loss_rate）从未被同步，
-  // 导致前端 apiSeedlingService 归一化后 survivalCount 永远是 0。
-  db.run(`
-    UPDATE seedlings
-    SET
-      loss_count = seedling_loss_count,
-      survival_quantity = MAX(0, seedling_quantity - seedling_loss_count),
-      survival_rate = CASE
-        WHEN seedling_quantity > 0
-        THEN ROUND((CAST(MAX(0, seedling_quantity - seedling_loss_count) AS REAL) / seedling_quantity) * 100, 1)
-        ELSE 0
-      END,
-      loss_rate = CASE
-        WHEN seedling_quantity > 0
-        THEN ROUND((CAST(seedling_loss_count AS REAL) / seedling_quantity) * 100, 1)
-        ELSE 0
-      END
-    WHERE id = ?
-  `, [id]);
-
-  return null;
-}
 
 // 2026-07-21：每日记录 4 端点提取到 seedlingDailyRecords.route.ts
 router.use("/:id/daily-records", seedlingDailyRecordsRouter);

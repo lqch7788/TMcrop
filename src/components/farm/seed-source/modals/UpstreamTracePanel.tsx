@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, ChevronDown, ChevronRight, ArrowUp, Package, Sprout, Leaf, Store, HelpCircle, CircleDashed, Archive } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
-import { enhancedApiClient } from '@/lib/apiClient';
+import { getUpstreamTrace } from '@/services/apiSeedSourceService';
 import type { SeedSource } from '@/types/crop';
 import { TRANSFERRED_FROM_BUSINESS_TYPE_MAP, ORIGINAL_SOURCE_MODULE_MAP } from '@/constants/cropConstants';
 
@@ -568,8 +568,7 @@ export function UpstreamTracePanel({ seedSourceId, record }: UpstreamTracePanelP
     let cancelled = false;
     setLoading(true);
     setError(null);
-    enhancedApiClient
-      .get<UpstreamTraceData>(`/seed-sources/${seedSourceId}/upstream-trace?maxDepth=10`)
+    getUpstreamTrace<UpstreamTraceData>(seedSourceId, 10)
       .then((d) => {
         if (cancelled) return;
         const result = d as unknown as UpstreamTraceData;

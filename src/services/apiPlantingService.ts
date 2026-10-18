@@ -219,8 +219,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
  * 数据流：API → SQLite DB
  */
 export async function getPlantings(): Promise<Planting[]> {
-  // 2026-08-14 修复：显式传 limit=500 — 后端默认 50 会静默截断列表（与育苗同款 bug）
-  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings?limit=500');
+  // 2026-08-14 修复：显式传 limit — 后端默认 50 会静默截断列表
+  // 2026-10-18 P2：上限从 500 提升到 10000，避免业务量增长后静默丢行
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings?limit=10000');
   return transformPlantingFromBackend(data) as Planting[];
 }
 
@@ -399,6 +400,12 @@ export interface AddHarvestRecordInput {
   generation?: string | null
   /** 2026-07-18: 用户选择强制新建（即使有匹配也不合并） */
   forceNew?: boolean
+  /**
+   * 2026-10-18 P0 修复：行级采收入库已经创建的下游记录 ID。
+   * harvesting 明细必须保存这两个关联，否则后续删除/编辑只能按时间猜测，会误删最新一笔入库。
+   */
+  harvestRecordId?: string
+  inventoryStockId?: string
 }
 
 /**

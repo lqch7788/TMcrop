@@ -17,6 +17,7 @@
 
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateISO } from '../utils/dateUtil';
+import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 
 export const SeedSourceReturnErrorCode = {
   INBOUND_RECORD_NOT_FOUND: 'SEED_SRC_RETURN_INBOUND_NOT_FOUND',
@@ -110,7 +111,7 @@ export function executeReturnToInventory(
     // 2026-07-19：增加 reversed_at 校验 — 已冲销的流水不能退库（避免双重扣库存）
     const irStmt = db.prepare(
       `SELECT id, source_module, source_id, source_code, stock_type,
-              quantity, returned_quantity, unit, reversed_at
+              quantity, returned_quantity, unit, reversed_at, origin_stock_id
        FROM inventory_inbound_records WHERE id = ?`
     );
     irStmt.bind([item.inboundRecordId]);
@@ -154,7 +155,9 @@ export function executeReturnToInventory(
     // 用它更新会把退库数量加到种源库存而非原始库存，导致用户作物库存永远收不到退回数。
     // 正确做法：从 seed_sources.transferred_from_stock_id 取原始调拨源库存 ID。
     // 兜底：如果该字段为空（旧数据/手工建库），仍尝试用 ir.source_id 避免完全失败。
-    const originalStockId = String(ss.transferred_from_stock_id || ir.source_id || '');
+    // 2026-10-18 P0 修复：优先使用本条入库记录自带的原始库存（追加调拨可能来自不同批次）；
+    // 旧数据没有 origin_stock_id 时回退到种源级 transferred_from_stock_id。
+    const originalStockId = String(ir.origin_stock_id || ss.transferred_from_stock_id || ir.source_id || '');
     const irSourceId = originalStockId;
 
     // 2026-07-06 P0 修复 B：种源退库必须同时扣减新种源库存（ir.source_id 指向的新库存）。
@@ -250,11 +253,13 @@ export function executeReturnToInventory(
     const newCurrent = oldCurrent + item.quantity;
     const newAvailable = oldAvailable + item.quantity;
     db.run(
+      // 2026-10-18 P1 修复：不再硬写 status='in_stock'（忽略冻结量），统一重算库存状态
       `UPDATE inventory_stock
-       SET current_quantity = ?, available_quantity = ?, status = 'in_stock', update_time = ?
+       SET current_quantity = ?, available_quantity = ?, update_time = ?
        WHERE id = ?`,
       [newCurrent, newAvailable, now, irSourceId],
     );
+    recomputeAndUpdateStockStatus(db, irSourceId);
 
     // 10. 扣减种源
     // 2026-07-06：同步增加 used_quantity（退库是"使用过又退回"，属历史使用累计）

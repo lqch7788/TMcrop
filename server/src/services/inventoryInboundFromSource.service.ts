@@ -368,9 +368,14 @@ export async function executeInboundFromSource(
           const updateStmt = db.prepare(
             `UPDATE plantings SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?,
                 harvest_quantity = COALESCE(harvest_quantity, 0) + ?,
-                harvest_to_inventory_unit = ?, update_time = ? WHERE id = ?`,
+                harvest_to_inventory_unit = ?,
+                is_harvest = 1,
+                harvest_date = COALESCE(harvest_date, ?),
+                update_time = ? WHERE id = ?`,
           );
-          updateStmt.bind([totalQuantity, totalQuantity, input.unit || null, now, input.sourceRecordId]);
+          updateStmt.bind([
+            totalQuantity, totalQuantity, input.unit || null, now.slice(0, 10), now, input.sourceRecordId,
+          ]);
           updateStmt.step();
           updateStmt.free();
           console.log(

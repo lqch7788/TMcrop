@@ -16,6 +16,8 @@ import {
   validateDailyChange,
   normalizeChangeData,
   applyDailyChangeToPlanting,
+  applyAreaStockDelta,
+  recalcAttritionRate,
 } from '../services/plantingDailyChange';
 import { checkHarvestRecordDeletable, checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 // 2026-07-22：追溯修复 - 移入移出/种植结束写入 audit_log
@@ -26,6 +28,38 @@ import { isSameUnitDimension } from '../lib/unitCategories';
 import plantingDailyRecordsRouter from './plantingDailyRecords.route';
 import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 import { asyncHandler } from '../middleware/errorHandler';
+
+/**
+ * 2026-10-18 P0 修复：以 planting_harvest_records 为唯一真值重算主表采收入库量/采收日期。
+ * 行级入库、采收记录新增/编辑/删除、结束采收后统一调用，避免主表累加值与明细永久漂移。
+ */
+function recalcHarvestTotals(db: any, plantingId: string, now?: string): void {
+  const rows = queryToObjects<any>(
+    db,
+    `SELECT COALESCE(SUM(quantity), 0) AS total,
+            MAX(record_date) AS lastDate,
+            (SELECT unit FROM planting_harvest_records
+              WHERE planting_id = ? AND destination = 'harvest'
+              ORDER BY record_date DESC, create_time DESC LIMIT 1) AS lastUnit
+       FROM planting_harvest_records
+      WHERE planting_id = ? AND destination = 'harvest'`,
+    [plantingId, plantingId],
+  );
+  const r = rows[0] || {};
+  const total = Number(r.total) || 0;
+  const lastDate = r.lastDate || null;
+  const lastUnit = r.lastUnit || null;
+  db.run(
+    `UPDATE plantings
+        SET harvest_to_inventory_qty = ?,
+            harvest_quantity = ?,
+            harvest_to_inventory_unit = COALESCE(?, harvest_to_inventory_unit),
+            harvest_date = COALESCE(?, harvest_date),
+            update_time = ?
+      WHERE id = ?`,
+    [total, total, lastUnit, lastDate, now || new Date().toISOString(), plantingId],
+  );
+}
 
 /**
  * 2026-10-17：删除种植时退回种源扣减（单条/批量共用）
@@ -633,17 +667,38 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     let effHarvestId: string | null = (old.harvest_record_id as string | null) || null;
     let effStockId: string | null = (old.inventory_stock_id as string | null) || null;
     if (!effHarvestId) {
+      // 2026-10-18 P0 修复：历史明细缺 harvest_record_id 时，按「日期 + 数量 + 仓库」精确匹配；
+      // 匹配不唯一则拒绝。禁止再按 create_time 取最新一条——多笔入库时会误删其它批次。
       const fs = db.prepare(`
         SELECT hr.id AS hid, ist.id AS sid
         FROM harvest_records hr
         LEFT JOIN inventory_stock ist ON ist.business_id = hr.id AND ist.business_type = 'harvest'
         WHERE hr.source_module = 'planting' AND hr.source_id = ? AND hr.deleted_at IS NULL
-        ORDER BY hr.create_time DESC LIMIT 1
+          AND hr.harvest_date = ?
+          AND ABS(COALESCE(hr.harvest_quantity, 0) - ?) < 0.0001
+          AND (? IS NULL OR hr.warehouse_id = ?)
+        ORDER BY hr.create_time DESC
       `);
-      fs.bind([id]);
-      const frow = fs.step() ? fs.getAsObject() as any : null;
+      fs.bind([
+        id,
+        old.record_date || '',
+        Number(old.quantity) || 0,
+        old.warehouse_id || null,
+        old.warehouse_id || null,
+      ]);
+      const matches: any[] = [];
+      while (fs.step()) matches.push(fs.getAsObject());
       fs.free();
-      if (frow) { effHarvestId = (frow.hid as string) || null; effStockId = effStockId || (frow.sid as string) || null; }
+      if (matches.length !== 1) {
+        return res.status(409).json({
+          success: false,
+          error: matches.length === 0
+            ? '该采收明细缺少入库关联，且无法按日期/数量/仓库定位对应入库记录，无法安全编辑。请先在库存页处理原入库记录。'
+            : '该采收明细缺少入库关联，且匹配到多条入库记录，无法安全编辑。请先在库存页处理。',
+        });
+      }
+      effHarvestId = (matches[0].hid as string) || null;
+      effStockId = effStockId || (matches[0].sid as string) || null;
     }
     if (effHarvestId) {
       const check = checkHarvestRecordDeletable(effHarvestId);
@@ -785,6 +840,8 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
       ]
     );
 
+    // 2026-10-18 P0 修复：编辑采收明细后重算主表入库量/采收日期，避免列表与明细漂移
+    recalcHarvestTotals(db, id, now)
     saveDatabase();
 
     // 写入 material_flow_log（P0 修复 — 编辑采收记录时补链）
@@ -868,21 +925,38 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
 
     // 如果 harvest_record_id 为 null（老数据未关联），通过 planting_id 反向查找
     if (!effectiveHarvestId) {
+      // 2026-10-18 P0 修复：同 PUT — 按日期/数量/仓库精确匹配，匹配不唯一则拒绝删除，
+      // 禁止按时间取最新一条（会删掉用户未选中的批次）。
       const findStmt = db.prepare(`
         SELECT hr.id AS hid, ist.id AS sid
         FROM harvest_records hr
         LEFT JOIN inventory_stock ist ON ist.business_id = hr.id AND ist.business_type = 'harvest'
-        WHERE hr.source_module = 'planting' AND hr.source_id = ?
-        AND hr.deleted_at IS NULL
-        ORDER BY hr.create_time DESC LIMIT 1
+        WHERE hr.source_module = 'planting' AND hr.source_id = ? AND hr.deleted_at IS NULL
+          AND hr.harvest_date = ?
+          AND ABS(COALESCE(hr.harvest_quantity, 0) - ?) < 0.0001
+          AND (? IS NULL OR hr.warehouse_id = ?)
+        ORDER BY hr.create_time DESC
       `);
-      findStmt.bind([id]);
-      const found = findStmt.step() ? findStmt.getAsObject() as any : null;
+      findStmt.bind([
+        id,
+        old.record_date || '',
+        Number(old.quantity) || 0,
+        old.warehouse_id || null,
+        old.warehouse_id || null,
+      ]);
+      const matches: any[] = [];
+      while (findStmt.step()) matches.push(findStmt.getAsObject());
       findStmt.free();
-      if (found) {
-        effectiveHarvestId = (found.hid as string) || null;
-        effectiveStockId = effectiveStockId || (found.sid as string) || null;
+      if (matches.length !== 1) {
+        return res.status(409).json({
+          success: false,
+          error: matches.length === 0
+            ? '该采收明细缺少入库关联，且无法按日期/数量/仓库定位对应入库记录，无法安全删除。请先在库存页处理原入库记录。'
+            : '该采收明细缺少入库关联，且匹配到多条入库记录，无法安全删除。请先在库存页处理。',
+        });
       }
+      effectiveHarvestId = (matches[0].hid as string) || null;
+      effectiveStockId = effectiveStockId || (matches[0].sid as string) || null;
     }
 
     if (effectiveHarvestId) {
@@ -930,12 +1004,71 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
       db.run('UPDATE plantings SET status = ?, update_time = ? WHERE id = ?', ['growing', now, id]);
     }
 
+    // 2026-10-18 P0 修复：删除采收明细后重算主表入库量/采收日期
+    recalcHarvestTotals(db, id, now);
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
     markArchiveFailed(archiveId, error);
     console.error('删除采收记录失败:', error);
     res.status(500).json({ success: false, error: '删除失败' });
+  }
+});
+
+// ============================================
+// 批量操作路由必须在 /:id 之前定义，否则 /batch 会被当作 :id 参数
+// 2026-10-18 P2 修复：这两段原先定义在 /:id 之后，GET /batch 与 PUT /batch 永远 404
+// ============================================
+
+/** 批量获取种植记录 GET /api/plantings/batch?ids=id1,id2,id3 */
+router.get('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.query;
+    if (!ids || typeof ids !== 'string') {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
+    }
+    const idArray = ids.split(',').filter(id => id.trim() !== '');
+    if (idArray.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+    const db = getDatabase();
+    const placeholders = idArray.map(() => '?').join(',');
+    const sql = `SELECT * FROM plantings WHERE id IN (${placeholders})`;
+    const items = queryToObjects(db, sql, idArray);
+    res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '批量获取种植记录失败' });
+  }
+});
+
+/** 批量更新种植记录 PUT /api/plantings/batch */
+router.put('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids, updates } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是有效数组' });
+    }
+    if (ids.length > 200) {
+      return res.status(400).json({ success: false, error: '批量更新最多 200 条' });
+    }
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ success: false, error: '缺少 updates 参数或 updates 不是有效对象' });
+    }
+    const now = new Date().toISOString();
+    const db = getDatabase();
+    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now]);
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
+    }
+    if (rejected.length > 0) {
+      console.warn(`[ZP-1 batch] rejected unknown columns: ${rejected.join(', ')}`);
+    }
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
+    saveDatabase();
+    res.json({ success: true, data: { ids, updated: ids.length } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '批量更新种植记录失败' });
   }
 });
 
@@ -1353,7 +1486,7 @@ router.put('/:id', (req: Request, res: Response) => {
     //   ③ 支持更换种源：旧种源退回原扣减、新种源重新扣减
     //   ④ 可用量不足在改动前直接 400（原实现无校验，曾把种源扣成负数）
     // ============================================================
-    const oldChk = db.exec('SELECT planting_quantity, crop_name, crop_variety, source_type, source_id, unit, source_deducted_quantity FROM plantings WHERE id = ?', [id]);
+    const oldChk = db.exec('SELECT planting_quantity, crop_name, crop_variety, source_type, source_id, unit, source_deducted_quantity, loss_count, supplement_count FROM plantings WHERE id = ?', [id]);
     if (!oldChk[0]?.values?.[0]) {
       return res.status(404).json({ success: false, error: '种植记录不存在' });
     }
@@ -1365,6 +1498,8 @@ router.put('/:id', (req: Request, res: Response) => {
     const oldSourceId = String(oldVals[4] || '');
     const oldUnit = String(oldVals[5] || '株');
     const oldDeducted = Number(oldVals[6] || 0);
+    const oldLossCount = Number(oldVals[7] || 0);
+    const oldSupplementCount = Number(oldVals[8] || 0);
 
     const newSourceType = String(updates.source_type ?? updates.sourceType ?? oldSourceType).toLowerCase();
     const newSourceId = String(updates.source_id ?? updates.sourceId ?? oldSourceId);
@@ -1419,6 +1554,25 @@ router.put('/:id', (req: Request, res: Response) => {
       });
     }
 
+    // 2026-10-18 P1 修复：多区域库存的种植单禁止直接改区域。
+    // 原实现把该单所有 area_stocks 行重写为同一区域（数量不变、无移库流水），等于无痕搬家。
+    const newAreaNameCheck = updates.areaName || updates.area_name || '';
+    const newAreaIdCheck = updates.areaId || updates.area_id || '';
+    let areaStockRows: any[] = [];
+    if (newAreaNameCheck || newAreaIdCheck) {
+      areaStockRows = queryToObjects<any>(
+        db,
+        `SELECT id FROM planting_area_stocks WHERE planting_id = ? ORDER BY quantity DESC`,
+        [id],
+      );
+      if (areaStockRows.length > 1) {
+        return res.status(400).json({
+          success: false,
+          error: '该种植单分布在多个区域，请使用「移入/移出」调整区域，不能直接修改种植区域',
+        });
+      }
+    }
+
     const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now, id]);
     if (fields.length === 0) {
       return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
@@ -1435,9 +1589,25 @@ router.put('/:id', (req: Request, res: Response) => {
     // 只改 plantings 表不改 stocks 表 → 列表显示旧数据
     const newAreaName = updates.areaName || updates.area_name || '';
     const newAreaId = updates.areaId || updates.area_id || '';
-    if (newAreaName || newAreaId) {
-      db.run(`UPDATE planting_area_stocks SET area_name = ?, area_id = ? WHERE planting_id = ?`,
-        [newAreaName || null, newAreaId || null, id]);
+    if ((newAreaName || newAreaId) && areaStockRows.length === 1) {
+      db.run(`UPDATE planting_area_stocks SET area_name = ?, area_id = ? WHERE id = ?`,
+        [newAreaName || null, newAreaId || null, areaStockRows[0].id]);
+    }
+
+    // 2026-10-18 P1 修复：编辑种植数量/损耗/补栽时同步区域库存与损耗率。
+    // 原实现直接改主表三列，导致列表「剩余数量」不变、损耗率不重算。
+    const newLossRaw = updates.loss_count ?? updates.lossCount;
+    const newSuppRaw = updates.supplement_count ?? updates.supplementCount;
+    const newLoss = newLossRaw !== undefined ? Math.max(0, Number(newLossRaw) || 0) : oldLossCount;
+    const newSupp = newSuppRaw !== undefined ? Math.max(0, Number(newSuppRaw) || 0) : oldSupplementCount;
+    const areaDelta = (newPlantingQty - oldPlantingQty)
+      + (newSupp - oldSupplementCount)
+      - (newLoss - oldLossCount);
+    if (Math.abs(areaDelta) > 0.0001) {
+      applyAreaStockDelta(id, areaDelta, now);
+    }
+    if (newLossRaw !== undefined || newSuppRaw !== undefined) {
+      recalcAttritionRate(db, id);
     }
 
     // 应用种源库存调整 + 记录已扣减量
@@ -1486,75 +1656,6 @@ router.put('/:id', (req: Request, res: Response) => {
     res.json({ success: true, data: _updItems[0] || { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: '更新种植记录失败' });
-  }
-});
-
-// 批量操作路由必须在 /:id 之前定义，否则 /batch 会被当作 :id 参数
-
-/**
- * 批量获取种植记录
- * GET /api/plantings/batch?ids=id1,id2,id3
- */
-router.get('/batch', (req: Request, res: Response) => {
-  try {
-    const { ids } = req.query;
-    if (!ids || typeof ids !== 'string') {
-      return res.status(400).json({ success: false, error: '缺少 ids 参数' });
-    }
-
-    const idArray = ids.split(',').filter(id => id.trim() !== '');
-    if (idArray.length === 0) {
-      return res.json({ success: true, data: [] });
-    }
-
-    const db = getDatabase();
-    const placeholders = idArray.map(() => '?').join(',');
-    const sql = `SELECT * FROM plantings WHERE id IN (${placeholders})`;
-    const items = queryToObjects(db, sql, idArray);
-
-    res.json({ success: true, data: items });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '批量获取种植记录失败' });
-  }
-});
-
-/**
- * 批量更新种植记录
- * PUT /api/plantings/batch
- */
-router.put('/batch', (req: Request, res: Response) => {
-  try {
-    const { ids, updates } = req.body;
-
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是有效数组' });
-    }
-    if (ids.length > 200) {
-      return res.status(400).json({ success: false, error: '批量更新最多 200 条' });
-    }
-
-    if (!updates || typeof updates !== 'object') {
-      return res.status(400).json({ success: false, error: '缺少 updates 参数或 updates 不是有效对象' });
-    }
-
-    const now = new Date().toISOString();
-    const db = getDatabase();
-
-    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now]);
-    if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
-    }
-    if (rejected.length > 0) {
-      console.warn(`[ZP-1 batch] rejected unknown columns: ${rejected.join(', ')}`);
-    }
-
-    const placeholders = ids.map(() => '?').join(',');
-    db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
-
-    saveDatabase();
-    res.json({ success: true, data: { ids, updated: ids.length } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '批量更新种植记录失败' });
   }
 });
 
@@ -1975,6 +2076,8 @@ router.post('/:id/harvest-records', async (req, res) => {
       throw txErr
     }
 
+    // 2026-10-18 P0 修复：新增采收明细后重算主表入库量/采收日期（口径以明细为唯一真值）
+    recalcHarvestTotals(db, plantingId, now)
     saveDatabase()
     // 2026-07-22：追溯修复 - 采收记录创建补 audit_log
     writeAuditLog({
@@ -2033,7 +2136,6 @@ router.post('/:id/end', async (req, res) => {
     // - 'abnormal'（异常结束） → is_harvest_locked = 0（保留补录通道，让 PUT /:id/harvest-records/:id 继续可写）
     // - 'harvest' 等其它 → is_harvest_locked = 1（正常锁，不再允许新增采收记录）
     // 2026-07-09: dispose 已下线，endType 列表减为 3 个（harvest/circulate/self_seed）
-    const finalIsHarvestLocked = (endType === 'abnormal') ? 0 : 1
 
     // ========== 1. 采收入库：写 harvest_records + inventory_stock（库存实例） ==========
     if (endType === 'harvest') {
@@ -2152,6 +2254,8 @@ router.post('/:id/end', async (req, res) => {
         // 2026-10-19：入库量改累加（此前覆盖，会丢失此前的行级入库数量）
         [now, harvestQty, harvestQty, harvestUnit, now, now, id]
       )
+      // 2026-10-18 P0 修复：以 planting_harvest_records 为真值重算，消除累加漂移
+      recalcHarvestTotals(db, id, now)
       saveDatabase()
 
       // 写入 material_flow_log：种植→采收（P0 修复 — 补齐采收链路）
