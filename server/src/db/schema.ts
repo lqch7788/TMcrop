@@ -3419,6 +3419,8 @@ export function initializeDatabase() {
       fertilizer_code TEXT NOT NULL UNIQUE,
       fertilizer_name TEXT NOT NULL,
       fertilizer_type TEXT,
+      -- 2026-10-18：无机肥料中类（macro 大量元素 / medium 中量元素 / trace 微量元素 / compound 复合肥料）
+      fertilizer_sub_type TEXT,
       application_timing TEXT,
       function_desc TEXT,
       taboo_desc TEXT,
@@ -4219,6 +4221,8 @@ export function initializeDatabase() {
 
   // 2026-07-12：肥料规格子表加 5 个扁平化字段（同步 CREATE TABLE 中的新结构）
   try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN fertilizer_type TEXT"); } catch (e) {}
+  // 2026-10-18：无机肥料中类（大量元素/中量元素/微量元素/复合肥料）
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN fertilizer_sub_type TEXT"); } catch (e) {}
   try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN function_desc TEXT"); } catch (e) {}
   try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN taboo_desc TEXT"); } catch (e) {}
   try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN shelf_life TEXT"); } catch (e) {}

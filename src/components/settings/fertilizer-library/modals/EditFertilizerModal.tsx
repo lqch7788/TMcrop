@@ -15,7 +15,13 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { UnitDictSelect } from '../../../common/settings/UnitDictSelect';
 import { useFertilizerLibraryStore, FertilizerSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
-import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS, APPLICATION_TIMING_OPTIONS } from '../constants';
+import {
+  FERTILIZER_TYPE_OPTIONS,
+  FERTILIZER_SUB_TYPE_OPTIONS,
+  FERTILIZER_TYPE_WITH_SUB,
+  STOCK_UNIT_OPTIONS,
+  APPLICATION_TIMING_OPTIONS,
+} from '../constants';
 
 /** 区域标题（2026-08-15：从组件内提取到文件级，避免每次渲染重建组件类型导致子树 remount） */
 function SectionTitle({ title, icon }: { title: string; icon: string }) {
@@ -33,6 +39,8 @@ interface EditFertilizerModalProps {
 type SpecForm = {
   fertilizerName: string;
   fertilizerType: string;
+  /** 无机肥料中类，其他大类为空 */
+  fertilizerSubType: string;
   applicationTiming: string;
   functionDesc: string;
   tabooDesc: string;
@@ -59,6 +67,7 @@ type SpecForm = {
 const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
   fertilizerName: record.fertilizerName || '',
   fertilizerType: record.fertilizerType || 'organic',
+  fertilizerSubType: record.fertilizerSubType || '',
   applicationTiming: record.applicationTiming || '',
   functionDesc: record.functionDesc || '',
   tabooDesc: record.tabooDesc || '',
@@ -109,7 +118,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
   // 检测变更
   const hasChanges = (): boolean => {
     const fields: (keyof SpecForm)[] = [
-      'fertilizerName', 'fertilizerType', 'applicationTiming', 'functionDesc',
+      'fertilizerName', 'fertilizerType', 'fertilizerSubType', 'applicationTiming', 'functionDesc',
       'tabooDesc', 'shelfLife', 'storageCondition', 'supplierInfo',
       'brandName', 'specContent', 'manufacturer', 'suggestedDosage',
       'suggestedRatio', 'dosageUnit', 'remark', 'unitPrice', 'batchNumber',
@@ -123,6 +132,11 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim()) {
       await showAlert('请输入肥料名称');
+      return;
+    }
+    // 2026-10-18：无机肥料必须选择中类
+    if (form.fertilizerType === FERTILIZER_TYPE_WITH_SUB && !form.fertilizerSubType) {
+      await showAlert('无机肥料请选择肥料中类');
       return;
     }
     // 2026-08-15 审核修复：日期校验（对齐药剂库弹窗 — 过期日期不得早于生产日期）
@@ -141,6 +155,8 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       const result = await updateItem(record.id, {
         fertilizerName: form.fertilizerName,
         fertilizerType: form.fertilizerType,
+        // 只有无机肥料带中类，其它大类显式传 null（后端允许清空）
+        fertilizerSubType: form.fertilizerType === FERTILIZER_TYPE_WITH_SUB ? form.fertilizerSubType : null,
         applicationTiming: form.applicationTiming,
         functionDesc: form.functionDesc,
         tabooDesc: form.tabooDesc,
@@ -208,7 +224,14 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                 <Label className="text-gray-900">肥料类型</Label>
                 <Select
                   value={form.fertilizerType}
-                  onValueChange={(value) => updateField('fertilizerType', value)}
+                  onValueChange={(value) => {
+                    // 切换大类时清空中类（非无机大类不允许带中类）
+                    setForm((prev) => ({
+                      ...prev,
+                      fertilizerType: value,
+                      fertilizerSubType: value === FERTILIZER_TYPE_WITH_SUB ? prev.fertilizerSubType : '',
+                    }));
+                  }}
                 >
                   <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
                     <SelectValue placeholder="选择肥料类型" />
@@ -223,6 +246,33 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                 </Select>
               </div>
             </div>
+
+            {/* 中类：仅无机肥料需要 */}
+            {form.fertilizerType === FERTILIZER_TYPE_WITH_SUB && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-900">
+                    肥料中类 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={form.fertilizerSubType}
+                    onValueChange={(value) => updateField('fertilizerSubType', value)}
+                  >
+                    <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                      <SelectValue placeholder="选择无机肥料中类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FERTILIZER_SUB_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-gray-900">施肥时期（可多选）</Label>
               <div className="flex gap-2 mt-1">

@@ -50,12 +50,13 @@ function generateFertilizerCode(db: any): string {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { fertilizer_type, keyword, page = '1', limit = '10000' } = req.query as Record<string, string>;
+    const { fertilizer_type, fertilizer_sub_type, keyword, page = '1', limit = '10000' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(10000, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
     if (fertilizer_type) { conditions.push('fertilizer_type = ?'); params.push(fertilizer_type); }
+    if (fertilizer_sub_type) { conditions.push('fertilizer_sub_type = ?'); params.push(fertilizer_sub_type); }
     if (keyword) {
       // 关键字模糊匹配：肥料名称 / 品牌 / 肥料编码 / 生产厂家 / 成分含量
       // 修复"按编码或厂家搜不到"的 bug（用户常常用编码搜索）
@@ -95,13 +96,13 @@ router.post('/', (req: Request, res: Response) => {
     const id = `fs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     db.run(`INSERT INTO fertilizer_specs (
-      id, fertilizer_code, fertilizer_name, fertilizer_type, application_timing,
+      id, fertilizer_code, fertilizer_name, fertilizer_type, fertilizer_sub_type, application_timing,
       function_desc, taboo_desc, shelf_life, storage_condition, supplier_info,
       brand_name, spec_content, manufacturer, suggested_dosage, suggested_ratio, dosage_unit,
       remark, unit_price, batch_number, production_date, expiration_date, stock_quantity,
       package_spec, stock_unit, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.fertilizer_name, body.fertilizer_type || null, body.application_timing || null,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, code, body.fertilizer_name, body.fertilizer_type || null, body.fertilizer_sub_type || null, body.application_timing || null,
        body.function_desc || null, body.taboo_desc || null, body.shelf_life || null,
        body.storage_condition || null, body.supplier_info || null,
        body.brand_name || '主品牌', body.spec_content || null, body.manufacturer || null,
@@ -213,7 +214,7 @@ router.put('/:id', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '肥料不存在' }); return; }
 
     db.run(`UPDATE fertilizer_specs SET
-      fertilizer_name=?, fertilizer_type=?, application_timing=?,
+      fertilizer_name=?, fertilizer_type=?, fertilizer_sub_type=?, application_timing=?,
       function_desc=?, taboo_desc=?, shelf_life=?, storage_condition=?, supplier_info=?,
       brand_name=?, spec_content=?, manufacturer=?, suggested_dosage=?, suggested_ratio=?, dosage_unit=?,
       remark=?, unit_price=?, batch_number=?, production_date=?, expiration_date=?, stock_quantity=?,
@@ -221,6 +222,8 @@ router.put('/:id', (req: Request, res: Response) => {
       status=?, update_time=? WHERE id=?`,
       [body.fertilizer_name ?? existing[0].fertilizer_name,
        body.fertilizer_type ?? existing[0].fertilizer_type,
+       // 中类允许清空（大类切到非无机时前端传空），不能用 ?? 否则旧中类残留
+       body.fertilizer_sub_type !== undefined ? (body.fertilizer_sub_type || null) : existing[0].fertilizer_sub_type,
        body.application_timing ?? existing[0].application_timing,
        body.function_desc ?? existing[0].function_desc,
        body.taboo_desc ?? existing[0].taboo_desc,

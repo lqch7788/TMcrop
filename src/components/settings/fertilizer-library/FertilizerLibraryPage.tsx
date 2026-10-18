@@ -13,7 +13,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { useFertilizerLibraryStore, useToastStore } from '@/stores';
 import type { FertilizerLibrary } from '@/stores';
-import { FertilizerType } from './constants';
+import {
+  FertilizerType,
+  FERTILIZER_TYPE_OPTIONS,
+  FERTILIZER_SUB_TYPE_OPTIONS,
+  FERTILIZER_TYPE_WITH_SUB,
+} from './constants';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
 import { AddFertilizerModal } from './modals/AddFertilizerModal';
 import { EditFertilizerModal } from './modals/EditFertilizerModal';
@@ -44,6 +49,8 @@ export default function FertilizerLibraryPage() {
 
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<FertilizerType>('organic');
+  // 无机肥料中类筛选（空字符串 = 全部中类）；其它大类不使用
+  const [activeSubType, setActiveSubType] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
   // 搜索触发计数器：每次新搜索时 +1，传给表格用于将分页重置到第 1 页
   // （修复"跨 tab 搜索结果被分页隐藏"导致用户看不到的 bug）
@@ -72,8 +79,10 @@ export default function FertilizerLibraryPage() {
   // 传给后端（后端只认 keyword），保存后搜索结果被静默清空
   const buildFetchFilters = useCallback((): Record<string, string> => ({
     fertilizer_type: activeTab,
+    // 中类筛选只在无机肥料大类下生效
+    fertilizer_sub_type: activeTab === FERTILIZER_TYPE_WITH_SUB ? activeSubType : '',
     keyword: (filters.fertilizerName || '').trim(),
-  }), [activeTab, filters]);
+  }), [activeTab, activeSubType, filters]);
 
   useEffect(() => {
     fetchItems(buildFetchFilters());
@@ -92,7 +101,9 @@ export default function FertilizerLibraryPage() {
     const keyword = (filters.fertilizerName || '').trim();
     setSearchKey((k) => k + 1);
     if (keyword) {
-      // 输入了关键字时：全局搜索（不按 tab 过滤），让用户能跨类型找到肥料
+      // 输入了关键字时：全局搜索（不按 tab / 中类过滤），让用户能跨类型找到肥料
+      // 同时清空中类筛选，避免后续按 tab 重拉时把命中的其它中类记录过滤掉
+      setActiveSubType('');
       await fetchItems({ ...filters, keyword });
       // 取首条命中 → 自动切到该肥料所在的 tab，保证"输入名称即可定位"
       const firstMatch = useFertilizerLibraryStore.getState().items[0];
@@ -102,16 +113,16 @@ export default function FertilizerLibraryPage() {
         // useEffect on [activeTab] 会自动按新 tab + 当前 keyword 重新拉取
       }
     } else {
-      // 无关键字时按当前 tab 过滤
-      await fetchItems({ ...filters, fertilizer_type: activeTab });
+      // 无关键字时按当前大类 + 中类过滤
+      await fetchItems(buildFetchFilters());
     }
-  }, [filters, activeTab, fetchItems]);
+  }, [filters, activeTab, buildFetchFilters, fetchItems]);
 
   const handleReset = useCallback(() => {
     setFilters({});
     setSearchKey((k) => k + 1);
-    fetchItems({ fertilizer_type: activeTab });
-  }, [activeTab, fetchItems]);
+    fetchItems(buildFetchFilters());
+  }, [buildFetchFilters, fetchItems]);
 
   const updateFilter = useCallback((key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -151,7 +162,7 @@ export default function FertilizerLibraryPage() {
     const selectedData = items.filter((item) => selectedRows.includes(item.id));
 
     const headers = [
-      '肥料编码', '肥料名称', '品牌', '肥料类型', '成份与含量', '功能说明',
+      '肥料编码', '肥料名称', '品牌', '肥料类型', '肥料中类', '成份与含量', '功能说明',
       '包装规格', '库存量', '库存单位', '单价', '生产厂家', '建议用量', '单位',
       '稀释比例', '产品批次', '生产日期', '过期日期', '备注',
     ];
@@ -160,7 +171,11 @@ export default function FertilizerLibraryPage() {
       record.fertilizerCode || '',
       record.fertilizerName || '',
       record.brandName || '',
-      record.fertilizerType || '',
+      // 大类 + 中类均输出中文，避免导出英文码
+      FERTILIZER_TYPE_OPTIONS.find((o) => o.value === record.fertilizerType)?.label || record.fertilizerType || '',
+      record.fertilizerSubType
+        ? (FERTILIZER_SUB_TYPE_OPTIONS.find((o) => o.value === record.fertilizerSubType)?.label || record.fertilizerSubType)
+        : '',
       record.specContent || '',
       record.functionDesc || '',
       record.packageSpec || '',
@@ -260,6 +275,14 @@ export default function FertilizerLibraryPage() {
   // ========== Tab 切换 ==========
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab as FertilizerType);
+    // 切大类时重置中类筛选（包括切到无机肥料时默认「全部中类」）
+    setActiveSubType('');
+  }, []);
+
+  // ========== 中类筛选（仅无机肥料） ==========
+  const handleSubTypeChange = useCallback((subType: string) => {
+    setActiveSubType(subType);
+    setSearchKey((k) => k + 1);
   }, []);
 
   // ========== 表头工具栏 ==========
@@ -334,15 +357,11 @@ export default function FertilizerLibraryPage() {
       {/* Tabs + 搜索框（同行布局） */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-          {/* Tab 按键 */}
+          {/* Tab 按键（4 大类，2026-10-18 重分类） */}
           <TabsList selectedValue={activeTab} onValueChange={handleTabChange}>
-            <TabsTrigger value="organic">有机肥</TabsTrigger>
-            <TabsTrigger value="inorganic">无机肥</TabsTrigger>
-            <TabsTrigger value="water_soluble">水溶肥</TabsTrigger>
-            <TabsTrigger value="compound">复合肥</TabsTrigger>
-            <TabsTrigger value="bio">生物肥</TabsTrigger>
-            <TabsTrigger value="slow_release">缓释肥</TabsTrigger>
-            <TabsTrigger value="trace">微量元素肥</TabsTrigger>
+            {FERTILIZER_TYPE_OPTIONS.map((opt) => (
+              <TabsTrigger key={opt.value} value={opt.value}>{opt.label}</TabsTrigger>
+            ))}
           </TabsList>
 
           {/* 搜索框 + 重置 + 搜索按键（tab 按键之后） */}
@@ -368,6 +387,30 @@ export default function FertilizerLibraryPage() {
             </Button>
           </div>
         </div>
+
+        {/* 无机肥料中类筛选（仅无机肥料 Tab 显示） */}
+        {activeTab === FERTILIZER_TYPE_WITH_SUB && (
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <span className="text-sm text-gray-500">中类：</span>
+            <Button
+              size="sm"
+              variant={activeSubType === '' ? 'default' : 'secondary'}
+              onClick={() => handleSubTypeChange('')}
+            >
+              全部
+            </Button>
+            {FERTILIZER_SUB_TYPE_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={activeSubType === opt.value ? 'default' : 'secondary'}
+                onClick={() => handleSubTypeChange(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        )}
 
         {/* 单一 TabsContent 区域（受控渲染，按 activeTab 显示） */}
         <TabsContent value={activeTab} forceMount>

@@ -11,6 +11,7 @@ import { FertilizerSpec } from '@/stores';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { getDictItemName } from '@/stores';
+import { getFertilizerTypeLabel } from './constants';
 
 interface FertilizerLibraryTableProps {
   data: FertilizerSpec[];
@@ -32,11 +33,12 @@ interface FertilizerLibraryTableProps {
 // 2026-07-12：移除「施肥时期」和「稀释比例」两列；新增库存单位列
 const TOTAL_COLS = 18;
 
-const getFertilizerTypeLabel = (type: string) => {
-  if (!type) return '-';
-  const label = getDictItemName('fertilizer_type', type);
-  return label || type;
-};
+/**
+ * 肥料类型列显示：大类 + 中类（如「无机肥料 · 大量元素」）
+ * 2026-10-18：改用 constants 的权威映射，避免字典未刷新时显示英文
+ */
+const formatFertilizerType = (record: FertilizerSpec) =>
+  getFertilizerTypeLabel(record.fertilizerType, record.fertilizerSubType);
 
 export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDelete, onStockIn, exportMode = false, selectedRows = [], onSelectRow, onSelectAll, searchKey }: FertilizerLibraryTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -148,7 +150,7 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 </TableCell>
                 {/* 4. 肥料类型 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {getFertilizerTypeLabel(record.fertilizerType || '')}
+                  {formatFertilizerType(record)}
                 </TableCell>
                 {/* 5. 成份与含量 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.specContent || ''}>

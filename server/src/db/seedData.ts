@@ -4515,24 +4515,44 @@ function seedFertilizerAndMarks() {
   const db = getDatabase();
 
   // === fertilizer_type 字典分类 ===
+  // 2026-10-18：列名修正为 dictionary_categories 实际结构（id/code/name/module/...），原写法列不存在被静默吞掉
   try {
-    db.run(`INSERT OR IGNORE INTO dictionary_categories (category_code, category_name, description, sort_order) VALUES (?, ?, ?, ?)`,
-      ['fertilizer_type', '肥料类型', '施肥管理中肥料类型分类', 90]);
+    db.run(`INSERT OR IGNORE INTO dictionary_categories (id, code, name, module, description, sort_order, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,
+      ['DC-FERT-TYPE', 'fertilizer_type', '肥料类型', 'farm', '施肥管理中肥料类型分类', 90]);
   } catch (e) { /* 已存在 */ }
 
-  // === fertilizer_type 字典项 ===
+  // === fertilizer_type 字典项（2026-10-18 重分类：7 类合并为 4 大类） ===
   const fertilizerTypes = [
-    { id: 'fert-001', category: 'fertilizer_type', code: 'organic', name: '有机肥', sort: 1 },
-    { id: 'fert-002', category: 'fertilizer_type', code: 'inorganic', name: '无机肥', sort: 2 },
-    { id: 'fert-003', category: 'fertilizer_type', code: 'compound', name: '复合肥', sort: 3 },
-    { id: 'fert-004', category: 'fertilizer_type', code: 'microbial', name: '微生物肥', sort: 4 },
-    { id: 'fert-005', category: 'fertilizer_type', code: 'foliar', name: '叶面肥', sort: 5 },
-    { id: 'fert-006', category: 'fertilizer_type', code: 'water_soluble', name: '水溶肥', sort: 6 },
-    { id: 'fert-007', category: 'fertilizer_type', code: 'slow_release', name: '缓释肥', sort: 7 },
-    { id: 'fert-008', category: 'fertilizer_type', code: 'other_fert', name: '其他', sort: 8 },
+    { id: 'fert-001', category: 'fertilizer_type', code: 'organic', name: '有机肥料', sort: 1 },
+    { id: 'fert-002', category: 'fertilizer_type', code: 'inorganic', name: '无机肥料', sort: 2 },
+    { id: 'fert-004', category: 'fertilizer_type', code: 'microbial', name: '微生物肥料', sort: 3 },
+    { id: 'fert-009', category: 'fertilizer_type', code: 'functional', name: '功能性肥料', sort: 4 },
   ];
 
   for (const ft of fertilizerTypes) {
+    db.run(
+      `INSERT OR IGNORE INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,
+      [ft.id, ft.category, ft.code, ft.name, ft.name, ft.sort]
+    );
+  }
+
+  // === fertilizer_sub_type 字典（无机肥料中类，2026-10-18 新增） ===
+  try {
+    db.run(`INSERT OR IGNORE INTO dictionary_categories (id, code, name, module, description, sort_order, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,
+      ['DC-FERT-SUB', 'fertilizer_sub_type', '无机肥料中类', 'farm', '无机肥料下属中类分类', 91]);
+  } catch (e) { /* 已存在 */ }
+
+  const fertilizerSubTypes = [
+    { id: 'fert-sub-001', category: 'fertilizer_sub_type', code: 'macro', name: '大量元素', sort: 1 },
+    { id: 'fert-sub-002', category: 'fertilizer_sub_type', code: 'medium', name: '中量元素', sort: 2 },
+    { id: 'fert-sub-003', category: 'fertilizer_sub_type', code: 'trace', name: '微量元素', sort: 3 },
+    { id: 'fert-sub-004', category: 'fertilizer_sub_type', code: 'compound', name: '复合肥料', sort: 4 },
+  ];
+
+  for (const ft of fertilizerSubTypes) {
     db.run(
       `INSERT OR IGNORE INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`,

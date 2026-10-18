@@ -320,7 +320,7 @@ export default function FertilizerPage() {
           数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
           作物: cropsLabel,
           温室: it.greenhouseName || '',
-          肥料类型: it.fertilizerType || '',
+          肥料类型: getDictItemName('fertilizer_type', it.fertilizerType || '') || it.fertilizerType || '',
           稀释倍数: it.dilutionRatio || '',
           肥料品牌: (it as any).specBrandName || '',
           操作员: it.operatorName || '',

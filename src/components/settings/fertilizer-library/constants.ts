@@ -3,16 +3,33 @@
  * 消除 AddFertilizerModal / EditFertilizerModal 中的重复定义
  */
 
-/** 肥料类型选项（按化学性质分类） */
+/**
+ * 肥料大类选项（2026-10-18 重分类：原 7 类合并为 4 大类）
+ * organic   有机肥料
+ * inorganic 无机肥料（下含 4 个中类，见 FERTILIZER_SUB_TYPE_OPTIONS）
+ * microbial 微生物肥料
+ * functional 功能性肥料（原水溶肥、缓释肥合并）
+ */
 export const FERTILIZER_TYPE_OPTIONS = [
-  { value: 'organic', label: '有机肥' },
-  { value: 'inorganic', label: '无机肥' },
-  { value: 'water_soluble', label: '水溶肥' },
-  { value: 'compound', label: '复合肥' },
-  { value: 'bio', label: '生物肥' },
-  { value: 'slow_release', label: '缓释肥' },
-  { value: 'trace', label: '微量元素肥' },
+  { value: 'organic', label: '有机肥料' },
+  { value: 'inorganic', label: '无机肥料' },
+  { value: 'microbial', label: '微生物肥料' },
+  { value: 'functional', label: '功能性肥料' },
 ] as const;
+
+/**
+ * 无机肥料中类选项（仅大类为 inorganic 时使用）
+ * 其余大类没有中类
+ */
+export const FERTILIZER_SUB_TYPE_OPTIONS = [
+  { value: 'macro', label: '大量元素' },
+  { value: 'medium', label: '中量元素' },
+  { value: 'trace', label: '微量元素' },
+  { value: 'compound', label: '复合肥料' },
+] as const;
+
+/** 只有无机肥料需要选择中类 */
+export const FERTILIZER_TYPE_WITH_SUB = 'inorganic' as const;
 
 /** 库存单位选项（覆盖液体/颗粒/块状/容器等形态） */
 export const STOCK_UNIT_OPTIONS = [
@@ -42,5 +59,17 @@ export const TIMING_BADGE_OPTIONS = [
   { value: 'foliar', label: '叶面肥', bg: 'bg-blue-100', text: 'text-blue-700' },
 ] as const;
 
-/** Tab 分类类型 */
-export type FertilizerType = 'organic' | 'inorganic' | 'water_soluble' | 'compound' | 'bio' | 'slow_release' | 'trace';
+/** Tab 分类类型（4 大类） */
+export type FertilizerType = typeof FERTILIZER_TYPE_OPTIONS[number]['value'];
+
+/** 无机肥料中类类型 */
+export type FertilizerSubType = typeof FERTILIZER_SUB_TYPE_OPTIONS[number]['value'];
+
+/** 大类 + 中类的中文显示（列表/详情/导出共用） */
+export function getFertilizerTypeLabel(type?: string | null, subType?: string | null): string {
+  if (!type) return '-';
+  const typeLabel = FERTILIZER_TYPE_OPTIONS.find((o) => o.value === type)?.label || type;
+  if (type !== FERTILIZER_TYPE_WITH_SUB || !subType) return typeLabel;
+  const subLabel = FERTILIZER_SUB_TYPE_OPTIONS.find((o) => o.value === subType)?.label || subType;
+  return `${typeLabel} · ${subLabel}`;
+}
