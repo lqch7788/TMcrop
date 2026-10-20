@@ -40,6 +40,14 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
   failed: { bg: 'bg-purple-100', color: 'text-purple-600', label: '任务失败' },
   cancelled: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已取消' },
   abandoned: { bg: 'bg-red-50', color: 'text-red-400', label: '已放弃' },
+  // 2026-10-20 补齐：这三个值此前缺失，导致「我的任务」把英文原样显示出来
+  // （农事任务中心 counterparts 已有中文标签，两页显示不一致）
+  pending_approval: { bg: 'bg-amber-100', color: 'text-amber-600', label: '派发审批中' },
+  pending_reassign: { bg: 'bg-orange-100', color: 'text-orange-600', label: '待重新派发' },
+  // 巡查记录原始状态（未关联整改问题时直接透出）
+  attention: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待处理' },
+  normal: { bg: 'bg-green-100', color: 'text-green-600', label: '正常' },
+  overdue: { bg: 'bg-red-100', color: 'text-red-600', label: '已超期' },
 };
 
 // 优先级映射
