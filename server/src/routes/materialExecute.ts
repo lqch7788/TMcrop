@@ -485,6 +485,29 @@ router.post('/', (req: Request, res: Response) => {
       ? req.body.source_application_codes
       : parseMaterials(req.body.source_application_codes);
     const source_application_codes = JSON.stringify(sourceCodes);
+
+    // P0-4：从来源申请单继承农事任务（显式传值优先；多任务混单则不继承）
+    let task_id = req.body.task_id || req.body.taskId || '';
+    let task_code = req.body.task_code || req.body.taskCode || '';
+    if (!task_id && sourceCodes.length > 0) {
+      try {
+        const placeholders = sourceCodes.map(() => '?').join(',');
+        const rows = db.exec(
+          `SELECT DISTINCT task_id, task_code FROM material_requests
+           WHERE request_code IN (${placeholders})
+             AND task_id IS NOT NULL AND task_id <> ''`,
+          sourceCodes
+        );
+        const values = rows?.[0]?.values ?? [];
+        if (values.length === 1) {
+          task_id = String(values[0][0] || '');
+          task_code = String(values[0][1] || '');
+        }
+      } catch (e) {
+        // 继承失败不阻断出库（列可能刚补），但必须留痕
+        console.error('[领料出库] 继承农事任务失败:', e);
+      }
+    }
     // 2026-09-27 两步出库（用户决策）：默认建"待出库"单（不扣库存），
     // 仓库确认发料时调 POST /:id/confirm 才扣库存；如需一步直达可显式传 completed/partial
     const execute_status_class = req.body.execute_status_class || 'pending_out';
@@ -505,12 +528,12 @@ router.post('/', (req: Request, res: Response) => {
 
       db.run(`
         INSERT INTO material_executes (
-          id, code, date, applicant, warehouse_location, reviewer, operator,
+          id, code, task_id, task_code, date, applicant, warehouse_location, reviewer, operator,
           production_batch_code, source_application_codes, execute_status,
           execute_status_class, materials, create_by, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        id, code, req.body.date || dateStr, applicant, warehouse_location, reviewer, operator,
+        id, code, task_id || null, task_code || null, req.body.date || dateStr, applicant, warehouse_location, reviewer, operator,
         production_batch_code, source_application_codes, execute_status,
         execute_status_class, JSON.stringify(materials), create_by, now, now,
       ]);

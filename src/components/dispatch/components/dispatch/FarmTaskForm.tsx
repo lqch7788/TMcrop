@@ -11,16 +11,10 @@ import { TASK_CODE_PREFIX, DispatchMode } from '../../types/dispatch';
 import { showAlert } from '@/lib/dialogService';
 import { Button } from '@/components/ui';
 
-// 农事类型选项（从mockData导入）
-const TASK_TYPES = [
-  { value: 'fertilization', label: '施肥' },
-  { value: 'irrigation', label: '灌溉' },
-  { value: 'pruning', label: '修剪' },
-  { value: 'harvest', label: '采收' },
-  { value: 'pesticide', label: '植保' },
-  { value: 'weeding', label: '除草' },
-  { value: 'other', label: '其他' },
-];
+// 农事类型选项
+// 2026-10-20 P0-10：取值从唯一真相源派生（此前含失效别名 'pesticide'）
+import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
+const TASK_TYPES = FARM_OPERATION_TYPES.map((t) => ({ value: t.value, label: t.label }));
 
 // 紧急程度选项
 const PRIORITY_OPTIONS = [

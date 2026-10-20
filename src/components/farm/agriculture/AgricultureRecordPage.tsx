@@ -13,8 +13,14 @@ import { showAlert } from '@/lib/dialogService';
 import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type FarmOperationRecordChild } from '../../../hooks/useOperationRecords';
 import { useTasks } from '../../../hooks/useTasks';
 import { useTempTasks } from '../../../hooks/useTempTasks';
+import { useExport } from '../../../hooks/farm/useExport';
+import { exportXlsx } from '../../../services/exporters/xlsx';
+import { todayLocal } from '@/lib/dateUtils';
+import { rejectTask as rejectFarmTask } from '../../../services/apiFarmTaskService';
+import { useFarmTaskStore } from '../../../stores/farmTaskStore';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { AddOperationRecordModal, ExportFormatModal, DeleteWarningModal } from './modals';
+import { TaskInputUsageModal, type TaskInputUsageTarget } from '../hub/modals/TaskInputUsageModal';
 // 引入权限控制 Hook
 import { useAuthPermission } from '../../../hooks/usePermission';
 
@@ -57,11 +63,16 @@ export default function AgricultureRecordPage() {
   // 使用统一操作记录 Hook
   const {
     records,
-    setRecords,
+    isLoading,
+    error: recordsError,
+    refresh,
     expandedIds,
     toggleChildren,
     getFilteredRecords,
+    deleteRecord,
   } = useOperationRecords();
+
+  const { handleExport: doExport } = useExport();
 
   // 任务验收 Hook
   const { acceptTaskCompletion } = useTasks();
@@ -104,6 +115,8 @@ export default function AgricultureRecordPage() {
 
   // 新增弹窗状态
   const [showAddModal, setShowAddModal] = useState(false);
+  // P0-3：验收后补录投入品用量
+  const [usageTask, setUsageTask] = useState<TaskInputUsageTarget | null>(null);
 
   // 筛选后的记录
   const filteredRecords = useMemo(() => {
@@ -185,29 +198,78 @@ export default function AgricultureRecordPage() {
     }
   };
 
-  // 确认删除
-  const handleConfirmDelete = () => {
-    // 实际删除逻辑
+  // 确认删除：逐条调用服务端删除，失败计数并显式报错
+  const handleConfirmDelete = async () => {
+    const ids = [...selectedRows];
     setShowDeleteWarning(false);
+
+    let failed = 0;
+    for (const id of ids) {
+      const ok = await deleteRecord(id);
+      if (!ok) failed++;
+    }
+
     setBatchDeleteMode(false);
     setSelectedRows([]);
+
+    if (failed > 0) {
+      showAlert(`删除完成：成功 ${ids.length - failed} 条，失败 ${failed} 条（失败原因见上方提示）`);
+    }
   };
 
-  // 导出
+  // 导出：未手动选中时默认导出当前筛选结果（表格只在删除模式渲染复选框）
   const handleExport = () => {
+    if (selectedRows.length === 0) {
+      setSelectedRows(filteredRecords.map(r => r.id));
+    }
     setShowExportModal(true);
   };
 
-  // 确认导出
-  const handleConfirmExport = () => {
-    // 实际导出逻辑
+  // 确认导出：Excel 走 SheetJS 产出真 .xlsx，其余走通用导出
+  const handleConfirmExport = async () => {
+    const rows = records.filter((r) => selectedRows.includes(r.id));
+    if (rows.length === 0) {
+      showAlert('请先选择要导出的数据');
+      return;
+    }
+
+    const headers = ['操作单号', '来源', '来源编号', '操作类型', '作物', '区域', '操作人员', '操作日期', '进度', '状态', '备注'];
+    const exportRows = rows.map((r) => ({
+      操作单号: r.recordCode,
+      来源: SOURCE_CONFIG[r.sourceType as keyof typeof SOURCE_CONFIG]?.label || r.sourceType,
+      来源编号: r.sourceCode || '',
+      操作类型: r.operationTypeName || r.operationType,
+      作物: r.cropName,
+      区域: r.greenhouseName,
+      操作人员: r.operatorName,
+      操作日期: r.operationDate,
+      进度: r.progress === undefined ? '' : `${r.progress}%`,
+      状态: getStatusLabel(r.status),
+      备注: r.remarks || '',
+    }));
+
+    if (exportFormat === 'excel') {
+      await exportXlsx({
+        filename: `农事操作记录_${todayLocal()}.xlsx`,
+        headers,
+        rows: exportRows,
+        sheetName: '农事操作记录',
+      });
+    } else {
+      await doExport(
+        exportRows as unknown as Record<string, unknown>[],
+        { fileNamePrefix: '农事操作记录', headers, getExportData: (record) => record },
+        exportFormat as 'csv' | 'word',
+      );
+    }
+
     setShowExportModal(false);
     setExportMode(false);
     setSelectedRows([]);
   };
 
   // 验收通过记录
-  const handleAcceptRecord = (record: FarmOperationRecord) => {
+  const handleAcceptRecord = async (record: FarmOperationRecord) => {
     if (!record.sourceId || !record.sourceType) {
       showAlert('该记录无法验收：缺少来源信息');
       return;
@@ -222,28 +284,49 @@ export default function AgricultureRecordPage() {
       return;
     }
 
-    // 触发刷新 - 通过 setRecords 重新渲染组件
-    setRecords(r => [...r]);
+    // 状态变更由后端落库，稍后刷新列表
+    await refresh();
+
+    // P0-3：施肥/用药任务验收后，提示补录本次实际用量（可跳过）
+    const opType = String(record.operationType || '');
+    if (record.sourceType === 'task' && /fert|施肥|pest|防治|植保/.test(opType)) {
+      setUsageTask({
+        id: record.sourceId,
+        taskCode: record.sourceCode,
+        type: opType,
+        typeName: record.operationTypeName,
+        greenhouseName: record.greenhouseName,
+        crop: record.cropName,
+      });
+    }
   };
 
   // 驳回记录
-  const handleRejectRecord = (record: FarmOperationRecord) => {
+  const handleRejectRecord = async (record: FarmOperationRecord) => {
     if (!record.sourceId || !record.sourceType) {
       showAlert('该记录无法驳回：缺少来源信息');
       return;
     }
 
-    const reason = prompt('请输入驳回原因：');
+    const reason = prompt('请输入驳回原因（至少 6 个字符）：');
     if (reason === null) return; // 用户取消
+    if (reason.trim().length < 6) {
+      showAlert('驳回原因至少 6 个字符');
+      return;
+    }
 
     if (record.sourceType === 'task') {
-      // useTasks 暂未实现驳回方法，可后续扩展
-      showAlert('任务驳回功能暂未实现，请在任务中心处理');
+      try {
+        await rejectFarmTask(record.sourceId, reason.trim());
+        await useFarmTaskStore.getState().fetchTasks();
+        await refresh();
+      } catch (error) {
+        showAlert(`任务驳回失败：${error instanceof Error ? error.message : String(error)}`);
+      }
     } else if (record.sourceType === 'tempTask') {
       // 使用 hook 返回的 rejectCompletion
       rejectCompletion(record.sourceId, reason);
-      // 触发刷新 - 通过 setRecords 重新渲染组件
-      setRecords(r => [...r]);
+      await refresh();
     }
   };
 
@@ -374,13 +457,30 @@ export default function AgricultureRecordPage() {
         canCreate={canCreate}
       />
 
+      {/* 加载失败提示：服务端不可用时必须显式报错，不能显示成"空数据" */}
+      {recordsError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+          农事操作记录加载失败：{recordsError}
+        </div>
+      )}
+
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {/* 表头工具栏 */}
         <AgricultureRecordTableToolbar
           batchDeleteMode={batchDeleteMode}
           selectedRowsCount={selectedRows.length}
-          onBatchDelete={() => setBatchDeleteMode(true)}
+          onBatchDelete={() => {
+            if (!batchDeleteMode) {
+              setBatchDeleteMode(true);
+              return;
+            }
+            if (selectedRows.length === 0) {
+              showAlert('请先选择要删除的记录');
+              return;
+            }
+            setShowDeleteWarning(true);
+          }}
           onCancelBatchDelete={() => { setBatchDeleteMode(false); setSelectedRows([]); }}
           onExport={handleExport}
           canDelete={canDelete}
@@ -416,7 +516,13 @@ export default function AgricultureRecordPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-300">
-              {paginatedRecords.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={batchDeleteMode ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
+                    加载中…
+                  </TableCell>
+                </TableRow>
+              ) : paginatedRecords.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={batchDeleteMode ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
@@ -539,6 +645,14 @@ export default function AgricultureRecordPage() {
       <AddOperationRecordModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
+      />
+
+      {/* P0-3：验收后补录投入品用量 */}
+      <TaskInputUsageModal
+        isOpen={!!usageTask}
+        task={usageTask}
+        onClose={() => setUsageTask(null)}
+        onSaved={() => { void refresh(); }}
       />
 
       {/* 导出格式选择弹窗 */}

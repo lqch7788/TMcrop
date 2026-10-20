@@ -140,7 +140,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
   };
 
   // 保存记录
-  const handleSave = () => {
+  const handleSave = async () => {
     // 获取温室信息
     const greenhouse = greenhouseOptions.find(g => g.value === formData.greenhouseId);
     const operator = operatorOptions.find(o => o.value === formData.operatorId);
@@ -154,7 +154,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     }
 
     // 添加记录
-    addRecord({
+    const saved = await addRecord({
       // 2026-10-11：补 sourceType —— FarmOperationRecord 的必填字段（addRecord 内部固定写入 'manual'，此处同为手动录入）
       sourceType: 'manual',
       operationType: formData.operationType,
@@ -176,6 +176,9 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
       remarks: formData.remarks,
       progress: formData.progress,
     });
+
+    // 保存失败时保持弹窗打开：错误已由 useOperationRecords 弹窗提示
+    if (!saved) return;
 
     handleClose();
   };

@@ -122,6 +122,8 @@ import batchTimelineRouter from './batchTimeline';
 import taskProgressRouter from './taskProgress';
 // v0.3 P0-R + P0-S：监管报告 + 合规血缘
 import complianceReportRouter from './complianceReport';
+// P1-3：承诺达标合格证
+import complianceCertificateRouter from './complianceCertificate';
 // v0.3 P0-3：移动端离线队列同步
 import offlineSyncRouter from './offlineSync';
 // v0.3 P0-B：纸单兜底（班组长代填）
@@ -226,6 +228,8 @@ router.use('/farm-tasks', requireAuth, taskProgressRouter);
 router.use('/farm-tasks', requireAuth, farmTaskRouter);
 // v0.3 P0-R + P0-S：监管报告导出 + 合规血缘
 router.use('/compliance-report', requireAuth, complianceReportRouter);
+// P1-3：承诺达标合格证（按批次开具，留存 ≥6 个月）
+router.use('/compliance-certificates', requireAuth, complianceCertificateRouter);
 // v0.3 P0-3：移动端离线队列同步
 router.use('/offline-sync', requireAuth, offlineSyncRouter);
 // v0.3 P0-B：纸单兜底（班组长代填）

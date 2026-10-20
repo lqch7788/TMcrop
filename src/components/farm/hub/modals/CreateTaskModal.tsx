@@ -246,6 +246,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       ? selectedAreas[0].greenhouseId
       : (() => { const n = fieldValue.split(',')[0]?.trim() || ''; const m = taskDispatchFields.find(f => f.name === n); return m?.id?.toString() || ''; })();
 
+    // P0-5：选中的种植实例 → planting_id / batch_code（此前选完区域直接丢弃 id）
+    const primaryPlanting = selectedAreas.find(a => a.type === 'planting');
+
     const estimatedHours = ((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8)) + (newTask.estimatedHours || 0);
     const planEndTime = calculateEndDateTime(
       newTask.planStart,
@@ -267,6 +270,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       typeName: typeLabels,
       greenhouseId: greenhouseId,
       greenhouseName: fieldValue,
+      // P0-5：任务回链种植实例与真实批次号
+      plantingId: primaryPlanting?.id || '',
+      batchCode: primaryPlanting?.code || '',
       teamId: newTask.teamId || '',
       teamName: newTask.teamName || '',
       cropName: cropValue,

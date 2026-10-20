@@ -47,6 +47,9 @@ export interface SelectedArea {
 export interface MaterialReceivingRecord {
   id: number;
   code: string;
+  /** P0-4：关联农事任务 */
+  taskId?: string;
+  taskCode?: string;
   date: string;
   applicant: string;
   department: string;

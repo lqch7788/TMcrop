@@ -10,6 +10,8 @@ import { tenantContext } from '../middleware/tenantContext';
 import { permissionGuard } from '../middleware/permissionGuard';
 // 2026-10-12 P2 (IS-NEW-159) 修复：拒绝/撤回原因长度仅前端校验，绕过即 500；后端补 zod min(6)
 import { z } from 'zod';
+// 2026-10-20 P0-10：后端权威状态转移守卫（此前转移表只在前端，后端 17 个流转端点零守卫）
+import { assertTaskTransition } from '../constants';
 
 const router = Router();
 
@@ -32,6 +34,22 @@ function runInTransaction(db: any, work: () => void): void {
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch { /* ROLLBACK 失败不掩盖原异常 */ }
     throw err;
+  }
+}
+
+/**
+ * 2026-10-20 P0-10：状态转移守卫
+ * 非法转移返回 409，并说明允许的目标状态（此前后端零守卫，直调 API 可把 completed 改回 pending）
+ */
+function guardTransition(res: Response, from: string, to: string): boolean {
+  try {
+    assertTaskTransition(from, to);
+    return true;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[farmTask] 拦截非法状态转移:', message);
+    res.status(409).json({ success: false, error: message });
+    return false;
   }
 }
 
@@ -332,6 +350,10 @@ router.post('/', (req: Request, res: Response) => {
       tools,
       batch_id, batchId,
       batch_code, batchCode,
+      // P0-5：种植实例 / 生产计划关联
+      planting_id, plantingId,
+      production_plan_id, productionPlanId,
+      production_plan_code, productionPlanCode,
       // 前端直接发送的字段名（createTask/useTasks.ts apiTaskData）
       planStart,
       planEnd,
@@ -377,6 +399,7 @@ router.post('/', (req: Request, res: Response) => {
         due_date, progress, crop, estimated_hours, estimated_days, remarks,
         materials, tools,
         batch_id, batch_code,
+        planting_id, production_plan_id, production_plan_code,
         type_name, source_type, dispatch_mode,
         feedback_requirements,
         rework_history, deadline_extensions,
@@ -384,7 +407,7 @@ router.post('/', (req: Request, res: Response) => {
         team_id, team_name, tools_remarks,
         source_problem_id, source_inspection_id, source_id, source_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -413,8 +436,13 @@ router.post('/', (req: Request, res: Response) => {
       // P2-2：统一 toDbJson() 序列化
       toDbJson(materials),
       toDbJson(tools),
-      batch_id || batchId || newId,
-      batch_code || batchCode || `PC-${newId}`,
+      // P0-5：不再编造批次（旧逻辑 batch_id 默认=自身 id、batch_code 默认='PC-'+自身 id，
+      //   导致 22 条任务的批次字段全为无意义自引用）
+      batch_id || batchId || null,
+      batch_code || batchCode || null,
+      planting_id || plantingId || null,
+      production_plan_id || productionPlanId || null,
+      production_plan_code || productionPlanCode || null,
       // 数据改造新增字段
       type_name || typeName || '',
       source_type || sourceType || 'dispatch',
@@ -562,6 +590,10 @@ const FARM_TASK_DB_COLUMNS = new Set<string>([
   'paused_at', 'resumed_at', 'current_pause_reason', 'total_pause_seconds',
   'actual_start_at', 'actual_end_at', 'actual_hours', 'actual_hours_recorded_at',
   'actual_hours_recorded_by', 'estimated_hours', 'estimated_days', 'estimated_vs_actual_ratio',
+  // P0-8：实际作业面积（亩）→ 亩均成本
+  'actual_area',
+  // P0-5：种植实例 / 生产计划关联
+  'planting_id', 'production_plan_id', 'production_plan_code',
   'dispatch_mode', 'source_type', 'source_id', 'source_code',
   'source_problem_id', 'source_inspection_id',
   'feedback_requirements', 'deadline_extensions', 'type_config', 'type_name', 'sop_content',
@@ -1064,6 +1096,226 @@ function recordTaskOperation(
 }
 
 /**
+ * P0-8：解析执行人工时单价
+ * - 优先取 employees.hourly_rate
+ * - 为空时回退 50（系统既有约定，见 src/components/labor/overtime/hooks/useOvertime.ts）
+ */
+const DEFAULT_HOURLY_RATE = 50;
+
+function resolveHourlyRate(db: any, workerId: string): number {
+  if (!workerId) return DEFAULT_HOURLY_RATE;
+  try {
+    const rows = db.exec(
+      'SELECT hourly_rate FROM employees WHERE id = ? OR oid = ? LIMIT 1',
+      [workerId, workerId]
+    );
+    const raw = rows?.[0]?.values?.[0]?.[0];
+    const rate = Number(raw);
+    if (Number.isFinite(rate) && rate > 0) return rate;
+  } catch {
+    // employees 表缺 hourly_rate 列时回退默认值
+  }
+  return DEFAULT_HOURLY_RATE;
+}
+
+/**
+ * P0-8：任务验收 → 写人工工时记录（labor_records）
+ *
+ * - 幂等：同一任务只保留一条（按 task_id 查重，重复验收只更新不新增）
+ * - 写入实际工时、单价快照、金额、作业面积
+ * - 必须在 runInTransaction 内调用
+ */
+function syncLaborRecord(
+  db: any,
+  task: any,
+  options: { actualHours: number; actualArea: number }
+): void {
+  const { actualHours, actualArea } = options;
+  if (!actualHours || actualHours <= 0) return;
+
+  const workerId = task.assignee_id || '';
+  const workerName = task.assignee_name || '';
+  const hourlyRate = resolveHourlyRate(db, workerId);
+  const totalAmount = Number((actualHours * hourlyRate).toFixed(2));
+  const now = new Date().toISOString();
+  const workDate = task.plan_date || now.slice(0, 10);
+
+  // 幂等：查该任务是否已有工时记录
+  let existingId: string | null = null;
+  try {
+    const found = db.exec(
+      'SELECT id FROM labor_records WHERE task_id = ? LIMIT 1',
+      [task.id]
+    );
+    existingId = found?.[0]?.values?.[0]?.[0] ?? null;
+  } catch {
+    existingId = null;
+  }
+
+  if (existingId) {
+    db.run(
+      `UPDATE labor_records
+       SET work_hours = ?, hourly_rate = ?, total_amount = ?, area = ?,
+           work_date = ?, status = 'completed', update_time = ?
+       WHERE id = ?`,
+      [actualHours, hourlyRate, totalAmount, actualArea, workDate, now, existingId]
+    );
+    return;
+  }
+
+  // 编号：当日序号递增（禁止 Math.random，业务编码需可复现）
+  let seq = 1;
+  try {
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const last = db.exec(
+      `SELECT id FROM labor_records WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+      [`LB${dateStr}-%`]
+    );
+    const lastId = last?.[0]?.values?.[0]?.[0];
+    if (lastId) {
+      const tail = Number(String(lastId).split('-').pop());
+      if (Number.isFinite(tail)) seq = tail + 1;
+    }
+  } catch {
+    // 序号查询失败用 1
+  }
+  const d2 = new Date();
+  const dateStr2 = `${d2.getFullYear()}${String(d2.getMonth() + 1).padStart(2, '0')}${String(d2.getDate()).padStart(2, '0')}`;
+  const laborId = `LB${dateStr2}-${String(seq).padStart(4, '0')}`;
+
+  db.run(
+    `INSERT INTO labor_records (
+      id, worker_id, worker_name, work_type, work_date, work_hours, hourly_rate,
+      total_amount, greenhouse_id, greenhouse_name, area_name, task_description,
+      task_id, task_code, area, batch_id, batch_code, status, remarks,
+      create_time, update_time
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      laborId, workerId, workerName, task.task_type || task.type_name || '农事作业', workDate,
+      actualHours, hourlyRate, totalAmount,
+      task.greenhouse_id || '', task.greenhouse_name || '', task.area_name || '',
+      task.task_title || task.title || task.task_code || '',
+      task.id, task.task_code || task.id, actualArea,
+      task.batch_id || null, task.batch_code || null,
+      'completed', `任务 ${task.task_code || task.id} 验收工时`,
+      now, now,
+    ]
+  );
+}
+
+/**
+ * P0-2：任务状态变更 → 同步农事操作记录（farm_operation_records）
+ *
+ * 关联优先级：task_id（本批次起写入） → source_id（客户端早先写入的父记录）
+ * 命中则更新状态/进度并回填 task_id；未命中则新建一条父记录。
+ * 必须在 runInTransaction 内调用（不在此处 saveDatabase）。
+ */
+function syncTaskOperationRecord(
+  db: any,
+  task: any,
+  options: {
+    status: string;
+    progress?: number;
+    operatorId?: string;
+    operatorName?: string;
+    /** P0-8：实际工时（写人工成本快照） */
+    actualHours?: number;
+  }
+): void {
+  const { status, progress, operatorId = '', operatorName = '', actualHours } = options;
+  const now = new Date().toISOString();
+
+  // P0-8：人工成本快照（单价取自执行人配置，缺失回退系统默认）
+  const hourlyRate = resolveHourlyRate(db, task.assignee_id || operatorId);
+  const laborCost = actualHours && actualHours > 0
+    ? Number((actualHours * hourlyRate).toFixed(2))
+    : null;
+
+  let existingId: string | null = null;
+  try {
+    const found = db.exec(
+      `SELECT id FROM farm_operation_records
+       WHERE source_type = 'task' AND (task_id = ? OR source_id = ?)
+       ORDER BY created_at ASC LIMIT 1`,
+      [task.id, task.id]
+    );
+    existingId = found?.[0]?.values?.[0]?.[0] ?? null;
+  } catch {
+    // 老库缺 task_id 列时降级为只按 source_id 匹配，不让主流程失败
+    const found = db.exec(
+      `SELECT id FROM farm_operation_records
+       WHERE source_type = 'task' AND source_id = ?
+       ORDER BY created_at ASC LIMIT 1`,
+      [task.id]
+    );
+    existingId = found?.[0]?.values?.[0]?.[0] ?? null;
+  }
+
+  if (existingId) {
+    db.run(
+      `UPDATE farm_operation_records
+       SET status = ?,
+           progress = COALESCE(?, progress),
+           task_id = ?,
+           operator_id = COALESCE(NULLIF(?, ''), operator_id),
+           operator_name = COALESCE(NULLIF(?, ''), operator_name),
+           worker_hourly_rate_snapshot = COALESCE(?, worker_hourly_rate_snapshot),
+           labor_cost_snapshot = COALESCE(?, labor_cost_snapshot),
+           updated_at = ?
+       WHERE id = ?`,
+      [status, progress ?? null, task.id, operatorId, operatorName, hourlyRate, laborCost, now, existingId]
+    );
+    return;
+  }
+
+  // 当日序号（禁止 Math.random：业务编码必须可复现）
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const prefix = `OP${dateStr}-`;
+  let seq = 1;
+  try {
+    const last = db.exec(
+      `SELECT record_code FROM farm_operation_records
+       WHERE record_code LIKE ? ORDER BY record_code DESC LIMIT 1`,
+      [`${prefix}%`]
+    );
+    const lastCode = last?.[0]?.values?.[0]?.[0];
+    if (lastCode) {
+      const tail = Number(String(lastCode).split('-').pop());
+      if (Number.isFinite(tail)) seq = tail + 1;
+    }
+  } catch {
+    // 序号查询失败用 1，不阻塞写入
+  }
+  const recordCode = `${prefix}${String(seq).padStart(4, '0')}`;
+  const id = `OP_${Date.now()}_${String(seq).padStart(4, '0')}`;
+
+  db.run(
+    `INSERT INTO farm_operation_records (
+      id, record_code, source_type, source_id, source_code, task_id,
+      operation_type, operation_type_name, status,
+      greenhouse_id, greenhouse_name, crop_name,
+      batch_id, batch_code,
+      operator_id, operator_name,
+      worker_hourly_rate_snapshot, labor_cost_snapshot,
+      operation_date, progress, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, recordCode, 'task', task.id, task.task_code, task.id,
+      task.task_type || 'other', task.type_name || task.task_title || task.title || '',
+      status,
+      task.greenhouse_id || '', task.greenhouse_name || '', task.crop || '',
+      task.batch_id || '', task.batch_code || '',
+      operatorId, operatorName,
+      hourlyRate, laborCost,
+      todayLocal, progress ?? null, now, now,
+    ]
+  );
+}
+
+/**
  * 发布任务
  */
 router.post('/:id/publish', (req: Request, res: Response) => {
@@ -1085,6 +1337,7 @@ router.post('/:id/publish', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'pending')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹 UPDATE + 操作记录 INSERT，避免脏数据
@@ -1131,6 +1384,7 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'draft')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1173,6 +1427,7 @@ router.post('/:id/accept', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'accepted')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1182,6 +1437,10 @@ router.post('/:id/accept', (req: Request, res: Response) => {
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'accept', '接受任务', fromStatus, 'accepted');
+
+      syncTaskOperationRecord(db, task, {
+        status: 'accepted', operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: 'accepted' } });
@@ -1212,6 +1471,7 @@ router.post('/:id/start', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'in_progress')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1221,6 +1481,10 @@ router.post('/:id/start', (req: Request, res: Response) => {
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'start', '开始执行', fromStatus, 'in_progress');
+
+      syncTaskOperationRecord(db, task, {
+        status: 'in_progress', operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: 'in_progress' } });
@@ -1261,6 +1525,9 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     // 若未传 status 则保持原 status 不变（向后兼容旧客户端）
     const normalizedStatus = status ? normalizeTaskStatus(status) : undefined;
 
+    // P0-10：仅在显式推进状态时校验转移合法性（只改进度不校验）
+    if (normalizedStatus && !guardTransition(res, task.status, normalizedStatus)) return;
+
     // P0-1：事务包裹；P0-4：可选 status
     runInTransaction(db, () => {
       if (normalizedStatus) {
@@ -1276,6 +1543,13 @@ router.post('/:id/progress', (req: Request, res: Response) => {
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'progress', '提交进度',
         task.status, normalizedStatus || task.status, newProgress, comment, undefined, feedbackStr);
+
+      syncTaskOperationRecord(db, task, {
+        status: normalizedStatus || 'in_progress',
+        progress: newProgress,
+        operatorId: operator_id || '',
+        operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, progress: newProgress, status: normalizedStatus || task.status } });
@@ -1307,6 +1581,7 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'waiting_acceptance')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1318,6 +1593,11 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
       const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment, undefined, feedbackStr);
+
+      syncTaskOperationRecord(db, task, {
+        status: 'waiting_acceptance', progress: 100,
+        operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: 'waiting_acceptance' } });
@@ -1332,7 +1612,7 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
 router.post('/:id/complete', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { comments, operator_id, operator_name, actual_hours } = req.body;
+    const { comments, operator_id, operator_name, actual_hours, actual_area } = req.body;
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
@@ -1348,14 +1628,20 @@ router.post('/:id/complete', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'completed')) return;
     const now = new Date().toISOString();
 
     // 2026-08-22：AI-06 工时预测 — 收集实际工时（AI 训练 target）
     // 同时计算 estimated_vs_actual_ratio 供 AI 特征工程使用
+    // P0-8：body 未传时回退到任务上已记录的 actual_hours
+    //   （ActualHoursRecorder 组件走 /api/ai/workhour/feedback 写入该列）
     let actualHoursValue: number | null = null;
     let ratioValue: number | null = null;
-    if (actual_hours !== undefined && actual_hours !== null) {
-      const ah = Number(actual_hours);
+    const rawHours = actual_hours !== undefined && actual_hours !== null
+      ? actual_hours
+      : task.actual_hours;
+    if (rawHours !== undefined && rawHours !== null) {
+      const ah = Number(rawHours);
       if (!isNaN(ah) && ah > 0) {
         actualHoursValue = ah;
         const estimated = Number(task.estimated_hours) || 0;
@@ -1365,20 +1651,36 @@ router.post('/:id/complete', (req: Request, res: Response) => {
       }
     }
 
+    // P0-8：实际作业面积（亩）——可选，用于亩均成本
+    const actualAreaValue = actual_area !== undefined && actual_area !== null && !Number.isNaN(Number(actual_area))
+      ? Number(actual_area)
+      : (Number(task.actual_area) || 0);
+
     // P0-1：事务包裹
     runInTransaction(db, () => {
       db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100,
                                    actual_hours = ?, actual_hours_recorded_at = ?, actual_hours_recorded_by = ?,
-                                   estimated_vs_actual_ratio = ?, update_time = ?
+                                   estimated_vs_actual_ratio = ?, actual_area = ?, update_time = ?
                                    WHERE id = ?`,
         [now, actualHoursValue, actualHoursValue ? now : null, actualHoursValue ? (operator_id || '') : null,
-         ratioValue, now, id]);
+         ratioValue, actualAreaValue, now, id]);
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'complete', '验收通过', fromStatus, 'completed', 100, comments);
+
+      syncTaskOperationRecord(db, task, {
+        status: 'completed', progress: 100,
+        operatorId: operator_id || '', operatorName: operator_name || '',
+        actualHours: actualHoursValue ?? undefined,
+      });
+
+      // P0-8：写人工工时（幂等，同任务只一条）
+      if (actualHoursValue) {
+        syncLaborRecord(db, task, { actualHours: actualHoursValue, actualArea: actualAreaValue });
+      }
     });
 
-    res.json({ success: true, data: { id, status: 'completed', actual_hours: actualHoursValue, estimated_vs_actual_ratio: ratioValue } });
+    res.json({ success: true, data: { id, status: 'completed', actual_hours: actualHoursValue, actual_area: actualAreaValue, estimated_vs_actual_ratio: ratioValue } });
   } catch (error) {
     // 2026-09-19 修复 H14：原先这里只有 res.status(500)，没有 console.error ——
     // 缺列（no such column: actual_hours）这类故障在前端只看到"验收通过失败"，
@@ -1421,6 +1723,9 @@ router.post('/:id/reject', (req: Request, res: Response) => {
     // 如果返工次数超过2次，则状态为 failed
     const newStatus = reworkCount >= 2 ? 'failed' : 'rejected';
 
+    // P0-10：状态转移守卫
+    if (!guardTransition(res, fromStatus, newStatus)) return;
+
     // P0-1：事务包裹
     // P1-9：驳回原因/操作人写入 rejected_* 审计列
     runInTransaction(db, () => {
@@ -1429,6 +1734,10 @@ router.post('/:id/reject', (req: Request, res: Response) => {
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'reject', '验收驳回', fromStatus, newStatus, undefined, reason);
+
+      syncTaskOperationRecord(db, task, {
+        status: newStatus, operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: newStatus, reworkCount } });
@@ -1458,6 +1767,7 @@ router.post('/:id/continue', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'in_progress')) return;
     const now = new Date().toISOString();
 
     runInTransaction(db, () => {
@@ -1494,6 +1804,7 @@ router.post('/:id/cancel', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'cancelled')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1504,6 +1815,10 @@ router.post('/:id/cancel', (req: Request, res: Response) => {
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'cancel', '取消任务', fromStatus, 'cancelled', undefined, reason);
+
+      syncTaskOperationRecord(db, task, {
+        status: 'cancelled', operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: 'cancelled' } });
@@ -1534,6 +1849,7 @@ router.post('/:id/abandon', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'abandoned')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹
@@ -1544,6 +1860,10 @@ router.post('/:id/abandon', (req: Request, res: Response) => {
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'abandon', '放弃任务', fromStatus, 'abandoned', undefined, reason);
+
+      syncTaskOperationRecord(db, task, {
+        status: 'abandoned', operatorId: operator_id || '', operatorName: operator_name || '',
+      });
     });
 
     res.json({ success: true, data: { id, status: 'abandoned' } });
@@ -1622,6 +1942,7 @@ router.post('/:id/overtime-abandon', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+    if (!guardTransition(res, fromStatus, 'abandoned')) return;
     const now = new Date().toISOString();
 
     // P0-1：事务包裹

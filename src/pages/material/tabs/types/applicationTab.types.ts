@@ -91,6 +91,9 @@ export interface AddFormState {
   reviewer: string;
   /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 + 附件 */
   productionBatchCode: string;
+  /** P0-4：关联农事任务 */
+  taskId: string;
+  taskCode: string;
   expectedDate: string;
   priority: string;
   attachments: Array<{ name: string; dataUrl: string }>;

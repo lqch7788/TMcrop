@@ -129,6 +129,8 @@ import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
 // DailyProblemSummary 已迁移至 /summary/problems（生产汇总表 V1.0）
 import DailyWorkSummary from './pages/farm/DailyWorkSummary';
+// P0-6：农事任务排班页
+import TaskSchedulePage from './pages/farm/TaskSchedulePage';
 // PlanSummary 已迁移至 /summary/batch（生产汇总表 V1.0）
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
@@ -197,6 +199,8 @@ const BatchCostAnalysisPage = lazy(() => import('./pages/agronomy/BatchCostAnaly
 const IssueTrackingBoard = lazy(() => import('./pages/agronomy/IssueTrackingBoard'));
 // v0.3 P0-R + P0-S：合规报告
 const ComplianceReportPage = lazy(() => import('./pages/agronomy/ComplianceReportPage'));
+// P1-3：承诺达标合格证
+const ComplianceCertificatePage = lazy(() => import('./pages/agronomy/ComplianceCertificatePage'));
 // v0.3 P2-X：数据库备份中心
 const BackupCenterPage = lazy(() => import('./pages/agronomy/BackupCenterPage'));
 // v0.3 其他管理聚合页（8 个工具 Tab）
@@ -375,12 +379,14 @@ function AppContent() {
       <TraceabilityLayout>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/traceability" element={<TraceabilityPage />} />
-            <Route path="/traceability/planting" element={<PlantingArchive />} />
-            <Route path="/traceability/processing" element={<ProcessingArchive />} />
-            <Route path="/traceability/circulation" element={<CirculationTrace />} />
-            <Route path="/traceability/code" element={<TraceCode />} />
-            <Route path="/traceability/consumer" element={<ConsumerQuery />} />
+            {/* 2026-10-20 P0-9：这 6 个溯源页此前是 V1.3 静态假数据（无任何 API 调用），
+                真实流转追溯在 /crop/material-flow，统一重定向过去；原页面文件保留未删 */}
+            <Route path="/traceability" element={<Navigate to="/crop/material-flow" replace />} />
+            <Route path="/traceability/planting" element={<Navigate to="/crop/material-flow" replace />} />
+            <Route path="/traceability/processing" element={<Navigate to="/crop/material-flow" replace />} />
+            <Route path="/traceability/circulation" element={<Navigate to="/crop/material-flow" replace />} />
+            <Route path="/traceability/code" element={<Navigate to="/crop/material-flow" replace />} />
+            <Route path="/traceability/consumer" element={<Navigate to="/crop/material-flow" replace />} />
           </Routes>
         </Suspense>
       </TraceabilityLayout>
@@ -431,7 +437,9 @@ function AppContent() {
       <ManagementLayout>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/manage/cost" element={<CostAccounting />} />
+            {/* 2026-10-20 P0-9：成本核算页此前是 10 条硬编码假数据，
+                真实成本分析在 /summary/business-analysis，统一重定向；原页面文件保留未删 */}
+            <Route path="/manage/cost" element={<Navigate to="/summary/business-analysis" replace />} />
             <Route path="/manage/income" element={<IncomeManagement />} />
             <Route path="/manage/financial" element={<FinancialAnalysisPage />} />
             <Route path="/manage/input-output" element={<InputOutputAnalysis />} />
@@ -554,6 +562,8 @@ function AppContent() {
           <Route path="/agronomy/issue-board" element={<IssueTrackingBoard />} />
           {/* v0.3 P0-R + P0-S：合规报告 */}
           <Route path="/agronomy/compliance-report" element={<ComplianceReportPage />} />
+          {/* P1-3：承诺达标合格证（按批次开具，留存 ≥6 个月） */}
+          <Route path="/agronomy/compliance-certificates" element={<ComplianceCertificatePage />} />
           {/* v0.3 P2-X：备份中心 */}
           <Route path="/agronomy/backup-center" element={<BackupCenterPage />} />
           {/* v0.3 其他管理聚合页（8 个工具 Tab） — 2026-09-20 已迁到 /settings/operations */}
@@ -564,6 +574,8 @@ function AppContent() {
           <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
+          {/* P0-6：农事任务排班（与 /schedule 的人力考勤排班区分） */}
+          <Route path="/farm-task-schedule" element={<TaskSchedulePage />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/team" element={<Team />} />
           {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}

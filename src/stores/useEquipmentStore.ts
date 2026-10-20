@@ -1,7 +1,9 @@
 /**
  * 设备管理 Store
  *
- * 种子数据来自 data/farm/farmData，后续可对接后端 API
+ * ⚠️ 2026-10-20 P0-9 标注：以下全部为**前端种子数据，无后端表、无 API**。
+ *   真实设备数据请看 `monitoring_devices` / `iot_devices` 表与 `/api/monitoring-devices`。
+ *   农机具台账（台账/保养/折旧）列入 P2 规划，当前 schema 中无 equipment 表。
  */
 
 import { create } from 'zustand';

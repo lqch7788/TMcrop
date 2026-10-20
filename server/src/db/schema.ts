@@ -828,6 +828,10 @@ export function initializeDatabase() {
       completion_note TEXT,
       batch_id TEXT,
       batch_code TEXT,
+      -- P0-5：任务 ↔ 种植实例 / 生产计划（batch_code 不再充当万能批次字段）
+      planting_id TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT,
       create_by TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
@@ -961,6 +965,10 @@ export function initializeDatabase() {
       task_description TEXT,
       batch_id TEXT,
       batch_code TEXT,
+      -- P0-8：工时回链农事任务 + 作业面积（亩）
+      task_id TEXT,
+      task_code TEXT,
+      area REAL DEFAULT 0,
       status TEXT DEFAULT 'pending',
       remarks TEXT,
       create_time TEXT,
@@ -1101,6 +1109,9 @@ export function initializeDatabase() {
       id TEXT PRIMARY KEY,
       request_code TEXT NOT NULL,
       request_title TEXT NOT NULL,
+      -- P0-4：领料单 ↔ 农事任务
+      task_id TEXT,
+      task_code TEXT,
       request_type TEXT,
       department_id TEXT,
       department_name TEXT,
@@ -1183,6 +1194,9 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS material_executes (
       id TEXT PRIMARY KEY,
       code TEXT NOT NULL,
+      -- P0-4：出库单 ↔ 农事任务（从来源申请单继承）
+      task_id TEXT,
+      task_code TEXT,
       date TEXT,
       applicant TEXT,
       warehouse_location TEXT,
@@ -1484,6 +1498,8 @@ export function initializeDatabase() {
   // 数据改造：补齐前端通过API传递但后端未落库的关键字段
   try { db.run(`ALTER TABLE farm_tasks ADD COLUMN crop TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE farm_tasks ADD COLUMN estimated_hours INTEGER DEFAULT 0`); } catch (e) {}
+  // P0-8：实际作业面积（亩）→ 亩均成本
+  try { db.run(`ALTER TABLE farm_tasks ADD COLUMN actual_area REAL DEFAULT 0`); } catch (e) {}
   try { db.run(`ALTER TABLE farm_tasks ADD COLUMN estimated_days INTEGER DEFAULT 0`); } catch (e) {}
   try { db.run(`ALTER TABLE farm_tasks ADD COLUMN type_name TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE farm_tasks ADD COLUMN materials TEXT`); } catch (e) {}
@@ -2971,6 +2987,9 @@ export function initializeDatabase() {
       seedling_code TEXT,
       greenhouse_id TEXT,
       greenhouse_name TEXT NOT NULL,
+      -- P1-1 合规生产档案：《农产品质量安全法》第 27 条要求的「投入品来源 / 停用日期」
+      source TEXT,
+      stop_use_date TEXT,
       -- area_name 定义在下方 (line ~2747, 2026-07-15 修复同步后 area 为空 bug,
       -- 配合 area_id 一起;此处的旧 area_name 已被合并,避免重复列定义 throw)
       crop_name TEXT NOT NULL,
@@ -3486,6 +3505,11 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS pesticide_records (
       id TEXT PRIMARY KEY,
       record_code TEXT NOT NULL UNIQUE,
+      -- P0-3：用药记录 ↔ 农事任务
+      farm_task_id TEXT,
+      -- P1-1 合规生产档案：投入品来源 / 停用日期
+      source TEXT,
+      stop_use_date TEXT,
       spray_time TEXT NOT NULL,
       operator_id TEXT,
       operator_name TEXT,
@@ -3936,6 +3960,8 @@ export function initializeDatabase() {
       source_type TEXT NOT NULL,
       source_id TEXT,
       source_code TEXT,
+      -- P0-2：农事任务 ↔ 作业记录强关联（客户端早先写入的行只有 source_id）
+      task_id TEXT,
       operation_type TEXT NOT NULL,
       operation_type_name TEXT,
       status TEXT,
@@ -3968,6 +3994,10 @@ export function initializeDatabase() {
       area TEXT,
       children TEXT,
       reject_reason TEXT,
+      -- P1-2：软删除留痕（合规记录不可事后静默删除）
+      deleted_at TEXT,
+      deleted_by TEXT,
+      delete_reason TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT
     )

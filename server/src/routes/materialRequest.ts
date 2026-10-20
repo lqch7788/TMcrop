@@ -100,6 +100,12 @@ router.get('/', (req: Request, res: Response) => {
       params.push(approval_status as string);
     }
 
+    // P0-4：按农事任务反查领料单
+    if (req.query.task_id) {
+      sql += ' AND task_id = ?';
+      params.push(req.query.task_id as string);
+    }
+
     if (department_name) {
       sql += ' AND department_name LIKE ?';
       params.push(`%${department_name}%`);
@@ -242,6 +248,9 @@ router.post('/', (req: Request, res: Response) => {
       warehouse_name,
       plant_area,
       production_batch_code,
+      // P0-4：关联农事任务（兼容 camelCase）
+      task_id: task_id_raw,
+      task_code: task_code_raw,
       total_amount,
       priority,
       status,
@@ -260,6 +269,8 @@ router.post('/', (req: Request, res: Response) => {
     const localDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const localNow = `${localDateStr} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     let requestCode = request_code || generateMaterialRequestCode();
+    const task_id = task_id_raw || req.body.taskId || null;
+    const task_code = task_code_raw || req.body.taskCode || null;
 
     // 2026-09-26 改进批次一：解析 materials（前端传字符串或数组；此前直接 JSON.stringify(字符串)
     // 会产生双重编码，靠启动迁移反复兜底——此处根治）
@@ -355,6 +366,7 @@ router.post('/', (req: Request, res: Response) => {
       db.run(`
         INSERT INTO material_requests (
           id, request_code, request_title, request_type,
+          task_id, task_code,
           department_id, department_name,
           applicant_id, applicant_name,
           apply_date, expected_date,
@@ -363,12 +375,14 @@ router.post('/', (req: Request, res: Response) => {
           total_amount, priority, status, approval_status,
           remarks, reviewer, attachments, materials, create_by,
           create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId,
         requestCode,
         request_title || null,
         request_type || null,
+        task_id,
+        task_code,
         department_id || null,
         department_name || null,
         applicant_id || null,
@@ -646,6 +660,7 @@ router.put('/:id', (req: Request, res: Response) => {
       'request_title', 'request_type', 'department_id', 'department_name',
       'applicant_id', 'applicant_name', 'apply_date', 'expected_date',
       'warehouse_id', 'warehouse_name', 'plant_area', 'production_batch_code',
+      'task_id', 'task_code',
       'total_amount', 'priority', 'status', 'approval_status',
       'remarks', 'attachments', 'materials', 'reviewer', 'create_by',
       'dispatch_status',

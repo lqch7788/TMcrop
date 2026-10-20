@@ -4,11 +4,12 @@
  * 数据存储在 localStorage，实现刷新后数据不丢失
  */
 
-import React, { useState, useCallback } from 'react';
-import { useLocalStorage } from './useLocalStorage';
-// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useFarmOperationRecordStore 同步双写
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFarmOperationRecordStore } from '../stores/useFarmOperationRecordStore';
+import type { FarmOperationRecord as StoreOperationRecord } from '../stores/useFarmOperationRecordStore';
+import { migrateOperationRecordsOnce } from '../services/migrateOperationRecords';
 import { COMMON_STATUS } from '../types/farm/common';
+import { showAlert } from '@/lib/dialogService';
 
 // ============================================
 // 操作记录来源类型
@@ -155,41 +156,47 @@ function generateRecordCode(): string {
 // Hook 返回类型
 // ============================================
 export interface UseOperationRecordsReturn {
-  // 操作记录列表
+  /** 服务端记录（已映射为 Hook 领域类型） */
   records: FarmOperationRecord[];
-  setRecords: React.Dispatch<React.SetStateAction<FarmOperationRecord[]>>;
+  /** 首次加载中 */
+  isLoading: boolean;
+  /** 加载失败信息（null 表示无错误） */
+  error: string | null;
 
-  // 添加操作记录（手动录入）
-  addRecord: (record: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'createdAt' | 'updatedAt'>) => FarmOperationRecord;
+  /** 重新从服务端拉取（任务状态变更后调用） */
+  refresh: () => Promise<void>;
 
-  // 添加任务来源的操作记录
-  addTaskRecord: (record: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => FarmOperationRecord;
+  /** 新增手动录入记录；失败返回 null 并弹窗提示 */
+  addRecord: (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'createdAt' | 'updatedAt'>) => Promise<FarmOperationRecord | null>;
 
-  // 添加临时任务来源的操作记录
-  addTempTaskRecord: (record: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => FarmOperationRecord;
+  /** 新增任务来源记录（同一任务聚合为父记录 + 子记录） */
+  addTaskRecord: (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => Promise<FarmOperationRecord | null>;
 
-  // 更新记录状态
-  updateRecordStatus: (id: string, status: string) => void;
+  /** 新增临时任务来源记录 */
+  addTempTaskRecord: (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => Promise<FarmOperationRecord | null>;
 
-  // 获取记录
+  /** 更新记录状态 */
+  updateRecordStatus: (id: string, status: string) => Promise<boolean>;
+
+  /** 按 id 取记录 */
   getRecord: (id: string) => FarmOperationRecord | undefined;
 
-  // 获取来源类型的记录
+  /** 按来源类型取记录 */
   getRecordsBySource: (sourceType: OperationSourceType) => FarmOperationRecord[];
 
-  // 获取关联任务的所有记录
+  /** 按任务 id 取记录 */
   getRecordsByTaskId: (taskId: string) => FarmOperationRecord[];
 
-  // 删除记录
-  deleteRecord: (id: string) => void;
+  /** 删除记录 */
+  deleteRecord: (id: string) => Promise<boolean>;
 
-  // 展开/折叠子记录
+  /** 展开/折叠子记录 */
   toggleChildren: (id: string) => void;
 
-  // 展开的记录ID集合
+  /** 已展开的记录 id 集合 */
   expandedIds: Set<string>;
 
-  // 根据筛选条件获取记录
+  /** 按条件过滤 */
   getFilteredRecords: (filters: {
     sourceType?: OperationSourceType;
     status?: string;
@@ -647,15 +654,72 @@ function generateDemoRecords(): FarmOperationRecord[] {
   return demoRecords;
 }
 
+/** Store 记录 → Hook 领域记录（补齐必填字段，避免组件层出现 undefined） */
+function toHookRecord(record: StoreOperationRecord): FarmOperationRecord {
+  return {
+    ...record,
+    sourceType: record.sourceType as OperationSourceType,
+    operationTypeName: record.operationTypeName ?? '',
+    status: record.status ?? COMMON_STATUS.PENDING,
+    greenhouseId: record.greenhouseId ?? '',
+    greenhouseName: record.greenhouseName ?? '',
+    cropName: record.cropName ?? '',
+    operatorId: record.operatorId ?? '',
+    operatorName: record.operatorName ?? '',
+    operationDate: record.operationDate ?? (record.createdAt ? record.createdAt.slice(0, 10) : ''),
+    children: (record.children ?? []) as FarmOperationRecordChild[],
+  };
+}
+
+/** 统一的写入失败上报（Fail Loud：不让失败悄无声息） */
+function reportWriteError(action: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  showAlert(`${action}失败：${message}`);
+}
+
 export function useOperationRecords(): UseOperationRecordsReturn {
-  // 从 localStorage 读取操作记录，演示数据作为默认值（清空后自动恢复）
-  const [records, setRecords] = useLocalStorage<FarmOperationRecord[]>(
-    'yuanxingtu_operationRecords',
-    generateDemoRecords()
-  );
+  const storeRecords = useFarmOperationRecordStore((s) => s.records);
+  const isLoading = useFarmOperationRecordStore((s) => s.isLoading);
+  const error = useFarmOperationRecordStore((s) => s.error);
+  const loadRecords = useFarmOperationRecordStore((s) => s.loadRecords);
+  const addRecordApi = useFarmOperationRecordStore((s) => s.addRecord);
+  const updateRecordApi = useFarmOperationRecordStore((s) => s.updateRecord);
+  const deleteRecordApi = useFarmOperationRecordStore((s) => s.deleteRecord);
 
   // 展开的记录ID集合
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // 挂载：先做一次性 localStorage 迁移，再从服务端加载（服务端是唯一数据源）
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await migrateOperationRecordsOnce();
+      } catch (migrationError) {
+        reportWriteError('迁移历史农事操作记录', migrationError);
+      }
+      if (cancelled) return;
+      try {
+        await loadRecords();
+      } catch {
+        // 错误已写入 store.error，由页面展示，不重复弹窗
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadRecords]);
+
+  // 重新拉取：任务验收/驳回后由页面调用
+  const refresh = useCallback(async () => {
+    try {
+      await loadRecords();
+    } catch {
+      // 错误已写入 store.error，由页面展示
+    }
+  }, [loadRecords]);
+
+  const records = useMemo(() => storeRecords.map(toHookRecord), [storeRecords]);
 
   // 切换展开/折叠
   const toggleChildren = useCallback((id: string) => {
@@ -671,46 +735,36 @@ export function useOperationRecords(): UseOperationRecordsReturn {
   }, []);
 
   // 添加操作记录（手动录入）
-  const addRecord = useCallback((recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'createdAt' | 'updatedAt'>): FarmOperationRecord => {
-    const now = new Date().toISOString();
-    const newRecord: FarmOperationRecord = {
-      ...recordData,
-      id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      recordCode: generateRecordCode(),
-      sourceType: 'manual',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setRecords(prev => [newRecord, ...prev]);
-    // 2026-06-04 V2.1 铁律改造：双写 Store（异步，失败不影响主流程）
-    void useFarmOperationRecordStore.getState().addRecord(newRecord as any);
-    return newRecord;
-  }, [setRecords]);
+  const addRecord = useCallback(async (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'createdAt' | 'updatedAt'>): Promise<FarmOperationRecord | null> => {
+    try {
+      const created = await addRecordApi({
+        ...recordData,
+        id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        recordCode: generateRecordCode(),
+        sourceType: 'manual',
+      });
+      return toHookRecord(created);
+    } catch (writeError) {
+      reportWriteError('新增农事操作记录', writeError);
+      return null;
+    }
+  }, [addRecordApi]);
 
   // 添加任务来源的操作记录
-  const addTaskRecord = useCallback((recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>): FarmOperationRecord => {
-    const now = new Date().toISOString();
-    const newRecord: FarmOperationRecord = {
-      ...recordData,
-      id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      recordCode: generateRecordCode(),
-      sourceType: 'task',
-      createdAt: now,
-      updatedAt: now,
-    };
+  const addTaskRecord = useCallback(async (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>): Promise<FarmOperationRecord | null> => {
+    try {
+      const now = new Date().toISOString();
+      const current = useFarmOperationRecordStore.getState().records;
+      const existing = recordData.sourceId
+        ? current.find((r) => r.sourceType === 'task' && r.sourceId === recordData.sourceId)
+        : undefined;
 
-    // 检查是否已存在该任务的主记录
-    const existingIndex = records.findIndex(r => r.sourceId === recordData.sourceId && r.sourceType === 'task');
-
-    if (existingIndex >= 0) {
-      // 更新主记录的children
-      setRecords(prev => {
-        const updated = [...prev];
-        const childRecord: FarmOperationRecordChild = {
-          id: newRecord.id,
-          recordCode: newRecord.recordCode,
-          operationType: recordData.operationType as 'accept' | 'progress' | 'complete' | 'reject' | 'accept_confirm' | 'create',
+      if (existing) {
+        // 已有主记录：把本次操作作为子记录追加，并同步进度/状态
+        const child: FarmOperationRecordChild = {
+          id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          recordCode: generateRecordCode(),
+          operationType: recordData.operationType as FarmOperationRecordChild['operationType'],
           operationTypeName: recordData.operationTypeName,
           operatorId: recordData.operatorId,
           operatorName: recordData.operatorName,
@@ -733,49 +787,55 @@ export function useOperationRecords(): UseOperationRecordsReturn {
           rejectReason: recordData.rejectReason,
           createdAt: now,
         };
-        updated[existingIndex] = {
-          ...updated[existingIndex],
+
+        const updated = await updateRecordApi(existing.id, {
           progress: recordData.progress,
           status: recordData.status,
-          children: [childRecord, ...(updated[existingIndex].children || [])],
-          updatedAt: now,
-        };
-        return updated;
-      });
-      return records[existingIndex];
-    } else {
+          children: [child, ...((existing.children ?? []) as FarmOperationRecordChild[])],
+        });
+        return toHookRecord(updated);
+      }
+
       // 新建主记录
-      setRecords(prev => [newRecord, ...prev]);
-      return newRecord;
+      const created = await addRecordApi({
+        ...recordData,
+        id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        recordCode: generateRecordCode(),
+        sourceType: 'task',
+      });
+      return toHookRecord(created);
+    } catch (writeError) {
+      reportWriteError('记录农事任务操作', writeError);
+      return null;
     }
-  }, [records, setRecords]);
+  }, [addRecordApi, updateRecordApi]);
 
   // 添加临时任务来源的操作记录
-  const addTempTaskRecord = useCallback((recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>): FarmOperationRecord => {
-    const now = new Date().toISOString();
-    const newRecord: FarmOperationRecord = {
-      ...recordData,
-      id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      recordCode: generateRecordCode(),
-      sourceType: 'tempTask',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setRecords(prev => [newRecord, ...prev]);
-    return newRecord;
-  }, [setRecords]);
+  const addTempTaskRecord = useCallback(async (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>): Promise<FarmOperationRecord | null> => {
+    try {
+      const created = await addRecordApi({
+        ...recordData,
+        id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        recordCode: generateRecordCode(),
+        sourceType: 'tempTask',
+      });
+      return toHookRecord(created);
+    } catch (writeError) {
+      reportWriteError('记录临时任务操作', writeError);
+      return null;
+    }
+  }, [addRecordApi]);
 
   // 更新记录状态
-  const updateRecordStatus = useCallback((id: string, status: string) => {
-    setRecords(prev => prev.map(record =>
-      record.id === id
-        ? { ...record, status, updatedAt: new Date().toISOString() }
-        : record
-    ));
-    // 2026-06-04 V2.1 铁律改造：双写 Store
-    void useFarmOperationRecordStore.getState().updateRecord(id, { status });
-  }, [setRecords]);
+  const updateRecordStatus = useCallback(async (id: string, status: string): Promise<boolean> => {
+    try {
+      await updateRecordApi(id, { status });
+      return true;
+    } catch (writeError) {
+      reportWriteError('更新操作记录状态', writeError);
+      return false;
+    }
+  }, [updateRecordApi]);
 
   // 获取记录
   const getRecord = useCallback((id: string) => {
@@ -793,11 +853,15 @@ export function useOperationRecords(): UseOperationRecordsReturn {
   }, [records]);
 
   // 删除记录
-  const deleteRecord = useCallback((id: string) => {
-    setRecords(prev => prev.filter(record => record.id !== id));
-    // 2026-06-04 V2.1 铁律改造：双写 Store
-    void useFarmOperationRecordStore.getState().deleteRecord(id);
-  }, [setRecords]);
+  const deleteRecord = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      await deleteRecordApi(id);
+      return true;
+    } catch (writeError) {
+      reportWriteError('删除农事操作记录', writeError);
+      return false;
+    }
+  }, [deleteRecordApi]);
 
   // 获取筛选后的记录
   const getFilteredRecords = useCallback((filters: {
@@ -823,7 +887,9 @@ export function useOperationRecords(): UseOperationRecordsReturn {
 
   return {
     records,
-    setRecords,
+    isLoading,
+    error,
+    refresh,
     addRecord,
     addTaskRecord,
     addTempTaskRecord,

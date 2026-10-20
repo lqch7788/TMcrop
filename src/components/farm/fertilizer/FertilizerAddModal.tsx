@@ -11,7 +11,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { TabsList, TabsTrigger } from '@/components/ui';
-import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore } from '@/stores';
+import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore, useFarmTaskStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { FertilizerPoolEditor } from './FertilizerPoolEditor';
@@ -41,6 +41,23 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
 
   const [form, setForm] = useState({ fertilizeTime: '', operatorName: '', description: '', greenhouseName: '' });
   const [fertilizerCode, setFertilizerCode] = useState('');
+  // P0-3：关联农事任务（可选）
+  const farmTasks = useFarmTaskStore((s) => s.tasks);
+  const fetchFarmTasks = useFarmTaskStore((s) => s.fetchTasks);
+  const [farmTaskId, setFarmTaskId] = useState('');
+  // P1-1 合规生产档案
+  const [complianceSource, setComplianceSource] = useState('');
+  const [stopUseDate, setStopUseDate] = useState('');
+  const fertilizerTasks = useMemo(
+    () => farmTasks.filter((t) =>
+      t.type === 'fertilization' || String(t.type || '').includes('施肥') || String(t.type || '').includes('fertiliz')
+    ),
+    [farmTasks],
+  );
+
+  useEffect(() => {
+    if (farmTasks.length === 0) void fetchFarmTasks();
+  }, [farmTasks.length, fetchFarmTasks]);
   const [selectedAreas, setSelectedAreas] = useState<SelectedArea[]>([]);
   const [fertilizerPool, setFertilizerPool] = useState<FertilizerPoolItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +212,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
 
       await store.createItem({
         fertilizerCode: fertilizerCode || undefined,
+        farmTaskId: farmTaskId || undefined,
+        // P1-1 合规生产档案
+        source: complianceSource || undefined,
+        stopUseDate: stopUseDate || undefined,
         fertilizeTime: form.fertilizeTime,
         cropName: primaryArea.cropName,
         cropNames: allCropNames.length > 0 ? JSON.stringify(allCropNames) : undefined,
@@ -266,6 +287,49 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
                 <Input type="text" value={form.operatorName} onChange={(e) => setForm({...form, operatorName: e.target.value})} placeholder="操作员姓名" className="h-10 text-sm" />
               )}
             </div>
+          </div>
+
+          {/* P1-1 合规生产档案：投入品来源 / 停用日期（《农产品质量安全法》第 27 条） */}
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <Label className="text-gray-900">投入品来源 <span className="text-gray-500 text-xs">（供应商/自产等）</span></Label>
+              <Input
+                type="text"
+                value={complianceSource}
+                onChange={(e) => setComplianceSource(e.target.value)}
+                placeholder="例如：XX 农资公司 / 自产"
+                className="h-10 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-900">停用日期 <span className="text-gray-500 text-xs">（停用期）</span></Label>
+              <Input
+                type="date"
+                value={stopUseDate}
+                onChange={(e) => setStopUseDate(e.target.value)}
+                className="h-10 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* P0-3：关联农事任务（可选） */}
+          <div className="mt-3">
+            <Label className="text-gray-900">关联农事任务（可选）</Label>
+            <select
+              value={farmTaskId}
+              onChange={(e) => setFarmTaskId(e.target.value)}
+              className="w-full h-10 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            >
+              <option value="">不关联</option>
+              {fertilizerTasks.slice(0, 200).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.taskCode || t.id} · {t.title || ''}{t.status === 'completed' ? '（已完成）' : ''}
+                </option>
+              ))}
+            </select>
+            {fertilizerTasks.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">暂无可关联的施肥任务</p>
+            )}
           </div>
         </div>
 

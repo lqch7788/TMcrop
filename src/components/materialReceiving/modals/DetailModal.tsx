@@ -114,6 +114,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
           <Label className="text-sm text-gray-500">生产计划批次号</Label>
           <p className="font-semibold text-gray-900">{(record as any).productionBatchCode || '-'}</p>
         </div>
+        {/* P0-4：关联农事任务 */}
+        <div>
+          <Label className="text-sm text-gray-500">关联农事任务</Label>
+          <p className="font-semibold text-gray-900 font-mono text-xs">
+            {(record as any).taskCode || (record as any).taskId || '-'}
+          </p>
+        </div>
         {/* 2026-09-26 批次四：预计领用日期 + 优先级 */}
         <div>
           <Label className="text-sm text-gray-500">预计领用日期</Label>

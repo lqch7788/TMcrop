@@ -214,6 +214,79 @@ function aggregateDeductionsBySpecUnit(deductions: FertilizerDeduction[]): Map<s
  * 在事务内校验 + 扣减一批肥料库存
  * - 任一失败 → 抛 BusinessError，由 service 层外层 ROLLBACK
  */
+/**
+ * P0-3：从 pesticide_list 提取药剂库存扣减项（按 pesticide_code 聚合）
+ * - 只处理有 pesticideCode 且 dosage > 0 的条目
+ * - 历史数据可能没有 pesticideCode，直接跳过（不猜测）
+ */
+function extractPesticideDeductions(raw: unknown): Array<{ code: string; qty: number; name: string }> {
+  let list: any[] = [];
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = [];
+    }
+  } else if (Array.isArray(raw)) {
+    list = raw;
+  }
+
+  const map = new Map<string, { qty: number; name: string }>();
+  for (const it of list) {
+    const code = String(it?.pesticideCode ?? it?.pesticide_code ?? '').trim();
+    const qtyRaw = it?.dosage ?? it?.qty;
+    if (!code || qtyRaw == null || qtyRaw === '') continue;
+    const qty = Number(qtyRaw);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    const prev = map.get(code);
+    map.set(code, {
+      qty: (prev?.qty ?? 0) + qty,
+      name: String(it?.name ?? it?.pesticideName ?? code),
+    });
+  }
+  return [...map.entries()].map(([code, v]) => ({ code, qty: v.qty, name: v.name }));
+}
+
+/** P0-3：校验并扣减药剂库存（库存不足抛业务错误，不静默） */
+function checkAndDecreasePesticideStock(
+  db: any,
+  deductions: Array<{ code: string; qty: number; name: string }>,
+): void {
+  for (const d of deductions) {
+    const row = db.exec(
+      'SELECT pesticide_name, stock_quantity, stock_unit FROM pesticide_specs WHERE pesticide_code = ?',
+      [d.code]
+    );
+    const values = row?.[0]?.values?.[0];
+    if (!values) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.FERTILIZER_SPEC_NOT_FOUND,
+        `药剂规格不存在：${d.name}（编码 ${d.code}）`,
+        404,
+      );
+    }
+    const stock = Number(values[1] ?? 0);
+    const unit = String(values[2] ?? '');
+    if (stock < d.qty) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.INSUFFICIENT_STOCK,
+        `${values[0] || d.name} 库存不足：当前 ${stock}${unit}，需 ${d.qty}${unit}`,
+      );
+    }
+  }
+  for (const d of deductions) {
+    adjustPesticideStock(db, d.code, -d.qty);
+  }
+}
+
+/** P0-3：恢复药剂库存（删除/编辑下调时用） */
+function restorePesticideStock(db: any, deductions: Array<{ code: string; qty: number }>): void {
+  for (const d of deductions) {
+    adjustPesticideStock(db, d.code, d.qty);
+  }
+}
+
 function checkAndDecreaseStock(deductions: FertilizerDeduction[], now: string): void {
   for (const d of deductions) {
     const spec: any = fertilizerRepository.findSpecById(d.specId);
@@ -291,6 +364,10 @@ function increaseStock(deductions: FertilizerDeduction[], now: string): void {
  */
 const createRecordSchema = z.object({
   recordCode: z.string().nullish(),
+  farmTaskId: z.string().nullish(),
+  // P1-1 合规生产档案：投入品来源 / 停用日期
+  source: z.string().nullish(),
+  stopUseDate: z.string().nullish(),
   sprayTime: z.string().min(1, '防治时间为必填'),
   operatorId: z.string().nullish(),
   operatorName: z.string().nullish(),
@@ -388,6 +465,9 @@ export class PesticideService {
     const leafItems = parseLeafFertilizerList(rawLeafList);
     const deductions = aggregateDeductions(extractDeductions(leafItems));
 
+    // P0-3：手动新增也扣减药剂库存（此前仅 daily_record 同步路径扣减，手动记录不扣库存）
+    const pesticideDeductions = extractPesticideDeductions(data.pesticideList);
+
     const db = getDatabase();
     const now = nowLocalTimestamp();
     const id = `pr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -418,6 +498,11 @@ export class PesticideService {
         checkAndDecreaseStock(deductions, now);
       }
 
+      // 1.1) P0-3：校验 + 扣减药剂库存
+      if (pesticideDeductions.length > 0) {
+        checkAndDecreasePesticideStock(db, pesticideDeductions);
+      }
+
       // 2) INSERT 防治记录（含 UNIQUE 重试：防并发同名 record_code 冲突）
       // 注意：库存扣减已完成，所以重试时不能再扣库存（已 ROLLBACK 后重新跑）
       let insertedRecord: PesticideRecord | null = null;
@@ -426,6 +511,9 @@ export class PesticideService {
         const record: PesticideRecord = {
           id,
           record_code: currentRecordCode,
+          farm_task_id: data.farmTaskId ?? null,
+          source: (data as any).source ?? null,
+          stop_use_date: (data as any).stopUseDate ?? null,
           spray_time: data.sprayTime,
           operator_id: data.operatorId ?? null,
           operator_name: data.operatorName ?? null,
@@ -540,6 +628,16 @@ export class PesticideService {
     const oldMap = aggregateDeductionsBySpecUnit(oldDeductions);
     const newMap = aggregateDeductionsBySpecUnit(newDeductions);
 
+    // P0-3：药剂库存差值（与叶面肥差值同事务处理）
+    const rawNewPesticideList = (updates as any).pesticideList ?? (updates as any).pesticide_list;
+    if (rawNewPesticideList !== undefined && typeof rawNewPesticideList !== 'string') {
+      (updates as any).pesticideList = rawNewPesticideList === null ? null : JSON.stringify(rawNewPesticideList);
+    }
+    const oldPesticideDeductions = extractPesticideDeductions(existingRow.pesticideList);
+    const newPesticideDeductions = extractPesticideDeductions(
+      rawNewPesticideList !== undefined ? (updates as any).pesticideList : existingRow.pesticideList
+    );
+
     const db = getDatabase();
     const now = nowLocalTimestamp();
 
@@ -581,6 +679,25 @@ export class PesticideService {
           fertilizerRepository.increaseStock(specId, -delta, now);
         }
       }
+
+      // P0-3：药剂库存差值调整（按 pesticide_code）
+      const oldPesticideMap = new Map(oldPesticideDeductions.map((d) => [d.code, d]));
+      const newPesticideMap = new Map(newPesticideDeductions.map((d) => [d.code, d]));
+      const allPesticideCodes = new Set([...oldPesticideMap.keys(), ...newPesticideMap.keys()]);
+      const toDecrease: Array<{ code: string; qty: number; name: string }> = [];
+      const toIncrease: Array<{ code: string; qty: number }> = [];
+      for (const code of allPesticideCodes) {
+        const oldQty = oldPesticideMap.get(code)?.qty ?? 0;
+        const newQty = newPesticideMap.get(code)?.qty ?? 0;
+        const delta = newQty - oldQty;
+        if (delta > 0) {
+          toDecrease.push({ code, qty: delta, name: newPesticideMap.get(code)?.name ?? code });
+        } else if (delta < 0) {
+          toIncrease.push({ code, qty: -delta });
+        }
+      }
+      if (toDecrease.length > 0) checkAndDecreasePesticideStock(db, toDecrease);
+      if (toIncrease.length > 0) restorePesticideStock(db, toIncrease);
 
       // 同步顶层兼容字段（取新池首条）
       if (newRaw !== undefined) {
@@ -640,6 +757,11 @@ export class PesticideService {
       const oldRows = getOldPesticideSync(getDatabase(), sourceDailyRecordId);
       for (const r of oldRows) {
         if (r.code && r.qty > 0) pesticideRestores.push(r);
+      }
+    } else {
+      // P0-3：手动记录在 apply 时扣了药剂库存，删除时对称恢复（否则库存越删越多）
+      for (const d of extractPesticideDeductions((existing as unknown as Record<string, any>).pesticideList)) {
+        pesticideRestores.push({ code: d.code, qty: d.qty });
       }
     }
 

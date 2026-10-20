@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import { AreaMultiSelectPicker } from '@/components/common/AreaMultiSelectPicker';
-import { useWarehouseMaterialStore } from '@/stores';
+import { useWarehouseMaterialStore, useFarmTaskStore } from '@/stores';
 import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '@/types/materialReceiving';
 import { showAlert } from '@/lib/dialogService';
 
@@ -51,6 +51,9 @@ interface EditModalProps {
     status: string;
     /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 */
     productionBatchCode: string;
+    /** P0-4：关联农事任务 */
+    taskId: string;
+    taskCode: string;
     expectedDate: string;
     priority: string;
     materials: MaterialItem[];
@@ -64,6 +67,9 @@ interface EditModalProps {
     reviewer: string;
     status: string;
     productionBatchCode: string;
+    /** P0-4：关联农事任务 */
+    taskId: string;
+    taskCode: string;
     expectedDate: string;
     priority: string;
     materials: MaterialItem[];
@@ -500,6 +506,9 @@ interface AddModalProps {
     reviewer: string;
     /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 + 附件 */
     productionBatchCode: string;
+    /** P0-4：关联农事任务 */
+    taskId: string;
+    taskCode: string;
     expectedDate: string;
     priority: string;
     attachments: Array<{ name: string; dataUrl: string }>;
@@ -514,6 +523,9 @@ interface AddModalProps {
     plantAreas: SelectedArea[];
     reviewer: string;
     productionBatchCode: string;
+    /** P0-4：关联农事任务 */
+    taskId: string;
+    taskCode: string;
     expectedDate: string;
     priority: string;
     attachments: Array<{ name: string; dataUrl: string }>;
@@ -566,6 +578,13 @@ export function AddModal({
 }: AddModalProps) {
   // 2026-09-27 P2-10：模板名输入态
   const [templateName, setTemplateName] = useState('');
+
+  // P0-4：关联农事任务下拉数据
+  const farmTasks = useFarmTaskStore((s) => s.tasks);
+  const fetchFarmTasks = useFarmTaskStore((s) => s.fetchTasks);
+  useEffect(() => {
+    if (farmTasks.length === 0) void fetchFarmTasks();
+  }, [farmTasks.length, fetchFarmTasks]);
   // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
   useEffect(() => {
     if (!addForm.materials?.length) return;
@@ -725,6 +744,30 @@ export function AddModal({
             <option key={p.batchCode} value={p.batchCode}>{p.cropName} · {p.areaName}</option>
           ))}
         </datalist>
+      </div>
+      {/* P0-4：关联农事任务（可选） */}
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">关联农事任务</Label>
+        <Select
+          value={(addForm as any).taskId || '__none__'}
+          onValueChange={(v) => {
+            const id = v === '__none__' ? '' : v;
+            const task = farmTasks.find((t) => t.id === id);
+            onFormChange({ ...addForm, taskId: id, taskCode: task?.taskCode || '' } as any);
+          }}
+        >
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm">
+            <SelectValue placeholder="不关联" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">不关联</SelectItem>
+            {farmTasks.slice(0, 200).map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.taskCode || t.id} · {t.title || ''}{t.status === 'completed' ? '（已完成）' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">预计领用日期</Label>

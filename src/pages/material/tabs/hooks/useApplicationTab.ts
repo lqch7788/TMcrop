@@ -52,6 +52,9 @@ const getDefaultAddForm = () => ({
   plantAreas: [] as SelectedArea[],
   reviewer: '',
   productionBatchCode: '',
+  // P0-4：关联农事任务
+  taskId: '',
+  taskCode: '',
   expectedDate: '',
   priority: 'medium' as string,
   attachments: [] as Array<{ name: string; dataUrl: string }>,
@@ -1238,6 +1241,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
       reviewer: reviewerName,
       // 2026-09-26 改进批次四：生产批次号/预计日期/优先级/附件
       productionBatchCode: addForm.productionBatchCode || '',
+      // P0-4：关联农事任务
+      taskId: (addForm as any).taskId || '',
+      taskCode: (addForm as any).taskCode || '',
       expectedDate: addForm.expectedDate || '',
       priority: addForm.priority || 'medium',
       attachments: addForm.attachments || [],

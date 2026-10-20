@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Search, Plus, Download, Calendar, Eye, Edit, Trash2, TrendingUp, TrendingDown, Minus, CheckCircle, Clock } from 'lucide-react'
 
+/**
+ * 长势分析页
+ *
+ * ⚠️ 2026-10-20 P0-9 标注：以下 `analyses` 为**硬编码演示数据，无 API 调用**。
+ *   真实长势数据来源：`plantings.growth_status`（83/86 为空）、`daily_records` 环境参数、
+ *   `/api/summary/yield-stats` 产量统计。长势记录功能列入 P2「农事计划与物候期」批次。
+ */
 const GrowthAnalysis = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -80,6 +87,10 @@ const GrowthAnalysis = () => {
 
   return (
     <div className="pt-0 px-6 pb-6">
+      {/* 2026-10-20 P0-9：明示当前为演示数据，避免被误当作真实长势记录 */}
+      <div className="bg-amber-50 border border-amber-300 text-amber-900 text-sm rounded-lg px-4 py-3 mb-4">
+        ⚠️ 当前展示的是<b>演示数据</b>（硬编码 12 条，无后端接口）。真实长势数据请看「种植管理 → 每日记录」与「生产汇总表 → 经营分析」。
+      </div>
       {/* 页面标题 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
         <div className="flex items-center justify-between">

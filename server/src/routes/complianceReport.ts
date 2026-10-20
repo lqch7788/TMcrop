@@ -41,9 +41,21 @@ router.get('/:batchCode', async (req: Request, res: Response): Promise<void> => 
       sections: {},
     };
 
+    // 2026-10-20 P0-10：各段查询失败不再静默吞掉，统一收集到 sectionsErrors 并随响应返回
+    const sectionsErrors: Array<{ section: string; message: string }> = [];
+    const runSection = (section: string, fn: () => void) => {
+      try {
+        fn();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[compliance-report] 段「${section}」查询失败:`, message);
+        sectionsErrors.push({ section, message });
+      }
+    };
+
     // 1. 批次基本信息
-    try {
-      const r = db.exec('SELECT * FROM plantings WHERE batch_code = ? LIMIT 1', [batchCode]);
+    runSection('batchInfo', () => {
+      const r = db.exec('SELECT * FROM plantings WHERE planting_code = ? LIMIT 1', [batchCode]);
       if (r.length > 0 && r[0].values.length > 0) {
         const cols = r[0].columns;
         const obj: Record<string, unknown> = {};
@@ -52,27 +64,23 @@ router.get('/:batchCode', async (req: Request, res: Response): Promise<void> => 
         });
         (report.sections as Record<string, unknown>).batchInfo = obj;
       }
-    } catch {
-      // 忽略
-    }
+    });
 
     // 2. 农事任务
-    try {
+    runSection('tasks', () => {
       const r = db.exec(
         `SELECT id, task_code, task_title, task_type, status, progress_pct,
-                plan_date, completion_date, assignee_name
+                plan_date, completed_at, assignee_name, actual_hours, actual_area
          FROM farm_tasks WHERE batch_code = ?
          ORDER BY plan_date DESC`,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).tasks = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
+    });
 
     // 3. 作业流水（含用药记录的 pesticide_code）
-    try {
+    runSection('operations', () => {
       const r = db.exec(
         `SELECT id, operation_date, operation_type, operation_type_name,
                 operator_name, status, workload, unit, workers, materials
@@ -82,12 +90,10 @@ router.get('/:batchCode', async (req: Request, res: Response): Promise<void> => 
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).operations = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
+    });
 
     // 4. 采收记录
-    try {
+    runSection('harvests', () => {
       const r = db.exec(
         `SELECT id, harvest_date, harvest_quantity, unit, quality_grade,
                 harvester_names, buyer_name
@@ -97,39 +103,42 @@ router.get('/:batchCode', async (req: Request, res: Response): Promise<void> => 
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).harvests = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
+    });
 
     // 5. 巡查与问题
-    try {
+    // 2026-10-20 P0-10 列名修正：
+    //   inspections 实列 = check_date / issue_text（原查 inspection_date / problem_description 不存在）
+    //   problems 无 batch_code 列 —— 通过 source_task_id 关联同批次的任务
+    runSection('inspections', () => {
       const r = db.exec(
-        `SELECT id, inspection_date, inspector_name, status, problem_description
+        `SELECT id, record_code, check_date, check_time, inspector_name,
+                status, check_result, issue_severity, issue_text, crop_name, batch_code
          FROM inspections WHERE batch_code = ?
-         ORDER BY inspection_date DESC`,
+         ORDER BY check_date DESC`,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).inspections = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
-    try {
+    });
+    runSection('problems', () => {
       const r = db.exec(
-        `SELECT id, problem_type, severity, status, description,
-                rectification_progress, recheck_result, created_at
-         FROM problems WHERE batch_code = ?
-         ORDER BY created_at DESC`,
+        `SELECT p.id, p.problem_code, p.problem_type, p.status, p.description,
+                p.priority, p.reporter_name, p.assignee_name, p.handle_result,
+                p.rectification_progress, p.recheck_result, p.recheck_at,
+                p.recurrence_count, p.create_time
+         FROM problems p
+         WHERE p.source_task_id IN (
+           SELECT id FROM farm_tasks WHERE batch_code = ?
+         )
+         ORDER BY p.create_time DESC`,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).problems = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
+    });
 
     // 6. 每日记录
-    try {
+    runSection('dailyRecords', () => {
       const r = db.exec(
         `SELECT id, record_date, data
          FROM daily_records WHERE related_type = 'planting' AND related_code = ?
@@ -138,13 +147,94 @@ router.get('/:batchCode', async (req: Request, res: Response): Promise<void> => 
         [batchCode] as any
       );
       (report.sections as Record<string, unknown>).dailyRecords = rowsToObjects(r);
-    } catch {
-      // ignore
-    }
+    });
+
+    // 6.5 P1-1：合规生产档案（《农产品质量安全法》第 27 条三类内容）
+    //   ① 投入品：名称/来源/用法/用量/使用与停用日期
+    //   ② 病虫害发生与防治情况
+    //   ③ 收获日期
+    //   并按「记录保存 ≥2 年」给出 retentionUntil
+    runSection('productionRecord', () => {
+      const fertilizers = rowsToObjects(db.exec(
+        `SELECT id, fertilizer_code, fertilizer_name, fertilizer_type, dilution_ratio,
+                quantity, unit, source, fertilize_time AS use_date, stop_use_date,
+                greenhouse_name, area_name, crop_name, operator_name
+         FROM fertilizer_records
+         WHERE planting_code = ?
+         ORDER BY fertilize_time ASC`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [batchCode] as any
+      ));
+
+      const pesticides = rowsToObjects(db.exec(
+        `SELECT id, record_code, pesticide_name, pesticide_type, dosage, dosage_unit,
+                dilution_ratio, target_pest, application_method,
+                source, spray_time AS use_date, stop_use_date,
+                greenhouse_name, crop_name, operator_name
+         FROM pesticide_records
+         WHERE planting_code = ?
+         ORDER BY spray_time ASC`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [batchCode] as any
+      ));
+
+      const pestOccurrences = rowsToObjects(db.exec(
+        `SELECT p.id, p.problem_code, p.problem_type, p.issue_text, p.description,
+                p.issue_severity, p.check_date, p.status, p.handle_result, p.handle_date
+         FROM problems p
+         WHERE p.source_task_id IN (SELECT id FROM farm_tasks WHERE batch_code = ?)
+            OR p.source_id IN (SELECT id FROM farm_tasks WHERE batch_code = ?)
+         ORDER BY p.check_date ASC`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [batchCode, batchCode] as any
+      ));
+
+      const harvests = rowsToObjects(db.exec(
+        `SELECT id, harvest_date, harvest_quantity, unit, quality_grade,
+                harvester_names, buyer_name
+         FROM harvest_records WHERE batch_code = ?
+         ORDER BY harvest_date ASC`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [batchCode] as any
+      ));
+
+      // 留存期 = 最早一条记录日期 + 2 年
+      const allDates = [
+        ...fertilizers.map((r: Record<string, unknown>) => String(r.useDate ?? r.use_date ?? '')),
+        ...pesticides.map((r: Record<string, unknown>) => String(r.useDate ?? r.use_date ?? '')),
+        ...harvests.map((r: Record<string, unknown>) => String(r.harvestDate ?? r.harvest_date ?? '')),
+      ].filter((d) => /^\d{4}-\d{2}-\d{2}/.test(d)).sort();
+
+      let retentionUntil: string | null = null;
+      if (allDates.length > 0) {
+        const first = new Date(allDates[0]);
+        if (!Number.isNaN(first.getTime())) {
+          first.setFullYear(first.getFullYear() + 2);
+          retentionUntil = first.toISOString().slice(0, 10);
+        }
+      }
+
+      (report.sections as Record<string, unknown>).productionRecord = {
+        // ① 投入品使用
+        fertilizerUsage: fertilizers,
+        pesticideUsage: pesticides,
+        // ② 病虫害发生与防治
+        pestOccurrences,
+        // ③ 收获日期
+        harvests,
+        retentionUntil,
+        retentionNote: '《农产品质量安全法》第 27 条：生产记录应保存不少于 2 年，禁止伪造、变造',
+      };
+    });
 
     // 7. P0-S 合规校验摘要（计算而非读取 view）
-    (report.sections as Record<string, unknown>).complianceSummary =
-      computeComplianceSummary(db, batchCode);
+    runSection('complianceSummary', () => {
+      (report.sections as Record<string, unknown>).complianceSummary =
+        computeComplianceSummary(db, batchCode);
+    });
+
+    // 8. P0-10：把失败的段如实告诉调用方（此前被 catch 吞掉，报告永远"看起来正常"）
+    report.sectionsErrors = sectionsErrors;
 
     res.json({ success: true, data: report });
   } catch (err: unknown) {
@@ -173,11 +263,15 @@ router.get('/:batchCode/download', async (req: Request, res: Response): Promise<
     };
 
     // 简化：只生成包含基础信息的报告
+    // 2026-10-20 P0-10：失败不再静默吞掉
     try {
-      const r = db.exec('SELECT batch_code, crop_name, crop_variety, planting_date, expected_harvest_date FROM plantings WHERE batch_code = ?', [batchCode]);
+      const r = db.exec('SELECT planting_code AS batch_code, crop_name, crop_variety, planting_date, expected_harvest_date FROM plantings WHERE planting_code = ?', [batchCode]);
       (report.sections as Record<string, unknown>).batchInfo = rowsToObjects(r);
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[compliance-report] 下载端点批次信息查询失败:', message);
+      res.status(500).json({ success: false, error: `生成报告失败：${message}` });
+      return;
     }
 
     if (format === 'csv') {
@@ -301,7 +395,7 @@ function computeComplianceSummary(
 
     // 获取批次预期采收日
     const harvestR = db.exec(
-      `SELECT expected_harvest_date FROM plantings WHERE batch_code = ? LIMIT 1`,
+      `SELECT expected_harvest_date FROM plantings WHERE planting_code = ? LIMIT 1`,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [batchCode] as any
     );

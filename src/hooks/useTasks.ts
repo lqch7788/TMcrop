@@ -679,7 +679,7 @@ export interface UseTasksReturn {
   // 验收通过
   acceptCompletion: (id: string, comments?: string) => void;
   /** 2026-10-11：acceptCompletion 的别名（AgricultureRecordPage 按该名调用，语义一致） */
-  acceptTaskCompletion: (id: string, comments?: string) => void;
+  acceptTaskCompletion: (id: string, comments?: string, actualArea?: number) => void;
 
   // 验收驳回（最多2次）
   rejectForRework: (id: string, reason: string) => void;
@@ -856,6 +856,10 @@ export function useTasks(): UseTasksReturn {
       // 补充 CreateTaskModal 传入但之前缺失的字段
       batchId: (taskData as Task).batchId || '',
       batchCode: (taskData as Task).batchCode || '',
+      // P0-5：种植实例 / 生产计划关联
+      plantingId: (taskData as any).plantingId || '',
+      productionPlanId: (taskData as any).productionPlanId || '',
+      productionPlanCode: (taskData as any).productionPlanCode || '',
       description: (taskData as Task).description || '',
       remarks: (taskData as Task).remarks || '',
       field: (taskData as Task).field || '',
@@ -1310,7 +1314,7 @@ export function useTasks(): UseTasksReturn {
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 验收通过
-  const acceptCompletion = useCallback((id: string, comments?: string) => {
+  const acceptCompletion = useCallback((id: string, comments?: string, actualArea?: number) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     if (!validateTransition(task, 'completed')) { console.error(`[状态机] 非法转换: ${task.status} → completed, task=${id}`); return; }
@@ -1344,6 +1348,8 @@ export function useTasks(): UseTasksReturn {
         operator_id: me?.oid || me?.username || task.assignerId || '',
         operator_name: myName || task.assignerName || '',
         comments: comments || '',
+        // P0-8：作业面积（亩）→ 亩均成本
+        ...(actualArea !== undefined && actualArea !== null ? { actual_area: actualArea } : {}),
       });
     }, 'acceptCompletion');
 

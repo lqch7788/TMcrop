@@ -257,6 +257,11 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                       <span className="text-xs text-gray-500">操作员</span>
                       <span className="text-sm text-gray-900">{record.operatorName || '-'}</span>
                     </div>
+                    {/* P0-3：关联农事任务 */}
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">关联农事任务</span>
+                      <span className="text-sm font-mono text-gray-900">{record.farmTaskId || '-'}</span>
+                    </div>
                   </div>
                 </div>
 

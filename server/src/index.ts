@@ -342,6 +342,11 @@ async function start() {
       const { fixSchemaColumns } = await import('./db/fixSchemaColumns');
       const result = fixSchemaColumns();
       console.log(`[fixSchemaColumns] 启动补齐：新增 ${result.addedColumns} 列，新增 ${result.addedIndexes} 索引`);
+      // 2026-10-20：纯 ALTER/CREATE INDEX 只改内存库，必须显式落盘，
+      //   否则依赖后续回填顺带 saveDatabase，回填无工作时新列重启即失
+      if (result.addedColumns > 0 || result.addedIndexes > 0) {
+        saveDatabase();
+      }
     } catch (e: any) {
       console.warn('[fixSchemaColumns] 启动补齐失败（不影响主流程）:', e?.message || e);
     }

@@ -201,10 +201,106 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     // 此前这两列不存在，联动 UPDATE 直接 SQL 报错，被"幽灵成功"掩盖）
     ['approval_code', 'TEXT'],
     ['approved_at', 'TEXT'],
+    // P0-5：任务 ↔ 种植实例 / 生产计划
+    ['planting_id', 'TEXT'],
+    ['production_plan_id', 'TEXT'],
+    ['production_plan_code', 'TEXT'],
+    // P0-8：实际作业面积（亩）
+    ['actual_area', 'REAL', '0'],
   ];
   for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
   }
+
+  // ============ farm_operation_records（P0-2 任务↔作业记录关联）============
+  // 客户端早先写入的父记录只有 source_id；本列用于后端按任务直连查询
+  addedColumns += safeAddColumn(db, 'farm_operation_records', 'task_id', 'TEXT') ? 1 : 0;
+
+  // ============ pesticide_records（P0-3 用药记录↔农事任务）============
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'farm_task_id', 'TEXT') ? 1 : 0;
+
+  // ============ material_requests / material_executes（P0-4 领料↔农事任务）============
+  addedColumns += safeAddColumn(db, 'material_requests', 'task_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'material_requests', 'task_code', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'material_executes', 'task_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'material_executes', 'task_code', 'TEXT') ? 1 : 0;
+
+  // ============ labor_records（P0-8 工时回链任务）============
+  addedColumns += safeAddColumn(db, 'labor_records', 'task_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'labor_records', 'task_code', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'labor_records', 'area', 'REAL', '0') ? 1 : 0;
+
+  // ============ P1-2 记录不可静默修改：软删除留痕 ============
+  // 《农产品质量安全法》要求生产记录可追溯、不可事后静默删除
+  addedColumns += safeAddColumn(db, 'farm_operation_records', 'deleted_at', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'farm_operation_records', 'deleted_by', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'farm_operation_records', 'delete_reason', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'fertilizer_records', 'deleted_at', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'fertilizer_records', 'deleted_by', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'fertilizer_records', 'delete_reason', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'deleted_at', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'deleted_by', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'delete_reason', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'harvest_records', 'deleted_by', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'harvest_records', 'delete_reason', 'TEXT') ? 1 : 0;
+
+  // ============ P1-3 承诺达标合格证 ============
+  // 《农产品质量安全承诺达标合格证管理办法》（2026-02-01 施行）
+  // 第 8 条按生产批次开具；第 14 条内容项；第 21 条「同一批次」定义；开具记录留存 ≥6 个月
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS compliance_certificates (
+        id TEXT PRIMARY KEY,
+        certificate_no TEXT NOT NULL UNIQUE,
+        batch_code TEXT NOT NULL,
+        product_name TEXT NOT NULL,
+        quantity REAL DEFAULT 0,
+        unit TEXT,
+        origin TEXT,
+        harvest_date TEXT,
+        cert_type TEXT DEFAULT 'commitment',
+        commitment TEXT,
+        basis TEXT,
+        issuer_name TEXT,
+        issuer_contact TEXT,
+        issued_at TEXT NOT NULL,
+        qr_content TEXT,
+        status TEXT DEFAULT 'active',
+        voided_at TEXT,
+        voided_by TEXT,
+        void_reason TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    safeCreateIndex(db, 'idx_compliance_cert_batch',
+      `CREATE INDEX IF NOT EXISTS idx_compliance_cert_batch ON compliance_certificates(batch_code)`);
+    addedIndexes += 1;
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS compliance_certificate_items (
+        id TEXT PRIMARY KEY,
+        certificate_id TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        quantity REAL DEFAULT 0,
+        unit TEXT,
+        grade TEXT,
+        FOREIGN KEY (certificate_id) REFERENCES compliance_certificates(id) ON DELETE CASCADE
+      )
+    `);
+    safeCreateIndex(db, 'idx_compliance_cert_items',
+      `CREATE INDEX IF NOT EXISTS idx_compliance_cert_items ON compliance_certificate_items(certificate_id)`);
+    addedIndexes += 1;
+  } catch (e: any) {
+    seedLog.skip('• 合格证表创建失败:', e?.message || e);
+  }
+
+  // ============ 投入品记录（P1-1 合规生产档案）============
+  // 《农产品质量安全法》第 27 条：生产记录须含投入品的名称、来源、用法、用量、使用与停用日期
+  addedColumns += safeAddColumn(db, 'fertilizer_records', 'source', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'fertilizer_records', 'stop_use_date', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'source', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'pesticide_records', 'stop_use_date', 'TEXT') ? 1 : 0;
 
   // 2026-09-19：上面的 *_actual_hours 索引（原裸 SQL 文件里创建），同步进启动通道
   safeCreateIndex(db, 'idx_ft_actual_hours',
@@ -218,6 +314,42 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     'idx_seed_sources_source_code_active',
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_seed_sources_source_code_active
      ON seed_sources(source_code) WHERE deleted_at IS NULL`
+  );
+  addedIndexes += 1;
+
+  // P0-2：按任务查作业记录（任务详情/验收联动）
+  safeCreateIndex(db,
+    'idx_farm_op_records_task',
+    `CREATE INDEX IF NOT EXISTS idx_farm_op_records_task
+     ON farm_operation_records(task_id, source_type)`
+  );
+  addedIndexes += 1;
+
+  // P0-3：按任务查用药记录
+  safeCreateIndex(db,
+    'idx_pesticide_records_task',
+    `CREATE INDEX IF NOT EXISTS idx_pesticide_records_task
+     ON pesticide_records(farm_task_id)`
+  );
+  addedIndexes += 1;
+
+  // P0-5：按种植实例/生产计划反查任务
+  safeCreateIndex(db, 'idx_farm_tasks_planting',
+    `CREATE INDEX IF NOT EXISTS idx_farm_tasks_planting ON farm_tasks(planting_id)`);
+  addedIndexes += 1;
+  safeCreateIndex(db, 'idx_farm_tasks_plan',
+    `CREATE INDEX IF NOT EXISTS idx_farm_tasks_plan ON farm_tasks(production_plan_id)`);
+  addedIndexes += 1;
+
+  // P0-4：按任务查领料/出库单
+  safeCreateIndex(db,
+    'idx_material_requests_task',
+    `CREATE INDEX IF NOT EXISTS idx_material_requests_task ON material_requests(task_id)`
+  );
+  addedIndexes += 1;
+  safeCreateIndex(db,
+    'idx_material_executes_task',
+    `CREATE INDEX IF NOT EXISTS idx_material_executes_task ON material_executes(task_id)`
   );
   addedIndexes += 1;
 

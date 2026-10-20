@@ -39,19 +39,29 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 // 导入 Task 类型（从 useTasks）
 import { Task } from '../../../hooks/useTasks';
 import { useUserStore } from '../../../stores/useUserStore';
+import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 
 // 任务类型定义
-const taskTypes = [
-  { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
-  { value: 'irrigation', label: '灌溉', color: 'bg-blue-500' },
-  { value: 'pruning', label: '修剪', color: 'bg-purple-500' },
-  { value: 'pesticide', label: '植保', color: 'bg-red-500' },
-  { value: 'rootIrrigation', label: '灌根', color: 'bg-cyan-500' },
-  { value: 'planting', label: '定植', color: 'bg-lime-500' },
-  { value: 'harvest', label: '采收', color: 'bg-orange-500' },
-  { value: 'weeding', label: '除草', color: 'bg-emerald-500' },
-  { value: 'other', label: '其他', color: 'bg-gray-500' },
-];
+// 2026-10-20 P0-10：取值从唯一真相源派生（此前是第三份副本，含 pesticide/rootIrrigation 等别名）
+const TYPE_COLOR_MAP: Record<string, string> = {
+  planting: 'bg-lime-500',
+  irrigation: 'bg-blue-500',
+  fertilization: 'bg-green-500',
+  pest_control: 'bg-red-500',
+  pruning: 'bg-purple-500',
+  harvest: 'bg-orange-500',
+  weeding: 'bg-emerald-500',
+  farm_repair: 'bg-amber-500',
+  equipment_repair: 'bg-amber-600',
+  cleaning: 'bg-slate-500',
+  seedling: 'bg-teal-500',
+  other: 'bg-gray-500',
+};
+const taskTypes = FARM_OPERATION_TYPES.map((t) => ({
+  value: t.value,
+  label: t.label,
+  color: TYPE_COLOR_MAP[t.value] ?? 'bg-gray-500',
+}));
 
 // 获取任务类型颜色
 const getTypeColor = (type: string): string => {

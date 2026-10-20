@@ -1,24 +1,15 @@
 /**
  * 气象监测 — 表格 UI 与订单管理（market/OrderManagement）保持一致
+ *
+ * 2026-10-20 P0-9：接入真实气象数据（此前为 8 条硬编码假数据）
+ * 数据流：组件 → useWeatherStore → apiWeatherService → /api/weather → Open-Meteo
  */
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sun, Cloud, Wind, Droplets, Snowflake, Thermometer, Search, Home, Download, Plus, Eye, Calendar,
 } from 'lucide-react';
-
-const weatherData = [
-  { id: 'WX-001', location: '北京顺义基地', temp: -2, feelsLike: -6, humidity: 45, windSpeed: 12, windDir: '北风', pressure: 1025, visibility: 10, condition: 'sunny', updateTime: '2025-01-15 14:30:00' },
-  { id: 'WX-002', location: '河北沧州基地', temp: 0, feelsLike: -4, humidity: 52, windSpeed: 8, windDir: '东北风', pressure: 1023, visibility: 8, condition: 'cloudy', updateTime: '2025-01-15 14:30:00' },
-  { id: 'WX-003', location: '天津武清基地', temp: 1, feelsLike: -3, humidity: 58, windSpeed: 15, windDir: '西北风', pressure: 1020, visibility: 6, condition: 'windy', updateTime: '2025-01-15 14:29:00' },
-  { id: 'WX-004', location: '山东寿光基地', temp: 3, feelsLike: 0, humidity: 65, windSpeed: 10, windDir: '南风', pressure: 1018, visibility: 5, condition: 'foggy', updateTime: '2025-01-15 14:30:00' },
-  { id: 'WX-005', location: '江苏南京基地', temp: 8, feelsLike: 6, humidity: 72, windSpeed: 5, windDir: '东风', pressure: 1015, visibility: 4, condition: 'rainy', updateTime: '2025-01-15 14:30:00' },
-  { id: 'WX-006', location: '云南昆明基地', temp: 15, feelsLike: 14, humidity: 55, windSpeed: 3, windDir: '西南风', pressure: 1012, visibility: 15, condition: 'sunny', updateTime: '2025-01-15 14:28:00' },
-  { id: 'WX-007', location: '黑龙江基地', temp: -15, feelsLike: -22, humidity: 35, windSpeed: 20, windDir: '西风', pressure: 1030, visibility: 12, condition: 'snowy', updateTime: '2025-01-15 14:30:00' },
-  { id: 'WX-008', location: '新疆和田基地', temp: 5, feelsLike: 2, humidity: 25, windSpeed: 18, windDir: '东风', pressure: 1010, visibility: 8, condition: 'dusty', updateTime: '2025-01-15 14:30:00' },
-];
-
-const statistics = { totalStations: 8, avgTemp: 0.6, avgHumidity: 50, avgWindSpeed: 11, extremeWeather: 2 };
+import { useWeatherStore } from '@/stores/useWeatherStore';
 
 // 天气状况徽章映射（含 icon 和背景色）
 const conditionMap: Record<string, { icon: React.ReactNode; bg: string; text: string; label: string }> = {
@@ -31,11 +22,58 @@ const conditionMap: Record<string, { icon: React.ReactNode; bg: string; text: st
   dusty: { icon: <Wind className="w-3 h-3" />, bg: 'bg-amber-100', text: 'text-amber-700', label: '沙尘' },
 };
 
-// 天气状况筛选（与表格徽章标签一一对应）
+// WMO 天气代码 → 徽章 key（Open-Meteo 返回的数字码）
+const WMO_TO_CONDITION: Record<number, string> = {
+  0: 'sunny',
+  1: 'sunny',
+  2: 'cloudy',
+  3: 'cloudy',
+  45: 'foggy',
+  48: 'foggy',
+  51: 'rainy',
+  53: 'rainy',
+  55: 'rainy',
+  56: 'rainy',
+  57: 'rainy',
+  61: 'rainy',
+  63: 'rainy',
+  65: 'rainy',
+  66: 'rainy',
+  67: 'rainy',
+  71: 'snowy',
+  73: 'snowy',
+  75: 'snowy',
+  77: 'snowy',
+  80: 'rainy',
+  81: 'rainy',
+  82: 'rainy',
+  85: 'snowy',
+  86: 'snowy',
+  95: 'windy',
+  96: 'windy',
+  99: 'windy',
+};
+
+/** 天气状况筛选（与表格徽章标签一一对应） */
 const conditions = ['全部', '晴', '多云', '大风', '雾', '雨', '雪', '沙尘'];
 
 // condition code → 筛选标签 反向映射
 const conditionToLabel = (code: string) => conditionMap[code]?.label ?? code;
+
+/** 页面行数据（实况 + 预报） */
+interface WeatherRow {
+  id: string;
+  location: string;
+  temp: number;
+  feelsLike: number;
+  humidity: number;
+  windSpeed: number;
+  windDir: string;
+  pressure: number;
+  visibility: number;
+  condition: string;
+  updateTime: string;
+}
 
 export default function WeatherMonitoring() {
   const navigate = useNavigate();
@@ -43,6 +81,70 @@ export default function WeatherMonitoring() {
   const [conditionFilter, setConditionFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // P0-9：真实气象数据（useWeatherStore → /api/weather → Open-Meteo）
+  const now = useWeatherStore((s) => s.now);
+  const forecast = useWeatherStore((s) => s.forecast);
+  const weatherLoading = useWeatherStore((s) => s.loading);
+  const weatherError = useWeatherStore((s) => s.error);
+  const loadWeather = useWeatherStore((s) => s.loadWeather);
+  const locationSource = useWeatherStore((s) => s.locationSource);
+
+  useEffect(() => {
+    void loadWeather();
+  }, [loadWeather]);
+
+  /** 真实数据 → 表格行 */
+  const weatherData: WeatherRow[] = useMemo(() => {
+    const rows: WeatherRow[] = [];
+    if (now) {
+      rows.push({
+        id: '实况',
+        location: now.locationName || '当前位置',
+        temp: Number(now.temp),
+        feelsLike: Number(now.feelsLike),
+        humidity: Number(now.humidity),
+        windSpeed: Number(now.windSpeed),
+        windDir: '—',
+        pressure: Number(now.pressure),
+        visibility: 0,
+        condition: WMO_TO_CONDITION[now.weatherCode] ?? 'cloudy',
+        updateTime: now.obsTime || '—',
+      });
+    }
+    forecast.forEach((d, i) => {
+      rows.push({
+        id: `预报${i + 1}`,
+        location: now?.locationName || '当前位置',
+        temp: Number(d.tempMax),
+        feelsLike: Number(d.tempMin),
+        humidity: 0,
+        windSpeed: 0,
+        windDir: '—',
+        pressure: 0,
+        visibility: 0,
+        condition: WMO_TO_CONDITION[d.weatherCode] ?? 'cloudy',
+        updateTime: d.date,
+      });
+    });
+    return rows;
+  }, [now, forecast]);
+
+  /** 统计（由真实数据计算） */
+  const statistics = useMemo(() => {
+    const temps = weatherData.map((r) => r.temp).filter((n) => Number.isFinite(n));
+    const hums = weatherData.map((r) => r.humidity).filter((n) => n > 0);
+    const winds = weatherData.map((r) => r.windSpeed).filter((n) => n > 0);
+    const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+    const extreme = weatherData.filter((r) => r.temp <= 0 || r.temp >= 35).length;
+    return {
+      totalStations: weatherData.length,
+      avgTemp: Number(avg(temps).toFixed(1)),
+      avgHumidity: Math.round(avg(hums)),
+      avgWindSpeed: Number(avg(winds).toFixed(1)),
+      extremeWeather: extreme,
+    };
+  }, [weatherData]);
 
   const filteredData = weatherData.filter(item => {
     const matchSearch = item.location.toLowerCase().includes(searchKeyword.toLowerCase());
@@ -64,22 +166,39 @@ export default function WeatherMonitoring() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">气象监测</h1>
-              <p className="text-gray-500 mt-1">气象数据监测</p>
+              <p className="text-gray-500 mt-1">
+                气象数据监测
+                {locationSource === 'default' && <span className="ml-2 text-xs text-amber-600">（未授权定位，使用默认坐标）</span>}
+                {locationSource === 'geolocation' && <span className="ml-2 text-xs text-gray-400">（当前定位）</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
+            <button
+              onClick={() => void loadWeather(true)}
+              disabled={weatherLoading}
+              className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" /> {weatherLoading ? '刷新中…' : '刷新'}
             </button>
             <button
-              onClick={() => alert('新增气象监测站')}
-              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+              onClick={() => void loadWeather(true)}
+              disabled={weatherLoading}
+              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2 disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" /> 新增监测站
+              <Plus className="w-4 h-4" /> 刷新实况
             </button>
           </div>
         </div>
       </div>
+
+      {/* 加载/错误提示：真实数据失败必须显式报错，不能显示成"暂无数据" */}
+      {weatherError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
+          气象数据获取失败：{weatherError}
+          <button className="ml-3 underline" onClick={() => void loadWeather(true)}>重试</button>
+        </div>
+      )}
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
