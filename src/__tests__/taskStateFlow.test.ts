@@ -192,8 +192,9 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
     expect(STATUS_TRANSITIONS.cancelled).toEqual([]);
   });
 
-  it('所有 10 个状态都定义在转换表中', () => {
-    const expected = ['draft', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected', 'failed', 'cancelled', 'abandoned'];
+  // 2026-10-20：补 pending_approval（后端一直有，前端此前缺失，导致历史该状态任务无法流转）
+  it('所有 11 个状态都定义在转换表中', () => {
+    const expected = ['draft', 'pending_approval', 'pending', 'accepted', 'in_progress', 'waiting_acceptance', 'completed', 'rejected', 'failed', 'cancelled', 'abandoned'];
     expect(Object.keys(STATUS_TRANSITIONS).sort()).toEqual(expected.sort());
   });
 });

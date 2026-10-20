@@ -21,16 +21,23 @@ export function ExportFormatAdapter({ taskIds, onClose }: ExportFormatAdapterPro
     // 获取选中的任务数据
     const selectedTasks = tasksHook.tasks.filter(t => taskIds.includes(t.id));
 
+    // 2026-10-20 修复：补齐 failed / pending_approval / pending_reassign / overdue，
+    //   并统一 in_progress 为「处理中」（此前是「进行中」，与其它页面不一致）。
+    //   缺键时导出文件的状态列会直接输出英文枚举（库内当前有 1 条 failed 任务）。
     const statusMap: Record<string, { label: string }> = {
       draft: { label: '草稿' },
+      pending_approval: { label: '派发审批中' },
       pending: { label: '待接受' },
       accepted: { label: '已接受' },
-      in_progress: { label: '进行中' },
+      in_progress: { label: '处理中' },
       waiting_acceptance: { label: '待验收' },
       completed: { label: '已完成' },
       rejected: { label: '返工中' },
+      failed: { label: '任务失败' },
       cancelled: { label: '已取消' },
       abandoned: { label: '已放弃' },
+      overdue: { label: '已超期' },
+      pending_reassign: { label: '待重新派发' },
     };
 
     const priorityMap: Record<string, { label: string }> = {

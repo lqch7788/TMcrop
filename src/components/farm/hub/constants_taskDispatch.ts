@@ -11,7 +11,8 @@ import {
 const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-100' },
   // 2026-10-10：任务派发审批接线新增状态
-  pending_approval: { label: '审批中', color: 'text-amber-600', bg: 'bg-amber-100' },
+  // 2026-10-20 统一口径：此前这里叫「审批中」，我的任务与全局配置都叫「派发审批中」
+  pending_approval: { label: '派发审批中', color: 'text-amber-600', bg: 'bg-amber-100' },
   pending: { label: '待接受', color: 'text-gray-600', bg: 'bg-gray-100' },
   accepted: { label: '已接受', color: 'text-blue-600', bg: 'bg-blue-100' },
   in_progress: { label: '处理中', color: 'text-blue-600', bg: 'bg-blue-100' },
