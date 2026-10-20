@@ -138,13 +138,17 @@ export function getTaskPermissions(): typeof TASK_PERMISSIONS_DEFAULTS {
 export const STATUS_TRANSITIONS_DEFAULTS: Record<string, string[]> = {
   draft: ['pending', 'cancelled'],
   pending: ['accepted', 'cancelled', 'draft'],
-  accepted: ['in_progress', 'cancelled', 'draft'],
+  // 2026-10-20：补 waiting_acceptance（执行人可直接在「已接受」提交进度，100% 即申请验收），
+  //   与服务端 TASK_STATUS_TRANSITIONS 同步
+  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
   // 2026-10-20：补 failed，与服务端 TASK_STATUS_TRANSITIONS 保持一致。
   //   驳回规则是「返工次数 >= 2 判定失败」，驳回只能从 waiting_acceptance 发起，
   //   不允许 failed 会导致第二次驳回被服务端守卫拒绝。
   waiting_acceptance: ['completed', 'rejected', 'failed'],
-  rejected: ['in_progress', 'failed'],
+  // 2026-10-20：补 pending —— 「重新派发」就是 rejected → 选新执行人 → pending。
+  //   缺这条边时 reassignTask 的 validateTransition 直接 return，弹窗照关、界面无变化。
+  rejected: ['in_progress', 'pending', 'failed'],
   failed: ['pending'],
   abandoned: ['pending'],
   cancelled: [],

@@ -53,7 +53,11 @@ export const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ['pending', 'cancelled'],
   pending_approval: ['pending', 'draft', 'cancelled'],
   pending: ['accepted', 'cancelled', 'draft'],
-  accepted: ['in_progress', 'cancelled', 'draft'],
+  // 2026-10-20：补 waiting_acceptance。执行人可以直接在「已接受」状态下提交进度，
+  //   进度到 100% 即为「申请验收」（submitProgress 的 isFinal 分支）。
+  //   缺这条边时该操作必被守卫拒绝（实测 accepted → waiting_acceptance 返回 409），
+  //   而 UI 对 accepted 行本来就显示「提交进度」按钮 —— 用户拖到 100% 就撞墙。
+  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
   // 2026-10-20：补 failed。POST /:id/reject 的规则是「返工次数 >= 2 判定失败」，
   //   而驳回只能从 waiting_acceptance 发起 —— 若这里不允许 failed，
@@ -63,7 +67,11 @@ export const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
   //   任务永远驳不掉。failed 在 rejected 的转移里本来就已开放，语义一致。
   waiting_acceptance: ['completed', 'rejected', 'failed'],
   completed: [],
-  rejected: ['in_progress', 'failed'],
+  // 2026-10-20：补 pending。「重新派发」就是从 rejected 选新执行人回到待接受，
+  //   历史上 task_operation_records 里已有 rejected → pending 的真实记录。
+  //   缺这条边时前端 validateTransition 直接 return（且弹窗照关），
+  //   表现为点了「重新派发」什么都没发生 —— 任务卡死在返工中。
+  rejected: ['in_progress', 'pending', 'failed'],
   failed: ['pending'],
   abandoned: ['pending'],
   cancelled: [],
