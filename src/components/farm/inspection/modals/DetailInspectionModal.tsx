@@ -547,64 +547,74 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
                           )}
                         </div>
 
-                        {/* 流转详情 */}
+                        {/* 流转详情 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
+                              （此前操作人/动作、时间、状态变化、进度、备注 各占一行，一条记录 5~7 行） */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                record.action === 'approve' ? 'bg-green-100 text-green-700' :
-                                record.action === 'reject_acceptance' ? 'bg-red-100 text-red-700' :
-                                record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
-                                record.action === 'dispatch' ? 'bg-blue-100 text-blue-700' :
-                                record.action === 'report' ? 'bg-purple-100 text-purple-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {ACTION_LABELS[record.action] || record.action}
-                              </span>
-                            </div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                            <span className="font-medium text-gray-900">{record.operatorName || '-'}</span>
+
+                            <span className="text-gray-300 select-none">|</span>
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${
+                              record.action === 'approve' ? 'bg-green-100 text-green-700' :
+                              record.action === 'reject_acceptance' ? 'bg-red-100 text-red-700' :
+                              record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
+                              record.action === 'dispatch' ? 'bg-blue-100 text-blue-700' :
+                              record.action === 'report' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {ACTION_LABELS[record.action] || record.action}
+                            </span>
+
+                            {/* 状态变化 */}
+                            {(record.fromStatus || record.toStatus) && (
+                              <>
+                                <span className="text-gray-300 select-none">|</span>
+                                <span className="flex items-center gap-1">
+                                  {record.fromStatus && (
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                                      {record.fromStatus}
+                                    </span>
+                                  )}
+                                  <span className="text-gray-400">→</span>
+                                  {record.toStatus && (
+                                    <span className={`px-2 py-0.5 text-xs rounded ${getFlowStatusClass(record.toStatus)}`}>
+                                      {/* 显示也归一化，避免把英文枚举原样暴露给用户 */}
+                                      {problemStatusToCN(record.toStatus)}
+                                    </span>
+                                  )}
+                                </span>
+                              </>
+                            )}
+
+                            {/* 进度 */}
+                            {record.progress !== undefined && (
+                              <>
+                                <span className="text-gray-300 select-none">|</span>
+                                <span className="flex items-center gap-2">
+                                  <span className="w-[90px] bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                    <span
+                                      className="block h-full bg-blue-500 rounded-full"
+                                      style={{ width: `${record.progress}%` }}
+                                    />
+                                  </span>
+                                  <span className="text-xs text-gray-500">{record.progress}%</span>
+                                </span>
+                              </>
+                            )}
+
+                            {/* 备注 */}
+                            {record.comment && (
+                              <>
+                                <span className="text-gray-300 select-none">|</span>
+                                <span className="text-gray-600 break-all">{record.comment}</span>
+                              </>
+                            )}
+
+                            <span className="text-gray-300 select-none">|</span>
                             <span className="text-xs text-gray-400 whitespace-nowrap">
                               {formatTime(record.actionTime)}
                             </span>
                           </div>
-
-                          {/* 状态变化 */}
-                          {(record.fromStatus || record.toStatus) && (
-                            <div className="flex items-center gap-1 mb-1">
-                              {record.fromStatus && (
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                                  {record.fromStatus}
-                                </span>
-                              )}
-                              <span className="text-gray-400">→</span>
-                              {record.toStatus && (
-                                <span className={`px-2 py-0.5 text-xs rounded ${getFlowStatusClass(record.toStatus)}`}>
-                                  {/* 显示也归一化，避免把英文枚举原样暴露给用户 */}
-                                  {problemStatusToCN(record.toStatus)}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* 进度显示 */}
-                          {record.progress !== undefined && (
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className="h-full bg-blue-500 rounded-full"
-                                  style={{ width: `${record.progress}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs text-gray-500">{record.progress}%</span>
-                            </div>
-                          )}
-
-                          {/* 备注/说明 */}
-                          {record.comment && (
-                            <div className="mt-1 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
-                              {record.comment}
-                            </div>
-                          )}
 
                           {/* 反馈数据展示（位置、照片、语音等） */}
                           {record.feedbackData && (
