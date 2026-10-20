@@ -1,21 +1,25 @@
 /**
  * 选择执行人弹窗组件
- * 功能：为待派工任务选择执行人（支持AI推荐和手动选择）
+ * 功能：为待派工任务人工选择执行人
+ *
+ * 2026-10-20：移除 AI 智能推荐模式，只保留人工选择。
+ *   原因：实测点开 AI 推荐会让页面卡死 30 秒以上（AI 派工链的重渲染风暴），
+ *   且智能任务中心尚未完全实现。农事管理的数据一律走「人工新建 → 人工派发 → 人工执行」。
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
-import { AlertCircle, Clock, Sparkles, UserPlus, Users, X } from 'lucide-react';
+import { AlertCircle, Clock, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
 import { useWorkerStore } from '../../../../stores';
-import { AIRecommendationPanel } from '../../../dispatch/AIRecommendationPanel';
-import { useComprehensiveDispatch } from '../../../../hooks/useComprehensiveDispatch';
 // ★ 排班联动：派发后同步 schedule.dispatched_task_ids
 import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
-import type { WorkerRecommendation } from '../../../../hooks/useComprehensiveDispatch';
-// 2026-10-11：AI 推荐配置基线（config 为整体替换语义，只传 showTopN 会丢掉其余开关）
-import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../../types/dispatch';
+// 2026-10-20：AI 派工链（AIRecommendationPanel / useComprehensiveDispatch /
+//   DEFAULT_AI_RECOMMEND_CONFIG）已从本弹窗移除 —— 实测点开 AI 推荐会让页面卡死
+//   30 秒以上（useComprehensiveDispatch 会拉起 useEnvironmentData 的 30 秒传感器
+//   定时器形成重渲染风暴，memory: farm-hub-freeze-ai-chain）。
+//   农事管理的数据一律走「人工新建 → 人工派发 → 人工执行」。
 import {
   Select,
   SelectContent,
@@ -86,73 +90,14 @@ function SelectExecutorModalContent({
   }, [workers, loadWorkers]);
 
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
-  // 分派模式：ai_assisted 或 manual
-  const [dispatchMode, setDispatchMode] = useState<'ai_assisted' | 'manual'>('ai_assisted');
-  // AI推荐结果
-  const [aiRecommendations, setAiRecommendations] = useState<WorkerRecommendation[]>([]);
-  // AI推荐加载状态
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-
-  // 使用综合派工Hook获取AI推荐功能
-  const { getRecommendations } = useComprehensiveDispatch();
-
   // ★ 排班联动 hook：派发成功后 fire-and-forget 同步占用
   const { syncAfterDispatch } = useDispatchScheduleBridge();
 
-  // 获取AI推荐
-  const fetchAIRecommendations = useCallback(() => {
-    if (!task) return;
-
-    setIsLoadingAI(true);
-    try {
-      // 构建任务信息用于AI推荐
-      const taskInfo = {
-        id: task.id,
-        source: 'farm' as const,
-        sourceId: '',
-        taskCode: task.taskCode || task.id,
-        title: task.title || '农事任务',
-        type: task.type || 'other',
-        typeName: task.typeName || task.type || '',
-        priority: (task.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
-        workZone: task.greenhouseName || task.field || '',
-        greenhouse: task.greenhouseName || '',
-        cropName: task.cropName || '',
-        batchId: task.batchId || '',
-        batchCode: task.batchCode || '',
-        requiredSkills: [],
-        estimatedHours: 2,
-        dueDate: task.dueDate || '',
-        description: task.description || '',
-        createdAt: new Date().toISOString(),
-      };
-
-      const recommendations = getRecommendations(taskInfo, 5);
-      setAiRecommendations(recommendations || []);
-    } catch {
-      setAiRecommendations([]);
-    } finally {
-      setIsLoadingAI(false);
-    }
-  }, [task, getRecommendations]);
-
-  // 当切换到AI模式时获取推荐
-  const handleModeChange = (mode: 'ai_assisted' | 'manual') => {
-    setDispatchMode(mode);
-    if (mode === 'ai_assisted' && aiRecommendations.length === 0) {
-      fetchAIRecommendations();
-    }
-  };
-
-  // 处理AI推荐选中
-  const handleAIRecommendSelect = (workerId: string) => {
-    const worker = taskDispatchStaff.find(s => s.id === workerId);
-    if (worker) {
-      setSelectedAssignee(workerId);
-      // 自动切换为手动模式，保留选中状态
-      setDispatchMode('manual');
-    }
-  };
+  // ★ 2026-10-20：AI 派工链（useComprehensiveDispatch）已从本弹窗完全移除。
+  //   原因：实测点开 AI 推荐会让页面卡死 30 秒以上 —— useComprehensiveDispatch 会
+  //   拉起 useEnvironmentData 的 30 秒传感器定时器等重型链，形成重渲染风暴
+  //   （memory: farm-hub-freeze-ai-chain）。智能任务中心尚未完全实现，
+  //   农事管理的数据一律走「人工新建 → 人工派发 → 人工执行」，不设自动智能处理。
 
   // 执行人状态映射
   const getStatusLabel = (status: string) => {
@@ -178,23 +123,21 @@ function SelectExecutorModalContent({
       const staff = taskDispatchStaff.find(s => s.id === selectedAssignee);
       if (staff) {
         onConfirm(selectedAssignee, staff.name);
-        // ★ 排班联动：派发成功后副作用，同步 schedule 行
+        // ★ 排班联动：派发成功后副作用，同步 schedule 行 + 自动补一条农事任务排班
+        //   workerName 一并传下去：服务端要把执行人归一化到 employees.id（排班表外键要求），
+        //   只凭 assigneeId 在历史多套 ID 体系下未必能命中。
         void syncAfterDispatch(
           { source: 'farm', sourceId: task.id },
           selectedAssignee,
-          { taskPlanDate: task.planStart || task.dueDate }
+          { taskPlanDate: task.planStart || task.dueDate, workerName: staff.name }
         );
         setSelectedAssignee('');
-        setDispatchMode('ai_assisted');
-        setAiRecommendations([]);
       }
     }
   };
 
   const handleClose = () => {
     setSelectedAssignee('');
-    setDispatchMode('ai_assisted');
-    setAiRecommendations([]);
     onClose();
   };
 
@@ -234,94 +177,8 @@ function SelectExecutorModalContent({
           </div>
         </div>
 
-        {/* 分派模式切换 */}
-        <div className="flex gap-2 mb-3">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => handleModeChange('ai_assisted')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
-              dispatchMode === 'ai_assisted'
-                ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            AI智能推荐（默认）
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => handleModeChange('manual')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
-              dispatchMode === 'manual'
-                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            手动选择
-          </Button>
-        </div>
-
-        {/* AI辅助模式 - 显示AI推荐面板 */}
-        {dispatchMode === 'ai_assisted' && (
-          <div className="space-y-3">
-            {isLoadingAI ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-                <span className="ml-3 text-gray-500">正在分析最优执行人...</span>
-              </div>
-            ) : (
-              <>
-                {/* AI推荐触发按钮 */}
-                {aiRecommendations.length === 0 && (
-                  <Button
-                    variant="ghost"
-                    onClick={fetchAIRecommendations}
-                    className="w-full py-4 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 hover:border-purple-500 hover:bg-purple-50"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    点击获取AI智能推荐
-                  </Button>
-                )}
-
-                {/* AI推荐面板 */}
-                {aiRecommendations.length > 0 && (
-                  <AIRecommendationPanel
-                    taskInfo={{
-                      id: task.id,
-                      taskCode: task.taskCode || task.id,
-                      title: task.title || '农事任务',
-                      type: task.type || 'other',
-                      typeName: task.typeName || '',
-                      priority: (task.priority as 'urgent' | 'high' | 'normal' | 'low') || 'normal',
-                      workZone: task.greenhouseName || '',
-                      greenhouse: task.greenhouseName || '',
-                      cropName: task.cropName || '',
-                      batchId: task.batchId || '',
-                      batchCode: task.batchCode || '',
-                      requiredSkills: [],
-                      estimatedHours: 2,
-                      dueDate: task.dueDate || '',
-                    }}
-                    recommendations={aiRecommendations}
-                    onWorkerSelect={(workerId, score) => {
-                      handleAIRecommendSelect(workerId);
-                    }}
-                    onManualSelect={() => handleModeChange('manual')}
-                    config={{ ...DEFAULT_AI_RECOMMEND_CONFIG, showTopN: 5 }}
-                    selectedWorkerId={selectedAssignee}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 手动模式 - 执行人列表 */}
-        {dispatchMode === 'manual' && (
-          <div>
+        {/* 执行人选择（2026-10-20：移除 AI/手动 模式切换，只保留人工选择） */}
+        <div>
             <Label className="text-gray-700 mb-2">
               <Users className="w-4 h-4 inline mr-1" />
               选择执行人
@@ -360,8 +217,7 @@ function SelectExecutorModalContent({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+        </div>
 
         {/* 确认提示 */}
         {selectedAssignee && (

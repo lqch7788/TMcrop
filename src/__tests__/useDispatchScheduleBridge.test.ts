@@ -230,6 +230,82 @@ describe('useDispatchScheduleBridge', () => {
   });
 });
 
+// ============ 2026-10-20 新增：派工后自动排班联动 ============
+
+/**
+ * 背景：农事任务中心派工后，「待排班任务」列表的口径是"该任务还没有任何排班记录"，
+ *   任务会一直堆着排不掉。派工成功后自动补一条 farm_task_schedules 排班，让派工闭环。
+ */
+describe('syncAfterDispatch 自动排班联动', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockState.invalidateOccupations = vi.fn();
+    mockToast.success.mockReset();
+    mockToast.error.mockReset();
+    mockToast.warning.mockReset();
+    mockToast.info.mockReset();
+    (enhancedApiClient.patch as any).mockResolvedValue({ success: true });
+    (enhancedApiClient.post as any).mockResolvedValue({ success: true });
+  });
+
+  it('farm 源任务应调 /farm-task-schedules/auto-assign', async () => {
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    await act(async () => {
+      await result.current!.syncAfterDispatch(
+        { source: 'farm', sourceId: 'FT-100' },
+        'EMP_001',
+        { taskPlanDate: '2026-10-21', workerName: '张三' }
+      );
+    });
+
+    expect(enhancedApiClient.post).toHaveBeenCalledWith(
+      '/farm-task-schedules/auto-assign',
+      expect.objectContaining({
+        taskId: 'FT-100',
+        workerId: 'EMP_001',
+        workerName: '张三',
+        planDate: '2026-10-21',
+      })
+    );
+    expect(mockToast.warning).not.toHaveBeenCalled();
+  });
+
+  it('tempTask 源任务不应调 auto-assign（临时任务不在 farm_tasks 表里）', async () => {
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    await act(async () => {
+      await result.current!.syncAfterDispatch(
+        { source: 'tempTask', sourceId: 'TT-100' },
+        'EMP_001'
+      );
+    });
+
+    expect(enhancedApiClient.post).not.toHaveBeenCalledWith(
+      '/farm-task-schedules/auto-assign',
+      expect.anything()
+    );
+  });
+
+  it('auto-assign 失败时不抛错，只 toast.warning 提示手动安排', async () => {
+    (enhancedApiClient.post as any).mockRejectedValue({ message: '自动排班失败' });
+
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    // 不应抛出：派工主流程已成功
+    await act(async () => {
+      await result.current!.syncAfterDispatch(
+        { source: 'farm', sourceId: 'FT-200' },
+        'EMP_001'
+      );
+    });
+
+    expect(mockToast.warning).toHaveBeenCalledWith(
+      expect.stringContaining('自动生成任务排班失败')
+    );
+  });
+});
+
 // ============ Batch 6 新增：confirmDispatchWithSoftWarn 测试 ============
 
 /**

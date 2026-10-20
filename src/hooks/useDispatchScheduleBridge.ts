@@ -51,6 +51,8 @@ export interface DispatchTaskRef {
 export interface DispatchBridgeOptions {
   /** 任务的 plan_date，决定要同步到哪天的 schedule 行。默认 today */
   taskPlanDate?: string;
+  /** 执行人姓名 —— 自动排班时用于把执行人归一化到 employees.id（外键要求） */
+  workerName?: string;
 }
 
 // ============== Hook 主实现 ==============
@@ -103,6 +105,28 @@ export function useDispatchScheduleBridge() {
         invalidateOccupations(today);
         if (options?.taskPlanDate && options.taskPlanDate !== today) {
           invalidateOccupations(options.taskPlanDate);
+        }
+
+        // ★ 2026-10-20：派工后自动补一条农事任务排班（幂等，服务端 upsert）
+        //   背景：「待排班任务」列表的口径是"已派工 且 该任务在 farm_task_schedules 里
+        //   没有任何排班记录"，派工成功后任务会一直堆在列表里排不掉。
+        //   自动补排班让"派工 → 排班"闭环，任务不再堆积。
+        //   只对 farm 源生效 —— 临时任务不在 farm_tasks 表里，插排班会外键失败。
+        //   失败不影响派工主流程（与本 hook 既有设计一致），只 toast 提示。
+        if (task.source === 'farm') {
+          try {
+            await enhancedApiClient.post('/farm-task-schedules/auto-assign', {
+              taskId: task.sourceId,
+              workerId,
+              workerName: options?.workerName,
+              planDate: options?.taskPlanDate || undefined,
+            });
+          } catch (autoErr: unknown) {
+            console.warn('[派工联动] 自动排班失败（派工主流程已成功）:', autoErr);
+            useToastStore.getState().toast.warning(
+              '派工成功，但自动生成任务排班失败，请到「排班调度 → 任务排班」手动安排',
+            );
+          }
         }
       } catch (err: any) {
         // ★ 不抛错避免破坏主流程（派发已成功，仅占用同步失败）
