@@ -1931,69 +1931,84 @@ export const TempTaskTab: React.FC = () => {
                                   )}
                                 </div>
 
-                                {/* 流转详情 */}
+                                {/* 流转详情 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
+                                    （此前操作人/动作、时间、状态变化、进度、备注 各占一行，一条记录 5~7 行） */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-2 mb-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                        record.action === 'complete' ? 'bg-green-100 text-green-700' :
-                                        record.action === 'reject' ? 'bg-red-100 text-red-700' :
-                                        record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
-                                        record.action === 'publish' ? 'bg-blue-100 text-blue-700' :
-                                        record.action === 'accept' ? 'bg-green-100 text-green-700' :
-                                        'bg-gray-100 text-gray-700'
-                                      }`}>
-                                        {ACTION_LABELS[record.action] || record.actionName || record.action}
-                                      </span>
-                                    </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                    <span className="font-medium text-gray-900">{record.operatorName || '-'}</span>
+
+                                    <span className="text-gray-300 select-none">|</span>
+                                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                      record.action === 'complete' ? 'bg-green-100 text-green-700' :
+                                      record.action === 'reject' ? 'bg-red-100 text-red-700' :
+                                      record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
+                                      record.action === 'publish' ? 'bg-blue-100 text-blue-700' :
+                                      record.action === 'accept' ? 'bg-green-100 text-green-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {ACTION_LABELS[record.action] || record.actionName || record.action}
+                                    </span>
+
+                                    {/* 状态变化 */}
+                                    {(record.fromStatus || record.toStatus) && (
+                                      <>
+                                        <span className="text-gray-300 select-none">|</span>
+                                        <span className="flex items-center gap-1">
+                                          {record.fromStatus && (
+                                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)}`}>
+                                              {getStatusLabel(record.fromStatus)}
+                                            </span>
+                                          )}
+                                          <span className="text-gray-400">→</span>
+                                          {record.toStatus && (
+                                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}>
+                                              {getStatusLabel(record.toStatus)}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </>
+                                    )}
+
+                                    {/* 进度 */}
+                                    {record.progress !== undefined && (
+                                      <>
+                                        <span className="text-gray-300 select-none">|</span>
+                                        <span className="flex items-center gap-2">
+                                          <span className="w-[90px] bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                            <span
+                                              className="block h-full bg-blue-500 rounded-full"
+                                              style={{ width: `${record.progress}%` }}
+                                            />
+                                          </span>
+                                          <span className="text-xs text-gray-500">{record.progress}%</span>
+                                        </span>
+                                      </>
+                                    )}
+
+                                    {/* 驳回原因 */}
+                                    {record.reason && (
+                                      <>
+                                        <span className="text-gray-300 select-none">|</span>
+                                        <span className="text-red-600 break-all">
+                                          <span className="font-medium">驳回原因：</span>
+                                          {record.reason}
+                                        </span>
+                                      </>
+                                    )}
+
+                                    {/* 备注 */}
+                                    {record.comment && (
+                                      <>
+                                        <span className="text-gray-300 select-none">|</span>
+                                        <span className="text-gray-600 break-all">{record.comment}</span>
+                                      </>
+                                    )}
+
+                                    <span className="text-gray-300 select-none">|</span>
                                     <span className="text-xs text-gray-400 whitespace-nowrap">
                                       {formatTime(record.actionTime)}
                                     </span>
                                   </div>
-
-                                  {/* 状态变化 */}
-                                  {(record.fromStatus || record.toStatus) && (
-                                    <div className="flex items-center gap-1 mb-1">
-                                      {record.fromStatus && (
-                                        <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)}`}>
-                                          {getStatusLabel(record.fromStatus)}
-                                        </span>
-                                      )}
-                                      <span className="text-gray-400">→</span>
-                                      {record.toStatus && (
-                                        <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}>
-                                          {getStatusLabel(record.toStatus)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* 进度显示 */}
-                                  {record.progress !== undefined && (
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
-                                        <div
-                                          className="h-full bg-blue-500 rounded-full"
-                                          style={{ width: `${record.progress}%` }}
-                                        ></div>
-                                      </div>
-                                      <span className="text-xs text-gray-500">{record.progress}%</span>
-                                    </div>
-                                  )}
-
-                                  {/* 备注/驳回原因 */}
-                                  {(record.comment || record.reason) && (
-                                    <div className="text-sm text-gray-600 bg-gray-50 rounded px-2 py-1 mb-1">
-                                      {record.reason && (
-                                        <div className="text-red-600 mb-1">
-                                          <span className="font-medium">驳回原因：</span>
-                                          {record.reason}
-                                        </div>
-                                      )}
-                                      {record.comment && <div>{record.comment}</div>}
-                                    </div>
-                                  )}
 
                                   {/* 反馈数据展示 - 参照巡查记录详情弹窗 */}
                                   {feedback && (
