@@ -24,6 +24,7 @@ import { TextArea } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface TeamTableProps {
   // 权限控制props
@@ -91,13 +92,20 @@ export function TeamTable({
     }
   }, [storeError]);
 
-  // ★ Task 15：跳到排班页 + 预填班组/日期/班次（url-deep-link-modal-pattern）
+  /**
+   * 跳到「排班调度 → 任务排班」Tab，并预填班组 + 日期。
+   *
+   * 2026-10-20 修复：
+   *  1. 原实现跳 /schedule?teamId=..&prefillDate=..&prefillShift=..，但排班调度页
+   *     只读 teamId —— prefillDate / prefillShift 无人消费，预填形同虚设。
+   *     现改为跳 /schedule?tab=farm-task&teamId=..&date=..，由任务排班 Tab 真正消费。
+   *  2. 原用 new Date().toISOString().slice(0,10) 取当天 —— UTC，中国 0-8 点会算出昨天。
+   *     改用 todayLocal()（memory: utc-timezone-id-bug）。
+   */
   const handleBatchSchedule = (team: Team) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     navigate(
-      `/schedule?teamId=${encodeURIComponent(team.id)}` +
-        `&prefillDate=${today}` +
-        `&prefillShift=${encodeURIComponent('早班')}`,
+      `/schedule?tab=farm-task&teamId=${encodeURIComponent(team.id)}&date=${today}`,
     );
   };
 
@@ -458,13 +466,13 @@ export function TeamTable({
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
-                        {/* ★ Task 15：为该班组批量排班（跳到排班页 + 预填日期/班次） */}
+                        {/* ★ Task 15：为该班组批量排班（2026-10-20 起跳到「排班调度 → 任务排班」Tab 并预填班组/日期） */}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleBatchSchedule(team)}
-                          title="为该班组批量排班"
-                          aria-label="为该班组批量排班"
+                          title="为该班组安排任务排班"
+                          aria-label="为该班组安排任务排班"
                         >
                           <Calendar className="w-4 h-4" />
                         </Button>

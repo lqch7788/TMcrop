@@ -32,6 +32,8 @@ export interface FarmTaskSchedule {
   plan_start: string | null;
   plan_end: string | null;
   shift_type: string;
+  /** 班次名称（JOIN shifts 表得出，2026-10-20 新增） */
+  shift_name?: string | null;
   status: string;
   remarks: string | null;
   created_at: string;
@@ -75,9 +77,10 @@ export async function getSchedules(filters: ScheduleFilters = {}): Promise<FarmT
     const db = getDatabase();
 
     let sql = `
-      SELECT fts.*, ft.title as task_title, ft.task_code
+      SELECT fts.*, ft.title as task_title, ft.task_code, s.shift_name
       FROM farm_task_schedules fts
       LEFT JOIN farm_tasks ft ON fts.task_id = ft.id
+      LEFT JOIN shifts s ON fts.shift_type = s.shift_code
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -156,9 +159,10 @@ export async function getScheduleById(id: string): Promise<FarmTaskSchedule | nu
     const db = getDatabase();
 
     const stmt = db.prepare(`
-      SELECT fts.*, ft.title as task_title, ft.task_code
+      SELECT fts.*, ft.title as task_title, ft.task_code, s.shift_name
       FROM farm_task_schedules fts
       LEFT JOIN farm_tasks ft ON fts.task_id = ft.id
+      LEFT JOIN shifts s ON fts.shift_type = s.shift_code
       WHERE fts.id = ?
     `);
     stmt.bind([id]);
@@ -202,7 +206,9 @@ export async function createSchedule(input: CreateScheduleInput): Promise<FarmTa
       input.planDate,
       input.planStart || null,
       input.planEnd || null,
-      input.shiftType || 'day',
+      // 2026-10-20：shift_type 改存 shifts 表的 shift_code（SH001/SH002/SH003），
+      //   不再回落到硬编码 'day'（那不是合法 shift_code，会往库里写脏值）
+      input.shiftType || null,
       input.remarks || null,
       now,
       now,

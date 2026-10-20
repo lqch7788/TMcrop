@@ -100,7 +100,8 @@ const materialsSubItems = [
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
   { icon: ClipboardList, label: '智能任务中心', path: '/task-center' },
-  { icon: CalendarDays, label: '任务派工排班', path: '/farm-task-schedule' },
+  // 2026-10-20：原「任务派工排班」(/farm-task-schedule) 已并入「排班调度」的「任务排班」Tab，
+  //   侧边栏不再单列（避免两个"排班"同名项 + 同图标 CalendarDays 造成混淆）。
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },

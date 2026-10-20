@@ -38,8 +38,8 @@ const processRouteMap: Record<string, string> = {
   '/schedule': 'PROC_SCHEDULE',
   '/team': 'PROC_TEAM',
   '/daily-work-summary': 'PROC_DAILY_SUMMARY',
-  // 2026-10-20 P0-6：任务派工排班（在农事管理菜单内，需要权限映射）
-  '/farm-task-schedule': 'PROC_FARM',
+  // 2026-10-20：原 '/farm-task-schedule'（任务派工排班）已并入 '/schedule' 的「任务排班」Tab，
+  //   不再是独立路由，权限统一走 '/schedule' 的 PROC_SCHEDULE。
   // 注：/agronomy/* 那批工具页不在侧边栏菜单里（入口是「系统设置 → 运营管理」），
   //     不参与 canAccessProcess 过滤，无需在此登记。
 

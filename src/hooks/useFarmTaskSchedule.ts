@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { enhancedApiClient } from '../lib/apiClient';
+import { useShiftStore } from '../stores/useShiftStore';
+import type { Shift } from '../services/apiBasicDataService';
 
 /**
  * 农事任务排班数据
@@ -20,6 +22,8 @@ export interface FarmTaskSchedule {
   planStart: string | null;
   planEnd: string | null;
   shiftType: string;
+  /** 班次名称（后端 JOIN shifts 表得出，2026-10-20 新增） */
+  shiftName?: string | null;
   status: string;
   remarks: string | null;
 }
@@ -49,6 +53,12 @@ export interface UnscheduledTask {
 export interface UseFarmTaskScheduleResult {
   schedules: FarmTaskSchedule[];
   unscheduledTasks: UnscheduledTask[];
+  /**
+   * 班次字典（来源 shifts 表，唯一数据源，由 ShiftEditor 维护）。
+   * 2026-10-20：替代原硬编码枚举 FARM_TASK_SHIFT_TYPES（day/night/morning/afternoon），
+   * 那套码与排班调度的班次表对不上，两边班次无法互相理解。
+   */
+  shifts: Shift[];
   loading: boolean;
   error: string | null;
   createSchedule: (input: Partial<FarmTaskSchedule>) => Promise<FarmTaskSchedule>;
@@ -56,14 +66,6 @@ export interface UseFarmTaskScheduleResult {
   deleteSchedule: (id: string) => Promise<void>;
   refresh: () => void;
 }
-
-// 班次类型（与服务端 shift_type 对应）
-export const FARM_TASK_SHIFT_TYPES = [
-  { value: 'day', label: '白班' },
-  { value: 'night', label: '夜班' },
-  { value: 'morning', label: '早班' },
-  { value: 'afternoon', label: '午班' },
-] as const;
 
 /**
  * useFarmTaskSchedule Hook
@@ -78,6 +80,14 @@ export function useFarmTaskSchedule(filters?: {
   const [unscheduledTasks, setUnscheduledTasks] = useState<UnscheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 班次字典：shifts 表是唯一数据源（ShiftEditor 维护），不再用硬编码枚举
+  const shifts = useShiftStore((s) => s.shifts);
+  const loadShifts = useShiftStore((s) => s.loadShifts);
+
+  useEffect(() => {
+    if (shifts.length === 0) void loadShifts();
+  }, [shifts.length, loadShifts]);
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
@@ -172,6 +182,7 @@ export function useFarmTaskSchedule(filters?: {
   return {
     schedules,
     unscheduledTasks,
+    shifts,
     loading,
     error,
     createSchedule,
