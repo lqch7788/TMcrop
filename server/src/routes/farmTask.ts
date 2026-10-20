@@ -372,7 +372,7 @@ router.post('/', (req: Request, res: Response) => {
       create_by, createBy,
       due_date, dueDate,
       progress,
-      crop, cropName,
+      crop, cropName, crop_remarks, cropRemarks,
       estimated_hours, estimatedHours,
       estimated_days, estimatedDays,
       remarks,
@@ -426,7 +426,7 @@ router.post('/', (req: Request, res: Response) => {
         assignee_id, assignee_name, assigner_id, assigner_name,
         greenhouse_id, greenhouse_name, area_name,
         plan_date, plan_time, priority, status, create_by, create_time, update_time,
-        due_date, progress, crop, estimated_hours, estimated_days, remarks,
+        due_date, progress, crop, crop_remarks, estimated_hours, estimated_days, remarks,
         materials, tools,
         batch_id, batch_code,
         planting_id, production_plan_id, production_plan_code,
@@ -437,7 +437,7 @@ router.post('/', (req: Request, res: Response) => {
         team_id, team_name, tools_remarks,
         source_problem_id, source_inspection_id, source_id, source_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -460,6 +460,8 @@ router.post('/', (req: Request, res: Response) => {
       due_date || dueDate || (planEndVal ? planEndVal.split(' ')[0] : null),
       progress || 0,
       crop || cropName || '',
+      // 2026-10-20：作物备注（「作物=其他」时的说明）
+      crop_remarks || cropRemarks || '',
       estimated_hours || estimatedHours || 0,
       estimated_days || estimatedDays || 0,
       remarks || '',
@@ -559,6 +561,9 @@ const FIELD_NAME_MAP: Record<string, string> = {
   typeName: 'type_name',
   sopContent: 'sop_content',
   description: 'description',
+  // 2026-10-20：作物备注（新建弹窗「作物=其他」时填写，此前无列、无映射）
+  cropRemarks: 'crop_remarks',
+  crop_remarks: 'crop_remarks',
   materials: 'materials',
   tools: 'tools',
   createTime: 'create_time',
@@ -609,7 +614,7 @@ function toDbColumnName(fieldName: string): string {
 const FARM_TASK_DB_COLUMNS = new Set<string>([
   'id', 'task_code', 'task_title', 'title', 'task_type', 'task_content', 'description',
   'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name', 'create_by', 'create_by_id',
-  'greenhouse_id', 'greenhouse_name', 'area_name', 'crop',
+  'greenhouse_id', 'greenhouse_name', 'area_name', 'crop', 'crop_remarks',
   'plan_date', 'plan_time', 'due_date', 'priority', 'status', 'progress', 'progress_pct',
   'batch_id', 'batch_code', 'team_id', 'team_name',
   'completion_date', 'completion_note', 'completed_at', 'accepted_at',

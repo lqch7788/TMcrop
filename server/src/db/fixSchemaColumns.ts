@@ -207,6 +207,11 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     ['production_plan_code', 'TEXT'],
     // P0-8：实际作业面积（亩）
     ['actual_area', 'REAL', '0'],
+    // 2026-10-20：作物备注。新建任务弹窗在「作物 = 其他」时让用户填写说明，
+    //   但此前**既没有提交、后端也没有这一列**，用户输入被完全丢弃；
+    //   而农事任务中心的「作物」列对「其他」会渲染 `其他（${cropRemarks}）`，
+    //   一直是空括号。补齐列 + 后端映射 + 前端透传。
+    ['crop_remarks', 'TEXT'],
   ];
   for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;

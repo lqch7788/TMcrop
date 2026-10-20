@@ -325,6 +325,9 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     productionPlanId: (t as any).productionPlanId ?? '',
     productionPlanCode: (t as any).productionPlanCode ?? '',
     toolsRemarks: (t as any).toolsRemarks ?? '',
+    // 2026-10-20：作物备注。列表「作物」列对「其他」会渲染 `其他（${cropRemarks}）`，
+    //   此前后端没有该列、转换层也没透传，一直是空括号。
+    cropRemarks: (t as any).cropRemarks ?? '',
     acceptanceRecord: (t as any).acceptanceRecord ?? null,
   } as Task;
 }
@@ -936,6 +939,8 @@ export function useTasks(): UseTasksReturn {
       greenhouseId: (taskData as Task).greenhouseId,
       greenhouseName: (taskData as Task).greenhouseName,
       cropName: (taskData as Task).cropName,
+      // 2026-10-20：作物备注（「作物=其他」时的说明），此前未纳入 payload
+      cropRemarks: (taskData as any).cropRemarks || '',
       // 补充 CreateTaskModal 传入但之前缺失的字段
       batchId: (taskData as Task).batchId || '',
       batchCode: (taskData as Task).batchCode || '',
