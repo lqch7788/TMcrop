@@ -129,8 +129,6 @@ import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
 // DailyProblemSummary 已迁移至 /summary/problems（生产汇总表 V1.0）
 import DailyWorkSummary from './pages/farm/DailyWorkSummary';
-// P0-6：农事任务排班页
-import TaskSchedulePage from './pages/farm/TaskSchedulePage';
 // PlanSummary 已迁移至 /summary/batch（生产汇总表 V1.0）
 import SupplierManagement from './pages/SupplierManagement';
 import SupplierCodeRule from './pages/SupplierCodeRule';
@@ -574,8 +572,8 @@ function AppContent() {
           <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
-          {/* P0-6：农事任务排班（与 /schedule 的人力考勤排班区分） */}
-          <Route path="/farm-task-schedule" element={<TaskSchedulePage />} />
+          {/* 2026-10-20：任务派工排班已并入排班调度的「任务排班」Tab，旧路由重定向（保旧书签/外链） */}
+          <Route path="/farm-task-schedule" element={<Navigate to="/schedule?tab=farm-task" replace />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/team" element={<Team />} />
           {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}

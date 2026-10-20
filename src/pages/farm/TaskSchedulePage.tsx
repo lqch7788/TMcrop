@@ -1,26 +1,32 @@
 /**
- * 农事任务排班页（P0-6）
+ * 任务排班页（原「任务派工排班」，P0-6）
+ *
+ * 2026-10-20：并入「排班调度」(/schedule) 的「任务排班」Tab，旧路由 /farm-task-schedule 重定向过来。
  *
  * 左侧：待排班任务（已派工但未排班的农事任务）
  * 右侧：按日期的排班列表
  *
- * 与「排班调度」（/schedule，工人考勤班次）区分：这里排的是"哪条农事任务在什么时候由谁做"。
+ * 与同页「考勤排班」Tab 区分：这里排的是"哪条农事任务在什么时候由谁做"；
+ * 考勤排班排的是"某个人哪天上什么班、几点打卡"。
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Users } from 'lucide-react';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { useFarmTaskSchedule, FARM_TASK_SHIFT_TYPES } from '../../hooks/useFarmTaskSchedule';
+import { useFarmTaskSchedule } from '../../hooks/useFarmTaskSchedule';
 import { useWorkerStore } from '../../stores';
+import { useTeamManageStore } from '../../stores/useTeamManageStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 
-const SHIFT_LABEL: Record<string, string> = Object.fromEntries(
-  FARM_TASK_SHIFT_TYPES.map((s) => [s.value, s.label]),
-);
-
 export default function TaskSchedulePage() {
-  const [date, setDate] = useState(todayLocal());
-  const { schedules, unscheduledTasks, loading, error, createSchedule, deleteSchedule, refresh } =
+  // URL 参数：date（初始日期）/ teamId（预选班组），由班组分配页跳转带进来
+  const [searchParams] = useSearchParams();
+  const urlDate = searchParams.get('date');
+  const urlTeamId = searchParams.get('teamId');
+
+  const [date, setDate] = useState(urlDate || todayLocal());
+  const { schedules, unscheduledTasks, shifts, loading, error, createSchedule, deleteSchedule, refresh } =
     useFarmTaskSchedule({ date });
 
   const workers = useWorkerStore((s) => s.workers);
@@ -30,16 +36,54 @@ export default function TaskSchedulePage() {
     if (workers.length === 0) void loadWorkers();
   }, [workers.length, loadWorkers]);
 
+  // 班组列表（与「班组分配」页同一 Store）
+  const teams = useTeamManageStore((s) => s.teams);
+  const fetchTeamData = useTeamManageStore((s) => s.fetchData);
+
+  useEffect(() => {
+    if (teams.length === 0) void fetchTeamData();
+  }, [teams.length, fetchTeamData]);
+
   // 选中待排班任务
   const [selectedTaskId, setSelectedTaskId] = useState('');
   // 排班表单
-  const [form, setForm] = useState({ workerId: '', planStart: '08:00', planEnd: '12:00', shiftType: 'day', remarks: '' });
+  const [form, setForm] = useState({
+    workerId: '',
+    teamId: '',
+    teamName: '',
+    planStart: '08:00',
+    planEnd: '12:00',
+    shiftType: '',
+    remarks: '',
+  });
   const [saving, setSaving] = useState(false);
 
   const selectedTask = useMemo(
     () => unscheduledTasks.find((t) => t.id === selectedTaskId),
     [unscheduledTasks, selectedTaskId],
   );
+
+  // 选了班组就只列该班组成员；没选班组列全部
+  const workerOptions = useMemo(() => {
+    if (!form.teamId) return workers;
+    const team = teams.find((t) => t.id === form.teamId);
+    if (!team) return workers;
+    const memberIds = new Set(team.memberIds || []);
+    return workers.filter((w) => memberIds.has(w.id));
+  }, [workers, teams, form.teamId]);
+
+  // URL 日期变化时同步（本组件常驻挂载，useState 初始值只读一次）
+  useEffect(() => {
+    if (urlDate) setDate(urlDate);
+  }, [urlDate]);
+
+  // 从 URL 预选班组（班组分配页跳转过来）
+  useEffect(() => {
+    if (!urlTeamId) return;
+    const t = teams.find((x) => x.id === urlTeamId);
+    if (!t) return;
+    setForm((f) => (f.teamId === t.id ? f : { ...f, teamId: t.id, teamName: t.name }));
+  }, [urlTeamId, teams]);
 
   // 日期加减
   const shiftDate = (days: number) => {
@@ -58,6 +102,10 @@ export default function TaskSchedulePage() {
       await showAlert('请选择执行人');
       return;
     }
+    if (!form.shiftType) {
+      await showAlert('请选择班次');
+      return;
+    }
     if (form.planStart >= form.planEnd) {
       await showAlert('开始时间必须早于结束时间');
       return;
@@ -70,6 +118,8 @@ export default function TaskSchedulePage() {
         taskId: selectedTask.id,
         workerId: form.workerId,
         workerName: worker?.name || '',
+        teamId: form.teamId || null,
+        teamName: form.teamName || null,
         planDate: date,
         planStart: form.planStart,
         planEnd: form.planEnd,
@@ -101,8 +151,8 @@ export default function TaskSchedulePage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-gray-900">农事任务排班</h2>
-            <span className="text-xs text-gray-500">把已派工的农事任务安排到具体的日期与执行人</span>
+            <h2 className="text-lg font-semibold text-gray-900">任务排班</h2>
+            <span className="text-xs text-gray-500">把已派工的农事任务安排到具体的日期、班次与执行人</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => shiftDate(-1)}>
@@ -181,14 +231,46 @@ export default function TaskSchedulePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <Label className="text-xs text-gray-600">班组</Label>
+                  <Select
+                    value={form.teamId || '__none__'}
+                    onValueChange={(v) => {
+                      const id = v === '__none__' ? '' : v;
+                      const t = teams.find((x) => x.id === id);
+                      setForm((f) => ({
+                        ...f,
+                        teamId: id,
+                        teamName: t?.name || '',
+                        // 换班组时清掉执行人（人可能不属于新班组）
+                        workerId: '',
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="选择班组（可选）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">不指定班组</SelectItem>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label className="text-xs text-gray-600">执行人</Label>
-                  <Select value={form.workerId || '__none__'} onValueChange={(v) => setForm((f) => ({ ...f, workerId: v === '__none__' ? '' : v }))}>
+                  <Select
+                    value={form.workerId || '__none__'}
+                    onValueChange={(v) => setForm((f) => ({ ...f, workerId: v === '__none__' ? '' : v }))}
+                  >
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder="选择执行人" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">选择执行人</SelectItem>
-                      {workers.map((w) => (
+                      {workerOptions.map((w) => (
                         <SelectItem key={w.id} value={w.id}>
                           {w.name}
                         </SelectItem>
@@ -198,13 +280,29 @@ export default function TaskSchedulePage() {
                 </div>
                 <div>
                   <Label className="text-xs text-gray-600">班次</Label>
-                  <Select value={form.shiftType} onValueChange={(v) => setForm((f) => ({ ...f, shiftType: v }))}>
+                  <Select
+                    value={form.shiftType || '__none__'}
+                    onValueChange={(v) => {
+                      const code = v === '__none__' ? '' : v;
+                      const cfg = shifts.find((s) => s.shiftCode === code);
+                      setForm((f) => ({
+                        ...f,
+                        shiftType: code,
+                        // 选中班次自动带出该班次的起止时间（仍可手动改）
+                        planStart: cfg?.startTime || f.planStart,
+                        planEnd: cfg?.endTime || f.planEnd,
+                      }));
+                    }}
+                  >
                     <SelectTrigger className="h-9">
-                      <SelectValue />
+                      <SelectValue placeholder="选择班次" />
                     </SelectTrigger>
                     <SelectContent>
-                      {FARM_TASK_SHIFT_TYPES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      <SelectItem value="__none__">选择班次</SelectItem>
+                      {shifts.map((s) => (
+                        <SelectItem key={s.shiftCode} value={s.shiftCode}>
+                          {s.shiftName}（{s.startTime}-{s.endTime}）
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -249,7 +347,7 @@ export default function TaskSchedulePage() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-gray-600">{s.taskCode || s.taskId}</span>
                         <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700 text-xs">
-                          {SHIFT_LABEL[s.shiftType] || s.shiftType}
+                          {s.shiftName || shifts.find((x) => x.shiftCode === s.shiftType)?.shiftName || s.shiftType}
                         </span>
                       </div>
                       <div className="text-sm text-gray-900 truncate">{s.taskTitle || '-'}</div>
