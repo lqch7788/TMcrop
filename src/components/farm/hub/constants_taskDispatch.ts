@@ -78,10 +78,14 @@ export const BATCH_DISPATCH_STATUSES = ['draft'];
 // 批量重派时可重派的状态（失败/已放弃）
 export const BATCH_REASSIGN_STATUSES = ['failed', 'abandoned'];
 
-// 批量分配（行级 onBatchAssign）可触发的状态：排除终态 + 执行人已完工作但未验收的状态
-// 2026-09-22：completed / cancelled 终态无意义；waiting_acceptance 表示执行人已提交工作，
-//   此时再分配给别人无业务意义（任务工作已完成），禁止触发
-export const BATCH_ASSIGNABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'rejected', 'failed', 'abandoned'];
+// 批量分配（行级 onBatchAssign）可触发的状态：仅"尚未派工"的草稿 / 待执行。
+// 2026-10-20 修正（用户反馈 bug）：此前含 accepted / in_progress / rejected / failed / abandoned，
+//   导致已派工、正在执行中、甚至已返工的任务行也冒出「批量分配」按钮 ——
+//   而批量分配的语义是"给还没派出去的任务安排工人 + 日期范围生成排班"，
+//   任务一旦进入执行流程（accepted / in_progress）就已有执行人，再批量分配无业务意义；
+//   rejected / failed / abandoned 有各自的「重新派发」/「批量重派」入口，不走这里。
+// 终态（completed / cancelled / waiting_acceptance）同样无意义，禁止触发。
+export const BATCH_ASSIGNABLE_STATUSES = ['draft', 'pending'];
 
 // ========== 工作制配置 ==========
 export const WORK_HOUR_SYSTEMS = [
