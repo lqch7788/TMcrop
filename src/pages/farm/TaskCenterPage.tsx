@@ -9,9 +9,16 @@
  *   - 每日规划 tab：仅显示 DailyPlanningPage
  *   - 智能派工 tab：仅显示 SmartDispatchPage
  *   - AI 智能助手 tab：任务下拉框 + AIPanel
+ *
+ * 2026-10-20：「智能派工」和「AI 智能助手」标注「未完全实现」，进入前二次确认。
+ *   原因：这两个 Tab 会拉起整条 AI 调度链（useComprehensiveDispatch → useEnvironmentData
+ *   的 30 秒传感器定时器等），实测可造成页面卡死 30 秒以上与数据流异常
+ *   （memory: farm-hub-freeze-ai-chain）。智能任务中心尚未完全实现，
+ *   农事管理的数据一律走「人工新建 → 人工派发 → 人工执行」。
+ *   功能保留（不删入口），但默认不激活 + 明确警示，避免误入。
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ClipboardList, Sparkles, Calendar, Clock, Bot } from 'lucide-react';
 import { TabHeader } from '../../components/common/TabHeader';
 import { AIPanel } from '../../components/farm/ai/AIPanel';
@@ -19,16 +26,31 @@ import { useTasks } from '../../hooks/useTasks';
 import SmartDispatchPage from '../../pages/SmartDispatch';
 import MonthlyPlanningPage from '../../pages/MonthlyPlanningPage';
 import DailyPlanningPage from '../../pages/DailyPlanningPage';
+import { showConfirm } from '@/lib/dialogService';
 
 const TABS = [
   { key: 'monthly-planning', label: '月度规划', icon: Calendar },
   { key: 'daily-planning', label: '每日规划', icon: Clock },
-  { key: 'smart-dispatch', label: '智能派工', icon: Sparkles },
-  { key: 'ai-assistant', label: 'AI 智能助手', icon: Bot },
+  { key: 'smart-dispatch', label: '智能派工', icon: Sparkles, warning: '未完全实现' },
+  { key: 'ai-assistant', label: 'AI 智能助手', icon: Bot, warning: '未完全实现' },
 ];
 
 export default function TaskCenterPage() {
   const [activeTab, setActiveTab] = useState('monthly-planning');
+
+  /** 进入带「未完全实现」警示的 Tab 前二次确认，避免误入导致卡死 */
+  const handleTabChange = useCallback(async (key: string) => {
+    const tab = TABS.find((t) => t.key === key);
+    if (tab?.warning) {
+      const ok = await showConfirm(
+        `「${tab.label}」尚未完全实现，其 AI 调度链可能导致页面卡死与数据流异常。\n\n` +
+        '农事管理的数据建议走「人工新建 → 人工派发 → 人工执行」。\n\n' +
+        `确定要进入「${tab.label}」吗？`,
+      );
+      if (!ok) return;
+    }
+    setActiveTab(key);
+  }, []);
 
   // AI 智能助手 tab 需要任务上下文，从 useTasks 拉取
   const { tasks: allTasks } = useTasks();
@@ -50,7 +72,7 @@ export default function TaskCenterPage() {
         icon={<ClipboardList className="w-6 h-6 text-white" />}
         tabs={TABS}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         bold
       />
 
