@@ -220,6 +220,11 @@ router.post('/batch-assign', requireAuth, async (req, res) => {
     const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
     const errors: string[] = [];
 
+    // 2026-10-20：班次兜底 —— 前端 BatchAssignModal 不传 shiftType（保持其原有交互不变），
+    //   此前直接写 null，导致排班行的班次徽标空白。这里从 shifts 表取默认班次，
+    //   保证写入的是合法 shift_code，并把该班次的起止时间一并带出。
+    const defaultShift = await farmTaskScheduleService.getDefaultShift();
+
     for (const w of workers) {
       if (!w.workerId) continue;
       for (const date of dates) {
@@ -237,9 +242,9 @@ router.post('/batch-assign', requireAuth, async (req, res) => {
             teamId: w.teamId || null,
             teamName: w.teamName || null,
             planDate: date,
-            planStart: planStart || null,
-            planEnd: planEnd || null,
-            shiftType: w.shiftType || null,
+            planStart: planStart || defaultShift?.start_time || null,
+            planEnd: planEnd || defaultShift?.end_time || null,
+            shiftType: w.shiftType || defaultShift?.shift_code || null,
             remarks: remarks || null,
           });
           created++;
@@ -261,6 +266,42 @@ router.post('/batch-assign', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('批量任务分配失败:', error);
     res.status(500).json({ success: false, error: '批量任务分配失败' });
+  }
+});
+
+/**
+ * 派工后自动排班（幂等）
+ * POST /api/farm-task-schedules/auto-assign
+ *
+ * 入参：{ taskId, workerId, workerName?, planDate?, teamId?, teamName?, shiftType? }
+ * 返回：{ success, data: { created, updated, schedule, reason? } }
+ *
+ * 背景：农事任务中心派工成功后，「待排班任务」列表的口径是"该任务还没有任何排班记录"，
+ *   任务会一直堆着排不掉。本端点在派工后自动补一条排班，让派工 → 排班闭环。
+ *   已有排班时只更新执行人（保留人工排好的日期与班次），重复调用不会产生第二条。
+ */
+router.post('/auto-assign', requireAuth, async (req, res) => {
+  try {
+    const { taskId, workerId, workerName, planDate, teamId, teamName, shiftType } = req.body || {};
+
+    if (!taskId || !workerId) {
+      return res.status(400).json({ success: false, error: 'taskId/workerId 必填' });
+    }
+
+    const result = await farmTaskScheduleService.autoAssignSchedule({
+      taskId,
+      workerId,
+      workerName,
+      planDate: planDate || undefined,
+      teamId: teamId ?? undefined,
+      teamName: teamName ?? undefined,
+      shiftType: shiftType || undefined,
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('自动排班失败:', error);
+    res.status(500).json({ success: false, error: '自动排班失败' });
   }
 });
 

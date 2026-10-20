@@ -11,13 +11,14 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Users } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { useFarmTaskSchedule } from '../../hooks/useFarmTaskSchedule';
+import { useFarmTaskSchedule, type FarmTaskSchedule } from '../../hooks/useFarmTaskSchedule';
 import { useWorkerStore } from '../../stores';
 import { useTeamManageStore } from '../../stores/useTeamManageStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import TaskScheduleEditModal, { type TaskScheduleEditTarget } from './TaskScheduleEditModal';
 
 export default function TaskSchedulePage() {
   // URL 参数：date（初始日期）/ teamId（预选班组），由班组分配页跳转带进来
@@ -26,7 +27,7 @@ export default function TaskSchedulePage() {
   const urlTeamId = searchParams.get('teamId');
 
   const [date, setDate] = useState(urlDate || todayLocal());
-  const { schedules, unscheduledTasks, shifts, loading, error, createSchedule, deleteSchedule, refresh } =
+  const { schedules, unscheduledTasks, shifts, loading, error, createSchedule, updateSchedule, deleteSchedule, refresh } =
     useFarmTaskSchedule({ date });
 
   const workers = useWorkerStore((s) => s.workers);
@@ -141,6 +142,55 @@ export default function TaskSchedulePage() {
       await deleteSchedule(id);
     } catch (e) {
       await showAlert(`删除失败：${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  // ===== 编辑排班 =====
+  // 派工后自动生成的排班落在任务计划日期上，现场常需改期 / 换班次 / 换执行人。
+  // 没有编辑能力只能"删了重排"，而删除是物理删除（不可撤销），容易误删。
+  const [editing, setEditing] = useState<TaskScheduleEditTarget | null>(null);
+
+  const openEditModal = (s: FarmTaskSchedule) => {
+    setEditing({
+      id: s.id,
+      taskId: s.taskId,
+      taskCode: s.taskCode,
+      taskTitle: s.taskTitle,
+      workerId: s.workerId,
+      workerName: s.workerName,
+      teamId: s.teamId,
+      teamName: s.teamName,
+      planDate: s.planDate,
+      planStart: s.planStart,
+      planEnd: s.planEnd,
+      shiftType: s.shiftType,
+      remarks: s.remarks,
+    });
+  };
+
+  const handleSaveEdit = async (
+    id: string,
+    updates: {
+      planDate: string;
+      workerId: string;
+      workerName: string;
+      teamId: string | null;
+      teamName: string | null;
+      shiftType: string;
+      planStart: string;
+      planEnd: string;
+      remarks: string;
+    },
+  ) => {
+    setSaving(true);
+    try {
+      await updateSchedule(id, updates as Partial<FarmTaskSchedule>);
+      await showAlert('排班已更新');
+      setEditing(null);
+    } catch (e) {
+      await showAlert(`更新失败：${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -356,9 +406,20 @@ export default function TaskSchedulePage() {
                         {s.teamName ? ` · ${s.teamName}` : ''}
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="删除排班">
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditModal(s)}
+                        title="编辑排班"
+                        aria-label="编辑排班"
+                      >
+                        <Pencil className="w-4 h-4 text-amber-600" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="删除排班">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -366,6 +427,18 @@ export default function TaskSchedulePage() {
           </div>
         </div>
       </div>
+
+      {/* 编辑排班弹窗 */}
+      <TaskScheduleEditModal
+        open={editing !== null}
+        target={editing}
+        shifts={shifts}
+        teams={teams}
+        workers={workers}
+        saving={saving}
+        onClose={() => setEditing(null)}
+        onSave={handleSaveEdit}
+      />
     </div>
   );
 }

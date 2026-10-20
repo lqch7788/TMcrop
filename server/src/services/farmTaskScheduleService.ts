@@ -5,6 +5,7 @@
 
 import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
+import { formatLocalDateISO } from '../utils/dateUtil';
 
 /**
  * 错误处理包装函数
@@ -330,5 +331,271 @@ export async function checkConflicts(
     return conflicts;
   } catch (error) {
     return handleServiceError(error, '检查排班冲突');
+  }
+}
+
+/**
+ * 班次配置（shifts 表 —— 班次字典的唯一数据源）
+ */
+export interface ShiftOption {
+  shift_code: string;
+  shift_name: string;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+/**
+ * 按 shift_code 取班次
+ * @param code - 班次编码（SH001/SH002/...）
+ */
+export async function getShiftByCode(code: string): Promise<ShiftOption | null> {
+  try {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT shift_code, shift_name, start_time, end_time
+      FROM shifts
+      WHERE shift_code = ?
+      LIMIT 1
+    `);
+    stmt.bind([code]);
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as unknown as ShiftOption;
+      stmt.free();
+      return row;
+    }
+    stmt.free();
+    return null;
+  } catch (error) {
+    return handleServiceError(error, '读取班次');
+  }
+}
+
+/**
+ * 取默认班次：shifts 表中第一个启用的班次（按开始时间升序）
+ *
+ * 用途：派工后自动排班、以及批量分配未指定班次时兜底 ——
+ * 保证写入的 shift_type 一定是合法 shift_code，不再落 NULL。
+ */
+export async function getDefaultShift(): Promise<ShiftOption | null> {
+  try {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT shift_code, shift_name, start_time, end_time
+      FROM shifts
+      WHERE status != 'deleted'
+      ORDER BY start_time ASC
+      LIMIT 1
+    `);
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as unknown as ShiftOption;
+      stmt.free();
+      return row;
+    }
+    stmt.free();
+    return null;
+  } catch (error) {
+    return handleServiceError(error, '读取默认班次');
+  }
+}
+
+/**
+ * 派工后自动排班（幂等）
+ *
+ * 业务背景：「待排班任务」列表的口径是"已派工 且 该任务在 farm_task_schedules
+ * 里没有任何排班记录"。农事任务中心派工成功只写 farm_tasks.assignee_id，
+ * 任务就会一直堆在待排班列表里排不掉。本函数在派工后自动补一条排班记录，
+ * 让"派工 → 排班"闭环。
+ *
+ * 规则：
+ *  1. 幂等 —— 同一 taskId 重复调用不会产生第二条排班；
+ *  2. 已有排班时只更新执行人 / 班组，**保留**用户手排的日期与班次（不覆盖人工安排）；
+ *  3. 无排班时按 planDate（入参 → 任务 plan_date → 今天）+ 默认班次新建；
+ *  4. 冲突 —— 该执行人在目标日期已有其它排班则跳过并返回原因，不静默覆盖。
+ */
+export interface AutoAssignInput {
+  taskId: string;
+  workerId: string;
+  workerName?: string;
+  planDate?: string;
+  teamId?: string | null;
+  teamName?: string | null;
+  shiftType?: string | null;
+}
+
+export interface AutoAssignResult {
+  /** 是否新建了一条排班 */
+  created: boolean;
+  /** 是否更新了已有排班的执行人 */
+  updated: boolean;
+  /** 排班记录（created/updated 为 true 时有值） */
+  schedule: FarmTaskSchedule | null;
+  /** 跳过原因 */
+  reason?: string;
+}
+
+/** 自动排班时读取的任务字段（服务端权威口径） */
+interface FarmTaskAutoAssignRow {
+  id: string;
+  plan_date: string | null;
+  team_id: string | null;
+  team_name: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+}
+
+/**
+ * 把派工用的执行人标识归一化成 employees.id
+ *
+ * 背景：farm_tasks.assignee_id 存在多套 ID 体系并存的历史问题
+ *   （EMP_001 属 employees.id；EMP_98404 / W38406 是姓名哈希；user-admin 是登录账号 oid），
+ *   而 farm_task_schedules.worker_id 外键指向 employees(id)，且服务启动时
+ *   `PRAGMA foreign_keys = ON` —— 直接把 assignee_id 当 worker_id 写会外键失败。
+ *
+ * 归一化顺序：worker_id 命中 employees.id → worker_name 命中 employees.name → 失败。
+ *
+ * @param workerId - 派工侧的执行人标识
+ * @param workerName - 执行人姓名（第二层兜底）
+ * @returns 归一化后的 employees.id / 姓名；无法归一化时返回 null
+ */
+export async function resolveEmployeeId(
+  workerId: string,
+  workerName?: string
+): Promise<{ id: string; name: string } | null> {
+  try {
+    const db = getDatabase();
+
+    if (workerId) {
+      const byId = db.prepare('SELECT id, name FROM employees WHERE id = ? LIMIT 1');
+      byId.bind([workerId]);
+      if (byId.step()) {
+        const row = byId.getAsObject() as { id: string; name: string };
+        byId.free();
+        return row;
+      }
+      byId.free();
+    }
+
+    if (workerName) {
+      const byName = db.prepare(
+        "SELECT id, name FROM employees WHERE name = ? AND status = 'active' LIMIT 1"
+      );
+      byName.bind([workerName]);
+      if (byName.step()) {
+        const row = byName.getAsObject() as { id: string; name: string };
+        byName.free();
+        return row;
+      }
+      byName.free();
+    }
+
+    return null;
+  } catch (error) {
+    return handleServiceError(error, '归一化执行人');
+  }
+}
+
+export async function autoAssignSchedule(input: AutoAssignInput): Promise<AutoAssignResult> {
+  try {
+    const db = getDatabase();
+
+    // 1. 取任务（服务端权威：plan_date / team_id / team_name / assignee）
+    const taskStmt = db.prepare(
+      'SELECT id, plan_date, team_id, team_name, assignee_id, assignee_name FROM farm_tasks WHERE id = ?'
+    );
+    taskStmt.bind([input.taskId]);
+    let task: FarmTaskAutoAssignRow | null = null;
+    if (taskStmt.step()) task = taskStmt.getAsObject() as unknown as FarmTaskAutoAssignRow;
+    taskStmt.free();
+
+    if (!task) {
+      return { created: false, updated: false, schedule: null, reason: '农事任务不存在' };
+    }
+
+    // 2. 执行人归一化到 employees.id（外键约束要求），失败则跳过（不产生孤儿排班）
+    const employee = await resolveEmployeeId(
+      input.workerId || task.assignee_id || '',
+      input.workerName || task.assignee_name || ''
+    );
+    if (!employee) {
+      return {
+        created: false,
+        updated: false,
+        schedule: null,
+        reason: '执行人不在员工档案中，无法自动排班，请到「排班调度 → 任务排班」手动安排',
+      };
+    }
+    const workerId = employee.id;
+    const workerName = employee.name;
+
+    // 3. 班次：入参 → 默认班次（保证 shift_type 落的是合法 shift_code）
+    const defaultShift = input.shiftType ? null : await getDefaultShift();
+    const shiftCode = input.shiftType || defaultShift?.shift_code || null;
+    const shiftCfg = shiftCode ? await getShiftByCode(shiftCode) : null;
+
+    const teamId = input.teamId ?? task.team_id ?? null;
+    const teamName = input.teamName ?? task.team_name ?? null;
+
+    // 4. 幂等：该任务已有的排班（按 task_id 找）
+    const existStmt = db.prepare('SELECT * FROM farm_task_schedules WHERE task_id = ? LIMIT 1');
+    existStmt.bind([input.taskId]);
+    let existing: FarmTaskSchedule | null = null;
+    if (existStmt.step()) existing = existStmt.getAsObject() as unknown as FarmTaskSchedule;
+    existStmt.free();
+
+    if (existing) {
+      // 已有排班：只更新执行人 / 班组，保留人工排好的日期与班次
+      // 冲突检查：该执行人在**排班当天**已有别的任务排班 → 跳过
+      const conflicts = await checkConflicts(workerId, existing.plan_date, existing.id);
+      if (conflicts.length > 0) {
+        return { created: false, updated: false, schedule: null, reason: '该执行人在同日已有其它排班' };
+      }
+      const now = new Date().toISOString();
+      db.run(
+        `UPDATE farm_task_schedules
+         SET worker_id = ?, worker_name = ?, team_id = ?, team_name = ?, updated_at = ?
+         WHERE id = ?`,
+        [workerId, workerName, teamId, teamName, now, existing.id],
+      );
+      saveDatabase();
+      return { created: false, updated: true, schedule: await getScheduleById(existing.id) };
+    }
+
+    // 5. 新建：目标日期 = 入参 → 任务 plan_date → 今天（本地日期，不用 UTC）
+    const planDate = (input.planDate || task.plan_date || formatLocalDateISO()).slice(0, 10);
+
+    // 冲突检查：同一执行人同一天不能有两班
+    const conflicts = await checkConflicts(workerId, planDate);
+    if (conflicts.length > 0) {
+      return { created: false, updated: false, schedule: null, reason: '该执行人在同日已有排班' };
+    }
+
+    const id = generateId();
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT INTO farm_task_schedules (
+         id, task_id, worker_id, worker_name, team_id, team_name,
+         plan_date, plan_start, plan_end, shift_type, status, remarks,
+         created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?)`,
+      [
+        id,
+        input.taskId,
+        workerId,
+        workerName,
+        teamId,
+        teamName,
+        planDate,
+        shiftCfg?.start_time ?? null,
+        shiftCfg?.end_time ?? null,
+        shiftCode,
+        '派工后自动生成',
+        now,
+        now,
+      ],
+    );
+    saveDatabase();
+    return { created: true, updated: false, schedule: await getScheduleById(id) };
+  } catch (error) {
+    return handleServiceError(error, '自动排班');
   }
 }
