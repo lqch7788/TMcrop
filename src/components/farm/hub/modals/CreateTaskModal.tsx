@@ -276,6 +276,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       teamId: newTask.teamId || '',
       teamName: newTask.teamName || '',
       cropName: cropValue,
+      // 2026-10-20 修复：作物备注此前**完全没有提交**（后端也无此列），
+      //   用户在「作物=其他」时填的说明被静默丢弃，列表「作物」列一直显示空括号。
+      cropRemarks: newTask.cropRemarks || '',
       priority: (newTask.priority as 'urgent' | 'high' | 'normal') || 'normal',
       assigneeId: finalAssigneeId,
       assigneeName: finalAssigneeName,
@@ -286,8 +289,15 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       dueDate: planEndTime?.split(' ')[0] || '',
       estimatedDays: newTask.estimatedDays || 0,
       estimatedHours: estimatedHours,
-      description: newTask.sopContent || '',
-      remarks: newTask.toolsRemarks || '',
+      // 2026-10-20 修复字段错接：
+      //   · remarks 在任务详情里被渲染为「工作内容」、在列表里是「备注」列，
+      //     此前却被写成 toolsRemarks（资源备注），导致同一条备注在两个语义位置重复出现，
+      //     而 newTask.remarks（工作内容）虽在 state 里声明却从未绑定输入框、也从未提交。
+      //   · description 此前也等于 sopContent，与 sopContent 完全重复（且前端无人读取）。
+      //   现在：remarks ← 工作内容输入；description 跟随 remarks（后端列存在，保持同值）；
+      //        toolsRemarks 只进它自己的字段。
+      description: newTask.remarks || '',
+      remarks: newTask.remarks || '',
       sourceType: 'dispatch',
       dispatchMode: 'farm',  // 农事任务标识，用于"我的任务"Tab分类
       materials: newTask.materials,
@@ -737,71 +747,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
             </div>
 
-            <div>
-              <Label className="text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <div
-                  className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
-                  onClick={() => setShowTaskTypeDropdown(!showTaskTypeDropdown)}
-                >
-                  {(!newTask.types || newTask.types.length === 0) && (
-                    <span className="text-gray-400 text-sm">请选择任务类型</span>
-                  )}
-                  {(newTask.types || []).map((typeValue: string) => {
-                    const type = FARM_OPERATION_TYPES.find(t => t.value === typeValue);
-                    return (
-                      <span
-                        key={typeValue}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm"
-                      >
-                        {type?.label || typeValue}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setNewTask({ ...newTask, types: newTask.types.filter(v => v !== typeValue) });
-                          }}
-                          className="hover:text-red-500 h-4 w-4"
-                        >
-                          ×
-                        </Button>
-                      </span>
-                    );
-                  })}
-                </div>
-                {showTaskTypeDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {FARM_OPERATION_TYPES.map(t => (
-                      <Label
-                        key={t.value}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Input
-                          type="checkbox"
-                          checked={newTask.types.includes(t.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewTask({ ...newTask, types: [...newTask.types, t.value] });
-                            } else {
-                              setNewTask({ ...newTask, types: newTask.types.filter(v => v !== t.value) });
-                            }
-                          }}
-                          className="w-4 h-4 text-emerald-600 rounded"
-                        />
-                        <span className="text-sm text-gray-700">{t.label}</span>
-                      </Label>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {showTaskTypeDropdown && (
-                <div className="fixed inset-0 z-0" onClick={() => setShowTaskTypeDropdown(false)} />
-              )}
-            </div>
-
             {newTask.types.includes('other') && (
               <div>
                 <Label className="text-gray-700 mb-1">其他任务备注 <span className="text-red-500">*</span></Label>
@@ -820,6 +765,21 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               configValues={newTask.typeConfig}
               onConfigChange={handleTypeConfigChange}
             />
+
+            {/* 2026-10-20 新增：工作内容。
+                newTask.remarks 此前在 state 里声明却没有任何输入框绑定，
+                而它在任务详情里正是「工作内容」区块、在列表里是「备注」列。
+                补上输入框，让这个字段真正可用且语义明确。 */}
+            <div>
+              <Label className="text-gray-700 mb-1">工作内容（可选）</Label>
+              <TextArea
+                value={newTask.remarks || ''}
+                onChange={(e) => setNewTask({ ...newTask, remarks: e.target.value })}
+                rows={2}
+                className={deepInputClass}
+                placeholder="本次作业的具体内容说明（显示在任务详情的「工作内容」与列表「备注」列）"
+              />
+            </div>
 
             <div>
               <Label className="text-gray-700 mb-1">作业标准 (SOP)</Label>
@@ -939,7 +899,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 </Select>
               </div>
               <div>
-                <Label className="text-gray-700 mb-1">备注（可选）</Label>
+                {/* 2026-10-20：原标签是「备注（可选）」但绑的是 toolsRemarks，
+                    容易被理解成任务备注。改名「资源备注」以匹配它的归属（所需工具区块）
+                    与展示位置（详情弹窗「所需工具」下的备注）。 */}
+                <Label className="text-gray-700 mb-1">资源备注（可选）</Label>
                 <TextArea
                   value={newTask.toolsRemarks || ''}
                   onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}

@@ -224,6 +224,8 @@ export interface Task {
   greenhouseId?: string;
   greenhouseName?: string;
   cropName?: string;
+  /** 作物备注（「作物 = 其他」时的说明文字）。2026-10-20 补：此前只存在于 TaskTableRow 的局部类型 */
+  cropRemarks?: string;
   teamId?: string;           // 关联班组ID（来自农事管理-班组分配）
   teamName?: string;         // 关联班组名称
 
