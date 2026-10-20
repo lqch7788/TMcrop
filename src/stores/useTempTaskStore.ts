@@ -259,8 +259,15 @@ export const useTempTaskStore = create<TempTaskState>()(
           }
           return optimisticTask;
         } catch (error) {
-          // logger.warn('[TempTaskStore] 创建任务API失败，保留本地乐观数据:', error);
-          return optimisticTask;
+          // 2026-10-20 修复（CRITICAL）：创建失败必须回滚 + 抛错。
+          //   此前直接 `return optimisticTask`，既不回滚也不抛 ——
+          //   任务创建 500 时列表里留下一条"幽灵任务"，表单关闭、看起来成功，
+          //   刷新后消失；后续执行/验收全部断链，且全程零提示零日志。
+          //   与同文件 updateTask / deleteTask 的"失败回滚 + throw"保持一致。
+          console.error('[TempTaskStore] 创建临时任务API失败，回滚乐观数据:', error);
+          set((state) => ({ tasks: state.tasks.filter(t => t.id !== tempId) }));
+          set((state) => ({ error: (error as Error).message }));
+          throw error;
         }
       },
 

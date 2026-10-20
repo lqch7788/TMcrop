@@ -5,12 +5,62 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useToastStore } from '../stores/useToastStore';
 import { useTasks } from './useTasks';
 import { useTempTasks } from './useTempTasks';
 import { useAIOptimization } from './useAIOptimization';
 import type { UnifiedDispatchTask } from './useComprehensiveDispatch';
 import type { AIOptimizationSuggestion } from '../types/dispatch';
 import type { PendingConfirmTask } from './usePendingConfirmTasks';
+
+/**
+ * 解析智能派工页的复合任务 ID。
+ *
+ * 2026-10-20 修复（CRITICAL）：usePendingConfirmTasks 把农事任务规范化为
+ * `farm-${task.id}`，而真实 ID 形如 `NS20261017-516`（**自带连字符**）。
+ * 此前用 `const [source, sourceId] = taskId.split('-')` 解构，
+ * 得到 sourceId = 'NS20261017'（第三段 `516` 被丢弃），于是：
+ *   POST /api/farm-tasks/NS20261017/accept → 404（又被 `.catch(() => {})` 吞掉）
+ *   PUT  /api/farm-tasks/NS20261017        → 404
+ * 但函数仍返回 success = true，界面提示"已成功派发给 X"，刷新后什么都没变。
+ * 现在只按**第一个**连字符切分，保留完整 ID。
+ */
+function parseDispatchTaskId(taskId: string): { source: string; sourceId: string } {
+  const sep = taskId.indexOf('-');
+  if (sep < 0) return { source: taskId, sourceId: '' };
+  return { source: taskId.slice(0, sep), sourceId: taskId.slice(sep + 1) };
+}
+
+/**
+ * 派工副作用请求的失败上报（2026-10-20 新增）。
+ *
+ * 这里全部是 fire-and-forget 的 fetch，且**此前用的 `.catch(() => {})` 抓不到 HTTP 错误**
+ * —— fetch 只在网络层失败时 reject，404/500 会正常 resolve。
+ * 所以那些请求失败时既没有日志也没有提示，界面照样报"已成功派发"。
+ * 现统一接上：非 2xx 与网络异常都写 console + toast。
+ */
+function reportDispatchFailure(label: string) {
+  return (input: unknown) => {
+    const detail = input instanceof Error
+      ? input.message
+      : (typeof input === 'object' && input && 'status' in input)
+        ? `HTTP ${(input as { status: number }).status}`
+        : String(input);
+    console.error(`[useDispatchActions] ${label}失败:`, input);
+    useToastStore.getState().toast.error(`${label}失败：${detail}`);
+  };
+}
+
+/** 包装 fetch：非 2xx 也当作失败抛给 reportDispatchFailure */
+function ensureOk(label: string) {
+  return (res: Response): Response => {
+    if (!res.ok) {
+      console.error(`[useDispatchActions] ${label} HTTP ${res.status}`);
+      useToastStore.getState().toast.error(`${label}失败（HTTP ${res.status}）`);
+    }
+    return res;
+  };
+}
 
 // ============================================
 // 类型定义
@@ -97,7 +147,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
 
     try {
       // 解析任务ID和来源
-      const [source, sourceId] = taskId.split('-');
+      const { source, sourceId } = parseDispatchTaskId(taskId);
       let success = false;
       let message = '';
 
@@ -107,7 +157,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-        }).catch(() => { /* farm accept failed */ });
+        }).then(ensureOk('farm accept')).catch(reportDispatchFailure('farm accept'));
 
         // 同时更新执行人信息
         updateTask(sourceId, {
@@ -124,7 +174,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-        }).catch(() => { /* tempTask accept failed */ });
+        }).then(ensureOk('tempTask accept')).catch(reportDispatchFailure('tempTask accept'));
 
         // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
         updateTempTask(sourceId, {
@@ -143,7 +193,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
               operator_name: workerName,
               comment: '开始执行任务',
             }),
-          }).catch(() => { /* submit-progress failed */ });
+          }).then(ensureOk('submit-progress')).catch(reportDispatchFailure('submit-progress'));
         }, 100);
 
         success = true;
@@ -188,7 +238,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
 
       taskIds.forEach((taskId, index) => {
         const workerId = workerIds[index] || workerIds[0]; // 如果工人ID数量不够，使用第一个
-        const [source, sourceId] = taskId.split('-');
+        const { source, sourceId } = parseDispatchTaskId(taskId);
         let success = false;
         let message = '';
 
@@ -237,7 +287,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     setIsProcessing(true);
 
     try {
-      const [source, sourceId] = taskId.split('-');
+      const { source, sourceId } = parseDispatchTaskId(taskId);
       let success = false;
       let message = '';
 
@@ -253,7 +303,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_name: newWorkerName,
             reason: `更换执行人为 ${newWorkerName}`,
           }),
-        }).catch(() => { /* farm reassign failed */ });
+        }).then(ensureOk('farm reassign')).catch(reportDispatchFailure('farm reassign'));
 
         // 同步更新本地状态
         updateTask(sourceId, {
@@ -302,7 +352,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     setIsProcessing(true);
 
     try {
-      const [source, sourceId] = taskId.split('-');
+      const { source, sourceId } = parseDispatchTaskId(taskId);
       let success = false;
       let message = '';
 
@@ -322,7 +372,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_id: '',
             operator_name: '',
           }),
-        }).catch(() => { /* extend-deadline failed */ });
+        }).then(ensureOk('extend-deadline')).catch(reportDispatchFailure('extend-deadline'));
 
         // 同步更新本地状态
         updateTask(sourceId, {
@@ -364,7 +414,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
 
     try {
       // 执行替换
-      const [source, sourceId] = suggestion.taskId.split('-');
+      const { source, sourceId } = parseDispatchTaskId(suggestion.taskId);
       let success = false;
       let message = '';
 
@@ -380,7 +430,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_name: suggestion.suggestedWorkerName,
             reason: '接受AI优化建议',
           }),
-        }).catch(() => { /* farm reassign failed */ });
+        }).then(ensureOk('farm reassign')).catch(reportDispatchFailure('farm reassign'));
 
         // 同步更新本地状态
         updateTask(sourceId, {

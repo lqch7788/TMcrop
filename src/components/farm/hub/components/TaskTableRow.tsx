@@ -324,7 +324,11 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               点「开始处理」（MyTasksPage.handleStartProcessing）或提交首次进度
               （useTasks.submitProgress：accepted + 非最终进度 → 自动转 in_progress）；
               管理者视角不该替执行人推进任务。 */}
-          {task.status === 'rejected' && onContinue && (
+          {/* 2026-10-20 修复（HIGH）：补执行人守卫 —— 与「我的任务」同源条件。
+              执行人拒单会把 assigneeId 清空并置 rejected；若这里不校验，
+              管理员点「继续执行」会把任务推进到 in_progress 且仍无执行人，
+              之后谁都做不了（库内 NS20261016-609 / NS20261017-039 即此成因）。 */}
+          {task.status === 'rejected' && !!task.assigneeId && onContinue && (
             <Button
               variant="outline"
               size="sm"

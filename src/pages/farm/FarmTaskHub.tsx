@@ -99,7 +99,10 @@ export function FarmTaskHub() {
   const [showImportModal, setShowImportModal] = useState(false);
 
   // 批量导入处理函数
-  const handleBatchImport = (importData: ImportRow[]) => {
+  // 2026-10-20 修复（CRITICAL）：改为 async 并逐条 await 真实创建结果。
+  //   此前 createTask 同步返回乐观任务（恒非空），`if (created) succeeded++` 永远成立，
+  //   后端宕机时 10 条全失败仍提示"成功导入 10 条"。现在以 __createPromise 的真实结果统计。
+  const handleBatchImport = async (importData: ImportRow[]) => {
     if (importData.length === 0) {
       showAlert('没有可导入的数据');
       return;
@@ -112,7 +115,7 @@ export function FarmTaskHub() {
     let succeeded = 0;
     const failedRows: string[] = [];
 
-    importData.forEach((row, index) => {
+    for (const [index, row] of importData.entries()) {
       const typeLabels = row.typeLabel || row.type;
       const finalAssigneeName = row.assignee || '';
       const finalAssigneeId = finalAssigneeName
@@ -156,12 +159,16 @@ export function FarmTaskHub() {
         status: 'pending',
       });
 
-      if (created) {
+      // 以真实创建结果统计（createTask 把 addTask 的 Promise 挂在 __createPromise 上）
+      const ok = created
+        ? await ((created as unknown as { __createPromise?: Promise<boolean> }).__createPromise ?? Promise.resolve(true))
+        : false;
+      if (ok) {
         succeeded++;
       } else {
         failedRows.push(`${row.field || ''}${typeLabels ? `·${typeLabels}` : ''}` || `第 ${index + 1} 行`);
       }
-    });
+    }
 
     if (failedRows.length === 0) {
       showAlert(`成功导入 ${succeeded} 条任务`);
