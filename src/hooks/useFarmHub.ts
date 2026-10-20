@@ -337,8 +337,12 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
     const today = getTodayString();
 
     // 计算任务统计
+    // 2026-10-20 修复（state-auditor L7）：补 waiting_acceptance。
+    //   此前「待办任务」只统计 pending + accepted，而 waiting_acceptance（待验收）
+    //   不计入任何一张卡片 —— 任务一旦提交验收就从统计里"消失"。
+    //   待验收对验收人来说同样是待办。
     const pendingTasks = tasks.filter(t =>
-      ['pending', 'accepted'].includes(t.status)
+      ['pending', 'accepted', 'waiting_acceptance'].includes(t.status)
     ).length;
     const inProgressTasks = tasks.filter(t =>
       t.status === 'in_progress'
