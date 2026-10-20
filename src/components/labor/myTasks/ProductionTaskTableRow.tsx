@@ -107,9 +107,11 @@ export function ProductionTaskTableRow({
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
         {task.field || '-'}
       </td>
-      {/* 作物 */}
+      {/* 作物 —— 2026-10-20：为「其他」时带上作物备注，与农事任务中心列表口径一致 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {task.crop || '-'}
+        {task.crop === '其他'
+          ? `其他（${(task as { cropRemarks?: string }).cropRemarks || '未填写'}）`
+          : (task.crop || '-')}
       </td>
       {/* 负责人 */}
       <td className="px-3 py-3 whitespace-nowrap">
@@ -155,9 +157,10 @@ export function ProductionTaskTableRow({
       <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={task.remarks || '-'}>
         {translateRemarks(task.remarks) || '-'}
       </td>
-      {/* 作业标准 */}
+      {/* 作业标准 —— 2026-10-20 修复：此前要求「任务类型 >= 2 个」才显示 SOP 链接，
+          但 SOP 与类型数量无关，单类型任务同样可以有作业标准（实测单类型任务一律显示 '-'）。 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        {types.length >= 2 && task.sopContent ? (
+        {task.sopContent ? (
           <Button
             variant="link"
             size="sm"

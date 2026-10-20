@@ -86,17 +86,25 @@ const getTypeLabel = (type: string): string => {
 function matchesProblemTabFilter(task: any): boolean {
   const dm = task.dispatchMode;
   if (dm === 'problem' || dm === 'inspection') return true;
-  if (task.sourceProblemId !== undefined || task.sourceInspectionId !== undefined) return true;
+  // 2026-10-20：改用**真值**判断。后端未关联时返回 null/''，
+  //   而 `!== undefined` 对 null 也成立 → 会把每条任务都误判成问题任务。
+  if (task.sourceProblemId || task.sourceInspectionId) return true;
   return false;
 }
 
-/** 「农事任务处理」tab：NS 开头的纯农事任务 */
+/**
+ * 「农事任务处理」tab：纯农事任务
+ *
+ * 2026-10-20 修复（state-auditor MEDIUM-3）：此前用 `taskCode.startsWith('NS')` 判定，
+ * 而农事任务中心用的是 `dispatchMode === 'farm'` —— 两套口径导致同一任务在两页归类不同
+ * （如 smart 派工产生的 farm 任务、编号非 NS 前缀的任务，在中心可见、在这里消失）。
+ * 现改为与服务端/农事任务中心一致的语义判定：排除 temp / 巡查 / 问题来源，其余即农事任务。
+ */
 function matchesProductionTabFilter(task: any): boolean {
-  if (!task.taskCode || !task.taskCode.startsWith('NS')) return false;
   const dm = task.dispatchMode;
-  if (dm === 'problem' || dm === 'inspection' || dm === 'tempTask') return false;
+  if (dm === 'tempTask' || dm === 'problem' || dm === 'inspection') return false;
   if (task.sourceType === 'tempTask') return false;
-  if (task.sourceProblemId !== undefined) return false;
+  if (task.sourceProblemId || task.sourceInspectionId) return false;
   return true;
 }
 
@@ -157,6 +165,8 @@ export function MyTasksPage() {
         typeName: t.typeName || '',
         field: t.field || t.greenhouseName || '',
         crop: t.crop || t.cropName || '',
+        // 2026-10-20：作物备注（「作物=其他」时的说明）
+        cropRemarks: (t as TaskWithExtras).cropRemarks || '',
         assignee: t.assigneeName || t.assignee || '',
         assigneeName: t.assigneeName || t.assignee || '',
         // 2026-10-20 修复（用户反馈：返工中的任务在「我的任务」只剩「查看」）：
@@ -242,6 +252,8 @@ export function MyTasksPage() {
         typeName: t.typeName || '',
         field: t.greenhouseName || t.field || '',
         crop: t.cropName || t.crop || '',
+        // 2026-10-20：降级映射同步补 cropRemarks
+        cropRemarks: (t as { cropRemarks?: string }).cropRemarks || '',
         assignee: t.assigneeName || t.assignee || '',
         assigneeName: t.assigneeName || t.assignee || '',
         // 2026-10-20：降级分支同样补 assigneeId（与 unifiedTasks 映射口径一致）
