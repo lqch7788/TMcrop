@@ -274,17 +274,54 @@ export function TaskDetailModal({
 
         {/* ???? ? ??????????????? + ???? + ????? */}
         {(() => {
-          // ???? ? ??????
-          const mapAction = (typeName: string): string => {
-            if (!typeName) return "comment";
-            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "dispatch";
-            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "accept";
-            if (typeName.includes("??") || typeName.includes("??")) return "reject";
-            if (typeName.includes("??") || typeName.includes("??")) return "start";
-            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "submit";
-            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "approve";
-            if (typeName.includes("??")) return "complete";
-            return "comment";
+          /**
+           * 把操作记录映射成流转动作。
+           *
+           * 2026-10-20 重写（用户反馈「流转记录里显示很多备注，实际没做过这些操作」）：
+           *   原实现是拿 operationTypeName 去 `includes("??")` 模糊匹配中文关键词，
+           *   有两点致命问题：
+           *     ① 该函数里的中文字面量在功能首次提交时就已损坏成 `??`，
+           *        任何输入都匹配不上，恒返回 'comment' → 全部显示为「备注」；
+           *     ② 即使中文没坏也匹配不了 —— operationTypeName 存的是**任务类型名**
+           *        （育苗任务 / 定植,灌溉 / 其他），根本不代表 accept/reject 等动作。
+           *   改为按确定性口径判断：优先用 status（枚举、无歧义），
+           *   其次用 remarks 文本兜底（子记录常把动作写在这里）。
+           */
+          const ACTION_BY_STATUS: Record<string, string> = {
+            draft: 'dispatch',
+            pending: 'dispatch',
+            pending_approval: 'dispatch',
+            accepted: 'accept',
+            in_progress: 'progress',
+            waiting_acceptance: 'submit',
+            completed: 'complete',
+            rejected: 'reject',
+            failed: 'reject',
+            cancelled: 'cancel',
+            abandoned: 'cancel',
+          };
+          /** 备注文本 → 动作；按从具体到宽泛排列，命中即返回 */
+          const ACTION_BY_TEXT: Array<[RegExp, string]> = [
+            [/驳回|返工|退回/, 'reject'],
+            [/验收通过|验收完成|已完成/, 'complete'],
+            [/接受|接单|领取/, 'accept'],
+            [/提交进度|进度更新|更新进度/, 'progress'],
+            [/申请验收|提交验收/, 'submit'],
+            [/派发|发布|新建/, 'dispatch'],
+            [/撤回|取消|作废/, 'cancel'],
+            [/继续执行|恢复执行/, 'start'],
+          ];
+
+          const mapActionByStatus = (status?: string): string =>
+            ACTION_BY_STATUS[String(status || '').toLowerCase()] || 'comment';
+
+          const mapActionByText = (text?: string): string => {
+            const t = String(text || '');
+            if (!t) return 'comment';
+            for (const [re, action] of ACTION_BY_TEXT) {
+              if (re.test(t)) return action;
+            }
+            return 'comment';
           };
 
           // ?????????????
@@ -303,50 +340,74 @@ export function TaskDetailModal({
             });
           });
           
-          // 2. ???????????
+          // 2. 农事操作记录（farm_operation_records）
+          //
+          // 2026-10-20 语义修正：这张表对「任务来源」的记录是**一条任务一行**，
+          //   每次操作都覆盖同一行的 status / remarks / progress，真实历史压进 children。
+          //   所以父行的 status 是「最新状态」而非「当时发生的事件」——
+          //   直接拿它当流转动作会把历史标错（实测：钱七只是接单，
+          //   父行 status 已是 rejected，于是被渲染成「钱七 拒绝任务」）。
+          //   现口径：**有 children 时只展示 children（真实历史），父行不再单独作为事件**；
+          //   没有 children 的才用父行本身兜底成一条。
           operationRecords.forEach((r: Record<string, unknown>, idx: number) => {
-            const opType = (r.operationTypeName as string) || (r.operationType as string) || "";
-            const action = mapAction(opType);
-            
-            flowRecords.push({
-              id: "opr_" + idx + "_" + Date.now(),
-              action,
-              actionTime: (r.operationDate as string) || (r.createdAt as string) || "",
-              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
-              toStatus: r.status as string | undefined,
-              comment: (r.remarks as string) || (r.rejectReason as string) || "",
-            });
-            
-            // 子记录：必须用 Array.isArray 判断 ——
-            // 2026-10-20：此前写的是 `children && children.length`，当 children 是
-            // JSON 字符串时 length > 0 成立，随后 children.forEach 不是函数直接抛
-            // TypeError，整个任务详情弹窗被 ErrorBoundary 接管。数据层已在
-            // useOperationRecords.toHookRecord 统一解析，这里再加一道防御。
+            const parentStatus = r.status as string | undefined;
+            const parentComment = (r.remarks as string) || (r.rejectReason as string) || "";
+
             const children = Array.isArray(r.children)
               ? (r.children as Array<Record<string, unknown>>)
               : [];
+
+            // 兜底：无子记录时才把父行当作一条事件（动作优先看备注文本，其次看状态）
+            if (children.length === 0) {
+              const action = mapActionByText(parentComment) !== 'comment'
+                ? mapActionByText(parentComment)
+                : mapActionByStatus(parentStatus);
+              flowRecords.push({
+                id: "opr_" + idx + "_" + Date.now(),
+                action,
+                actionTime: (r.operationDate as string) || (r.createdAt as string) || "",
+                operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+                toStatus: parentStatus,
+                comment: parentComment,
+              });
+            }
+
             if (children.length) {
               children.forEach((rawChild: Record<string, unknown>, childIdx: number) => {
                 const child = rawChild as any;
-                const childType = (child.operationTypeName as string) || (child.operationType as string) || "";
-                const childAction = mapAction(childType);
+                // 子记录：以 remarks 文本判断动作；文本没有时按 progress 兜底
+                // （progress 到 100 视为「申请验收」，否则视为「提交进度」）。
+                const childComment = (child.remarks as string) || "";
+                let childAction = mapActionByText(childComment);
+                if (childAction === 'comment') {
+                  const p = Number(child.progress);
+                  if (Number.isFinite(p) && p >= 100) childAction = 'submit';
+                  else if (Number.isFinite(p)) childAction = 'progress';
+                }
                 flowRecords.push({
                   id: "opr_c_" + idx + "_" + childIdx + "_" + Date.now(),
                   action: childAction,
                   actionTime: (child.time as string) || (child.operationDate as string) || "",
                   operatorName: (child.operatorName as string) || "",
-                  toStatus: (r.status || child.status) as string | undefined,
-                  comment: (child.remarks as string) || "",
+                  toStatus: undefined,
+                  comment: childComment,
                 });
               });
             }
           });
           
-          // 3. ???????useTasks TaskRecord ???
+          // 3. useTasks 的 TaskRecord（已带标准动作 key，直接用；否则按中文名兜底）
+          const KNOWN_ACTIONS = new Set([
+            'dispatch', 'accept', 'reject', 'start', 'progress', 'submit',
+            'complete', 'approve', 'cancel', 'comment',
+          ]);
           taskRecords.forEach((r: Record<string, unknown>, idx: number) => {
-            const actionName = (r.actionName as string) || (r.action as string) || "";
-            const action = mapAction(actionName);
-            
+            const rawAction = String(r.action || '');
+            const actionName = (r.actionName as string) || rawAction || '';
+            const action = KNOWN_ACTIONS.has(rawAction)
+              ? rawAction
+              : mapActionByText(actionName);
+
             flowRecords.push({
               id: (r.id as string) || ("tr_" + idx + "_" + Date.now()),
               action,
@@ -358,12 +419,30 @@ export function TaskDetailModal({
             });
           });
           
-          // ?????
-          flowRecords.sort((a, b) => new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime());
+          // 2026-10-20：剔除纯噪音记录 —— 动作识别为「备注」且无任何备注内容、
+          //   也没有时间/操作人的空壳（此前会把这类条目也渲染出来，用户看到一堆
+          //   "备注"却没有实际发生过的操作）。
+          const meaningful = flowRecords
+            .filter((rec) => !(rec.action === 'comment' && !String(rec.comment || '').trim()))
+            // 同一动作 + 同一操作人 + 同一时间（精确到分钟）视为重复，去重
+            .filter((rec, i, arr) => {
+              const key = `${rec.action}|${rec.operatorName}|${String(rec.actionTime).slice(0, 16)}`;
+              return arr.findIndex((x) =>
+                `${x.action}|${x.operatorName}|${String(x.actionTime).slice(0, 16)}` === key) === i;
+            });
+
+          // 按时间正序
+          meaningful.sort((a, b) => new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime());
+
+          if (meaningful.length === 0) {
+            return (
+              <div className="text-sm text-gray-400 py-4 text-center">暂无流转记录</div>
+            );
+          }
           
           return (
             <div>
-              <TaskFlowTimeline records={flowRecords as any} />
+              <TaskFlowTimeline records={meaningful as any} />
             </div>
           );
         })()}
@@ -404,8 +483,10 @@ export function TaskDetailModal({
                               {(child.time as string) || (child.operationDate as string)}
                             </span>
                           </div>
-                          {/* 工作量 */}
-                          {(child.workloadDays || child.workloadHours || child.workers) && (
+                          {/* 工作量 —— 同样显式转布尔，避免三项皆 0 时渲染出字面量 0 */}
+                          {((Number(child.workloadDays) || 0) > 0 ||
+                            (Number(child.workloadHours) || 0) > 0 ||
+                            (Number(child.workers) || 0) > 0) && (
                             <div className="text-xs text-gray-600 mb-1">
                               工作量：{child.workloadDays && `${child.workloadDays as any}天`}
                               {child.workloadHours && `${child.workloadHours as any}小时`}
@@ -427,8 +508,11 @@ export function TaskDetailModal({
                               GPS：{(child.gpsLocation as { lat: number; lng: number }).lat.toFixed(6)}, {(child.gpsLocation as { lat: number; lng: number }).lng.toFixed(6)}
                             </div>
                           )}
-                          {/* 照片 */}
-                          {(child.photosBefore?.length || child.photosAfter?.length) && (
+                          {/* 照片 —— 注意：`a?.length || b?.length` 在两数组皆空时等于 0，
+                              `{0 && <div/>}` 会把字面量 0 渲染到页面上（React 的常见陷阱）。
+                              2026-10-20：数据层把 photosBefore/photosAfter 统一规整成 [] 后
+                              这个坑被暴露，弹窗里出现一串 "0"。此处显式转成布尔。 */}
+                          {((child.photosBefore?.length || 0) > 0 || (child.photosAfter?.length || 0) > 0) && (
                             <div className="text-xs text-blue-600 mb-1">
                               照片：{(child.photosBefore as any)?.length || 0}张(前) + {(child.photosAfter as any)?.length || 0}张(后)
                             </div>
