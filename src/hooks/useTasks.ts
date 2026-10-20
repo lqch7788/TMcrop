@@ -127,10 +127,18 @@ function shouldSyncToFarmEndpoint(task: Task): boolean {
  * 2026-06-27 P0 修复：失败必须显式 log + 上报（CLAUDE.md Rule 12: Fail Loud）
  * 失败不再静默吞错，让用户在浏览器 console 能看到 API 同步失败
  */
-function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
-  Promise.resolve()
+/**
+ * 异步写后端。
+ *
+ * 2026-10-20：返回值从 void 改为 Promise<boolean>（成功 true / 失败 false）。
+ *   此前调用方拿不到结果，只能在发起后立刻弹"提交成功"，形成"提示成功但实际失败"的假象。
+ *   现在调用方可以 await 后按真实结果决定提示文案。
+ */
+function syncToApi(apiCall: () => Promise<unknown>, label: string): Promise<boolean> {
+  return Promise.resolve()
     .then(async () => {
       await apiCall();
+      return true;
     })
     .catch((error) => {
       // Fail Loud: 把错误写到 console + 全局事件总线
@@ -149,6 +157,7 @@ function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
       useToastStore.getState().toast.error(
         USER_MSG_BY_LABEL[label] ? `${USER_MSG_BY_LABEL[label]}：${msg}` : `操作未生效：${msg}`,
       );
+      return false;
     });
 }
 
@@ -268,7 +277,37 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     version: t.version || 1,
     createdAt: t.createdAt || new Date().toISOString(),
     updatedAt: t.updatedAt || new Date().toISOString(),
-  };
+
+    // ===== 2026-10-20 补齐（深度审核 HIGH）=====
+    // 后端 transformTaskFields 一直有返回这些字段，但转换层此前全部丢弃，
+    // 造成多处「单元格/按钮静默失效」。以下逐项标注影响面：
+    // · teamId/teamName —— 农事任务中心「班组」列恒为「-」（库内 8 条任务有班组）
+    // · remarks        —— 两个页面「备注」列恒为「-」（库内 9 条任务有备注），
+    //                     连带 ProductionTaskTableRow 的 translateRemarks() 永不执行
+    // · executorRejectCount —— 「执行人拒绝 2 次必须更换」规则永久失效：
+    //                     每次拒单都从 0 开始算，库内该列最大值只有 1
+    // · rejectReason   —— 重新派发弹窗看不到拒绝原因
+    // · batchId/batchCode —— 选择执行人弹窗「批次」恒为「-」
+    // · sourceId/sourceCode —— 每日工单汇总按来源关联时取不到
+    // · synthetic      —— useFarmHub 的 AI 训练样本过滤条件失效
+    teamId: (t as any).teamId ?? '',
+    teamName: (t as any).teamName ?? '',
+    remarks: (t as any).remarks ?? '',
+    executorRejectCount: (t as any).executorRejectCount ?? 0,
+    rejectReason: (t as any).rejectReason ?? '',
+    cancelledReason: (t as any).cancelledReason ?? '',
+    abandonedReason: (t as any).abandonedReason ?? '',
+    batchId: (t as any).batchId ?? '',
+    batchCode: (t as any).batchCode ?? '',
+    sourceId: (t as any).sourceId ?? '',
+    sourceCode: (t as any).sourceCode ?? '',
+    synthetic: (t as any).synthetic ?? 0,
+    plantingId: (t as any).plantingId ?? '',
+    productionPlanId: (t as any).productionPlanId ?? '',
+    productionPlanCode: (t as any).productionPlanCode ?? '',
+    toolsRemarks: (t as any).toolsRemarks ?? '',
+    acceptanceRecord: (t as any).acceptanceRecord ?? null,
+  } as Task;
 }
 
 /** 将 useTempTaskStore 的 TempTaskData 转换为本地 Task 格式 */
@@ -692,7 +731,7 @@ export interface UseTasksReturn {
       endTime?: string;
       isFinal?: boolean;
     }
-  ) => void;
+  ) => Promise<boolean>; // 2026-10-20：返回真实结果，供调用方决定提示文案
 
   // 超时处理
   handleOvertime: (
@@ -903,17 +942,39 @@ export function useTasks(): UseTasksReturn {
     // 使用 farmTaskStore 的 addTask（V2.1 铁律：API 直连）
     // 注意：addTask 内部先做乐观本地更新（同步），再做 API 调用（异步）
     // 因此调用后 store 状态已立即更新，可以从 getState().tasks[0] 读取新任务
-    useFarmTaskStore.getState().addTask(apiTaskData as any).then(s => {
-      // 后端API创建任务成功
-    }).catch(() => {
-      // 后端API创建任务失败
-    });
+    //
+    // 2026-10-20 修复（CRITICAL）：创建失败必须让调用方与用户都能感知。
+    //   此前是 `.then(() => {}).catch(() => {})` —— 空壳，失败被完全吞掉；
+    //   而下面同步读取乐观项使本函数**永远返回非 null**，
+    //   于是 FarmTaskHub 的批量导入 `if (created) succeeded++` 恒真，
+    //   后端宕机时导入 10 条全失败仍提示"成功导入 10 条"。
+    //   现在：失败弹 toast（Fail Loud），并把真实结果以 __createPromise 暴露给调用方，
+    //   批量导入据此逐条统计。addTask 自身失败时会回滚乐观项并 throw，不会留下幽灵任务。
+    const createPromise: Promise<boolean> = useFarmTaskStore
+      .getState()
+      .addTask(apiTaskData as any)
+      .then(() => true)
+      .catch((error: unknown) => {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error('[useTasks] 创建农事任务失败:', error);
+        useToastStore.getState().toast.error(`任务创建失败：${msg}`);
+        return false;
+      });
 
     // 读取乐观更新的任务（addTask 将新任务 prepend 到数组头部）
     const storeTask = useFarmTaskStore.getState().tasks[0];
     const result = storeTask ? convertStoreFarmTaskToTask(storeTask) : null;
     // logger.info('[createTask] 返回任务:', result?.id || 'null');
-    return result || ({
+    if (result) {
+      // 把真实创建结果挂到返回值上，供批量导入等场景 await
+      Object.defineProperty(result, '__createPromise', {
+        value: createPromise,
+        enumerable: false,
+        configurable: true,
+      });
+      return result;
+    }
+    return ({
       id: '',
       taskCode: '',
       title: taskData.title || '',
@@ -1198,7 +1259,8 @@ export function useTasks(): UseTasksReturn {
 
     // P0-3：改用 enhancedApiClient.post（4 个分支统一替换）
     // P0-4：progress 端点额外传 status 字段，让前端状态机同步到后端（修 bug，不改业务）
-    syncToApi(async () => {
+    // 2026-10-20：保存 Promise，供调用方 await 后按真实结果决定提示文案
+    const apiResult = syncToApi(async () => {
       // 2026-10-10 审核修复 M1：巡查记录不发端点（其进度走问题通道，见 MyTasksPage 分流）
       if (task.dispatchMode === 'inspection' || task.sourceType === 'inspection') return;
       const basePayload = {
@@ -1286,6 +1348,8 @@ export function useTasks(): UseTasksReturn {
       updatedAt: nowIso,
       version: task.version + 1,
     } as any);
+
+    return apiResult;
   }, [tasks, attendance, updateAttendance, syncWorkLogFromTask, createTaskRecord, saveTaskRecords]);
 
   // 超时处理

@@ -2,7 +2,7 @@
  * 农事任务 API 路由
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 // v0.3 前置 3 + 前置 5：租户上下文 + RBAC 权限守卫
@@ -36,6 +36,25 @@ function runInTransaction(db: any, work: () => void): void {
     throw err;
   }
 }
+
+/**
+ * 2026-10-20：静态单段路由名白名单。
+ *
+ * Express 按注册顺序匹配，`/:id` 会把 `/batch`、`/stats` 等**单段静态路径**当成 id 吃掉
+ * （实测：PUT /farm-tasks/batch 落到 PUT /:id，返回"没有需要更新的字段"；
+ *   DELETE /farm-tasks/batch 返回"农事任务不存在"）。
+ * 由于这些静态路由定义在 `/:id` 之后，本文件在三个参数路由入口统一做一次"让行"：
+ * 命中白名单就 next()，交给后面真正的静态路由处理。
+ */
+const STATIC_ROUTE_SEGMENTS = new Set([
+  'batch',
+  'stats',
+  'count',
+  'overdue',
+  'pending',
+  'in-progress',
+  'waiting-acceptance',
+]);
 
 /**
  * 2026-10-20 P0-10：状态转移守卫
@@ -306,7 +325,9 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
+  // 静态路由让行（/batch /stats /count …），否则会被当成 id
+  if (STATIC_ROUTE_SEGMENTS.has(req.params.id)) return next();
   try {
     const { id } = req.params;
     const db = getDatabase();
@@ -619,7 +640,9 @@ function toDbValue(value: any): any {
   return value;
 }
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+  // 静态路由让行（/batch），否则批量更新会被当成 id='batch'
+  if (STATIC_ROUTE_SEGMENTS.has(req.params.id)) return next();
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -631,6 +654,25 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     const db = getDatabase();
+
+    // 2026-10-20 修复（CRITICAL）：状态变更必须过状态机守卫。
+    //   此前本端点对 status 完全不校验 —— 任何登录用户可 PUT {"status":"pending"}
+    //   把已完成任务改回去（实测 completed → pending 返回 200），
+    //   同时它也是前端乐观更新的落库通道，绕过了 /accept /complete /reject 等
+    //   专用端点上的全部守卫与审计。
+    //   现在：状态确实发生变化时才校验；同值写入（幂等更新）仍放行。
+    if (updates.status) {
+      const curStmt = db.prepare('SELECT status FROM farm_tasks WHERE id = ?');
+      curStmt.bind([id]);
+      let curStatus = '';
+      if (curStmt.step()) {
+        curStatus = String((curStmt.getAsObject() as { status?: string }).status || '');
+      }
+      curStmt.free();
+      if (curStatus && curStatus !== updates.status) {
+        if (!guardTransition(res, curStatus, String(updates.status))) return;
+      }
+    }
 
     // 过滤有效字段并转换为数据库列名（跳过不存在于 DB 的字段，避免 SQL 错误）
     // 2026-09-21：改用共用白名单 FARM_TASK_DB_COLUMNS，并在丢弃字段时打日志（Fail Loud）
@@ -666,7 +708,9 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+  // 静态路由让行（/batch），否则批量删除会被当成 id='batch'
+  if (STATIC_ROUTE_SEGMENTS.has(req.params.id)) return next();
   try {
     const { id } = req.params;
     const db = getDatabase();
@@ -959,11 +1003,28 @@ router.put('/batch', (req: Request, res: Response) => {
     const values = validKeys.map(k => toDbValue(normalizedUpdates[k]));
     values.push(now);
 
+    // 2026-10-20：批量改状态同样要过守卫 —— 否则它就是绕过状态机的第二条通道
+    if (normalizedUpdates.status) {
+      const stmt = db.prepare('SELECT id, status FROM farm_tasks WHERE id IN (' + ids.map(() => '?').join(',') + ')');
+      stmt.bind(ids);
+      const rows: Array<{ id: string; status: string }> = [];
+      while (stmt.step()) rows.push(stmt.getAsObject() as unknown as { id: string; status: string });
+      stmt.free();
+      for (const r of rows) {
+        if (r.status && r.status !== normalizedUpdates.status) {
+          if (!guardTransition(res, r.status, String(normalizedUpdates.status))) return;
+        }
+      }
+    }
+
     const placeholders = ids.map(() => '?').join(',');
     db.run(`UPDATE farm_tasks SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
 
+    // 2026-10-20：返回**真实**影响行数（此前恒为 ids.length，不存在的 id 也算成功）
+    const affected = db.getRowsModified();
+
     saveDatabase();
-    res.json({ success: true, data: { ids, updated: ids.length } });
+    res.json({ success: true, data: { ids, requested: ids.length, updated: affected } });
   } catch (error) {
     res.status(500).json({ success: false, error: '批量更新农事任务失败' });
   }
@@ -988,9 +1049,11 @@ router.delete('/batch', (req: Request, res: Response) => {
     const db = getDatabase();
     const placeholders = idArray.map(() => '?').join(',');
     db.run(`DELETE FROM farm_tasks WHERE id IN (${placeholders})`, idArray);
+    // 2026-10-20：返回真实删除行数（此前恒为 idArray.length，不存在的 id 也算"已删除"）
+    const deleted = db.getRowsModified();
     saveDatabase();
 
-    res.json({ success: true, data: { deleted: idArray.length } });
+    res.json({ success: true, data: { requested: idArray.length, deleted } });
   } catch (error) {
     res.status(500).json({ success: false, error: '批量删除农事任务失败' });
   }
@@ -1436,6 +1499,18 @@ router.post('/:id/accept', (req: Request, res: Response) => {
     }
 
     const fromStatus = task.status;
+
+    // 2026-10-20 修复（HIGH）：没有执行人的任务不允许被接受。
+    //   此前不校验，导致任务进入 accepted/in_progress/waiting_acceptance 却无人负责，
+    //   页面上也没有任何操作按钮可推进 —— 实测库内已产生 2 条这种卡死任务
+    //   （NS20261016-609、NS20261017-039，流转记录里的 operator_name 都是空）。
+    if (!String(task.assignee_id || '').trim()) {
+      return res.status(400).json({
+        success: false,
+        error: '任务尚未指派执行人，无法接受。请先派工给具体人员。',
+      });
+    }
+
     if (!guardTransition(res, fromStatus, 'accepted')) return;
     const now = new Date().toISOString();
 

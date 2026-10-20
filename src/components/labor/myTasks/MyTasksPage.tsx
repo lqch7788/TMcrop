@@ -562,7 +562,7 @@ export function MyTasksPage() {
   };
 
   // 提交反馈
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async () => {
     try {
       if (!feedbackModal.task) {
         // 反馈提交错误
@@ -657,6 +657,10 @@ export function MyTasksPage() {
 
       // ========== 数据闭环：同步到 useTasks ==========
       // 查找 unifiedTasks 中对应的任务
+      // 2026-10-20 修复：记录 submitProgress 的真实结果，只有成功才提示"提交成功"。
+      //   此前不 await 且无条件弹成功 —— 后端 500 时用户同时看到"提交进度未生效"和"提交成功！"
+      //   两条互相矛盾的提示，弹窗还照常关闭。
+      let apiOk = true;
       const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
       if (unifiedTask) {
         const isFinal = feedbackForm.progress === 100;
@@ -664,7 +668,7 @@ export function MyTasksPage() {
         //   addProgressRecord/submitProblemFeedback），避免 submitProgress 发往 farm-tasks 幽灵端点
         if (!(task as any).sourceInspectionId) {
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
-        submitProgress(unifiedTask.id, feedbackForm.progress, {
+        apiOk = await submitProgress(unifiedTask.id, feedbackForm.progress, {
           remarks: feedbackForm.resultText || feedbackForm.progressText,
           workload: feedbackForm.workloadConfirm
             ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
@@ -709,6 +713,10 @@ export function MyTasksPage() {
         // 任务未找到
       }
 
+      if (!apiOk) {
+        // 失败时保持弹窗打开，让用户可以直接重试（错误详情已由 syncToApi 的 toast 给出）
+        return;
+      }
       setFeedbackModal({ isOpen: false, task: null });
       showAlert('提交成功！');
     } catch (error) {
