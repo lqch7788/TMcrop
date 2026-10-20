@@ -127,5 +127,13 @@ server/data/yuanxingtu.db.backup-*
 server/data/yuanxingtu.db.save.tmp
 # 2026-10-07：数据修复脚本产生的备份（18MB 二进制，勿提交）
 server/data/*.bak-*
+# 2026-10-20：迁移脚本产生的备份命名是 yuanxingtu.db.bak.<时间戳>，
+#   前面 *.bak / *.bak-* 两条规则都匹配不到（结尾是时间戳不是 .bak），
+#   导致 3 个 21MB 备份一直挂在 git status 的未跟踪列表里。补此规则。
+server/data/yuanxingtu.db.bak.*
+server/data/*.db.bak.*
+# 迁移/清理脚本产生的 JSON 报告（可重新生成，不必入库）
+server/data/*-report.*.json
+server/data/*-migration-report.*.json
 uploads/
 server/models/pest_image.onnx
