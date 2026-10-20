@@ -69,31 +69,39 @@ export function TaskFlowTimeline({ records, showStatusChange = true }: TaskFlowT
                   <IconComponent className="w-3 h-3" />
                 </div>
 
-                {/* 内容 */}
-                <div className={`flex-1 pb-4 ${isLast ? '' : 'border-b border-gray-100'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">
-                      {record.operatorName}
+                {/* 内容 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
+                    （此前操作人/动作/状态变更/备注/时间 逐行竖向堆叠，一条记录占 4~5 行） */}
+                <div className={`flex-1 pb-3 ${isLast ? '' : 'border-b border-gray-100'}`}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-6">
+                    <span className="font-medium text-gray-900">
+                      {record.operatorName || '-'}
                     </span>
-                    <span className={`text-xs ${config.color}`}>
+
+                    <span className="text-gray-300 select-none">|</span>
+                    <span className={`text-xs font-medium ${config.color}`}>
                       {config.label}
                     </span>
-                  </div>
 
-                  {showStatusChange && record.fromStatus && record.toStatus && record.fromStatus !== record.toStatus && (
-                    <div className="text-xs text-gray-500 mb-1">
-                      {record.fromStatus} → {record.toStatus}
-                    </div>
-                  )}
+                    {showStatusChange && record.fromStatus && record.toStatus && record.fromStatus !== record.toStatus && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="text-xs text-gray-500">
+                          {record.fromStatus} → {record.toStatus}
+                        </span>
+                      </>
+                    )}
 
-                  {record.comment && (
-                    <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2 mt-1">
-                      {record.comment}
-                    </div>
-                  )}
+                    {record.comment && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="text-gray-600 break-all">{record.comment}</span>
+                      </>
+                    )}
 
-                  <div className="text-xs text-gray-400 mt-1">
-                    {formatTime(record.actionTime)}
+                    <span className="text-gray-300 select-none">|</span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {formatTime(record.actionTime)}
+                    </span>
                   </div>
                 </div>
               </div>

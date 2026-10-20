@@ -113,75 +113,86 @@ export function TaskRecordTimeline({
                   {index + 1}
                 </div>
 
-                {/* 内容 */}
-                <div className={`flex-1 pb-6 ${isLast ? '' : 'border-b border-gray-100'}`}>
-                  {/* 头部：操作人和操作类型 */}
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {record.operatorName}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 text-xs rounded-full ${config.color} bg-opacity-10 ${config.bgColor}`}
-                        style={{ backgroundColor: `${config.color}15` }}
-                      >
-                        {record.actionName || config.label}
-                      </span>
-                    </div>
+                {/* 内容 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
+                    （此前操作人/动作、状态变化、进度、备注 各占一行，一条记录 4~5 行） */}
+                <div className={`flex-1 pb-4 ${isLast ? '' : 'border-b border-gray-100'}`}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span className="font-medium text-gray-900">
+                      {record.operatorName || '-'}
+                    </span>
+
+                    <span className="text-gray-300 select-none">|</span>
+                    <span
+                      className={`px-2 py-0.5 text-xs rounded-full ${config.color} ${config.bgColor}`}
+                    >
+                      {record.actionName || config.label}
+                    </span>
+
+                    {/* 状态变化 */}
+                    {showStatusChange && (record.fromStatus || record.toStatus) && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="flex items-center gap-1">
+                          {record.fromStatus && (
+                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)}`}
+                              style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.fromStatus as TaskStatus]?.bg || '#f3f4f6'}` }}>
+                              {getStatusLabel(record.fromStatus)}
+                            </span>
+                          )}
+                          <span className="text-gray-400">→</span>
+                          {record.toStatus && (
+                            <span
+                              className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}
+                              style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.toStatus as TaskStatus]?.bg || '#f3f4f6'}` }}
+                            >
+                              {getStatusLabel(record.toStatus)}
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    )}
+
+                    {/* 进度 */}
+                    {record.progress !== undefined && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="flex items-center gap-2">
+                          <span className="w-[90px] bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <span
+                              className="block h-full bg-blue-500 rounded-full"
+                              style={{ width: `${record.progress}%` }}
+                            />
+                          </span>
+                          <span className="text-xs text-gray-500">{record.progress}%</span>
+                          {record.progressIncrement !== undefined && record.progressIncrement > 0 && (
+                            <span className="text-xs text-green-500">+{record.progressIncrement}%</span>
+                          )}
+                        </span>
+                      </>
+                    )}
+
+                    {/* 驳回原因 / 备注 */}
+                    {record.reason && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="text-red-600 break-all">
+                          <span className="font-medium">驳回原因：</span>
+                          {record.reason}
+                        </span>
+                      </>
+                    )}
+                    {record.comment && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="text-gray-600 break-all">{record.comment}</span>
+                      </>
+                    )}
+
+                    <span className="text-gray-300 select-none">|</span>
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       {formatTime(record.actionTime)}
                     </span>
                   </div>
-
-                  {/* 状态变化 */}
-                  {showStatusChange && (record.fromStatus || record.toStatus) && (
-                    <div className="flex items-center gap-1 mb-2">
-                      {record.fromStatus && (
-                        <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)} bg-opacity-10`}
-                          style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.fromStatus as TaskStatus]?.bg || '#f3f4f6'}` }}>
-                          {getStatusLabel(record.fromStatus)}
-                        </span>
-                      )}
-                      <span className="text-gray-400">→</span>
-                      {record.toStatus && (
-                        <span
-                          className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}
-                          style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.toStatus as TaskStatus]?.bg || '#f3f4f6'}` }}
-                        >
-                          {getStatusLabel(record.toStatus)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 进度显示 */}
-                  {record.progress !== undefined && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${record.progress}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500">{record.progress}%</span>
-                      {record.progressIncrement !== undefined && record.progressIncrement > 0 && (
-                        <span className="text-xs text-green-500">+{record.progressIncrement}%</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 备注/驳回原因 */}
-                  {(record.comment || record.reason) && (
-                    <div className="text-sm text-gray-600 bg-gray-50 rounded px-3 py-2 mb-2">
-                      {record.reason && (
-                        <div className="text-red-600 mb-1">
-                          <span className="font-medium">驳回原因：</span>
-                          {record.reason}
-                        </div>
-                      )}
-                      {record.comment && <div>{record.comment}</div>}
-                    </div>
-                  )}
 
                   {/* 反馈数据展示（位置、照片、语音等） */}
                   {showFeedback && record.feedback && (
