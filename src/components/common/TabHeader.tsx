@@ -15,6 +15,12 @@ export interface TabItem {
   key: string;
   label: string;
   icon?: LucideIcon;
+  /**
+   * 2026-10-20：警示标注（如「未完全实现」）。
+   *   在 tab 标签后显示琥珀色徽标，标签整体降低不透明度 —— 用于标记
+   *   「功能保留但尚未完全实现、可能造成卡死」的模块。
+   */
+  warning?: string;
 }
 
 interface TabHeaderProps {
@@ -59,9 +65,19 @@ export function TabHeader({
         <Tabs value={activeTab} onValueChange={onTabChange}>
           <TabsList>
             {tabs.map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key} className={`flex items-center gap-2 ${bold ? 'font-bold' : ''}`}>
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className={`flex items-center gap-2 ${bold ? 'font-bold' : ''} ${tab.warning ? 'opacity-70' : ''}`}
+                title={tab.warning ? `${tab.label} —— ${tab.warning}` : undefined}
+              >
                 {tab.icon && <tab.icon className="w-4 h-4" />}
                 {tab.label}
+                {tab.warning && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
+                    {tab.warning}
+                  </span>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
