@@ -317,9 +317,15 @@ export function TaskDetailModal({
               comment: (r.remarks as string) || (r.rejectReason as string) || "",
             });
             
-            // ????children?
-            const children = r.children as Array<Record<string, unknown>> | undefined;
-            if (children && children.length) {
+            // 子记录：必须用 Array.isArray 判断 ——
+            // 2026-10-20：此前写的是 `children && children.length`，当 children 是
+            // JSON 字符串时 length > 0 成立，随后 children.forEach 不是函数直接抛
+            // TypeError，整个任务详情弹窗被 ErrorBoundary 接管。数据层已在
+            // useOperationRecords.toHookRecord 统一解析，这里再加一道防御。
+            const children = Array.isArray(r.children)
+              ? (r.children as Array<Record<string, unknown>>)
+              : [];
+            if (children.length) {
               children.forEach((rawChild: Record<string, unknown>, childIdx: number) => {
                 const child = rawChild as any;
                 const childType = (child.operationTypeName as string) || (child.operationType as string) || "";
@@ -380,8 +386,8 @@ export function TaskDetailModal({
                     </div>
                     <span className="text-xs text-gray-500">{(record.operationDate as string)}</span>
                   </div>
-                  {/* 显示子记录（children） */}
-                  {(record.children as Array<Record<string, unknown>>)?.length > 0 && (
+                  {/* 显示子记录（children）—— 同样用 Array.isArray 防御，避免字符串导致 .map 崩溃 */}
+                  {Array.isArray(record.children) && record.children.length > 0 && (
                     <div className="mt-3 pl-4 border-l-2 border-gray-400 space-y-3">
                       {(record.children as Array<Record<string, unknown>>).map((rawChild: Record<string, unknown>, childIdx: number) => {
                         const child = rawChild as any;
@@ -431,8 +437,8 @@ export function TaskDetailModal({
                           {child.voiceNote && (
                             <div className="text-xs text-purple-600 mb-1">语音备注</div>
                           )}
-                          {/* 物料 */}
-                          {(child.materials as Array<{ name: string; qty: number }>)?.length > 0 && (
+                          {/* 物料 —— 同样用 Array.isArray 防御（后端可能返回 JSON 字符串） */}
+                          {Array.isArray(child.materials) && child.materials.length > 0 && (
                             <div className="text-xs text-orange-600 mb-1">
                               物料：{(child.materials as Array<{ name: string; qty: number }>).map(m => `${m.name}×${m.qty}`).join(', ')}
                             </div>

@@ -654,8 +654,42 @@ function generateDemoRecords(): FarmOperationRecord[] {
   return demoRecords;
 }
 
+/**
+ * 把「可能是 JSON 字符串」的字段安全解析成数组
+ *
+ * 2026-10-20：`children` / `materials` / `photosBefore` / `photosAfter` 在 DB 里是 TEXT，
+ *   后端 GET /api/farm-operation-records 的 normalize() 只做字段改名、**不做 JSON 解析**，
+ *   所以接口返回的是字符串 `'[{"..."}]'` 而不是数组。
+ *   此前 `toHookRecord` 只写了 `as FarmOperationRecordChild[]` —— TS 断言运行时无效，
+ *   下游 `children.forEach(...)` 直接把字符串当数组用，抛
+ *   `TypeError: children.forEach is not a function`，
+ *   整个组件树被 ErrorBoundary 接管（MyTasks 任务详情弹窗白屏）。
+ *   现在在数据边界统一解析，兼容「后端已返回数组」和「返回 JSON 字符串」两种形态。
+ */
+function parseJsonArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as T[]) : [];
+    } catch {
+      // 脏数据：解析失败当空数组，不阻断页面渲染
+      return [];
+    }
+  }
+  return [];
+}
+
 /** Store 记录 → Hook 领域记录（补齐必填字段，避免组件层出现 undefined） */
 function toHookRecord(record: StoreOperationRecord): FarmOperationRecord {
+  // 子记录内部的 materials / photosBefore / photosAfter 同样是 JSON 字符串，一并解析
+  const children = parseJsonArray<FarmOperationRecordChild>(record.children).map((child) => ({
+    ...child,
+    materials: parseJsonArray<{ name: string; qty: number; unit: string }>(child.materials),
+    photosBefore: parseJsonArray<string>(child.photosBefore),
+    photosAfter: parseJsonArray<string>(child.photosAfter),
+  }));
+
   return {
     ...record,
     sourceType: record.sourceType as OperationSourceType,
@@ -667,7 +701,7 @@ function toHookRecord(record: StoreOperationRecord): FarmOperationRecord {
     operatorId: record.operatorId ?? '',
     operatorName: record.operatorName ?? '',
     operationDate: record.operationDate ?? (record.createdAt ? record.createdAt.slice(0, 10) : ''),
-    children: (record.children ?? []) as FarmOperationRecordChild[],
+    children,
   };
 }
 
