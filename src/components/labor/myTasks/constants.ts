@@ -33,7 +33,9 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
   draft: { bg: 'bg-gray-100', color: 'text-gray-600', label: '草稿' },
   pending: { bg: 'bg-gray-100', color: 'text-gray-600', label: '待接受' },
   accepted: { bg: 'bg-blue-100', color: 'text-blue-600', label: '已接受' },
-  in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
+  // 2026-10-20 统一口径：此前这里是「进行中」，农事任务中心与全局配置都是「处理中」，
+  // 同一条任务在两页显示不同中文，用户对不上号。统一为「处理中」。
+  in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '处理中' },
   completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
   waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
   rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '返工中' },

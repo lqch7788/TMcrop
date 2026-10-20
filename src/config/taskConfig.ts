@@ -137,6 +137,10 @@ export function getTaskPermissions(): typeof TASK_PERMISSIONS_DEFAULTS {
 //   前端只能退而写 'cancelled'，造成"界面显示已取消、刷新后变回草稿"的两端不一致。
 export const STATUS_TRANSITIONS_DEFAULTS: Record<string, string[]> = {
   draft: ['pending', 'cancelled'],
+  // 2026-10-20 补：后端转移表有 pending_approval，前端此前缺失。
+  //   一旦出现历史 pending_approval 行，前端 validateTransition 查表得空数组 →
+  //   所有操作被静默拦下（按钮点了没反应），徽章也会显示英文。
+  pending_approval: ['pending', 'draft', 'cancelled'],
   pending: ['accepted', 'cancelled', 'draft'],
   // 2026-10-20：补 waiting_acceptance（执行人可直接在「已接受」提交进度，100% 即申请验收），
   //   与服务端 TASK_STATUS_TRANSITIONS 同步
