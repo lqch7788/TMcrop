@@ -2093,6 +2093,9 @@ router.post('/:id/reassign', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
 
+    // 2026-10-20：补状态守卫（此前本端点直接把 status 写成 pending，任何源状态都放行）
+    if (!guardTransition(res, task.status, 'pending')) return;
+
     // P0-1：事务包裹
     runInTransaction(db, () => {
       db.run(`UPDATE farm_tasks SET assignee_id = ?, assignee_name = ?, status = 'pending', update_time = ? WHERE id = ?`,

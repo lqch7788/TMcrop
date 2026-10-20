@@ -158,8 +158,12 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
     expect(STATUS_TRANSITIONS.pending).toEqual(['accepted', 'cancelled', 'draft']);
   });
 
-  it('accepted 可转到 in_progress、cancelled 或 draft（撤回）', () => {
-    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'cancelled', 'draft']);
+  // 2026-10-20 更新：允许 accepted → waiting_acceptance。
+  //   执行人可以直接在「已接受」状态提交进度，进度到 100% 即申请验收
+  //   （useTasks.submitProgress 的 isFinal 分支，UI 对 accepted 行本就显示「提交进度」）。
+  //   缺这条边时该操作必被守卫拒绝（实测 accepted → waiting_acceptance 返回 409）。
+  it('accepted 可转到 in_progress、waiting_acceptance、cancelled 或 draft（撤回）', () => {
+    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'waiting_acceptance', 'cancelled', 'draft']);
   });
 
   it('in_progress 只能转到 waiting_acceptance、cancelled 或 abandoned', () => {
@@ -176,8 +180,11 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
     expect(STATUS_TRANSITIONS.waiting_acceptance).toEqual(['completed', 'rejected', 'failed']);
   });
 
-  it('rejected 只能转到 in_progress 或 failed', () => {
-    expect(STATUS_TRANSITIONS.rejected).toEqual(['in_progress', 'failed']);
+  // 2026-10-20 更新：允许 rejected → pending。
+  //   「重新派发」就是从返工中选新执行人、回到待接受；缺这条边时前端
+  //   validateTransition 直接 return（弹窗照关），表现为点了没反应、任务永久卡住。
+  it('rejected 可转到 in_progress、pending（重新派发）或 failed', () => {
+    expect(STATUS_TRANSITIONS.rejected).toEqual(['in_progress', 'pending', 'failed']);
   });
 
   it('completed 和 cancelled 不能再转换', () => {
