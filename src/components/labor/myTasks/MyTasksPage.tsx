@@ -159,6 +159,12 @@ export function MyTasksPage() {
         crop: t.crop || t.cropName || '',
         assignee: t.assigneeName || t.assignee || '',
         assigneeName: t.assigneeName || t.assignee || '',
+        // 2026-10-20 修复（用户反馈：返工中的任务在「我的任务」只剩「查看」）：
+        //   此前只映射了 assignee/assigneeName，**漏了 assigneeId**。
+        //   ProductionTaskTableRow 里「继续执行」的显示条件是
+        //   `!isInspectionTask && !!task.assigneeId`，assigneeId 恒为 undefined
+        //   → 按钮永不渲染，返工任务无法继续执行。
+        assigneeId: t.assigneeId || '',
         planStart: t.planStart || '',
         planEnd: t.planEnd || '',
         progress: t.progress || 0,
@@ -238,6 +244,8 @@ export function MyTasksPage() {
         crop: t.cropName || t.crop || '',
         assignee: t.assigneeName || t.assignee || '',
         assigneeName: t.assigneeName || t.assignee || '',
+        // 2026-10-20：降级分支同样补 assigneeId（与 unifiedTasks 映射口径一致）
+        assigneeId: t.assigneeId || '',
         planStart: t.planStart || t.startTime || '',
         planEnd: t.planEnd || t.dueDate || '',
         progress: t.progress || 0,

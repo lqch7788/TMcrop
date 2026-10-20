@@ -680,10 +680,26 @@ function parseJsonArray<T>(value: unknown): T[] {
   return [];
 }
 
+/**
+ * 解析子记录数组，并**丢弃历史脏元素**（自愈式）
+ *
+ * 2026-10-20：children 曾被写成「JSON 字符串被 `...` 展开后的单个字符」
+ *   （如 "[", "{", "\"", "i", "d" …），也出现过空对象 {}。
+ *   仅做 JSON.parse 不够 —— 解析出来的数组里仍然混着这些垃圾元素，
+ *   下一次追加时会被原样带回、继续污染。
+ *   所以这里只保留「非空、非数组、非字符串的对象」，让脏数据在每次读取时被自然清掉。
+ */
+function parseChildren(value: unknown): FarmOperationRecordChild[] {
+  return parseJsonArray<FarmOperationRecordChild>(value).filter(
+    (c): c is FarmOperationRecordChild =>
+      !!c && typeof c === 'object' && !Array.isArray(c) && Object.keys(c as object).length > 0,
+  );
+}
+
 /** Store 记录 → Hook 领域记录（补齐必填字段，避免组件层出现 undefined） */
 function toHookRecord(record: StoreOperationRecord): FarmOperationRecord {
   // 子记录内部的 materials / photosBefore / photosAfter 同样是 JSON 字符串，一并解析
-  const children = parseJsonArray<FarmOperationRecordChild>(record.children).map((child) => ({
+  const children = parseChildren(record.children).map((child) => ({
     ...child,
     materials: parseJsonArray<{ name: string; qty: number; unit: string }>(child.materials),
     photosBefore: parseJsonArray<string>(child.photosBefore),
@@ -822,10 +838,17 @@ export function useOperationRecords(): UseOperationRecordsReturn {
           createdAt: now,
         };
 
+        // 2026-10-20 修复：existing.children 直接从 Store 读（未经 toHookRecord 解析），
+        //   它是后端返回的 JSON **字符串**。此前写的是
+        //     [child, ...((existing.children ?? []) as FarmOperationRecordChild[])]
+        //   —— 对字符串做展开会得到**单个字符**，于是 children 被塞进
+        //   "[", "{", "\"", "i", "d", ... 等 265 个字符元素（实测 NS20261017-516
+        //   的那条记录就是这么被污染的），详情弹窗再把它们全部渲染成「备注」。
+        //   这里先用 parseJsonArray 规整成数组，再展开。
         const updated = await updateRecordApi(existing.id, {
           progress: recordData.progress,
           status: recordData.status,
-          children: [child, ...((existing.children ?? []) as FarmOperationRecordChild[])],
+          children: [child, ...parseChildren(existing.children)],
         });
         return toHookRecord(updated);
       }
