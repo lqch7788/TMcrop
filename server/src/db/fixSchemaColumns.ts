@@ -212,6 +212,9 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     //   而农事任务中心的「作物」列对「其他」会渲染 `其他（${cropRemarks}）`，
     //   一直是空括号。补齐列 + 后端映射 + 前端透传。
     ['crop_remarks', 'TEXT'],
+    // 2026-10-20：计划结束（完整日期时间）。此前没有这一列，API 的 planEnd 直接取
+    //   plan_date（开始日期），多天任务的「计划结束」永远显示成开始那天。
+    ['plan_end', 'TEXT'],
   ];
   for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
