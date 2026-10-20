@@ -695,6 +695,21 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     values.push(now, id);
 
     db.run(`UPDATE farm_tasks SET ${setClauses}, update_time = ? WHERE id = ?`, values);
+
+    // 2026-10-20：状态变化时清理不属于新状态的审计时间戳。
+    //   实测库内已有 5 条自相矛盾数据（3 条 completed 带 rejected_at、
+    //   2 条 accepted/cancelled 带 rejected_at），会让"按驳回时间统计"等报表失真。
+    if (updates.status) {
+      db.run(
+        `UPDATE farm_tasks SET
+           completed_at = CASE WHEN ? = 'completed' THEN completed_at ELSE NULL END,
+           rejected_at  = CASE WHEN ? IN ('rejected','failed') THEN rejected_at ELSE NULL END,
+           cancelled_at = CASE WHEN ? = 'cancelled' THEN cancelled_at ELSE NULL END,
+           abandoned_at = CASE WHEN ? = 'abandoned' THEN abandoned_at ELSE NULL END
+         WHERE id = ?`,
+        [updates.status, updates.status, updates.status, updates.status, id],
+      );
+    }
     // 2026-10-10：0 行更新 → 404（Fail Loud）。此前对不存在的 id 更新返回 200"幽灵成功"
     //   （如巡查记录误发给本端点），前端乐观更新不回滚、刷新后数据回退且无任何提示
     if (db.getRowsModified() === 0) {
@@ -1744,7 +1759,10 @@ router.post('/:id/complete', (req: Request, res: Response) => {
     runInTransaction(db, () => {
       db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100,
                                    actual_hours = ?, actual_hours_recorded_at = ?, actual_hours_recorded_by = ?,
-                                   estimated_vs_actual_ratio = ?, actual_area = ?, update_time = ?
+                                   estimated_vs_actual_ratio = ?, actual_area = ?, update_time = ?,
+                                   -- 2026-10-20：验收通过后清理其它终态的时间戳，
+                                   --   避免"已完成却带 rejected_at / cancelled_at"的矛盾数据
+                                   rejected_at = NULL, cancelled_at = NULL, abandoned_at = NULL
                                    WHERE id = ?`,
         [now, actualHoursValue, actualHoursValue ? now : null, actualHoursValue ? (operator_id || '') : null,
          ratioValue, actualAreaValue, now, id]);

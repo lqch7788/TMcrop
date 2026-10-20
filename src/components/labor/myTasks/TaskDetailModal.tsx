@@ -87,7 +87,8 @@ export function TaskDetailModal({
             </div>
             <div>
               <Label className="text-xs text-gray-500">负责人</Label>
-              <p className="font-semibold text-gray-900">陆启闯</p>
+              {/* 2026-10-20 修复：原来硬编码「陆启闯」—— 任何任务（张三/钱七…）都显示成陆启闯 */}
+              <p className="font-semibold text-gray-900">{task.assigneeName || task.assignee || '-'}</p>
             </div>
             <div>
               <Label className="text-xs text-gray-500">优先级</Label>

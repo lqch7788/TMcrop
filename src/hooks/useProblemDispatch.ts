@@ -10,7 +10,24 @@ import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
 import { useTasks } from './useTasks';
 import type { Task } from '../types';
 import { useWorkerStore } from '../stores/useWorkerStore';
+import { useInspectionDataStore } from '../stores/useInspectionDataStore';
 import { todayLocal } from '@/lib/dateUtils';
+
+/**
+ * 2026-10-20 修复（HIGH）：问题通道动作后主动刷新巡查记录。
+ *
+ * 「我的任务」里巡查任务行的状态是由 inspection store 的 linkedProblemStatus 推导的，
+ * 而本文件所有动作（接单/拒绝/提交反馈/验收）只写 problem store、从不刷新 inspection store。
+ * 结果：提交进度到 100% 后，「问题管理」已显示"待验收"，「我的任务」同一行仍是"处理中"，
+ * 直到切页或刷新才自愈。
+ *
+ * 失败只 warn 不阻断 —— 这是展示一致性的补偿动作，主流程已成功。
+ */
+function refreshInspectionRecords() {
+  void Promise.resolve(useInspectionDataStore.getState().fetchRecords()).catch((err: unknown) => {
+    console.warn('[useProblemDispatch] 刷新巡查记录失败（不影响主流程）:', err);
+  });
+}
 
 // ========== 状态映射（中文 ↔ 英文） ==========
 
@@ -376,6 +393,7 @@ export function useProblemDispatch() {
       acceptedTime: new Date().toISOString(),
       flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
+    refreshInspectionRecords();
   }, [storeProblems, updateProblemInStore]);
 
   // 拒绝问题
@@ -410,6 +428,7 @@ export function useProblemDispatch() {
       sourceTaskId: '',
       flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
+    refreshInspectionRecords();
   }, [storeProblems, updateProblemInStore]);
 
   // 提交反馈
@@ -477,6 +496,7 @@ export function useProblemDispatch() {
     updateProblemInStore(problemId, {
       flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
+    refreshInspectionRecords();
   }, [storeProblems, updateProblemInStore]);
 
   // 验收完成
@@ -513,6 +533,7 @@ export function useProblemDispatch() {
     if (linkedTask) {
       updateTaskStatus(linkedTask.id, 'completed');
     }
+    refreshInspectionRecords();
   }, [storeProblems, updateProblemInStore, updateTaskStatus, tasks]);
 
   // 验收返工
