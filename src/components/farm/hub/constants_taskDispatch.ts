@@ -76,6 +76,11 @@ export const DELETABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress'
 // 批量派发时可派发的状态（仅草稿）
 export const BATCH_DISPATCH_STATUSES = ['draft'];
 
+// 批量验收时可验收的状态
+// 2026-10-20：从 TaskTab.tsx 的局部硬编码上提为共享常量 —— 表格行需要用它来
+//   决定复选框是否可选（此前只有「全选」按状态过滤，逐行勾选不过滤）。
+export const BATCH_ACCEPT_STATUSES = ['waiting_acceptance'];
+
 // 批量重派时可重派的状态（失败/已放弃）
 export const BATCH_REASSIGN_STATUSES = ['failed', 'abandoned'];
 

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // 导入迁移的 TaskTable 组件
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
-import { EDITABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
+import { EDITABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, BATCH_ACCEPT_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
 
 // 状态配置（从常量文件导入，与 taskDispatch 保持一致）
 const STATUS_FILTERS = STATUS_OPTIONS;
@@ -24,7 +24,8 @@ const STATUS_FILTERS = STATUS_OPTIONS;
 // BATCH_DISPATCH_STATUSES 已从 constants_taskDispatch 导入
 
 // 可批量验收的状态：待验收
-const BATCH_ACCEPT_STATUSES = ['waiting_acceptance'];
+// 2026-10-20：改用共享常量（表格行判断复选框可选性需要同一份白名单）
+// 原为局部硬编码 const BATCH_ACCEPT_STATUSES = ['waiting_acceptance'];
 
 // 工具栏状态类型
 type ToolbarMode = 'normal' | 'export' | 'batchEdit' | 'batchDelete' | 'batchDispatch' | 'batchVerify' | 'batchReassign';

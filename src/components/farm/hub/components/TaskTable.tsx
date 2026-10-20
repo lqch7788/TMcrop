@@ -10,7 +10,14 @@ import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody } from '@/components/ui';
-import { EDITABLE_STATUSES, STATUS_MAP } from '../constants_taskDispatch';
+import {
+  EDITABLE_STATUSES,
+  DELETABLE_STATUSES,
+  BATCH_DISPATCH_STATUSES,
+  BATCH_ACCEPT_STATUSES,
+  BATCH_REASSIGN_STATUSES,
+  STATUS_MAP,
+} from '../constants_taskDispatch';
 
 interface Task {
   id: string;
@@ -442,8 +449,18 @@ export function TaskTable({
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
             {paginatedTasks.map((task, index) => {
-              const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
-              const isSelectable = batchEditMode ? isEditable : true;
+              // 2026-10-20 修复（state-auditor M8）：每种批量模式都要按各自的状态白名单
+              //   决定复选框是否可选。此前只有批量编辑做了限制，批量派发/验收/重派/删除
+              //   的逐行复选框对任意状态都可勾选 —— 与「全选」的过滤口径不一致，
+              //   路由遮蔽修复后即可把终态任务选进批量验收。
+              const statusWhitelist =
+                batchEditMode ? EDITABLE_STATUSES
+                  : batchDeleteMode ? DELETABLE_STATUSES
+                    : batchDispatchMode ? BATCH_DISPATCH_STATUSES
+                      : batchVerifyMode ? BATCH_ACCEPT_STATUSES
+                        : batchReassignMode ? BATCH_REASSIGN_STATUSES
+                          : null; // exportMode：不限状态
+              const isSelectable = statusWhitelist ? statusWhitelist.includes(task.status) : true;
               const statusName = STATUS_MAP[task.status]?.label || task.status;
               const selectableReason = !isSelectable ? `${statusName}状态不支持此操作` : undefined;
 

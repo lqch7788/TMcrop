@@ -110,11 +110,20 @@ export function getStorageConfig(): typeof STORAGE_DEFAULTS {
 // JSON 配置（复杂对象，以JSON格式存储在DB）
 // ============================================
 
-/** 操作权限矩阵默认值 */
+/**
+ * 操作权限矩阵默认值
+ *
+ * 2026-10-20 修复（state-auditor M6）：`statuses` 与 UI / 状态机对齐。
+ *   · cancel：UI 对 pending 行也显示「取消」，状态机也允许 pending→cancelled，
+ *     但矩阵只列了 accepted/in_progress → 非 admin 点 pending 行的取消会被拒。
+ *   · reassign：UI 对 rejected 行显示「重新派发」，状态机也允许 rejected→pending，
+ *     但矩阵只列了 failed/abandoned → 非 admin 点 rejected 行的重新派发会被拒。
+ *   （admin 因 canPerformAction 里直接放行，线上未被暴露，但权限矩阵本身是错的。）
+ */
 export const TASK_PERMISSIONS_DEFAULTS = {
   withdraw: { roles: ['admin'] as const, statuses: ['pending'] as const },
-  cancel: { roles: ['admin'] as const, statuses: ['accepted', 'in_progress'] as const },
-  reassign: { roles: ['admin'] as const, statuses: ['failed', 'abandoned'] as const },
+  cancel: { roles: ['admin'] as const, statuses: ['pending', 'accepted', 'in_progress'] as const },
+  reassign: { roles: ['admin'] as const, statuses: ['rejected', 'failed', 'abandoned'] as const },
   accept: { roles: ['assignee'] as const, statuses: ['pending'] as const },
   verify: { roles: ['assigner', 'admin'] as const, statuses: ['waiting_acceptance'] as const },
   continue: { roles: ['assignee'] as const, statuses: ['rejected'] as const },
