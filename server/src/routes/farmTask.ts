@@ -176,7 +176,10 @@ function transformTaskFields(item: any): any {
     planDate: item.planDate || '',
     planTime: item.planTime || '',
     planStart: item.planDate && item.planTime ? `${item.planDate} ${item.planTime}` : '',
-    planEnd: item.planDate || '',
+    // 2026-10-20 修复：planEnd 此前直接取 planDate（**开始日期**），
+    //   多天任务的「计划结束」永远显示成开始那天（实测传入 10-22 17:00，返回 10-21）。
+    //   现在优先读新的 plan_end 列；老数据回落到 due_date（它一直由 planEnd 派生）。
+    planEnd: item.planEnd || item.dueDate || item.planDate || '',
     dueDate: item.dueDate || item.planDate || '',
     // 任务工时
     estimatedHours: item.estimatedHours || 0,
@@ -426,7 +429,7 @@ router.post('/', (req: Request, res: Response) => {
         assignee_id, assignee_name, assigner_id, assigner_name,
         greenhouse_id, greenhouse_name, area_name,
         plan_date, plan_time, priority, status, create_by, create_time, update_time,
-        due_date, progress, crop, crop_remarks, estimated_hours, estimated_days, remarks,
+        due_date, plan_end, progress, crop, crop_remarks, estimated_hours, estimated_days, remarks,
         materials, tools,
         batch_id, batch_code,
         planting_id, production_plan_id, production_plan_code,
@@ -437,7 +440,7 @@ router.post('/', (req: Request, res: Response) => {
         team_id, team_name, tools_remarks,
         source_problem_id, source_inspection_id, source_id, source_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -458,6 +461,8 @@ router.post('/', (req: Request, res: Response) => {
       create_by || createBy || 'system',
       now, now,
       due_date || dueDate || (planEndVal ? planEndVal.split(' ')[0] : null),
+      // 2026-10-20：计划结束（完整日期时间），与 due_date（仅日期）并存
+      planEndVal || null,
       progress || 0,
       crop || cropName || '',
       // 2026-10-20：作物备注（「作物=其他」时的说明）
@@ -572,7 +577,10 @@ const FIELD_NAME_MAP: Record<string, string> = {
   cropName: 'crop',
   title: 'task_title',
   planStart: 'plan_date',
-  planEnd: 'plan_date',
+  // 2026-10-20：planEnd 此前映射到 plan_date（开始日期），PUT 会把结束时间写进开始日期列。
+  //   改为独立列 plan_end。
+  planEnd: 'plan_end',
+  plan_end: 'plan_end',
   teamId: 'team_id',
   teamName: 'team_name',
   team_id: 'team_id',
@@ -614,7 +622,7 @@ function toDbColumnName(fieldName: string): string {
 const FARM_TASK_DB_COLUMNS = new Set<string>([
   'id', 'task_code', 'task_title', 'title', 'task_type', 'task_content', 'description',
   'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name', 'create_by', 'create_by_id',
-  'greenhouse_id', 'greenhouse_name', 'area_name', 'crop', 'crop_remarks',
+  'greenhouse_id', 'greenhouse_name', 'area_name', 'crop', 'crop_remarks', 'plan_end',
   'plan_date', 'plan_time', 'due_date', 'priority', 'status', 'progress', 'progress_pct',
   'batch_id', 'batch_code', 'team_id', 'team_name',
   'completion_date', 'completion_note', 'completed_at', 'accepted_at',
