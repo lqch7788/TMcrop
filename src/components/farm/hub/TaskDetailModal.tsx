@@ -319,7 +319,12 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">作物</Label>
-                  <p className="font-semibold text-gray-900">{task.cropName || task.crop || '-'}</p>
+                  {/* 2026-10-20：作物为「其他」时带上作物备注，与列表列口径一致 */}
+                  <p className="font-semibold text-gray-900">
+                    {(task.cropName || task.crop) === '其他'
+                      ? `其他（${task.cropRemarks || '未填写'}）`
+                      : (task.cropName || task.crop || '-')}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">执行人</Label>
@@ -333,6 +338,21 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                 </div>
               </div>
             </div>
+
+            {/* 工作内容（2026-10-20 修复：此前被嵌在「来源信息」区块内部，
+                而该区块只在 task.sourceId 存在时渲染 —— 手工新建的任务没有来源 ID，
+                工作内容整块消失。现独立成块，与来源无关。） */}
+            {task.remarks && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  工作内容
+                </h4>
+                <p className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 rounded p-2">
+                  {task.remarks}
+                </p>
+              </div>
+            )}
 
             {/* 来源信息 - 蓝色背景 */}
             {task.sourceId && (
@@ -359,13 +379,6 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                     <p className="font-semibold text-gray-900 text-xs">{task.sourceId}</p>
                   </div>
                 </div>
-                {/* 显示详细工作内容（如果有） */}
-                {task.remarks && (
-                  <div className="mt-3 pt-3 border-t border-blue-200">
-                    <Label className="text-xs text-blue-600">工作内容</Label>
-                    <p className="text-sm text-gray-700 whitespace-pre-line bg-white rounded p-2">{task.remarks}</p>
-                  </div>
-                )}
               </div>
             )}
 
