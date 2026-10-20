@@ -72,17 +72,14 @@ export function TaskAcceptanceModal({
     }
   };
 
-  // 2026-10-20：驳回原因长度与服务端 ReasonSchema（min 6）保持一致，
-  //   提前内联提示，避免提交后才被 422 挡回。
-  const MIN_REJECT_REASON = 6;
+  // 2026-10-20：驳回原因取消最小字数限制（用户要求），只要求非空。
   const rejectReasonLen = rejectReason.trim().length;
-  const rejectReasonTooShort = mode === 'reject' && rejectReasonLen > 0 && rejectReasonLen < MIN_REJECT_REASON;
 
   const handleConfirm = () => {
     if (mode === 'confirm') {
       onAccept(remarks || undefined, actualArea ? Number(actualArea) : undefined);
     } else {
-      if (rejectReasonLen < MIN_REJECT_REASON) return;
+      if (rejectReasonLen === 0) return;
       onReject(rejectReason.trim());
     }
     setRemarks('');
@@ -367,15 +364,10 @@ export function TaskAcceptanceModal({
                   <textarea
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder={`请输入驳回原因（至少 ${MIN_REJECT_REASON} 个字符）...`}
-                    className={`${deepInputClass} w-full ${rejectReasonTooShort ? 'border-red-400' : ''}`}
+                    placeholder="请输入驳回原因..."
+                    className={`${deepInputClass} w-full`}
                     rows={3}
                   />
-                  <p className={`text-xs mt-1 ${rejectReasonTooShort ? 'text-red-500' : 'text-gray-400'}`}>
-                    {rejectReasonTooShort
-                      ? `还需 ${MIN_REJECT_REASON - rejectReasonLen} 个字符（服务端要求至少 ${MIN_REJECT_REASON} 个）`
-                      : `至少 ${MIN_REJECT_REASON} 个字符，当前 ${rejectReasonLen} 个`}
-                  </p>
                 </div>
               )}
 
@@ -403,7 +395,7 @@ export function TaskAcceptanceModal({
                 </Button>
                 <Button
                   onClick={handleConfirm}
-                  disabled={mode === 'reject' && rejectReasonLen < MIN_REJECT_REASON}
+                  disabled={mode === 'reject' && rejectReasonLen === 0}
                   className={mode === 'confirm' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}
                 >
                   {mode === 'confirm' ? '确认验收通过' : '确认驳回'}

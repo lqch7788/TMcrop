@@ -55,7 +55,13 @@ export const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
   pending: ['accepted', 'cancelled', 'draft'],
   accepted: ['in_progress', 'cancelled', 'draft'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
-  waiting_acceptance: ['completed', 'rejected'],
+  // 2026-10-20：补 failed。POST /:id/reject 的规则是「返工次数 >= 2 判定失败」，
+  //   而驳回只能从 waiting_acceptance 发起 —— 若这里不允许 failed，
+  //   第二次驳回会被守卫判为非法转移（实测 NS20261017-516：
+  //   rework_count=1 → 本次算 2 → newStatus=failed → 409
+  //   "状态转移非法：waiting_acceptance → failed（允许：completed/rejected）"），
+  //   任务永远驳不掉。failed 在 rejected 的转移里本来就已开放，语义一致。
+  waiting_acceptance: ['completed', 'rejected', 'failed'],
   completed: [],
   rejected: ['in_progress', 'failed'],
   failed: ['pending'],

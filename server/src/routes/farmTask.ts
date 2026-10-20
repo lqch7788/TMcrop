@@ -53,9 +53,18 @@ function guardTransition(res: Response, from: string, to: string): boolean {
   }
 }
 
-// 2026-10-12 P2 (IS-NEW-159) 修复：reject/withdraw reason 长度校验 schema（min 6 字符）
+// 2026-10-12 P2 (IS-NEW-159) 修复：withdraw reason 长度校验 schema（min 6 字符）
 const ReasonSchema = z.object({
   reason: z.string().min(6, '原因至少 6 个字符').max(500),
+});
+
+/**
+ * 2026-10-20：驳回原因**取消最小字数限制**（用户要求）。
+ *   只保留 500 字上限，防止异常超长文本；空内容仍由前端按钮禁用兜底。
+ *   与 ReasonSchema 分开，避免影响撤回（撤回仍要求 >= 6 字）。
+ */
+const RejectReasonSchema = z.object({
+  reason: z.string().max(500),
 });
 
 // 任务状态值标准化映射（中文 -> 英文）
@@ -1696,8 +1705,8 @@ router.post('/:id/complete', (req: Request, res: Response) => {
 router.post('/:id/reject', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    // 2026-10-12 (IS-NEW-159) P2 修复：reason 长度校验（min 6），防止绕过前端导致 500
-    const parsed = ReasonSchema.safeParse(req.body);
+    // 2026-10-20：驳回原因不做最小字数校验（改用 RejectReasonSchema），仅限 500 字上限
+    const parsed = RejectReasonSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(422).json({ success: false, error: parsed.error.issues[0]?.message || '参数校验失败' });
     }

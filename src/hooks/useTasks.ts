@@ -1440,11 +1440,9 @@ export function useTasks(): UseTasksReturn {
       // 不 return，继续执行驳回流程
     }
 
-    // 2026-10-20：驳回原因长度与服务端一致（ReasonSchema 要求 ≥6 字符）。
-    //   此前前端只校验"非空"，短原因会在服务端 422，而错误又被 syncToApi 吞掉，
-    //   表现为"点了没反应、任务仍在待验收"。这里前置拦截并给出明确提示。
-    if (reason.trim().length < 6) {
-      showAlert('驳回原因至少需要 6 个字符，请补充具体原因后再提交。');
+    // 2026-10-20：驳回原因**取消最小字数限制**（用户要求），只要求非空。
+    if (!reason.trim()) {
+      showAlert('请填写驳回原因。');
       return;
     }
 

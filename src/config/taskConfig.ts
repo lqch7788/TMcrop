@@ -140,7 +140,10 @@ export const STATUS_TRANSITIONS_DEFAULTS: Record<string, string[]> = {
   pending: ['accepted', 'cancelled', 'draft'],
   accepted: ['in_progress', 'cancelled', 'draft'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
-  waiting_acceptance: ['completed', 'rejected'],
+  // 2026-10-20：补 failed，与服务端 TASK_STATUS_TRANSITIONS 保持一致。
+  //   驳回规则是「返工次数 >= 2 判定失败」，驳回只能从 waiting_acceptance 发起，
+  //   不允许 failed 会导致第二次驳回被服务端守卫拒绝。
+  waiting_acceptance: ['completed', 'rejected', 'failed'],
   rejected: ['in_progress', 'failed'],
   failed: ['pending'],
   abandoned: ['pending'],

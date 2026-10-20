@@ -166,8 +166,14 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
     expect(STATUS_TRANSITIONS.in_progress).toEqual(['waiting_acceptance', 'cancelled', 'abandoned']);
   });
 
-  it('waiting_acceptance 只能转到 completed 或 rejected', () => {
-    expect(STATUS_TRANSITIONS.waiting_acceptance).toEqual(['completed', 'rejected']);
+  // 2026-10-20 更新：允许 waiting_acceptance → failed。
+  //   驳回接口的规则是「返工次数 >= 2 判定任务失败」，而驳回只能从
+  //   waiting_acceptance 发起 —— 若此处不允许 failed，第二次驳回必然被状态机
+  //   判为非法转移（实测 NS20261017-516：rework_count=1 → 本次算 2 → failed
+  //   → 409「状态转移非法：waiting_acceptance → failed」），任务永远驳不掉。
+  //   failed 在 rejected 的转移里原本就已开放，语义一致。
+  it('waiting_acceptance 可转到 completed、rejected 或 failed', () => {
+    expect(STATUS_TRANSITIONS.waiting_acceptance).toEqual(['completed', 'rejected', 'failed']);
   });
 
   it('rejected 只能转到 in_progress 或 failed', () => {
