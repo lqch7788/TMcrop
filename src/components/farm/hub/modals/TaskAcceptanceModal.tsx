@@ -17,7 +17,7 @@ interface TaskAcceptanceModalProps {
   task: Task | null;
   taskRecords: TaskRecord[];
   isLoadingRecords?: boolean;
-  onAccept: (comments?: string) => void;
+  onAccept: (comments?: string, actualArea?: number) => void;
   onReject: (reason: string) => void;
   onClose: () => void;
 }
@@ -34,6 +34,8 @@ export function TaskAcceptanceModal({
   const [mode, setMode] = useState<'confirm' | 'reject'>('confirm');
   const [remarks, setRemarks] = useState('');
   const [rejectReason, setRejectReason] = useState('');
+  // P0-8：作业面积（亩）—— 用于亩均成本
+  const [actualArea, setActualArea] = useState('');
 
   if (!isOpen || !task) return null;
 
@@ -72,7 +74,7 @@ export function TaskAcceptanceModal({
 
   const handleConfirm = () => {
     if (mode === 'confirm') {
-      onAccept(remarks || undefined);
+      onAccept(remarks || undefined, actualArea ? Number(actualArea) : undefined);
     } else {
       if (!rejectReason.trim()) return;
       onReject(rejectReason);
@@ -328,6 +330,24 @@ export function TaskAcceptanceModal({
                     placeholder="请输入验收备注..."
                     className={`${deepInputClass} w-full`}
                     rows={3}
+                  />
+                </div>
+              )}
+
+              {/* P0-8：作业面积（亩，选填）——用于亩均成本 */}
+              {mode === 'confirm' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    作业面积 <span className="text-gray-400">(亩，选填，用于亩均成本)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={actualArea}
+                    onChange={(e) => setActualArea(e.target.value)}
+                    placeholder="本次实际作业面积"
+                    className={`${deepInputClass} w-full`}
                   />
                 </div>
               )}

@@ -7,8 +7,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { TaskAcceptanceModal } from './TaskAcceptanceModal';
+import { TaskInputUsageModal, type TaskInputUsageTarget } from './TaskInputUsageModal';
 import { Task, TaskRecord } from '../../../../types/task';
 import { getTaskRecords } from '../../../../services/apiFarmTaskService';
+
+/** P0-3：施肥/用药类任务验收后提示补录实际用量 */
+function isInputUsageTask(task: Task): boolean {
+  const t = String((task as any).type || '');
+  return /fert|施肥|pest|防治|植保/.test(t);
+}
 
 interface TaskAcceptanceAdapterProps {
   taskId: string | null;
@@ -19,7 +26,7 @@ interface TaskAcceptanceAdapterProps {
   /** 从父组件传入的任务记录获取函数 */
   getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
   /** 验收通过 */
-  onAcceptCompletion: (taskId: string, comments?: string) => void;
+  onAcceptCompletion: (taskId: string, comments?: string, actualArea?: number) => void;
   /** 驳回返工 */
   onRejectForRework: (taskId: string, reason: string) => void;
 }
@@ -36,6 +43,8 @@ export function TaskAcceptanceAdapter({
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  // P0-3：验收通过后待补录投入品的任务
+  const [usageTask, setUsageTask] = useState<TaskInputUsageTarget | null>(null);
 
   useEffect(() => {
     if (!taskId) {
@@ -121,11 +130,28 @@ export function TaskAcceptanceAdapter({
     );
   };
 
-  const handleAccept = useCallback((comments?: string) => {
+  const handleAccept = useCallback((comments?: string, actualArea?: number) => {
     if (!task) return;
-    onAcceptCompletion(task.id, comments);
+    onAcceptCompletion(task.id, comments, actualArea);
+    // P0-3：施肥/用药任务先补录用量，关闭后再通知父组件验收完成
+    if (isInputUsageTask(task)) {
+      setUsageTask({
+        id: task.id,
+        taskCode: (task as any).taskCode,
+        type: (task as any).type,
+        typeName: (task as any).typeName,
+        greenhouseName: (task as any).greenhouseName,
+        crop: (task as any).crop || (task as any).cropName,
+      });
+      return;
+    }
     onVerified();
   }, [task, onAcceptCompletion, onVerified]);
+
+  const closeUsage = useCallback(() => {
+    setUsageTask(null);
+    onVerified();
+  }, [onVerified]);
 
   const handleReject = useCallback((reason: string) => {
     if (!task) return;
@@ -135,6 +161,18 @@ export function TaskAcceptanceAdapter({
 
   if (!taskId || !task) {
     return null;
+  }
+
+  // P0-3：补录弹窗独占显示，关闭后才结束验收流程
+  if (usageTask) {
+    return (
+      <TaskInputUsageModal
+        isOpen
+        task={usageTask}
+        onClose={closeUsage}
+        onSaved={() => {}}
+      />
+    );
   }
 
   return (

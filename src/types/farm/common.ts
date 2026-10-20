@@ -222,10 +222,17 @@ export function getCompletionTimeLabel(value: string): string {
 // ============================================
 // 优先级
 // ============================================
+/**
+ * 2026-10-20 P0-10 枚举统一：
+ * 全站任务优先级实际取值是 urgent / high / normal（见 constants_taskDispatch.TASK_PRIORITY_MAP、
+ * useTempTasks.URGENCY_CONFIG、farmTaskStore.Task.priority）。
+ * 此前这里是 high / medium / low —— CreateTaskModal 用它渲染下拉，
+ * 选「中」会写入 mission 不认识的 'medium'，导致列表优先级列显示空白。
+ */
 export const PRIORITY_OPTIONS = [
-  { value: 'high', label: '高', color: 'red' },
-  { value: 'medium', label: '中', color: 'yellow' },
-  { value: 'low', label: '低', color: 'green' },
+  { value: 'urgent', label: '紧急', color: 'red' },
+  { value: 'high', label: '高', color: 'orange' },
+  { value: 'normal', label: '普通', color: 'gray' },
 ] as const;
 
 export type Priority = typeof PRIORITY_OPTIONS[number]['value'];

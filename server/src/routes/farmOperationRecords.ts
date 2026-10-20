@@ -93,7 +93,8 @@ router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const { sourceType, status, sourceId, limit = '200' } = req.query;
-    let sql = 'SELECT * FROM farm_operation_records WHERE 1=1';
+    // P1-2：默认只返回未删除记录（软删除留痕）
+    let sql = 'SELECT * FROM farm_operation_records WHERE deleted_at IS NULL';
     const bindings: (string | number)[] = [];
     if (sourceType) { sql += ' AND source_type = ?'; bindings.push(sourceType as string); }
     if (status) { sql += ' AND status = ?'; bindings.push(status as string); }
@@ -155,6 +156,69 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 批量创建（幂等）
+ * 用途：前端 localStorage 历史数据一次性迁移（P0-1）
+ * 语义：按主键 id 去重 —— 已存在的记录跳过，不覆盖服务端数据
+ * 落盘：整批只 saveDatabase() 一次（sql.js 每次落盘重写整个库文件）
+ */
+router.post('/batch', (req: Request, res: Response) => {
+  try {
+    const { records } = req.body as { records?: Record<string, unknown>[] };
+    if (!Array.isArray(records)) {
+      return res.status(400).json({ success: false, error: 'records 必须是数组' });
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const errors: { id: string; message: string }[] = [];
+    let created = 0;
+    let skipped = 0;
+
+    for (const raw of records) {
+      const id = typeof raw.id === 'string' ? raw.id : '';
+      if (!id) {
+        errors.push({ id: '', message: '缺少 id' });
+        continue;
+      }
+      try {
+        const data = denormalize(raw);
+        db.run(
+          `INSERT OR IGNORE INTO farm_operation_records (
+            id, record_code, source_type, source_id, source_code,
+            operation_type, operation_type_name, status,
+            greenhouse_id, greenhouse_name, crop_name, variety, batch_id, batch_code,
+            operator_id, operator_name, operation_date, start_time, end_time, duration,
+            workload, workload_days, workload_hours, workers, unit,
+            materials, gps_location, photos_before, photos_after, voice_note, material_code, remarks,
+            progress, progress_increment, area, children, reject_reason,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id, data.record_code, data.source_type, data.source_id, data.source_code,
+            data.operation_type, data.operation_type_name, data.status,
+            data.greenhouse_id, data.greenhouse_name, data.crop_name, data.variety, data.batch_id, data.batch_code,
+            data.operator_id, data.operator_name, data.operation_date, data.start_time, data.end_time, data.duration,
+            data.workload, data.workload_days, data.workload_hours, data.workers, data.unit,
+            data.materials, data.gps_location, data.photos_before, data.photos_after, data.voice_note, data.material_code, data.remarks,
+            data.progress, data.progress_increment, data.area, data.children, data.reject_reason,
+            data.created_at || now, data.updated_at || now,
+          ],
+        );
+        if (db.getRowsModified() > 0) created++;
+        else skipped++;
+      } catch (error) {
+        errors.push({ id, message: (error as Error).message });
+      }
+    }
+
+    saveDatabase();
+    res.json({ success: true, data: { created, skipped, failed: errors.length, errors } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
 /** 更新 */
 router.put('/:id', (req: Request, res: Response) => {
   try {
@@ -188,13 +252,50 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-/** 删除 */
+/**
+ * 删除（P1-2：软删除留痕）
+ *
+ * 合规要求：生产记录不可事后静默删除。
+ * - 已验收（status=completed）的记录**禁止删除**，只能作废 → 返回 409
+ * - 其余记录标记 deleted_at/deleted_by/delete_reason，数据保留
+ * - 需 operator_id + reason（审计要求）
+ */
 router.delete('/:id', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    db.run('DELETE FROM farm_operation_records WHERE id = ?', [req.params.id]);
+    const id = req.params.id;
+    const operatorId = String(req.body?.operator_id ?? req.body?.operatorId ?? req.query.operator_id ?? '');
+    const reason = String(req.body?.reason ?? req.query.reason ?? '');
+
+    // 查当前状态
+    const stmt = db.prepare('SELECT id, status, deleted_at FROM farm_operation_records WHERE id = ?');
+    stmt.bind([id]);
+    let row: Record<string, unknown> | null = null;
+    if (stmt.step()) row = stmt.getAsObject();
+    stmt.free();
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: '记录不存在' });
+    }
+    if (row.deleted_at) {
+      return res.status(409).json({ success: false, error: '记录已删除（重复操作）' });
+    }
+    if (String(row.status || '') === 'completed') {
+      return res.status(409).json({
+        success: false,
+        error: '已验收的作业记录不可删除（《农产品质量安全法》要求生产记录可追溯）。如记录有误，请在备注中说明更正原因。',
+      });
+    }
+
+    const now = new Date().toISOString();
+    db.run(
+      `UPDATE farm_operation_records
+       SET deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
+       WHERE id = ? AND deleted_at IS NULL`,
+      [now, operatorId || null, reason || null, now, id]
+    );
     saveDatabase();
-    res.json({ success: true, data: { id: req.params.id } });
+    res.json({ success: true, data: { id, deletedAt: now } });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });
   }

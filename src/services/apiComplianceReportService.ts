@@ -8,6 +8,16 @@
 
 import { enhancedApiClient } from '@/lib/apiClient';
 
+/** P1-1：合规生产档案（《农产品质量安全法》第 27 条三类内容） */
+export interface ProductionRecordSection {
+  fertilizerUsage: Array<Record<string, unknown>>;
+  pesticideUsage: Array<Record<string, unknown>>;
+  pestOccurrences: Array<Record<string, unknown>>;
+  harvests: Array<Record<string, unknown>>;
+  retentionUntil: string | null;
+  retentionNote: string;
+}
+
 export interface ComplianceReport {
   batchCode: string;
   generatedAt: string;
@@ -19,8 +29,12 @@ export interface ComplianceReport {
     inspections?: Array<Record<string, unknown>>;
     problems?: Array<Record<string, unknown>>;
     dailyRecords?: Array<Record<string, unknown>>;
+    /** P1-1 合规生产档案 */
+    productionRecord?: ProductionRecordSection;
     complianceSummary?: ComplianceSummary;
   };
+  /** P0-10：查询失败的段（不再静默吞错） */
+  sectionsErrors?: Array<{ section: string; message: string }>;
 }
 
 export interface ComplianceSummary {

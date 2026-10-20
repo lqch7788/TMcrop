@@ -3,37 +3,44 @@ import { enhancedApiClient } from '../lib/apiClient';
 
 /**
  * 农事任务排班数据
+ *
+ * 2026-10-20 P0-6 修正：接口返回的是 **camelCase**（服务端 /api 全局响应中间件统一转换），
+ * 原类型定义为 snake_case，与实际响应不匹配 —— 这是本 Hook 从未被任何页面使用的原因。
  */
 export interface FarmTaskSchedule {
   id: string;
-  task_id: string;
-  task_title?: string;
-  task_code?: string;
-  worker_id: string;
-  worker_name: string;
-  team_id: string | null;
-  team_name: string | null;
-  plan_date: string;
-  plan_start: string | null;
-  plan_end: string | null;
-  shift_type: string;
+  taskId: string;
+  taskTitle?: string;
+  taskCode?: string;
+  workerId: string;
+  workerName: string;
+  teamId: string | null;
+  teamName: string | null;
+  planDate: string;
+  planStart: string | null;
+  planEnd: string | null;
+  shiftType: string;
   status: string;
   remarks: string | null;
 }
 
 /**
- * 待排班任务数据
+ * 待排班任务数据（服务端直接返回 farm_tasks 原始行，经 camelCase 转换）
  */
 export interface UnscheduledTask {
   id: string;
-  task_code: string;
-  title: string;
-  assignee_id: string;
-  assignee_name: string;
-  plan_date: string;
-  plan_start: string;
-  greenhouse: string;
-  type_name: string;
+  taskCode: string;
+  taskTitle?: string;
+  title?: string;
+  typeName?: string;
+  type?: string;
+  assigneeId: string;
+  assigneeName: string;
+  planDate: string;
+  planTime?: string;
+  greenhouseName?: string;
+  areaName?: string;
+  priority?: string;
 }
 
 /**
@@ -50,9 +57,17 @@ export interface UseFarmTaskScheduleResult {
   refresh: () => void;
 }
 
+// 班次类型（与服务端 shift_type 对应）
+export const FARM_TASK_SHIFT_TYPES = [
+  { value: 'day', label: '白班' },
+  { value: 'night', label: '夜班' },
+  { value: 'morning', label: '早班' },
+  { value: 'afternoon', label: '午班' },
+] as const;
+
 /**
- * 农事任务排班 Hook
- * @param filters 可选的筛选条件：日期、工人ID、班组ID
+ * useFarmTaskSchedule Hook
+ * @param filters 可选的筛选条件：日期、执行人、班组
  */
 export function useFarmTaskSchedule(filters?: {
   date?: string;
@@ -74,17 +89,11 @@ export function useFarmTaskSchedule(filters?: {
       if (filters?.workerId) params.append('workerId', filters.workerId);
       if (filters?.teamId) params.append('teamId', filters.teamId);
 
-      const url = `/farm-task-schedules/list${params.toString() ? '?' + params.toString() : ''}`;
-      const result = await enhancedApiClient.get<{ success: boolean; data?: FarmTaskSchedule[]; error?: string }>(url);
-
-      if (result.success) {
-        setSchedules(result.data || []);
-      } else {
-        setError(result.error || '获取排班失败');
-      }
+      const url = `/farm-task-schedules/list${params.toString() ? `?${params.toString()}` : ''}`;
+      const result = await enhancedApiClient.get<FarmTaskSchedule[]>(url);
+      setSchedules(Array.isArray(result) ? result : []);
     } catch (err) {
-      setError('网络错误');
-      // logger.error('获取排班失败:', err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -92,25 +101,19 @@ export function useFarmTaskSchedule(filters?: {
 
   const fetchUnscheduledTasks = useCallback(async () => {
     try {
-      const result = await enhancedApiClient.get<{ success: boolean; data?: UnscheduledTask[]; error?: string }>(
-        '/farm-task-schedules/unscheduled'
-      );
-
-      if (result.success) {
-        setUnscheduledTasks(result.data || []);
-      }
+      const result = await enhancedApiClient.get<UnscheduledTask[]>('/farm-task-schedules/unscheduled');
+      setUnscheduledTasks(Array.isArray(result) ? result : []);
     } catch (err) {
-      // logger.error('获取待排班任务失败:', err);
+      setError((err as Error).message);
     }
   }, []);
 
   useEffect(() => {
-    fetchSchedules();
-    fetchUnscheduledTasks();
+    void fetchSchedules();
+    void fetchUnscheduledTasks();
   }, [fetchSchedules, fetchUnscheduledTasks]);
 
   const createSchedule = useCallback(async (input: Partial<FarmTaskSchedule>): Promise<FarmTaskSchedule> => {
-    // enhancedApiClient.post 直接返回解析后的数据，检查 response 状态需用 rawResponse
     const response = await enhancedApiClient.rawPost('/farm-task-schedules', {
       body: JSON.stringify(input),
     });
@@ -126,18 +129,16 @@ export function useFarmTaskSchedule(filters?: {
       throw new Error(result.error || '创建排班失败');
     }
 
-    fetchSchedules();
-    fetchUnscheduledTasks();
-    return result.data!;
+    void fetchSchedules();
+    void fetchUnscheduledTasks();
+    return result.data as FarmTaskSchedule;
   }, [fetchSchedules, fetchUnscheduledTasks]);
 
-  const updateSchedule = useCallback(async (id: string, updates: Partial<FarmTaskSchedule>) => {
-    // enhancedApiClient.put 直接返回解析后的数据，检查 response 状态需用 rawPut
+  const updateSchedule = useCallback(async (id: string, updates: Partial<FarmTaskSchedule>): Promise<void> => {
     const response = await enhancedApiClient.rawPut(`/farm-task-schedules/${id}`, {
       body: JSON.stringify(updates),
     });
 
-    // 处理 409 冲突错误
     if (response.status === 409) {
       const result = await response.json();
       throw new Error(result.error || '该执行人在同日已有排班');
@@ -148,20 +149,24 @@ export function useFarmTaskSchedule(filters?: {
       throw new Error(result.error || '更新排班失败');
     }
 
-    fetchSchedules();
+    void fetchSchedules();
   }, [fetchSchedules]);
 
-  const deleteSchedule = useCallback(async (id: string) => {
+  const deleteSchedule = useCallback(async (id: string): Promise<void> => {
     const result = await enhancedApiClient.delete<{ success: boolean; error?: string }>(
       `/farm-task-schedules/${id}`
     );
-
     if (!result.success) {
       throw new Error(result.error || '删除排班失败');
     }
 
-    fetchSchedules();
-    fetchUnscheduledTasks();
+    void fetchSchedules();
+    void fetchUnscheduledTasks();
+  }, [fetchSchedules, fetchUnscheduledTasks]);
+
+  const refresh = useCallback(() => {
+    void fetchSchedules();
+    void fetchUnscheduledTasks();
   }, [fetchSchedules, fetchUnscheduledTasks]);
 
   return {
@@ -172,10 +177,7 @@ export function useFarmTaskSchedule(filters?: {
     createSchedule,
     updateSchedule,
     deleteSchedule,
-    refresh: () => {
-      fetchSchedules();
-      fetchUnscheduledTasks();
-    },
+    refresh,
   };
 }
 

@@ -217,6 +217,9 @@ export interface Task {
   // 关联
   batchId?: string;
   batchCode?: string;
+  /** P0-5：任务 ↔ 种植实例 / 生产计划 */
+  plantingId?: string;
+  productionPlanId?: string;
   productionPlanCode?: string;
   greenhouseId?: string;
   greenhouseName?: string;

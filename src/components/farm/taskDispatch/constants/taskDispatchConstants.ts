@@ -33,17 +33,36 @@ const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
 };
 
 // ========== 任务类型定义 ==========
-export const TASK_TYPES = [
-  { value: 'fertilization', label: '施肥', icon: Leaf, color: 'bg-green-500' },
-  { value: 'irrigation', label: '灌溉', icon: Droplets, color: 'bg-blue-500' },
-  { value: 'pruning', label: '修剪', icon: Scissors, color: 'bg-purple-500' },
-  { value: 'pesticide', label: '植保', icon: Bug, color: 'bg-red-500' },
-  { value: 'rootIrrigation', label: '灌根', icon: Droplets, color: 'bg-cyan-500' },
-  { value: 'planting', label: '定植', icon: Trees, color: 'bg-lime-500' },
-  { value: 'harvest', label: '采收', icon: ShoppingBasket, color: 'bg-orange-500' },
-  { value: 'weeding', label: '除草', icon: Trees, color: 'bg-emerald-500' },
-  { value: 'other', label: '其他', icon: Edit, color: 'bg-gray-500' },
-] as const;
+/**
+ * 2026-10-20 P0-10 枚举统一：
+ * 任务类型的**唯一真相源**是 `src/types/farm/common.ts` 的 FARM_OPERATION_TYPES（12 个值）。
+ * 此前这里有第二份 10 值副本，且取值不一致（如 'pesticide' vs 'pest_control'、缺 cleaning/seedling），
+ * 导致同一任务在不同页面显示成不同类型。
+ * 现在只在本层补充图标与颜色，取值一律从 FARM_OPERATION_TYPES 派生。
+ */
+import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
+
+const TYPE_ICON_MAP: Record<string, { icon: typeof Leaf; color: string }> = {
+  planting: { icon: Trees, color: 'bg-lime-500' },
+  irrigation: { icon: Droplets, color: 'bg-blue-500' },
+  fertilization: { icon: Leaf, color: 'bg-green-500' },
+  pest_control: { icon: Bug, color: 'bg-red-500' },
+  pruning: { icon: Scissors, color: 'bg-purple-500' },
+  harvest: { icon: ShoppingBasket, color: 'bg-orange-500' },
+  weeding: { icon: Trees, color: 'bg-emerald-500' },
+  farm_repair: { icon: Edit, color: 'bg-amber-500' },
+  equipment_repair: { icon: Edit, color: 'bg-amber-600' },
+  cleaning: { icon: Edit, color: 'bg-slate-500' },
+  seedling: { icon: Leaf, color: 'bg-teal-500' },
+  other: { icon: Edit, color: 'bg-gray-500' },
+};
+
+export const TASK_TYPES = FARM_OPERATION_TYPES.map((t) => ({
+  value: t.value,
+  label: t.label,
+  icon: TYPE_ICON_MAP[t.value]?.icon ?? Edit,
+  color: TYPE_ICON_MAP[t.value]?.color ?? 'bg-gray-500',
+}));
 
 // ========== 状态映射 ==========
 export const STATUS_MAP = TASK_STATUS_MAP;

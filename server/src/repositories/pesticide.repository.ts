@@ -59,6 +59,11 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
 export interface PesticideRecord {
   id: string;
   record_code: string;
+  /** P0-3：关联农事任务 */
+  farm_task_id?: string | null;
+  /** P1-1 合规：投入品来源 / 停用日期 */
+  source?: string | null;
+  stop_use_date?: string | null;
   spray_time: string;
   operator_id: string | null;
   operator_name: string | null;
@@ -147,7 +152,7 @@ export class PesticideRepository {
     const db = getDatabase();
     const rows = queryToObjects<PesticideRecord>(
       db,
-      `SELECT * FROM pesticide_records WHERE id = ?`,
+      `SELECT * FROM pesticide_records WHERE id = ? AND deleted_at IS NULL`,
       [id],
     );
     return rows[0] ?? null;
@@ -191,6 +196,8 @@ export class PesticideRepository {
         params.push(value);
       }
     }
+    // P1-2：默认排除软删除记录
+    wheres.push('deleted_at IS NULL');
     const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
     const offset = (page - 1) * pageSize;
     const rows = queryToObjects<PesticideRecord>(
@@ -243,7 +250,7 @@ export class PesticideRepository {
     const db = getDatabase();
     db.run(
       `INSERT INTO pesticide_records (
-        id, record_code, spray_time, operator_id, operator_name, crop_name, crop_names, greenhouse_name,
+        id, record_code, farm_task_id, source, stop_use_date, spray_time, operator_id, operator_name, crop_name, crop_names, greenhouse_name,
         planting_id, planting_code, seedling_id, seedling_code,
         pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content,
         dosage, dosage_unit, dilution_ratio, target_pest, application_method,
@@ -253,9 +260,11 @@ export class PesticideRepository {
         use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
         leaf_fertilizer_list,
         description, photos, create_time, update_time
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        record.id, record.record_code, record.spray_time,
+        record.id, record.record_code, record.farm_task_id ?? null,
+        record.source ?? null, record.stop_use_date ?? null,
+        record.spray_time,
         record.operator_id, record.operator_name, record.crop_name, record.crop_names ?? null, record.greenhouse_name,
         record.planting_id, record.planting_code, record.seedling_id, record.seedling_code,
         record.pesticide_id, record.pesticide_name, record.pesticide_type,
@@ -303,10 +312,14 @@ export class PesticideRepository {
    * 删除单条记录
    * @returns 受影响行数
    */
+  /** P1-2：软删除（合规要求，生产记录不可物理抹除） */
   deleteById(id: string): number {
     const db = getDatabase();
-    const stmt = db.prepare(`DELETE FROM pesticide_records WHERE id = ?`);
-    stmt.run([id]);
+    const now = new Date().toISOString();
+    const stmt = db.prepare(
+      `UPDATE pesticide_records SET deleted_at = ?, update_time = ? WHERE id = ? AND deleted_at IS NULL`
+    );
+    stmt.run([now, now, id]);
     stmt.free();
     return db.getRowsModified();
   }

@@ -31,6 +31,8 @@ const FIELD_MAP: Record<string, string> = {
   warehouseName: 'warehouseLocation',
   plantArea: 'plantAreaRaw',     // 后端返回 plantArea（camelCase），normalize 阶段再解析为 plantAreas
   productionBatchCode: 'productionBatchCode',
+  taskId: 'taskId',
+  taskCode: 'taskCode',
   totalAmount: 'totalAmount',
   priority: 'priority',
   status: 'rawStatus',
@@ -60,6 +62,8 @@ const WRITE_FIELD_MAP: Record<string, string> = {
   warehouseId: 'warehouse_id',
   warehouseLocation: 'warehouse_name',
   productionBatchCode: 'production_batch_code',
+  taskId: 'task_id',
+  taskCode: 'task_code',
   totalAmount: 'total_amount',
   priority: 'priority',
   rawStatus: 'status',
@@ -231,6 +235,9 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         delete body.plantAreaRaw;
         // 2026-09-26 改进批次四：恢复生产计划批次号关联（不再强制置 null）
         body.production_batch_code = body.production_batch_code ?? item.productionBatchCode ?? null;
+        // P0-4：关联农事任务
+        body.task_id = body.task_id ?? item.taskId ?? null;
+        body.task_code = body.task_code ?? item.taskCode ?? null;
         // 2026-08-10 修复：id 默认 = request_code（不传 id，后端 newId = requestCode；之前前端传 MR${Date.now()} 作 id，导致 id 列与 code 列存了不同值）
         body.request_code = body.request_code || item.code || `MR${Date.now()}`;
         delete body.id;

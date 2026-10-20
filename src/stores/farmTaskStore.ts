@@ -80,6 +80,10 @@ export interface Task {
   description?: string;
   batchId?: string;
   batchCode?: string;
+  /** P0-5：关联种植实例 / 生产计划 */
+  plantingId?: string;
+  productionPlanId?: string;
+  productionPlanCode?: string;
 }
 
 export interface FarmTaskFilters {

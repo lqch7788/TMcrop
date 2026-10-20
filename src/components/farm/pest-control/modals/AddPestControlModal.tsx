@@ -21,7 +21,7 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { DictSelect } from '@/components/common/settings/DictSelect';
 import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
-import { usePestControlStore, usePesticideLibraryStore, usePestDiseaseDictStore, usePlantingStore, useSeedlingStore } from '@/stores';
+import { usePestControlStore, usePesticideLibraryStore, usePestDiseaseDictStore, usePlantingStore, useSeedlingStore, useFarmTaskStore } from '@/stores';
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal, currentTimeLocal } from '@/lib/dateUtils';
@@ -86,6 +86,26 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     targetPests: [] as string[],
     description: '',
   });
+
+  // P0-3：关联农事任务（可选）
+  const farmTasks = useFarmTaskStore((s) => s.tasks);
+  const fetchFarmTasks = useFarmTaskStore((s) => s.fetchTasks);
+  const [farmTaskId, setFarmTaskId] = useState('');
+  // P1-1 合规生产档案
+  const [complianceSource, setComplianceSource] = useState('');
+  const [stopUseDate, setStopUseDate] = useState('');
+  const pesticideTasks = useMemo(
+    () => farmTasks.filter((t) =>
+      t.type === 'pest_control' || t.type === 'pesticide'
+      || String(t.type || '').includes('防治') || String(t.type || '').includes('植保')
+      || String(t.type || '').includes('pest')
+    ),
+    [farmTasks],
+  );
+
+  useEffect(() => {
+    if (farmTasks.length === 0) void fetchFarmTasks();
+  }, [farmTasks.length, fetchFarmTasks]);
 
   // 2026-07-11：药剂池（每个条目是一个药剂 + 内联用量/单位/稀释/方法/备注）
   const [pesticidePool, setPesticidePool] = useState<PesticidePoolItem[]>([]);
@@ -472,6 +492,10 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       );
 
       await pestStore.createItem({
+        farmTaskId: farmTaskId || undefined,
+        // P1-1 合规生产档案
+        source: complianceSource || undefined,
+        stopUseDate: stopUseDate || undefined,
         sprayTime: form.sprayTime,
         operatorName: form.operatorName,
         cropName: form.cropName,
@@ -586,6 +610,49 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                   className={deepInputClass}
                 />
               </div>
+            </div>
+
+            {/* P1-1 合规生产档案：来源 / 停用日期 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-900">投入品来源 <span className="text-gray-500 text-xs">（供应商/自产等）</span></Label>
+                <Input
+                  type="text"
+                  value={complianceSource}
+                  onChange={(e) => setComplianceSource(e.target.value)}
+                  placeholder="例如：XX 农资公司 / 自产"
+                  className={deepInputClass}
+                />
+              </div>
+              <div>
+                <Label className="text-gray-900">停用日期 <span className="text-gray-500 text-xs">（停用期）</span></Label>
+                <Input
+                  type="date"
+                  value={stopUseDate}
+                  onChange={(e) => setStopUseDate(e.target.value)}
+                  className={deepInputClass}
+                />
+              </div>
+            </div>
+
+            {/* P0-3：关联农事任务（可选） */}
+            <div>
+              <Label className="text-gray-900">关联农事任务 <span className="text-gray-500 text-xs">（可选）</span></Label>
+              <select
+                value={farmTaskId}
+                onChange={(e) => setFarmTaskId(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner bg-white"
+              >
+                <option value="">不关联</option>
+                {pesticideTasks.slice(0, 200).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.taskCode || t.id} · {t.title || ''}{t.status === 'completed' ? '（已完成）' : ''}
+                  </option>
+                ))}
+              </select>
+              {pesticideTasks.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1">暂无可关联的防治任务</p>
+              )}
             </div>
 
             {/* 2026-07-12：防治区域多选 — Tab 切换种植/育苗 + record 列表多选；同一次防治仅同一作物 */}

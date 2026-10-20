@@ -10,6 +10,9 @@ export interface FertilizerData {
   id: string;
   fertilizerCode: string;
   farmTaskId?: string;
+  /** P1-1 合规生产档案：投入品来源 / 停用日期 */
+  source?: string;
+  stopUseDate?: string;
   productionPlanId?: string;
   productionPlanCode?: string;
   plantingId?: string;
@@ -62,6 +65,8 @@ export interface FertilizerData {
 const FIELD_MAP: Record<string, string> = {
   fertilizer_code: 'fertilizerCode',
   farm_task_id: 'farmTaskId',
+  source: 'source',
+  stop_use_date: 'stopUseDate',
   production_plan_id: 'productionPlanId',
   production_plan_code: 'productionPlanCode',
   planting_id: 'plantingId',

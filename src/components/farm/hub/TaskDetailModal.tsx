@@ -13,8 +13,39 @@ import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
 import type { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
 import { TaskRecordTimeline } from '../../common/TaskRecordTimeline';
+// P0-7：任务绑定的作业标准（SOP）
+import { getSopBindings, type SopTaskBinding } from '../../../services/apiSopLibraryService';
 // 2026-08-22：AI 实际工时录入 UI
 import { ActualHoursRecorder } from '../../../components/farm/ai/ActualHoursRecorder';
+
+/** P0-4：任务关联的领料单（精简展示用） */
+interface LinkedMaterialRequest {
+  id: string;
+  code: string;
+  date: string;
+  status: string;
+  materials: Array<{ name: string; qty: number; unit: string }>;
+}
+
+/** 解析领料单 materials（JSON 字符串或数组） */
+function parseLinkedMaterials(raw: unknown): Array<{ name: string; qty: number; unit: string }> {
+  let list: any[] = [];
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = [];
+    }
+  } else if (Array.isArray(raw)) {
+    list = raw;
+  }
+  return list.map((m) => ({
+    name: String(m?.materialName || m?.material_name || m?.name || m?.materialCode || ''),
+    qty: Number(m?.requestedQuantity ?? m?.quantity ?? 0),
+    unit: String(m?.unit || ''),
+  }));
+}
 
 interface TaskDetailModalProps {
   taskId: string;
@@ -33,6 +64,50 @@ interface TaskDetailModalProps {
 export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, onRefresh, tasks, getTaskRecordsByTaskId }: TaskDetailModalProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
+  // P0-4：关联领料单
+  const [linkedRequests, setLinkedRequests] = useState<LinkedMaterialRequest[]>([]);
+  // P0-7：绑定的作业标准（SOP）
+  const [sopBindings, setSopBindings] = useState<SopTaskBinding[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getSopBindings(taskId);
+        if (!cancelled) setSopBindings(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setSopBindings([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [taskId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/material-requests?task_id=${encodeURIComponent(taskId)}`);
+        const result = await res.json();
+        if (cancelled) return;
+        if (result?.success && Array.isArray(result.data)) {
+          setLinkedRequests(result.data.map((r: Record<string, any>) => ({
+            id: String(r.id || ''),
+            code: String(r.requestCode || r.request_code || r.code || ''),
+            date: String(r.applyDate || r.apply_date || ''),
+            status: String(r.status || ''),
+            materials: parseLinkedMaterials(r.materials),
+          })));
+        } else {
+          setLinkedRequests([]);
+        }
+      } catch {
+        // 领料单加载失败不影响任务详情展示，但需在控制台留痕
+        console.error('[TaskDetailModal] 加载关联领料单失败');
+        if (!cancelled) setLinkedRequests([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [taskId]);
 
   // 加载任务数据和记录
   useEffect(() => {
@@ -487,6 +562,71 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                 <span className="text-sm font-bold text-cyan-700">{task.progress || 0}%</span>
               </div>
             </div>
+
+            {/* P0-7：作业标准（SOP） */}
+            {sopBindings.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <h4 className="text-sm font-bold text-purple-600 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  作业标准（{sopBindings.length}）
+                </h4>
+                <div className="space-y-3">
+                  {sopBindings.map((b) => (
+                    <div key={b.bindingId} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-semibold text-gray-900">{b.sopName}</span>
+                        <span className="font-mono text-xs text-gray-500">{b.sopCode}</span>
+                      </div>
+                      {b.warningNotes && (
+                        <p className="mt-1 text-xs text-amber-700">⚠️ {b.warningNotes}</p>
+                      )}
+                      {b.steps && b.steps.length > 0 && (
+                        <ol className="mt-2 space-y-1">
+                          {b.steps.map((s, i) => (
+                            <li key={s.id ?? i} className="text-xs text-gray-700">
+                              <span className="font-mono text-gray-400 mr-1">{i + 1}.</span>
+                              <span className="font-medium">{s.stepTitle}</span>
+                              {s.estimatedMinutes ? <span className="text-gray-400"> · {s.estimatedMinutes} 分钟</span> : null}
+                              {s.pesticideCode ? <span className="text-gray-400"> · 药剂 {s.pesticideCode}</span> : null}
+                              {s.stepContent ? <div className="text-gray-500">{s.stepContent}</div> : null}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* P0-4：关联领料单 */}
+            {linkedRequests.length > 0 && (
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  关联领料单（{linkedRequests.length}）
+                </h4>
+                <div className="space-y-3">
+                  {linkedRequests.map((req) => (
+                    <div key={req.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-mono font-semibold text-gray-900">{req.code}</span>
+                        <span className="text-gray-500">{req.date} · {req.status}</span>
+                      </div>
+                      {req.materials.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {req.materials.map((m, i) => (
+                            <span key={`${req.id}-${i}`} className="px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-800 text-xs">
+                              {m.name} × {m.qty}{m.unit}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 处理流转记录 - 使用完整的时间线组件 */}
             {sortedRecords.length > 0 && (

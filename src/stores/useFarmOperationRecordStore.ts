@@ -2,7 +2,10 @@
  * 农事操作综合记录 Zustand Store (V2.1 架构)
  * 数据流：enhancedApiClient → /api/farm-operation-records → SQLite
  *
- * 2026-06-04 新增：V2.1 铁律改造（useOperationRecords 从 localStorage 迁到后端）
+ * 2026-10-20 P0-1：改为服务端权威
+ * - 写入失败一律 throw（原实现 catch 后 return null，属静默失败）
+ * - loadRecords 支持过滤条件（URLSearchParams 拼 URL，apiClient 不支持 params 对象）
+ * - 模块级 in-flight Promise：多组件同时挂载只发一次请求
  *
  * 注：本表与老表 task_operation_records 并存，字段语义/聚合层级不同
  *     （聚合视图 vs 事件流），不取代。
@@ -52,15 +55,24 @@ export interface FarmOperationRecord {
   updatedAt?: string;
 }
 
+export interface LoadOperationRecordsFilters {
+  sourceType?: string;
+  status?: string;
+  sourceId?: string;
+}
+
+/** 模块级 in-flight Promise：多处挂载共享同一次加载 */
+let loadInflight: Promise<void> | null = null;
+
 interface FarmOperationRecordState {
   records: FarmOperationRecord[];
   isLoading: boolean;
   error: string | null;
 
-  loadRecords: (filters?: { sourceType?: string; status?: string; sourceId?: string }) => Promise<void>;
-  addRecord: (payload: Partial<FarmOperationRecord>) => Promise<FarmOperationRecord | null>;
-  updateRecord: (id: string, updates: Partial<FarmOperationRecord>) => Promise<FarmOperationRecord | null>;
-  deleteRecord: (id: string) => Promise<boolean>;
+  loadRecords: (filters?: LoadOperationRecordsFilters) => Promise<void>;
+  addRecord: (payload: Partial<FarmOperationRecord>) => Promise<FarmOperationRecord>;
+  updateRecord: (id: string, updates: Partial<FarmOperationRecord>) => Promise<FarmOperationRecord>;
+  deleteRecord: (id: string) => Promise<void>;
 }
 
 export const useFarmOperationRecordStore = create<FarmOperationRecordState>()((set) => ({
@@ -68,44 +80,48 @@ export const useFarmOperationRecordStore = create<FarmOperationRecordState>()((s
   isLoading: false,
   error: null,
 
-  loadRecords: async (filters) => {
-    set({ isLoading: true, error: null });
-    try {
-      // 注：ApiOptions 只支持 retryCount，GET 过滤条件需拼进 URL（此处原样保留"不带条件"的既有行为）
-      const data = await enhancedApiClient.get<FarmOperationRecord[]>('/farm-operation-records');
-      set({ records: data || [], isLoading: false });
-    } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
-    }
+  loadRecords: (filters) => {
+    if (loadInflight) return loadInflight;
+
+    const inflight = (async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const qs = new URLSearchParams();
+        if (filters?.sourceType) qs.append('sourceType', filters.sourceType);
+        if (filters?.status) qs.append('status', filters.status);
+        if (filters?.sourceId) qs.append('sourceId', filters.sourceId);
+        const url = `/farm-operation-records${qs.toString() ? `?${qs.toString()}` : ''}`;
+
+        const data = await enhancedApiClient.get<FarmOperationRecord[]>(url);
+        set({ records: Array.isArray(data) ? data : [], isLoading: false });
+      } catch (error) {
+        set({ error: (error as Error).message, isLoading: false });
+        throw error;
+      } finally {
+        loadInflight = null;
+      }
+    })();
+
+    loadInflight = inflight;
+    return inflight;
   },
 
   addRecord: async (payload) => {
-    try {
-      const result = await enhancedApiClient.post<FarmOperationRecord>('/farm-operation-records', payload);
-      if (result) set((s) => ({ records: [result, ...s.records] }));
-      return result;
-    } catch {
-      return null;
-    }
+    const result = await enhancedApiClient.post<FarmOperationRecord>('/farm-operation-records', payload);
+    if (!result) throw new Error('创建农事操作记录失败：服务端未返回数据');
+    set((s) => ({ records: [result, ...s.records] }));
+    return result;
   },
 
   updateRecord: async (id, updates) => {
-    try {
-      const result = await enhancedApiClient.put<FarmOperationRecord>(`/farm-operation-records/${id}`, updates);
-      if (result) set((s) => ({ records: s.records.map(r => r.id === id ? { ...r, ...result } : r) }));
-      return result;
-    } catch {
-      return null;
-    }
+    const result = await enhancedApiClient.put<FarmOperationRecord>(`/farm-operation-records/${id}`, updates);
+    if (!result) throw new Error('更新农事操作记录失败：服务端未返回数据');
+    set((s) => ({ records: s.records.map(r => (r.id === id ? { ...r, ...result } : r)) }));
+    return result;
   },
 
   deleteRecord: async (id) => {
-    try {
-      await enhancedApiClient.delete(`/farm-operation-records/${id}`);
-      set((s) => ({ records: s.records.filter(r => r.id !== id) }));
-      return true;
-    } catch {
-      return false;
-    }
+    await enhancedApiClient.delete(`/farm-operation-records/${id}`);
+    set((s) => ({ records: s.records.filter(r => r.id !== id) }));
   },
 }));

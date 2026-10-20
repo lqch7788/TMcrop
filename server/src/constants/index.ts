@@ -23,12 +23,66 @@ export enum CommonStatus {
 // 任务状态
 // ============================================================
 
+/**
+ * 2026-10-20 P0-10：补全为实际的 10 态
+ * （此前只有 5 态，缺 draft/accepted/waiting_acceptance/rejected/failed/abandoned）
+ * 注意：overdue 是**派生状态**（由 plan_date 过期推导），不落库
+ */
 export enum TaskStatus {
+  DRAFT = 'draft',                   // 草稿
+  PENDING_APPROVAL = 'pending_approval', // 派发审批中
   PENDING = 'pending',               // 待接受
+  ACCEPTED = 'accepted',             // 已接受
   IN_PROGRESS = 'in_progress',       // 进行中
+  WAITING_ACCEPTANCE = 'waiting_acceptance', // 待验收
   COMPLETED = 'completed',           // 已完成
+  REJECTED = 'rejected',             // 返工中
+  FAILED = 'failed',                 // 任务失败
   CANCELLED = 'cancelled',           // 已取消
-  OVERDUE = 'overdue',               // 已逾期
+  ABANDONED = 'abandoned',           // 已放弃
+  OVERDUE = 'overdue',               // 已逾期（派生，不落库）
+}
+
+/**
+ * 2026-10-20 P0-10：状态转移表 —— **后端权威**
+ * 此前转移表只存在于前端 src/config/taskConfig.ts，导致后端 17 个流转端点零守卫，
+ * 直调 API 可把 completed 改回 pending。
+ * 前端应从 /api/task-status-transitions 拉取或与此保持一致。
+ */
+export const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
+  draft: ['pending', 'cancelled'],
+  pending_approval: ['pending', 'draft', 'cancelled'],
+  pending: ['accepted', 'cancelled', 'draft'],
+  accepted: ['in_progress', 'cancelled', 'draft'],
+  in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
+  waiting_acceptance: ['completed', 'rejected'],
+  completed: [],
+  rejected: ['in_progress', 'failed'],
+  failed: ['pending'],
+  abandoned: ['pending'],
+  cancelled: [],
+  overdue: [],
+};
+
+/**
+ * 断言状态转移是否合法；不合法时抛出带说明的错误
+ */
+export function assertTaskTransition(from: string, to: string): void {
+  // 自转移允许（如 progress 端点重复提交同一状态）
+  if (from === to) return;
+  const allowed = TASK_STATUS_TRANSITIONS[from];
+  if (!allowed) {
+    // 未知源状态：不做拦截（历史脏数据），但记录
+    console.warn(`[taskStatus] 未知源状态 ${from} → ${to}，跳过守卫`);
+    return;
+  }
+  if (!allowed.includes(to)) {
+    const error = new Error(
+      `状态转移非法：${from} → ${to}（允许：${allowed.length ? allowed.join('/') : '无'}）`,
+    );
+    (error as Error & { code?: string }).code = 'ILLEGAL_TASK_TRANSITION';
+    throw error;
+  }
 }
 
 // ============================================================
@@ -154,10 +208,17 @@ export const COMMON_STATUS_LABELS: Record<CommonStatus, string> = {
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  [TaskStatus.DRAFT]: '草稿',
+  [TaskStatus.PENDING_APPROVAL]: '派发审批中',
   [TaskStatus.PENDING]: '待接受',
+  [TaskStatus.ACCEPTED]: '已接受',
   [TaskStatus.IN_PROGRESS]: '进行中',
+  [TaskStatus.WAITING_ACCEPTANCE]: '待验收',
   [TaskStatus.COMPLETED]: '已完成',
+  [TaskStatus.REJECTED]: '返工中',
+  [TaskStatus.FAILED]: '任务失败',
   [TaskStatus.CANCELLED]: '已取消',
+  [TaskStatus.ABANDONED]: '已放弃',
   [TaskStatus.OVERDUE]: '已逾期',
 };
 

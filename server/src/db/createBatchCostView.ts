@@ -41,7 +41,10 @@ function safeCreateView(db) {
   } catch {}
 
   // 2. 创建视图（带条件判断）
-  // 注意：用 COALESCE 防止字段不存在报错
+  // 2026-10-20 P0-8 重写：
+  //   - 人工成本改从 labor_records 聚合（P0-8 起任务验收真实写入工时与金额）
+  //   - 用标量子查询替代 LEFT JOIN + SUM(DISTINCT)，消除笛卡尔积导致的重复计数
+  //   - 新增 actual_area（作业面积，亩）与 cost_per_mu（亩均成本）
   let viewSql = `
     CREATE VIEW batch_cost_aggregation AS
     SELECT
@@ -51,22 +54,59 @@ function safeCreateView(db) {
       p.greenhouse_name,
       p.planting_quantity,
       p.expected_harvest_date,
-      ROUND(SUM(DISTINCT CASE WHEN op.labor_cost_snapshot IS NOT NULL THEN op.labor_cost_snapshot ELSE 0 END), 2) AS labor_cost,
-      ROUND(SUM(DISTINCT COALESCE(ft.outsource_cost, 0)), 2) AS outsource_cost,
-      ROUND(
-        SUM(DISTINCT CASE WHEN op.labor_cost_snapshot IS NOT NULL THEN op.labor_cost_snapshot ELSE 0 END) +
-        SUM(DISTINCT COALESCE(ft.outsource_cost, 0)),
-        2
-      ) AS total_cost,
+      ROUND(COALESCE((
+        SELECT SUM(lr.total_amount) FROM labor_records lr
+        WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+      ), 0), 2) AS labor_cost,
+      ROUND(COALESCE((
+        SELECT SUM(ft.outsource_cost) FROM farm_tasks ft
+        WHERE ft.batch_code = p.planting_code AND ft.outsource_cost IS NOT NULL
+      ), 0), 2) AS outsource_cost,
+      ROUND(COALESCE((
+        SELECT SUM(lr.total_amount) FROM labor_records lr
+        WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+      ), 0) + COALESCE((
+        SELECT SUM(ft.outsource_cost) FROM farm_tasks ft
+        WHERE ft.batch_code = p.planting_code AND ft.outsource_cost IS NOT NULL
+      ), 0), 2) AS total_cost,
       CASE
         WHEN p.planting_quantity > 0 THEN
           ROUND(
-            (SUM(DISTINCT CASE WHEN op.labor_cost_snapshot IS NOT NULL THEN op.labor_cost_snapshot ELSE 0 END) +
-             SUM(DISTINCT COALESCE(ft.outsource_cost, 0))) / p.planting_quantity,
+            (COALESCE((
+              SELECT SUM(lr.total_amount) FROM labor_records lr
+              WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+            ), 0) + COALESCE((
+              SELECT SUM(ft.outsource_cost) FROM farm_tasks ft
+              WHERE ft.batch_code = p.planting_code AND ft.outsource_cost IS NOT NULL
+            ), 0)) / p.planting_quantity,
             4
           )
         ELSE 0
       END AS cost_per_unit,
+      ROUND(COALESCE((
+        SELECT SUM(COALESCE(lr.area, 0)) FROM labor_records lr
+        WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+      ), 0), 4) AS actual_area,
+      CASE
+        WHEN COALESCE((
+          SELECT SUM(COALESCE(lr.area, 0)) FROM labor_records lr
+          WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+        ), 0) > 0 THEN
+          ROUND(
+            (COALESCE((
+              SELECT SUM(lr.total_amount) FROM labor_records lr
+              WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+            ), 0) + COALESCE((
+              SELECT SUM(ft.outsource_cost) FROM farm_tasks ft
+              WHERE ft.batch_code = p.planting_code AND ft.outsource_cost IS NOT NULL
+            ), 0)) / (
+              SELECT SUM(COALESCE(lr.area, 0)) FROM labor_records lr
+              WHERE lr.batch_code = p.planting_code AND lr.status = 'completed'
+            ),
+            4
+          )
+        ELSE 0
+      END AS cost_per_mu,
       0 AS equipment_depreciation_cost,
       (
         SELECT COUNT(*) FROM farm_operation_records op2
@@ -77,10 +117,7 @@ function safeCreateView(db) {
         WHERE ft2.batch_code = p.planting_code
       ) AS task_count
     FROM plantings p
-    LEFT JOIN farm_operation_records op ON op.batch_code = p.planting_code
-    LEFT JOIN farm_tasks ft ON ft.batch_code = p.planting_code
     WHERE p.planting_code IS NOT NULL
-    GROUP BY p.planting_code
   `;
 
   try {

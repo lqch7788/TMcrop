@@ -15,6 +15,8 @@ import {
   FileDown,
   // v0.3 新增图标（lucide-react 命名，非 antd 命名）
   LayoutGrid,
+  // 2026-10-20 P0-11：农事工具页归位所需图标
+  BookOpen, ShieldCheck, Zap, DatabaseBackup,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 
@@ -31,7 +33,8 @@ const menuItems = [
   { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
   { icon: Package, label: '物资管理', path: '/materials', category: 'materials' },
-  { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },
+  // 2026-10-20 P0-11 修复断链：/labor/task-center 在 App.tsx 中不存在（真实路由是 /task-center）
+  { icon: Users, label: '人工管理', path: '/labor/attendance', category: 'labor' },
   { icon: BarChart3, label: '生产汇总表', path: '/reports', category: 'summary' },
   { icon: CheckSquare, label: '审批管理', path: '/approvals', category: 'workflow' },
 ];
@@ -97,10 +100,13 @@ const materialsSubItems = [
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
   { icon: ClipboardList, label: '智能任务中心', path: '/task-center' },
+  { icon: CalendarDays, label: '任务派工排班', path: '/farm-task-schedule' },
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
-  // 2026-09-20："其他管理"已迁到系统设置 → 运营管理（原 /agronomy/other-management 重定向到 /settings/operations）
+  // 2026-10-20 回退：SOP/问题整改/提醒规则/批次成本/合规报告/备份/快速完成/纸单
+  //   这 8 个工具页的既定入口是「系统设置 → 运营管理」（/settings/operations），
+  //   不要挪到农事管理菜单（用户明确要求保持原位置）。
 ];
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {

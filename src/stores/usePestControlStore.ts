@@ -10,6 +10,8 @@ import { useInventoryStore } from './useInventoryStore';
 export interface PestControlData {
   id: string;
   recordCode: string;
+  /** P0-3：关联农事任务 */
+  farmTaskId?: string;
   sprayTime: string;
   operatorId?: string;
   operatorName?: string;
@@ -66,6 +68,7 @@ export interface PestControlData {
 const FIELD_MAP: Record<string, string> = {
   id: 'id',
   record_code: 'recordCode',
+  farm_task_id: 'farmTaskId',
   spray_time: 'sprayTime',
   operator_id: 'operatorId',
   operator_name: 'operatorName',

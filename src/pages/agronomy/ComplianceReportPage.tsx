@@ -33,6 +33,8 @@ import {
   type ComplianceReport,
   type ComplianceSummary,
 } from '@/services/apiComplianceReportService';
+// P1-1：Excel 导出（真 xlsx）
+import { exportXlsx } from '@/services/exporters/xlsx';
 
 export default function ComplianceReportPage() {
   const [batchCode, setBatchCode] = useState('');
@@ -212,9 +214,38 @@ export default function ComplianceReportPage() {
                 >
                   下载 CSV
                 </Button>
+                {/* P1-1：Excel 导出（真 xlsx，多 sheet：投入品 / 病虫害 / 采收） */}
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={() => {
+                    void exportReportExcel(report);
+                  }}
+                >
+                  导出 Excel
+                </Button>
               </Space>
             }
           >
+            {/* P0-10：如实展示哪些段缺失，而不是让报告"看起来正常但空白" */}
+            {(report.sectionsErrors?.length ?? 0) > 0 && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 12 }}
+                message={`本报告有 ${report.sectionsErrors!.length} 个数据段查询失败`}
+                description={
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {report.sectionsErrors!.map((e, i) => (
+                      <li key={i}>
+                        <b>{SECTION_LABELS[e.section] ?? e.section}</b>：{e.message}
+                      </li>
+                    ))}
+                  </ul>
+                }
+              />
+            )}
+
             <Tabs
               items={sectionKeys.map((k) => ({
                 key: k,
@@ -229,6 +260,102 @@ export default function ComplianceReportPage() {
   );
 }
 
+/**
+ * P1-1：导出合规生产档案为真 .xlsx（多 sheet）
+ * - 投入品使用（肥料 + 农药）
+ * - 病虫害发生与防治
+ * - 收获记录
+ */
+async function exportReportExcel(report: ComplianceReport): Promise<void> {
+  const pr = report.sections.productionRecord;
+  if (!pr) {
+    message.warning('该报告不含合规生产档案段');
+    return;
+  }
+
+  const fertilizerRows = (pr.fertilizerUsage || []).map((r: Record<string, unknown>, i: number) => ({
+    序号: i + 1,
+    投入品名称: String(r.fertilizerName ?? r.fertilizer_name ?? ''),
+    类型: String(r.fertilizerType ?? r.fertilizer_type ?? ''),
+    来源: String(r.source ?? ''),
+    用法: String(r.dilutionRatio ?? r.dilution_ratio ?? ''),
+    用量: `${r.quantity ?? ''}${r.unit ?? ''}`,
+    使用日期: String(r.useDate ?? r.use_date ?? r.fertilizeTime ?? ''),
+    停用日期: String(r.stopUseDate ?? r.stop_use_date ?? ''),
+    区域: String(r.areaName ?? r.area_name ?? r.greenhouseName ?? ''),
+    操作人: String(r.operatorName ?? r.operator_name ?? ''),
+  }));
+
+  const pesticideRows = (pr.pesticideUsage || []).map((r: Record<string, unknown>, i: number) => ({
+    序号: i + 1,
+    投入品名称: String(r.pesticideName ?? r.pesticide_name ?? ''),
+    类型: String(r.pesticideType ?? r.pesticide_type ?? ''),
+    来源: String(r.source ?? ''),
+    用法: String(r.applicationMethod ?? r.application_method ?? ''),
+    用量: `${r.dosage ?? ''}${r.dosageUnit ?? r.dosage_unit ?? ''}`,
+    防治对象: String(r.targetPest ?? r.target_pest ?? ''),
+    使用日期: String(r.useDate ?? r.use_date ?? r.sprayTime ?? ''),
+    停用日期: String(r.stopUseDate ?? r.stop_use_date ?? ''),
+    区域: String(r.greenhouseName ?? r.greenhouse_name ?? ''),
+    操作人: String(r.operatorName ?? r.operator_name ?? ''),
+  }));
+
+  const pestRows = (pr.pestOccurrences || []).map((r: Record<string, unknown>, i: number) => ({
+    序号: i + 1,
+    问题编号: String(r.problemCode ?? r.problem_code ?? ''),
+    类型: String(r.problemType ?? r.problem_type ?? ''),
+    发生情况: String(r.issueText ?? r.issue_text ?? r.description ?? ''),
+    严重程度: String(r.issueSeverity ?? r.issue_severity ?? ''),
+    发现日期: String(r.checkDate ?? r.check_date ?? ''),
+    状态: String(r.status ?? ''),
+    处理结果: String(r.handleResult ?? r.handle_result ?? ''),
+    处理日期: String(r.handleDate ?? r.handle_date ?? ''),
+  }));
+
+  const harvestRows = (pr.harvests || []).map((r: Record<string, unknown>, i: number) => ({
+    序号: i + 1,
+    收获日期: String(r.harvestDate ?? r.harvest_date ?? ''),
+    数量: `${r.harvestQuantity ?? r.harvest_quantity ?? ''}${r.unit ?? ''}`,
+    等级: String(r.qualityGrade ?? r.quality_grade ?? ''),
+    采收人: String(r.harvesterNames ?? r.harvester_names ?? ''),
+    收购方: String(r.buyerName ?? r.buyer_name ?? ''),
+  }));
+
+  await exportXlsx({
+    filename: `合规生产档案_${report.batchCode}.xlsx`,
+    sheetName: '投入品使用',
+    headers: ['序号', '投入品名称', '类型', '来源', '用法', '用量', '使用日期', '停用日期', '区域', '操作人'],
+    rows: [...fertilizerRows, ...pesticideRows],
+    sheets: [
+      {
+        name: '投入品使用',
+        headers: ['序号', '投入品名称', '类型', '来源', '用法', '用量', '使用日期', '停用日期', '区域', '操作人'],
+        rows: [...fertilizerRows, ...pesticideRows],
+      },
+      {
+        name: '病虫害防治',
+        headers: ['序号', '问题编号', '类型', '发生情况', '严重程度', '发现日期', '状态', '处理结果', '处理日期'],
+        rows: pestRows,
+      },
+      {
+        name: '收获记录',
+        headers: ['序号', '收获日期', '数量', '等级', '采收人', '收购方'],
+        rows: harvestRows,
+      },
+      {
+        name: '留存说明',
+        headers: ['项目', '内容'],
+        rows: [
+          { 项目: '批次', 内容: report.batchCode },
+          { 项目: '留存至', 内容: pr.retentionUntil ?? '—' },
+          { 项目: '依据', 内容: pr.retentionNote },
+          { 项目: '生成时间', 内容: new Date(report.generatedAt).toLocaleString() },
+        ],
+      },
+    ],
+  });
+}
+
 const SECTION_LABELS: Record<string, string> = {
   batchInfo: '📦 批次信息',
   tasks: '📋 农事任务',
@@ -237,6 +364,8 @@ const SECTION_LABELS: Record<string, string> = {
   inspections: '🔍 巡查',
   problems: '⚠️ 问题',
   dailyRecords: '📅 每日记录',
+  productionRecord: '📜 合规生产档案',
+  sectionsErrors: '⛔ 数据缺失',
 };
 
 function SectionView({ data }: { data: unknown }) {

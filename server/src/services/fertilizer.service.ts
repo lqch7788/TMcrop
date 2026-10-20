@@ -224,6 +224,9 @@ export const FertilizerErrorCode = {
 /** 生成施肥记录（手动录入）入参 schema — 接收前端 camelCase 字段 */
 const createRecordSchema = z.object({
   farmTaskId: z.string().nullish(),
+  // P1-1 合规生产档案
+  source: z.string().nullish(),
+  stopUseDate: z.string().nullish(),
   productionPlanId: z.string().nullish(),
   productionPlanCode: z.string().nullish(),
   plantingId: z.string().nullish(),
@@ -585,6 +588,9 @@ export class FertilizerService {
         spec_brand_name: specSnapshot?.brandName ?? null,
         spec_unit_price_snapshot: specSnapshot?.unitPrice ?? null,
         spec_batch_number: specSnapshot?.batchNumber ?? null,
+        // P1-1 合规生产档案：投入品来源 / 停用日期（《农产品质量安全法》第 27 条）
+        source: (data as any).source ?? null,
+        stop_use_date: (data as any).stopUseDate ?? null,
       };
       this.repository.insert(record);
 

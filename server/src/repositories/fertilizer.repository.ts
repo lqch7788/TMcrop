@@ -94,6 +94,9 @@ export interface FertilizerRecord {
   spec_brand_name: string | null;
   spec_unit_price_snapshot: number | null;
   spec_batch_number: string | null;
+  /** P1-1 合规：投入品来源 / 停用日期 */
+  source?: string | null;
+  stop_use_date?: string | null;
 }
 
 /**
@@ -147,7 +150,7 @@ export class FertilizerRepository {
    */
   findById(id: string): FertilizerRecord | null {
     const db = getDatabase();
-    const rows = queryToObjects<FertilizerRecord>(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
+    const rows = queryToObjects<FertilizerRecord>(db, `SELECT * FROM fertilizer_records WHERE id = ? AND deleted_at IS NULL`, [id]);
     return rows[0] ?? null;
   }
 
@@ -206,6 +209,8 @@ export class FertilizerRepository {
         params.push(value);
       }
     }
+    // P1-2：默认排除软删除记录
+    wheres.push('deleted_at IS NULL');
     const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
     const offset = (page - 1) * pageSize;
     const rows = queryToObjects<FertilizerRecord>(db,
@@ -307,8 +312,9 @@ export class FertilizerRepository {
         operator_id, operator_name, data_source, iot_device_id, iot_record_id,
         description, status, create_time, update_time, fertilizer_id,
         fertilization_pool,
-        spec_id, spec_brand_name, spec_unit_price_snapshot, spec_batch_number
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        spec_id, spec_brand_name, spec_unit_price_snapshot, spec_batch_number,
+        source, stop_use_date
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `, [
       record.id, record.fertilizer_code, record.farm_task_id, record.production_plan_id,
       record.production_plan_code, record.planting_id, record.planting_code,
@@ -327,6 +333,9 @@ export class FertilizerRepository {
       record.spec_brand_name ?? null,
       record.spec_unit_price_snapshot ?? null,
       record.spec_batch_number ?? null,
+      // P1-1 合规：投入品来源 / 停用日期
+      record.source ?? null,
+      record.stop_use_date ?? null,
     ]);
   }
 
@@ -366,10 +375,17 @@ export class FertilizerRepository {
    * 删除单条记录
    * @returns 受影响行数
    */
+  /**
+   * P1-2：软删除（合规要求，生产记录不可物理抹除）
+   * 数据保留，仅标记 deleted_at；列表默认过滤
+   */
   deleteById(id: string): number {
     const db = getDatabase();
-    const stmt = db.prepare(`DELETE FROM fertilizer_records WHERE id = ?`);
-    stmt.run([id]);
+    const now = new Date().toISOString();
+    const stmt = db.prepare(
+      `UPDATE fertilizer_records SET deleted_at = ?, update_time = ? WHERE id = ? AND deleted_at IS NULL`
+    );
+    stmt.run([now, now, id]);
     stmt.free();
     return db.getRowsModified();
   }
