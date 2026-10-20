@@ -97,6 +97,7 @@ import { useInspectionDataStore, InspectionData } from '../stores/useInspectionD
 import { enhancedApiClient } from '../lib/apiClient';
 import { useAuthStore } from '../stores/useAuthStore';
 import { showAlert } from '@/lib/dialogService';
+import { useToastStore } from '../stores/useToastStore';
 // 导入存储容量管理
 
 
@@ -135,13 +136,37 @@ function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
       // Fail Loud: 把错误写到 console + 全局事件总线
       // （用户在 F12 console 能看到，也方便后续埋点统计失败率）
       console.error(`[useTasks] ${label} API同步失败:`, error);
+      const msg = error instanceof Error ? error.message : String(error);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('api-sync-failed', {
-          detail: { label, error: error instanceof Error ? error.message : String(error), timestamp: Date.now() },
+          detail: { label, error: msg, timestamp: Date.now() },
         }));
       }
+      // 2026-10-20 修复（用户反馈「显示放行但实际没生效、任务一直卡在待验收」）：
+      //   此前只写 console，用户界面零反馈 —— 服务端 422（如驳回原因不足 6 字符）
+      //   被完全吞掉，验收弹窗照常关闭，任务状态不变，用户以为成功。
+      //   现在把服务端返回的真实错误以 toast 呈现，操作失败必定可见。
+      useToastStore.getState().toast.error(
+        USER_MSG_BY_LABEL[label] ? `${USER_MSG_BY_LABEL[label]}：${msg}` : `操作未生效：${msg}`,
+      );
     });
 }
+
+/**
+ * syncToApi 失败时给用户看的中文动作名
+ * 未列出的 label 退回通用文案「操作未生效」。
+ */
+const USER_MSG_BY_LABEL: Record<string, string> = {
+  acceptCompletion: '验收未生效',
+  rejectForRework: '驳回未生效',
+  continueExecution: '继续执行未生效',
+  publishTask: '发布未生效',
+  withdrawTask: '撤回未生效',
+  cancelTask: '取消未生效',
+  acceptTask: '接受任务未生效',
+  submitProgress: '提交进度未生效',
+  updateTaskStatus: '状态更新未生效',
+};
 
 // ============================================
 
@@ -1330,7 +1355,9 @@ export function useTasks(): UseTasksReturn {
     const myName = me?.realName || me?.username || '';
     if (myName && task.assigneeName && myName === task.assigneeName) {
       // 测试阶段：fire-and-forget 弹窗，不阻塞后续验收流程
-      showAlert('不能验收自己执行的任务，请由派发人或管理员验收（测试阶段已放行）');
+      // 2026-10-20 措辞修正：原「测试阶段已放行」容易被理解成"操作已成功"，
+      //   实际只是"权限规则被放行、操作继续执行"，成功与否由接口结果决定。
+      showAlert('提示：该任务由你自己执行。按规范应由派发人或管理员验收，当前为测试阶段已允许继续。');
       // 不 return，继续执行验收流程
     }
 
@@ -1407,8 +1434,18 @@ export function useTasks(): UseTasksReturn {
     const myName = me?.realName || me?.username || '';
     if (myName && task.assigneeName && myName === task.assigneeName) {
       // 测试阶段：fire-and-forget 弹窗，不阻塞后续驳回流程
-      showAlert('不能驳回自己执行的任务，请由派发人或管理员处理（测试阶段已放行）');
+      // 2026-10-20 措辞修正：原「测试阶段已放行」被用户理解为"操作已成功"，
+      //   实际只是权限规则放行、驳回请求继续发出，成功与否由接口结果决定。
+      showAlert('提示：该任务由你自己执行。按规范应由派发人或管理员处理，当前为测试阶段已允许继续。');
       // 不 return，继续执行驳回流程
+    }
+
+    // 2026-10-20：驳回原因长度与服务端一致（ReasonSchema 要求 ≥6 字符）。
+    //   此前前端只校验"非空"，短原因会在服务端 422，而错误又被 syncToApi 吞掉，
+    //   表现为"点了没反应、任务仍在待验收"。这里前置拦截并给出明确提示。
+    if (reason.trim().length < 6) {
+      showAlert('驳回原因至少需要 6 个字符，请补充具体原因后再提交。');
+      return;
     }
 
     const now = new Date().toISOString();
@@ -1438,22 +1475,24 @@ export function useTasks(): UseTasksReturn {
         operator_name: task.assignerName || '',
         reason,
       });
-      // 用服务端结果校正本地（本地 reworkCount 可能 stale，服务端才看得到 DB 真值）
-      if (resp && resp.status) {
-        getStoreForTask(task).updateTask(id, {
-          status: resp.status as TaskStatus,
-          reworkCount: typeof resp.reworkCount === 'number' ? resp.reworkCount : task.reworkCount + 1,
-        });
-      }
+      // 2026-10-20 修复：本地字段改为**请求成功后**才写。
+      //   此前是"先乐观写 rejectReason/reworkHistory + 再异步 POST"，
+      //   一旦 POST 失败（如 422 原因过短），任务状态仍是待验收却挂上了驳回原因，
+      //   形成"看起来驳回了、状态没变"的自相矛盾数据。
+      //   服务端 status / reworkCount 依旧是权威值（服务端基于 DB rework_count 自增）。
+      getStoreForTask(task).updateTask(id, {
+        ...(resp && resp.status
+          ? {
+              status: resp.status as TaskStatus,
+              reworkCount: typeof resp.reworkCount === 'number' ? resp.reworkCount : task.reworkCount + 1,
+            }
+          : {}),
+        reworkHistory: [...task.reworkHistory, reworkRecord],
+        rejectReason: reason,
+        updatedAt: now,
+        version: task.version + 1,
+      });
     }, 'rejectForRework');
-
-    // 本地状态更新（乐观更新）：只写本地展示字段，不写 status/reworkCount（见上方注释）
-    getStoreForTask(task).updateTask(id, {
-      reworkHistory: [...task.reworkHistory, reworkRecord],
-      rejectReason: reason,
-      updatedAt: now,
-      version: task.version + 1,
-    });
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 继续执行（返工后）
