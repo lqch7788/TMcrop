@@ -315,11 +315,16 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             </Button>
           )}
 
-          {/* 继续执行 - accepted/rejected 可转为 in_progress（状态机仅这两条边可达）
-              2026-09-21 新增：此前 onContinue 只有 prop 定义与解构，没有任何渲染入口，
-              即"继续执行"功能整体不可达（TaskTab/FarmTaskHub/useTasks 三层都在，
-              唯独缺这个按钮）。 */}
-          {['accepted', 'rejected'].includes(task.status) && onContinue && (
+          {/* 继续执行 - 仅「返工中（rejected）」可触发。
+              2026-10-20 修正（用户反馈 bug）：此前条件含 accepted，导致"已接受"的任务行
+              也显示「继续执行」按钮（语义上"已被接受怎么还要继续执行"）。
+              实际业务语义见 useTasks.continueExecution 的注释 ——「继续执行（返工后）」，
+              专指执行人拒绝 / 返工之后重新开工。
+              accepted → in_progress 的主路径不是这个按钮，而是执行人在「我的任务」页
+              点「开始处理」（MyTasksPage.handleStartProcessing）或提交首次进度
+              （useTasks.submitProgress：accepted + 非最终进度 → 自动转 in_progress）；
+              管理者视角不该替执行人推进任务。 */}
+          {task.status === 'rejected' && onContinue && (
             <Button
               variant="outline"
               size="sm"
