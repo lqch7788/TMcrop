@@ -643,7 +643,7 @@ router.post('/auth/login', async (req, res) => {
       return;
     }
 
-    // 获取用户角色
+    // 获取用户角色（role_oid 数组，保留给旧调用方）
     const roleStmt = db.prepare('SELECT role_oid FROM user_roles WHERE user_oid = ?');
     roleStmt.bind([user.oid as string]);
     const roles: string[] = [];
@@ -652,6 +652,35 @@ router.post('/auth/login', async (req, res) => {
       roles.push(row.role_oid);
     }
     roleStmt.free();
+
+    // 2026-10-20：补算角色码 role_code，随 user 一并下发。
+    //   此前本端点只返回 role_oid 数组（roles 字段），而前端 useAuthStore 读的是
+    //   user.role —— 永远拿到 undefined，导致 useTasks.resolveTaskRole 退化成
+    //   "全员按 admin 放行"，权限矩阵实际失效；控制台还误报"重新登录后即恢复
+    //   正常判定"（并不会恢复）。
+    //   口径与 POST /authority/login 保持一致：
+    //   优先 admin > manager > user，其余（如「访客」）取第一个有效角色码；
+    //   没有任何角色记录时按最低权限 user 处理。
+    let roleCode = 'user';
+    try {
+      const codeStmt = db.prepare(
+        `SELECT r.role_code FROM user_roles ur
+         JOIN roles r ON r.oid = ur.role_oid
+         WHERE ur.user_oid = ? AND (r.status IS NULL OR r.status = 'active')`
+      );
+      codeStmt.bind([user.oid as string]);
+      const codes: string[] = [];
+      while (codeStmt.step()) {
+        const code = String((codeStmt.getAsObject() as Record<string, unknown>).role_code || '');
+        if (code) codes.push(code);
+      }
+      codeStmt.free();
+      const priority = ['admin', 'manager', 'user'];
+      roleCode = priority.find((p) => codes.includes(p)) || codes[0] || 'user';
+    } catch (roleError) {
+      // 角色查询失败不阻断登录，退回最低权限
+      console.error('[authority/auth/login] 角色码查询失败，按 user 处理:', roleError);
+    }
 
     // 生成 JWT token
     const token = generateToken({
@@ -673,7 +702,8 @@ router.post('/auth/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: userWithoutPassword,
+      // role：前端 useAuthStore 读取 user.role 用于权限判定（2026-10-20 补）
+      user: { ...userWithoutPassword, role: roleCode },
       roles
     });
   } catch (error) {
