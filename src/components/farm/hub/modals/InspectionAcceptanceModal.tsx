@@ -238,44 +238,48 @@ export function InspectionAcceptanceModal({
                           }`}
                         />
 
-                        {/* 记录内容 */}
+                        {/* 记录内容 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
+                            （此前动作/状态、操作人、进度、时间分散在多行） */}
                         <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${actionConfig.bg} ${actionConfig.color}`}
-                              >
-                                {actionConfig.label}
-                              </span>
-                              {record.fromStatus && (
-                                <>
-                                  <span className="text-gray-400 text-xs">→</span>
-                                  <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.bg} ${statusConfig.color}`}
-                                  >
-                                    {statusConfig.label}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs font-medium ${actionConfig.bg} ${actionConfig.color}`}
+                            >
+                              {actionConfig.label}
+                            </span>
+
+                            {record.fromStatus && (
+                              <>
+                                <span className="text-gray-400 text-xs">→</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.bg} ${statusConfig.color}`}
+                                >
+                                  {statusConfig.label}
+                                </span>
+                              </>
+                            )}
+
+                            <span className="text-gray-300 select-none">|</span>
+                            <span className="flex items-center gap-1 text-gray-600">
+                              <User className="w-3 h-3" />
+                              {record.operatorName || '-'}
+                            </span>
+
+                            {record.progress !== undefined && record.progress !== null && (
+                              <>
+                                <span className="text-gray-300 select-none">|</span>
+                                <span className="flex items-center gap-1 text-gray-600">
+                                  <FileText className="w-3 h-3" />
+                                  进度：{record.progress}%
+                                </span>
+                              </>
+                            )}
+
+                            <span className="text-gray-300 select-none">|</span>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
                               {formatDate(record.actionTime)}
                             </span>
                           </div>
-
-                          {/* 操作人 */}
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                            <User className="w-3 h-3" />
-                            <span>{record.operatorName}</span>
-                          </div>
-
-                          {/* 进度信息 */}
-                          {record.progress !== undefined && record.progress !== null && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                              <FileText className="w-3 h-3" />
-                              <span>进度：{record.progress}%</span>
-                            </div>
-                          )}
 
                           {/* 反馈内容 */}
                           {feedbackData && (
