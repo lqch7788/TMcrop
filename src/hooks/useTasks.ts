@@ -162,6 +162,25 @@ function syncToApi(apiCall: () => Promise<unknown>, label: string): Promise<bool
 }
 
 /**
+ * 非法状态转移的统一反馈。
+ *
+ * 2026-10-20 修复（HIGH）：此前 9 处校验失败只 `console.error` 后 `return`，
+ * 而上层弹窗（验收 / 重新派发 / 超时处理）不接收返回值、仍会关闭弹窗并刷新 ——
+ * 用户看到的是"点了按钮、弹窗关了、什么都没变"，且没有任何提示。
+ * 并发场景下（任务已被他人改状态）最容易触发。
+ *
+ * 现在统一：console 留档 + toast 告知当前状态与目标状态。
+ */
+function reportIllegalTransition(task: Task, target: string): void {
+  console.error(`[状态机] 非法转换: ${task.status} → ${target}, task=${task.id}`);
+  const from = TASK_STATUS_CONFIG[task.status as TaskStatus]?.label || task.status;
+  const to = TASK_STATUS_CONFIG[target as TaskStatus]?.label || target;
+  useToastStore.getState().toast.error(
+    `任务当前状态为「${from}」，不能变更为「${to}」。请刷新后重试。`,
+  );
+}
+
+/**
  * syncToApi 失败时给用户看的中文动作名
  * 未列出的 label 退回通用文案「操作未生效」。
  */
@@ -1004,7 +1023,7 @@ export function useTasks(): UseTasksReturn {
   const publishTask = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    if (!validateTransition(task, 'pending')) { console.error(`[状态机] 非法转换: ${task.status} → pending, task=${id}`); return; }
+    if (!validateTransition(task, 'pending')) { reportIllegalTransition(task, 'pending'); return; }
 
     const now = new Date().toISOString();
 
@@ -1038,7 +1057,7 @@ export function useTasks(): UseTasksReturn {
     if (!task) return;
     // 2026-09-22：接入权限矩阵（withdraw 限 admin）
     if (!ensureTaskPermission('withdraw', task)) return;
-    if (!validateTransition(task, 'draft')) { console.error(`[状态机] 非法转换: ${task.status} → draft, task=${id}`); return; }
+    if (!validateTransition(task, 'draft')) { reportIllegalTransition(task, 'draft'); return; }
 
     const now = new Date().toISOString();
 
@@ -1068,7 +1087,7 @@ export function useTasks(): UseTasksReturn {
     if (!task) return;
     // 2026-09-22：接入权限矩阵（cancel 限 admin）
     if (!ensureTaskPermission('cancel', task)) return;
-    if (!validateTransition(task, 'cancelled')) { console.error(`[状态机] 非法转换: ${task.status} → cancelled, task=${id}`); return; }
+    if (!validateTransition(task, 'cancelled')) { reportIllegalTransition(task, 'cancelled'); return; }
 
     const now = new Date().toISOString();
 
@@ -1098,7 +1117,7 @@ export function useTasks(): UseTasksReturn {
   const acceptTask = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    if (!validateTransition(task, 'accepted')) { console.error(`[状态机] 非法转换: ${task.status} → accepted, task=${id}`); return; }
+    if (!validateTransition(task, 'accepted')) { reportIllegalTransition(task, 'accepted'); return; }
 
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];
@@ -1361,7 +1380,7 @@ export function useTasks(): UseTasksReturn {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     const targetStatus = action === 'continue' ? 'in_progress' : 'abandoned';
-    if (!validateTransition(task, targetStatus)) { console.error(`[状态机] 非法转换: ${task.status} → ${targetStatus}, task=${id}`); return; }
+    if (!validateTransition(task, targetStatus)) { reportIllegalTransition(task, targetStatus); return; }
 
     const now = new Date().toISOString();
     const taskAction: TaskAction = action === 'continue' ? 'overtime_continue' : 'overtime_abandon';
@@ -1406,7 +1425,7 @@ export function useTasks(): UseTasksReturn {
   const acceptCompletion = useCallback((id: string, comments?: string, actualArea?: number) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    if (!validateTransition(task, 'completed')) { console.error(`[状态机] 非法转换: ${task.status} → completed, task=${id}`); return; }
+    if (!validateTransition(task, 'completed')) { reportIllegalTransition(task, 'completed'); return; }
     // 2026-09-22：接入权限矩阵（verify 限 assigner / admin）
     if (!ensureTaskPermission('verify', task)) return;
 
@@ -1487,7 +1506,7 @@ export function useTasks(): UseTasksReturn {
   const rejectForRework = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    if (!validateTransition(task, 'rejected') && !validateTransition(task, 'failed')) { console.error(`[状态机] 非法转换: ${task.status} → rejected, task=${id}`); return; }
+    if (!validateTransition(task, 'rejected') && !validateTransition(task, 'failed')) { reportIllegalTransition(task, 'rejected'); return; }
     // 2026-09-22：接入权限矩阵（verify 限 assigner / admin）
     if (!ensureTaskPermission('verify', task)) return;
 
@@ -1563,7 +1582,7 @@ export function useTasks(): UseTasksReturn {
     if (!task) return;
     // 2026-09-22：接入权限矩阵（continue 限 assignee，admin 放行）
     if (!ensureTaskPermission('continue', task)) return;
-    if (!validateTransition(task, 'in_progress')) { console.error(`[状态机] 非法转换: ${task.status} → in_progress, task=${id}`); return; }
+    if (!validateTransition(task, 'in_progress')) { reportIllegalTransition(task, 'in_progress'); return; }
 
     const now = new Date().toISOString();
 
@@ -1634,7 +1653,7 @@ export function useTasks(): UseTasksReturn {
     if (!task) return;
     // 2026-09-22：接入权限矩阵（reassign 限 admin）
     if (!ensureTaskPermission('reassign', task)) return;
-    if (!validateTransition(task, 'pending')) { console.error(`[状态机] 非法转换: ${task.status} → pending, task=${id}`); return; }
+    if (!validateTransition(task, 'pending')) { reportIllegalTransition(task, 'pending'); return; }
 
     const now = new Date().toISOString();
 
