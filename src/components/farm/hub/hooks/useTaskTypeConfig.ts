@@ -11,12 +11,24 @@ import {
   TaskConfigField,
   MultiEntryRecord,
 } from '../../../../types/farm/taskTypeConfig';
+// 2026-10-21：肥料池 / 药剂池字段的值类型（type-only 导入，编译期擦除，无运行时依赖）
+import type { FertilizerPoolItem } from '../../fertilizer/FertilizerPoolEditor';
+import type { PesticidePoolItem } from '@/types/farm/pest-control';
 
 /**
  * 配置值类型
  */
 export interface TaskConfigValues {
-  [key: string]: string | number | boolean | string[] | MultiEntryRecord[];
+  // 2026-10-21：新增 FertilizerPoolItem[]（施肥的肥料选择与用量）
+  //            与 PesticidePoolItem[]（病虫害防治的防治药剂池）
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | string[]
+    | MultiEntryRecord[]
+    | FertilizerPoolItem[]
+    | PesticidePoolItem[];
 }
 
 /**

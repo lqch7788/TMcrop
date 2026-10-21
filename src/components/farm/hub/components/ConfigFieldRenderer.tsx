@@ -9,20 +9,34 @@ import { Button, Label } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
+import { TaskConfigField, MultiEntryRecord, EntryFieldDef, ConfigFieldType } from '../../../../types/farm/taskTypeConfig';
 import { useDictionaryStore, getDictItems } from '@/stores';
+// 2026-10-21：种源搜索下拉（业务字段，单独成组件以保持本渲染器的通用性）
+import { SeedSourceSelectField } from './SeedSourceSelectField';
+// 2026-10-21：肥料池 —— 直接复用「水肥管理 → 新增施肥记录」的同一个组件，
+//   保证任务配置与施肥台账的肥料选择/用量/单位换算完全一致
+import { FertilizerPoolEditor } from '../../fertilizer/FertilizerPoolEditor';
+import type { FertilizerPoolItem } from '../../fertilizer/FertilizerPoolEditor';
+// 2026-10-21：病虫害防治的两个字段 —— 复用「病虫害管理 → 新增防治记录」的同一份组件
+import { TargetPestPicker } from '../../pest-control/TargetPestPicker';
+import { PesticidePoolEditor } from '../../pest-control/PesticidePoolEditor';
+import type { PesticidePoolItem } from '@/types/farm/pest-control';
 
 interface ConfigFieldRendererProps {
   /** 配置项定义 */
   field: TaskConfigField;
   /** 当前值 */
-  value: MultiEntryRecord[] | string | number | boolean | string[];
+  value: MultiEntryRecord[] | FertilizerPoolItem[] | PesticidePoolItem[] | string | number | boolean | string[];
   /** 值变化回调 */
-  onChange: (key: string, value: MultiEntryRecord[] | string | number | boolean | string[]) => void;
+  onChange: (key: string, value: MultiEntryRecord[] | FertilizerPoolItem[] | PesticidePoolItem[] | string | number | boolean | string[]) => void;
   /** 错误信息 */
   error?: string;
   /** 是否禁用 */
   disabled?: boolean;
+  /** 2026-10-21：字段单位覆盖表（字段 key → 单位文本）。
+   *  由 TaskTypeConfigPanel 依据 field.unitSourceField 从所选种源解析后传入，
+   *  用于「种子/种苗用量」这类单位随上游选择变化的字段。 */
+  unitOverrides?: Record<string, string>;
 }
 
 export function ConfigFieldRenderer({
@@ -31,6 +45,7 @@ export function ConfigFieldRenderer({
   onChange,
   error,
   disabled,
+  unitOverrides,
 }: ConfigFieldRendererProps) {
   // 基础输入框样式
   const baseInputClass = `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
@@ -38,7 +53,7 @@ export function ConfigFieldRenderer({
   } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`;
 
   // 处理输入变化
-  const handleChange = (newValue: MultiEntryRecord[] | string | number | boolean | string[]) => {
+  const handleChange = (newValue: MultiEntryRecord[] | FertilizerPoolItem[] | PesticidePoolItem[] | string | number | boolean | string[]) => {
     if (!disabled) {
       onChange(field.key, newValue);
     }
@@ -101,8 +116,12 @@ export function ConfigFieldRenderer({
         className={`${baseInputClass} flex-1`}
         placeholder={field.placeholder}
       />
-      {field.unit && (
-        <span className="text-sm text-gray-500 whitespace-nowrap">{field.unit}</span>
+      {/* 2026-10-21：单位优先取父级解析出的动态单位（如所选种源的 株/千克/袋），
+          未解析到时才回落到配置里写死的 unit */}
+      {((unitOverrides?.[field.key] ?? field.unit) || '') && (
+        <span className="text-sm text-gray-500 whitespace-nowrap">
+          {unitOverrides?.[field.key] ?? field.unit}
+        </span>
       )}
     </div>
   );
@@ -126,6 +145,37 @@ export function ConfigFieldRenderer({
       </SelectContent>
     </Select>
   );
+
+  // ========== 渲染数据字典下拉（2026-10-21 新增） ==========
+  //   顶层字段用字典而非写死 options：采收形态取 crop_form、计量单位取 unit。
+  //   字典条目可变（用户可在系统设置里增删），写死选项会与实际字典脱节。
+  const renderDict = () => {
+    const items = field.dictCategory ? getDictItems(field.dictCategory) : [];
+    return (
+      <Select
+        value={(value as string) || ''}
+        onValueChange={val => handleChange(val)}
+        disabled={disabled}
+      >
+        <SelectTrigger className={baseInputClass}>
+          <SelectValue placeholder={field.placeholder || '请选择'} />
+        </SelectTrigger>
+        <SelectContent>
+          {items.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-400">
+              字典「{field.dictCategory}」暂无可用项
+            </div>
+          ) : (
+            items.map(item => (
+              <SelectItem key={item.dictCode} value={item.dictCode}>
+                {item.dictLabel}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+    );
+  };
 
   // ========== 渲染多选 ==========
   const renderMultiSelect = () => {
@@ -285,6 +335,60 @@ export function ConfigFieldRenderer({
     }
   };
 
+  // ========== 渲染种源搜索下拉（2026-10-21 新增） ==========
+  //   关联内部种源列表，不走 field.options（该字段的 options 已随虚构选项一并移除）
+  const renderSeedSourceSelect = () => (
+    <SeedSourceSelectField
+      value={(value as string) || ''}
+      onChange={(id) => handleChange(id)}
+      disabled={disabled}
+      error={error}
+      placeholder={field.placeholder}
+    />
+  );
+
+  // ========== 渲染目标病虫害多选（2026-10-21 新增） ==========
+  //   复用「病虫害管理 → 新增防治记录」的 TargetPestPicker，病虫害/虫害双 Tab + 搜索多选
+  const renderTargetPestPicker = () => (
+    <TargetPestPicker
+      value={Array.isArray(value) ? (value as string[]) : []}
+      onChange={(names) => handleChange(names)}
+      disabled={disabled}
+      // 2026-10-21：该字段的必填红星由组件自己显示（外层 Label 已对它整块跳过）
+      required={field.required || Boolean(error)}
+    />
+  );
+
+  // ========== 渲染防治药剂池（2026-10-21 新增） ==========
+  //   复用「病虫害管理 → 新增防治记录」的 PesticidePoolEditor
+  const renderPesticidePool = () => {
+    const pool: PesticidePoolItem[] = Array.isArray(value)
+      ? (value as unknown[]).filter(
+          (v): v is PesticidePoolItem =>
+          typeof v === 'object' && v !== null && 'pesticideName' in (v as object)
+        )
+      : [];
+    return <PesticidePoolEditor pool={pool} onChange={(next) => handleChange(next)} disabled={disabled} />;
+  };
+
+  // ========== 渲染肥料池（2026-10-21 新增） ==========
+  //   与「水肥管理 → 新增施肥记录」的「肥料选择与用量」复用同一个组件，
+  //   保证任务配置与施肥台账在肥料选择/用量/单位换算上完全一致。
+  //   值域为 FertilizerPoolItem[]，对历史数据（若存的是别的形态）做防御性过滤。
+  const renderFertilizerPool = () => {
+    const pool: FertilizerPoolItem[] = Array.isArray(value)
+      ? (value as unknown[]).filter(
+          (v): v is FertilizerPoolItem => typeof v === 'object' && v !== null && 'specId' in (v as object)
+        )
+      : [];
+    return (
+      <FertilizerPoolEditor
+        pool={pool}
+        onChange={(next) => handleChange(next)}
+      />
+    );
+  };
+
   // ========== 渲染多条目输入（混合配比） ==========
   const renderMultiEntry = () => {
     // 防御性检查：确保 entries 是有效数组
@@ -397,17 +501,34 @@ export function ConfigFieldRenderer({
         return renderTextarea();
       case 'multiEntry':
         return renderMultiEntry();
+      case 'fertilizerPool':
+        return renderFertilizerPool();
+      case 'targetPestPicker':
+        return renderTargetPestPicker();
+      case 'pesticidePool':
+        return renderPesticidePool();
+      case 'seedSourceSelect':
+        return renderSeedSourceSelect();
+      case 'dict':
+        return renderDict();
       default:
         return renderTextInput();
     }
   };
 
+  // 2026-10-21：自带标题的复杂字段类型 —— 组件内部已有自己的 Label，
+  //   外层再渲染一次会出现两行重复标题（用户报的 bug）。
+  //   这类字段的必填红星由组件自己显示，故外层整块跳过。
+  const SELF_TITLED_TYPES: ConfigFieldType[] = ['targetPestPicker'];
+
   return (
     <div>
-      <Label className="text-gray-700">
-        {field.label}
-        {(field.required || error) && <span className="text-red-500 ml-1">*</span>}
-      </Label>
+      {!SELF_TITLED_TYPES.includes(field.type) && (
+        <Label className="text-gray-700">
+          {field.label}
+          {(field.required || error) && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+      )}
       {renderInput()}
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>

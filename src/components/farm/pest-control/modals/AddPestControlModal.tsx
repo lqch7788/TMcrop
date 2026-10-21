@@ -13,16 +13,20 @@
  * - 提交时序列化为 leafFertilizerList JSON（字段名与 FertilizerPoolItem 一致，含 specId/fertilizerName/fertilizerType 等）
  */
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Trash2, X, Search } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { DictSelect } from '@/components/common/settings/DictSelect';
-import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
-import { usePestControlStore, usePesticideLibraryStore, usePestDiseaseDictStore, usePlantingStore, useSeedlingStore, useFarmTaskStore } from '@/stores';
-import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
+// 2026-10-21：目标病虫害与防治药剂池已抽取为共享组件
+//   （农事任务「病虫害防治 - 详细配置」复用同一份，避免两处 UI 漂移）
+//   DictSelect / UnitDictSelect / Trash2 / getDictLabel 随之从本文件移除 —— 它们只被这两块 JSX 使用
+import { TargetPestPicker } from '../TargetPestPicker';
+import { PesticidePoolEditor } from '../PesticidePoolEditor';
+import { usePestControlStore, usePlantingStore, useSeedlingStore, useFarmTaskStore } from '@/stores';
+// 2026-10-21：usePesticideLibraryStore / usePestDiseaseDictStore / useDictionaryStore
+//   已随各自 UI 移入共享组件，本文件不再需要
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal, currentTimeLocal } from '@/lib/dateUtils';
 import { FertilizerPoolEditor } from '@/components/farm/fertilizer/FertilizerPoolEditor';
@@ -69,11 +73,10 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   onSaved: () => void;
 }) {
   const pestStore = usePestControlStore();
-  const pesticideStore = usePesticideLibraryStore();
-  const pestDiseaseStore = usePestDiseaseDictStore();
+  // 2026-10-21：pesticideStore / pestDiseaseStore / dictionaries 随之移入
+  //   PesticidePoolEditor / TargetPestPicker 内部，本文件不再需要
   const plantingStore = usePlantingStore();
   const seedlingStore = useSeedlingStore();
-  const dictionaries = useDictionaryStore((s) => s.dictionaries);
 
   // 基础信息
   const [form, setForm] = useState({
@@ -108,13 +111,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   }, [farmTasks.length, fetchFarmTasks]);
 
   // 2026-07-11：药剂池（每个条目是一个药剂 + 内联用量/单位/稀释/方法/备注）
+  //   2026-10-21：类型筛选/搜索/下拉开关等内部状态已随 UI 一并移入 PesticidePoolEditor 组件
   const [pesticidePool, setPesticidePool] = useState<PesticidePoolItem[]>([]);
-  // 顶部类型筛选（多选）— 勾选后下拉只显示匹配类型的药剂
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  // 下拉搜索关键字 + 显示状态
-  const [pesticideSearchKeyword, setPesticideSearchKeyword] = useState('');
-  const [showPesticideDropdown, setShowPesticideDropdown] = useState(false);
-  const pesticideDropdownRef = useRef<HTMLDivElement>(null);
 
   // 2026-07-17：肥料联用池化（始终启用，由 FertilizerPoolEditor 提供完整 UI）
   const [fertilizerPool, setFertilizerPool] = useState<FertilizerPoolItem[]>([]);
@@ -134,17 +132,12 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   const bizSearchRef = useRef<HTMLDivElement>(null);
 
   // 2026-07-11：目标病虫害多选（病害/虫害 Tab 切换 + 搜索下拉）
-  const [pestTabType, setPestTabType] = useState<'pest' | 'disease'>('pest');
-  const [pestSearchKeyword, setPestSearchKeyword] = useState('');
-  const [showPestSearch, setShowPestSearch] = useState(false);
-  const pestSearchRef = useRef<HTMLDivElement>(null);
+  //   2026-10-21：Tab/搜索/下拉开关等内部状态已随 UI 一并移入 TargetPestPicker 组件
 
-  // 加载药剂列表 + 种植/育苗列表 + 病虫害词典
+  // 加载种植/育苗列表（用于关联业务下拉）
+  //   2026-10-21：药剂库与病虫害字典的加载已移入 PesticidePoolEditor / TargetPestPicker 内部
   useEffect(() => {
     if (isOpen) {
-      // 2026-07-11：药剂池只需拉取 store，UI 中通过 useMemo 派生过滤列表
-      pesticideStore.fetchItems();
-      // 加载种植和育苗记录列表（用于关联业务下拉）
       // 2026-07-18 P2-M4：统一使用 fetchItems 别名（与项目其他 store 命名一致）
       if (plantingStore.items.length === 0) {
         plantingStore.fetchItems();
@@ -152,8 +145,6 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       if (seedlingStore.items.length === 0) {
         seedlingStore.fetchItems();
       }
-      // 加载病虫害词典（用于目标病虫害多选）
-      pestDiseaseStore.fetchItems();
     }
   }, [isOpen]);
 
@@ -192,161 +183,18 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   // 点击外部关闭搜索下拉
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // 2026-10-21：目标病虫害 / 药剂池的"点击外部关闭"已随 UI 移入各自组件内部
       if (bizSearchRef.current && !bizSearchRef.current.contains(e.target as Node)) {
         setShowBizSearch(false);
-      }
-      if (pestSearchRef.current && !pestSearchRef.current.contains(e.target as Node)) {
-        setShowPestSearch(false);
-      }
-      if (pesticideDropdownRef.current && !pesticideDropdownRef.current.contains(e.target as Node)) {
-        setShowPesticideDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 2026-07-11：药剂池相关
-  // 切换类型筛选（多选）
-  const toggleTypeFilter = useCallback((typeCode: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(typeCode) ? prev.filter((t) => t !== typeCode) : [...prev, typeCode]
-    );
-  }, []);
-
-  // 已激活的药剂类型字典（用于顶部多选 checkbox）
-  const pesticideTypeItems = useMemo(() => {
-    return dictionaries.filter(
-      (d: any) => (d.categoryCode || d.category_code || d.category) === 'pesticide_type'
-    );
-  }, [dictionaries]);
-
-  // 2026-07-11：药剂库杀线虫剂 tab 已下线，顶部 checkbox 过滤掉
-  const EXCLUDED_PESTICIDE_TYPE_LABELS = ['杀线虫剂', 'nematicide'];
-
-  // 顶层类型（用于顶部 checkbox 行，过滤掉已废弃的杀线虫剂）
-  const topLevelPesticideTypes = useMemo(() => {
-    return pesticideTypeItems.filter((d: any) => {
-      if (d.parentId || d.parent_id) return false;
-      const label = d.dictLabel || d.dict_label;
-      const code = d.dictCode || d.dict_code;
-      return !EXCLUDED_PESTICIDE_TYPE_LABELS.includes(label) && !EXCLUDED_PESTICIDE_TYPE_LABELS.includes(code);
-    });
-  }, [pesticideTypeItems]);
-
-  // 2026-07-12：扁平化后每个 item 本身就是规格，不再需要展开 specs[]
-  // - 返回结构：{ pesticide, spec }[]，其中 spec === pesticide（扁平后每条即完整规格）
-  const filteredSpecs = useMemo(() => {
-    const items = (pesticideStore.items as any[]).filter(
-      (p) => p.status === 'active' || !p.status
-    );
-    // 1. 类型筛选
-    let pool = items;
-    if (selectedTypes.length > 0) {
-      pool = pool.filter((p) =>
-        (p.pesticideTypes || []).some((t: string) => selectedTypes.includes(t))
-      );
-    }
-    // 2. 关键字筛选（按药剂名/编码/含量/厂家/品牌）
-    const kw = pesticideSearchKeyword.trim().toLowerCase();
-    // 3. 扁平化后每条即完整规格，直接映射
-    const rows: { pesticide: any; spec: any }[] = [];
-    for (const p of pool) {
-      if (kw) {
-        const hay = [
-          p.pesticideName,
-          p.pesticideCode,
-          p.ingredient,
-          p.specContent,
-          p.manufacturer,
-          p.brandName,
-        ].filter(Boolean).join(' ').toLowerCase();
-        if (!hay.includes(kw)) continue;
-      }
-      rows.push({ pesticide: p, spec: p }); // 扁平化：pesticide 和 spec 是同一个对象
-    }
-    return rows;
-  }, [selectedTypes, pesticideSearchKeyword, pesticideStore.items]);
-
-  // 选中"规格"加入池（按 specId 去重，自动用 spec 默认值）
-  const addToPool = useCallback((pesticide: any, spec: any | null) => {
-    // 无规格时用 pesticide.id 作 fallback key
-    const dedupeKey = spec?.id || pesticide.id;
-    setPesticidePool((prev) => {
-      if (prev.some((p) => (p.specId || p.pesticideId) === dedupeKey)) return prev;
-      const newItem: PesticidePoolItem = {
-        pesticideId: pesticide.id,
-        pesticideName: pesticide.pesticideName,
-        pesticideCode: pesticide.pesticideCode,
-        pesticideTypes: pesticide.pesticideTypes || [],
-        specId: spec?.id,
-        specContent: spec?.specContent,
-        formulation: spec?.formulation,
-        manufacturer: spec?.manufacturer,
-        brandName: spec?.brandName,
-        // 2026-08-15：用量拆分 — dosage 为用户实际填写（初始空）；suggestedDosage 为药剂库建议用量（只读参考，不保存）
-        dosage: '',
-        suggestedDosage: spec?.suggestedDosage || '',
-        unit: spec?.dosageUnit || '',
-        dilutionRatio: spec?.suggestedRatio || '',
-        applicationMethod: '',
-        remarks: spec?.remark || '',
-        // 2026-07-26：从药剂库携带库存信息，池内行展示剩余用量（对照 FertilizerPoolEditor）
-        stockQuantity: spec?.stockQuantity ?? pesticide.stockQuantity ?? 0,
-        stockUnit: spec?.stockUnit || pesticide.stockUnit || 'kg',
-        unitPrice: spec?.unitPrice ?? pesticide.unitPrice ?? 0,
-      };
-      return [...prev, newItem];
-    });
-    setPesticideSearchKeyword('');
-    setShowPesticideDropdown(false);
-  }, []);
-
-  // 从池中移除
-  const removeFromPool = useCallback((index: number) => {
-    setPesticidePool((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  // 更新池中某行字段
-  const updatePoolField = useCallback(
-    (index: number, field: keyof PesticidePoolItem, value: any) => {
-      setPesticidePool((prev) =>
-        prev.map((it, i) => (i === index ? { ...it, [field]: value } : it))
-      );
-    },
-    []
-  );
-
-  // 病虫害词典过滤（按 tab 类型 + 关键字 + 状态）
-  const pestDictOptions = useMemo(() => {
-    const items = pestDiseaseStore.items.filter((d: any) => d.status === 'active' || !d.status);
-    const typed = items.filter((d: any) => d.dictType === pestTabType);
-    if (!pestSearchKeyword.trim()) return typed;
-    const kw = pestSearchKeyword.toLowerCase();
-    return typed.filter((d: any) =>
-      (d.dictName || '').toLowerCase().includes(kw) ||
-      (d.dictCode || '').toLowerCase().includes(kw)
-    );
-  }, [pestSearchKeyword, pestTabType, pestDiseaseStore.items]);
-
-  // 切换病虫害多选（2026-07-11：勾选后自动隐藏下拉，避免遮挡已选 chip）
-  const togglePest = useCallback((dictName: string) => {
-    setForm((prev) => {
-      const list = prev.targetPests;
-      return {
-        ...prev,
-        targetPests: list.includes(dictName)
-          ? list.filter((n) => n !== dictName)
-          : [...list, dictName],
-      };
-    });
-    setShowPestSearch(false);
-  }, []);
-
-  // 移除已选 chip
-  const removePest = useCallback((dictName: string) => {
-    setForm((prev) => ({ ...prev, targetPests: prev.targetPests.filter((n) => n !== dictName) }));
-  }, []);
+  // 2026-10-21：药剂池（类型筛选/搜索/入池/改池）与目标病虫害（词典过滤/勾选/移除）
+  //   的全部内部 state 与派生逻辑，已随 UI 一并移入共享组件
+  //   PesticidePoolEditor / TargetPestPicker，本文件只保留池数据本身（pesticidePool）。
 
   // 重置表单
   useEffect(() => {
@@ -366,11 +214,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         targetPests: [],
         description: '',
       });
-      // 药剂池重置
+      // 药剂池重置（2026-10-21：组件内部状态已外移，本文件只清池数据本身）
       setPesticidePool([]);
-      setSelectedTypes([]);
-      setPesticideSearchKeyword('');
-      setShowPesticideDropdown(false);
       // 2026-07-17：肥料池始终可见，重置为空数组
       setFertilizerPool([]);
       // 2026-07-12：防治区域多选重置
@@ -380,10 +225,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       setBizTabType('planting');
       // 2026-07-21 P1-修复：弹窗打开时重置自动反填 flag=true，让新一次勾选重新进入自动反填状态
       cropNameAutoFilledRef.current = true;
-      // 目标病虫害选择器重置
-      setPestSearchKeyword('');
-      setPestTabType('pest');
-      setShowPestSearch(false);
+      // 2026-10-21：目标病虫害内部状态由 TargetPestPicker 自身管理（每次挂载即初始值），
+      //   这里无需再调 setPestTabType / setPestSearchKeyword 等
     }
   }, [isOpen]);
 
@@ -886,419 +729,21 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
               </div>
             </div>
 
-            {/* 目标病虫害（2026-07-11：病害/虫害 Tab + 搜索下拉多选，从病虫害词典关联） */}
-            {/* 2026-07-16 重构：拆 grid-cols-2 — 左半 Tab+搜索，右半 已选 chips，与其他 row 视觉对齐 */}
-            <div ref={pestSearchRef} className="relative">
-              <div className="grid grid-cols-2 gap-4">
-                {/* 左半：Label + Tab + 搜索框 */}
-                <div className="flex flex-col">
-                  <Label className="text-gray-900 mb-1">
-                    目标病虫害 <span className="text-gray-500 text-xs">（多选，可同时防病害+虫害）</span>
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    {/* Tab 切换 */}
-                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => { setPestTabType('pest'); setShowPestSearch(true); }}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          pestTabType === 'pest' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        🐛 虫害
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setPestTabType('disease'); setShowPestSearch(true); }}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          pestTabType === 'disease' ? 'bg-purple-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        🦠 病害
-                      </button>
-                    </div>
-                    {/* 搜索框 */}
-                    <Input
-                      type="text"
-                      value={pestSearchKeyword}
-                      onChange={(e) => { setPestSearchKeyword(e.target.value); setShowPestSearch(true); }}
-                      onFocus={() => setShowPestSearch(true)}
-                      placeholder={pestTabType === 'pest' ? '搜索虫害名称...' : '搜索病害名称...'}
-                      className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowPestSearch(!showPestSearch)}
-                      className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg shrink-0"
-                    >
-                      <Search className="w-4 h-4 text-gray-500" />
-                    </Button>
-                  </div>
-                </div>
-                {/* 右半：已选 chip 显示（与其他 row 右列对齐） */}
-                <div className="flex flex-col">
-                  <Label className="text-gray-900 mb-1">
-                    已选病虫害 <span className="text-gray-500 text-xs">（{form.targetPests.length} 个）</span>
-                  </Label>
-                  <div className={`${deepInputClass} min-h-[42px] flex flex-wrap items-center gap-1.5 px-2 py-1`}>
-                    {form.targetPests.length > 0 ? (
-                      form.targetPests.map((name) => {
-                        const matched = pestDiseaseStore.items.find((d: any) => d.dictName === name);
-                        const isPest = matched?.dictType === 'pest';
-                        return (
-                          <span
-                            key={name}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
-                              isPest
-                                ? 'bg-orange-50 text-orange-700 border-orange-200'
-                                : 'bg-purple-50 text-purple-700 border-purple-200'
-                            }`}
-                          >
-                            {name}
-                            <button
-                              type="button"
-                              onClick={() => removePest(name)}
-                              className="hover:bg-white/50 rounded-full w-3 h-3 flex items-center justify-center"
-                            >
-                              <X className="w-2.5 h-2.5" />
-                            </button>
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span className="text-gray-400 text-sm">请从左侧选择病虫害</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {/* 下拉选项 */}
-              {showPestSearch && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                  {pestDictOptions.length > 0 ? (
-                    pestDictOptions.map((d: any) => {
-                      const selected = form.targetPests.includes(d.dictName);
-                      return (
-                        <Button
-                          key={d.id}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => togglePest(d.dictName)}
-                          className={`w-full justify-start rounded-none border-b border-gray-100 last:border-b-0 ${
-                            selected ? 'bg-emerald-50' : ''
-                          }`}
-                        >
-                          <span className={`w-4 h-4 mr-2 rounded border-2 flex items-center justify-center shrink-0 ${
-                            selected
-                              ? pestTabType === 'pest'
-                                ? 'bg-orange-500 border-orange-500'
-                                : 'bg-purple-500 border-purple-500'
-                              : 'border-gray-300'
-                          }`}>
-                            {selected && (
-                              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
-                          </span>
-                          <span className="text-sm text-gray-800 flex-1 text-left">{d.dictName}</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ml-2 ${
-                            pestTabType === 'pest'
-                              ? 'bg-orange-100 text-orange-600'
-                              : 'bg-purple-100 text-purple-600'
-                          }`}>
-                            {pestTabType === 'pest' ? '虫害' : '病害'}
-                          </span>
-                        </Button>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 text-center text-sm text-gray-400">
-                      暂无{pestTabType === 'pest' ? '虫害' : '病害'}字典数据，请到系统设置→病虫害字典添加
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* 2026-10-21：抽取为共享组件 TargetPestPicker —— 农事任务的
+                「病虫害防治 - 详细配置」复用同一份（病害/虫害 Tab + 搜索多选 + 已选 chip）。 */}
+            <TargetPestPicker
+              value={form.targetPests}
+              onChange={(names) => setForm((prev) => ({ ...prev, targetPests: names }))}
+            />
           </div>
         </div>
 
-        {/* 防治药剂池（2026-07-11：药剂类型筛选 → 过滤下拉 → 池化添加 → 每行内联编辑） */}
+        {/* 2026-10-21：抽取为共享组件 PesticidePoolEditor —— 与肥料侧的
+            FertilizerPoolEditor 对称，农事任务的病虫害配置复用同一份。 */}
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3">💊 防治药剂池（多选，先选类型再选药剂）</h3>
-
-          {/* 第 1 步 + 第 2 步：同排并排，各占一半 */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {/* 左半：药剂类型（多选 checkbox） */}
-            <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs text-gray-700 font-semibold">
-                  ① 药剂类型（过滤）<span className="text-red-500">*</span>
-                </Label>
-                {selectedTypes.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTypes([])}
-                    className="text-xs text-gray-500 hover:text-red-600"
-                  >
-                    清空
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {topLevelPesticideTypes.map((d: any) => {
-                  const code = d.dictCode || d.dict_code;
-                  const label = d.dictLabel || d.dict_label;
-                  const checked = selectedTypes.includes(code);
-                  return (
-                    <label
-                      key={d.id}
-                      className={`px-2 py-0.5 rounded border cursor-pointer text-xs font-medium transition-all select-none ${
-                        checked
-                          ? 'bg-emerald-500 text-white border-emerald-500'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={checked}
-                        onChange={() => toggleTypeFilter(code)}
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 右半：选择药剂（按已选类型过滤的下拉） */}
-            <div ref={pesticideDropdownRef} className="relative">
-              <div className="mb-1">
-                <Label className="text-xs text-gray-700 font-semibold">
-                  ② 选择规格（精确到含量/厂家）
-                  <span className="ml-2 text-xs text-gray-500 font-normal">
-                    共 {filteredSpecs.length} 个规格
-                    {selectedTypes.length > 0 && (
-                      <span className="text-emerald-600">（{selectedTypes.length} 个类型）</span>
-                    )}
-                  </span>
-                </Label>
-              </div>
-              <div className="flex items-center gap-1">
-                <Input
-                  type="text"
-                  value={pesticideSearchKeyword}
-                  onChange={(e) => { setPesticideSearchKeyword(e.target.value); setShowPesticideDropdown(true); }}
-                  onFocus={() => setShowPesticideDropdown(true)}
-                  placeholder={selectedTypes.length === 0 ? '搜索名称/规格/厂家/品牌...' : '搜索名称/规格/厂家/品牌...'}
-                  className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowPesticideDropdown(!showPesticideDropdown)}
-                  className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
-                >
-                  <Search className="w-4 h-4 text-gray-500" />
-                </Button>
-              </div>
-              {/* 下拉选项：每行 = 一个规格（含药剂名+规格+厂家），按 specId 去重 */}
-              {showPesticideDropdown && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
-                  {filteredSpecs.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-400">
-                      无匹配规格
-                      {selectedTypes.length > 0 && '（请调整类型筛选）'}
-                    </div>
-                  ) : (
-                    filteredSpecs.map((row: { pesticide: any; spec: any }) => {
-                      const { pesticide: p, spec } = row;
-                      const dedupeKey = spec?.id || p.id;
-                      const inPool = pesticidePool.some((it) => (it.specId || it.pesticideId) === dedupeKey);
-                      return (
-                        <Button
-                          key={`${p.id}-${spec?.id || 'no-spec'}`}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addToPool(p, spec)}
-                          disabled={inPool}
-                          className={`w-full justify-between rounded-none border-b border-gray-100 last:border-b-0 py-2 px-3 ${
-                            inPool ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          <div className="text-left flex-1 min-w-0">
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="text-sm font-medium text-gray-800">{p.pesticideName}</span>
-                              {inPool && <span className="text-xs text-emerald-600 shrink-0">✓ 已添加</span>}
-                              <span className="text-gray-400 shrink-0">|</span>
-                              <span className="text-xs text-gray-600 truncate">{spec?.specContent || '无规格'}{spec?.manufacturer ? ` · ${spec.manufacturer}` : ''}{spec?.brandName ? ` · ${spec.brandName}` : ''}</span>
-                              <span className="text-gray-400 shrink-0">|</span>
-                              {(p.pesticideTypes || []).slice(0, 1).map((t: string) => (
-                                <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 shrink-0">
-                                  {getDictLabel('pesticide_type', t) || t}
-                                </span>
-                              ))}
-                              {(spec?.unitPrice ?? p.unitPrice) > 0 && (
-                                <>
-                                  <span className="text-gray-400 shrink-0">|</span>
-                                  <span className="text-xs text-amber-600 shrink-0">¥{Number(spec?.unitPrice ?? p.unitPrice).toFixed(2)}</span>
-                                </>
-                              )}
-                              <span className="text-gray-400 shrink-0">|</span>
-                              <span className={`text-xs shrink-0 ${(spec?.stockQuantity ?? p.stockQuantity ?? 0) > 0 ? 'text-emerald-600' : 'text-red-400'}`}>
-                                库存 {Number(spec?.stockQuantity ?? p.stockQuantity ?? 0).toFixed(2)} {spec?.stockUnit || p.stockUnit || 'kg'}
-                              </span>
-                            </div>
-                          </div>
-                        </Button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          {/* end grid-cols-2 容器 */}
-
-          {/* 第 3 步：药剂池（每个药剂一行，可编辑用量/单位/稀释/方法/备注） */}
-          <div className="border-2 border-emerald-200 rounded-lg p-3 bg-emerald-50/30">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs text-gray-700 font-semibold">
-                ③ 药剂池（已添加 {pesticidePool.length} 个）
-              </Label>
-              {pesticidePool.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setPesticidePool([])}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  清空药剂池
-                </button>
-              )}
-            </div>
-            {pesticidePool.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-400 bg-white rounded border border-dashed border-gray-300">
-                药剂池为空，请先勾选类型，再从上方下拉选择药剂加入池
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pesticidePool.map((item, idx) => (
-                  <div key={item.specId || item.pesticideId || idx} className="bg-white border border-emerald-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-                        <span className="text-xs font-bold text-emerald-700 shrink-0">#{idx + 1}</span>
-                        <span className="text-sm font-semibold text-gray-900 truncate">{item.pesticideName}</span>
-                        {item.pesticideCode && (
-                          <span className="text-xs text-gray-400 font-mono shrink-0">{item.pesticideCode}</span>
-                        )}
-                        {/* 2026-07-11：规格详情（含量/剂型/厂家/品牌）— 用户精确选择依据 */}
-                        {(item.specContent || item.manufacturer || item.brandName) && (
-                          <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded truncate">
-                            {item.specContent || ''}
-                            {item.manufacturer && <span className="text-gray-600"> · {item.manufacturer}</span>}
-                            {item.brandName && <span className="text-gray-500"> · {item.brandName}</span>}
-                          </span>
-                        )}
-                        {(item.pesticideTypes || []).slice(0, 2).map((t) => (
-                          <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 shrink-0">
-                            {getDictLabel('pesticide_type', t) || t}
-                          </span>
-                        ))}
-                        {/* 2026-07-26：显示库存与价格（对照 FertilizerPoolEditor 池内行头部） */}
-                        {(item.unitPrice ?? 0) > 0 && (
-                          <span className="text-xs text-emerald-600 whitespace-nowrap shrink-0">
-                            ¥{Number(item.unitPrice ?? 0).toFixed(2)}
-                          </span>
-                        )}
-                        <span className="text-xs text-emerald-600 whitespace-nowrap shrink-0">
-                          · 库存 {Number(item.stockQuantity ?? 0).toFixed(2)} {item.stockUnit || 'kg'}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFromPool(idx)}
-                        className="text-red-500 hover:text-red-700 shrink-0 ml-2"
-                        title="从药剂池移除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-12 gap-2">
-                      {/* 2026-08-15：用量拆分 — "用量"为用户实际填写（与单位紧挨）；"建议用量"（单位后面）只读展示药剂库自带值（含单位），不保存 */}
-                      <div className="col-span-2">
-                        <Label className="text-xs text-gray-600">用量</Label>
-                        <Input
-                          type="text"
-                          value={item.dosage || ''}
-                          onChange={(e) => updatePoolField(idx, 'dosage', e.target.value)}
-                          placeholder="参考建议用量"
-                          className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs text-gray-600">单位</Label>
-                        <UnitDictSelect
-                          value={item.unit || ''}
-                          onChange={(val) => updatePoolField(idx, 'unit', val)}
-                          placeholder="单位"
-                          className="text-xs"
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs text-gray-600">建议用量</Label>
-                        <div
-                          className="px-2 py-1.5 border border-gray-200 bg-gray-50 rounded text-xs text-gray-600 min-h-[30px] leading-[18px]"
-                          title="药剂库规格自带建议用量，仅供参考，不保存"
-                        >
-                          {item.suggestedDosage
-                            ? `${item.suggestedDosage} ${item.unit || ''}`.trim()
-                            : '-'}
-                        </div>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-xs text-gray-600">稀释倍数</Label>
-                        <Input
-                          type="text"
-                          value={item.dilutionRatio || ''}
-                          onChange={(e) => updatePoolField(idx, 'dilutionRatio', e.target.value)}
-                          placeholder="如 1:1500"
-                          className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs text-gray-600">使用方法</Label>
-                        <DictSelect
-                          category="application_method"
-                          value={item.applicationMethod || ''}
-                          onChange={(val) => updatePoolField(idx, 'applicationMethod', val)}
-                          placeholder="请选择"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-12 gap-2 mt-2">
-                      <div className="col-span-6">
-                        <Label className="text-xs text-gray-600">备注</Label>
-                        <Input
-                          type="text"
-                          value={item.remarks || ''}
-                          onChange={(e) => updatePoolField(idx, 'remarks', e.target.value)}
-                          placeholder="可选备注"
-                          className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <PesticidePoolEditor pool={pesticidePool} onChange={setPesticidePool} />
         </div>
-
         {/* 2026-07-17：肥料联用池复用 FertilizerPoolEditor（与新增施肥记录一致） */}
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3">🧪 肥料联用（可选，先选类型再选肥料）</h3>
