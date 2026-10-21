@@ -281,6 +281,10 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     planEnd: t.planEnd || '',
     estimatedDays: t.estimatedDays || 0,
     estimatedHours: t.estimatedHours || 0,
+    // 2026-10-21：人工数量 / 紧急程度透传 —— 前两者缺失时列表「人工」列恒显示 1，
+    //   迁移过来的临时任务会丢人工数（后端列已补，这里必须同步映射）
+    workerCount: (t as any).workerCount ?? 1,
+    urgency: (t as any).urgency ?? 'normal',
     feedbackRequirements: defaultFeedback,
     requiredFeedback: rawFeedbackList, // 保留字符串数组格式，供 MyTasksPage TaskFeedbackModal 使用
     materials: (t.materials || []) as any,

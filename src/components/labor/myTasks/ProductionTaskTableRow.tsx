@@ -125,9 +125,10 @@ export function ProductionTaskTableRow({
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
         {task.planEnd || '-'}
       </td>
-      {/* 任务工时 */}
+      {/* 任务工时（2026-10-21 口径统一）：estimated_hours 已含天数，不再加 days×8；
+          总工时 = estimatedHours × 人工数量，与农事任务中心列表一致 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {((task.estimatedDays || 0) * 8 + (task.estimatedHours || 0)) || 0}小时
+        {((task.estimatedHours || 0) * (task.workerCount || 1)) || 0}小时
       </td>
       {/* 进度 */}
       <td className="px-3 py-3 whitespace-nowrap">

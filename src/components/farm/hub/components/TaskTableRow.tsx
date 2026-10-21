@@ -570,9 +570,17 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         {task.planEnd || task.dueDate || '-'}
       </td>
 
-      {/* 任务工时 */}
+      {/* 人工数量（2026-10-21 新增） */}
+      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
+        {task.workerCount || 1} 人
+      </td>
+
+      {/* 任务工时（2026-10-21 口径统一）：
+          后端 estimated_hours 存的是**已含天数**的总小时（CreateTaskModal 里
+          estimatedHours = 天数×工作制 + 小时），所以这里不能再加一次 estimatedDays×8，
+          否则天数部分会被双算。总工时 = estimatedHours × 人工数量。 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
-        {formatWorkHours(task.estimatedDays || 0, task.estimatedHours || 0)}
+        {formatWorkHours(0, (task.estimatedHours || 0) * (task.workerCount || 1))}
       </td>
     </tr>
   );

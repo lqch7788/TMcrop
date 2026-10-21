@@ -5,6 +5,8 @@
 
 import {
   Leaf, Droplets, Scissors, Bug, Edit, Trees, ShoppingBasket,
+  // 2026-10-21：临时任务合并新增的 3 类任务图标
+  Wrench, Users, ShieldCheck,
 } from 'lucide-react';
 
 // ========== 任务状态映射（从 farmMockData 迁出，内联定义） ==========
@@ -50,6 +52,10 @@ const TYPE_ICON_MAP: Record<string, { icon: typeof Leaf; color: string }> = {
   equipment_repair: { icon: Edit, color: 'bg-amber-600' },
   cleaning: { icon: Edit, color: 'bg-slate-500' },
   seedling: { icon: Leaf, color: 'bg-teal-500' },
+  // 2026-10-21：临时任务合并新增的 3 类
+  facility_maintenance: { icon: Wrench, color: 'bg-cyan-600' },
+  staff_dispatch: { icon: Users, color: 'bg-indigo-500' },
+  safety_check: { icon: ShieldCheck, color: 'bg-amber-600' },
   other: { icon: Edit, color: 'bg-gray-500' },
 };
 

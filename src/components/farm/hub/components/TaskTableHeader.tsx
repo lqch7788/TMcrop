@@ -62,6 +62,8 @@ export function TaskTableHeader({
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作业标准</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划开始</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划结束</th>
+      {/* 2026-10-21：人工数量列（临时任务合并前置）—— 任务工时 =（天数×8+小时）×人工 */}
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务工时</th>
     </tr>
   );

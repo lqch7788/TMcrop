@@ -845,7 +845,11 @@ export function initializeDatabase() {
       source_code TEXT,
       -- 2026-10-10：任务派发审批接线——审批元数据回写（fixMissingSchema 同步补列，防老库缺列）
       approval_code TEXT,
-      approved_at TEXT
+      approved_at TEXT,
+      -- 2026-10-21：临时任务合并前置——人工数量 / 紧急程度
+      -- （老库由 fixSchemaColumns 的 ADD COLUMN 补齐；此处仅新库生效）
+      worker_count INTEGER DEFAULT 1,
+      urgency TEXT DEFAULT 'normal'
     )
   `);
 

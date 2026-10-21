@@ -215,6 +215,13 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     // 2026-10-20：计划结束（完整日期时间）。此前没有这一列，API 的 planEnd 直接取
     //   plan_date（开始日期），多天任务的「计划结束」永远显示成开始那天。
     ['plan_end', 'TEXT'],
+    // 2026-10-21：临时任务合并前置（阶段 1）——farm_tasks 此前没有这两个概念：
+    //   · worker_count 人工数量：临时任务的「总工时 =（天数×8+小时）×人工」依赖它；
+    //     合并后农事任务需要同口径计算，否则迁移过来的任务工时全部少算。
+    //   · urgency 紧急程度：仅为迁移保真保留（critical/urgent/high/normal），
+    //     不进入新建表单与列表列；新建任务统一用 priority 表达。
+    ['worker_count', 'INTEGER', '1'],
+    ['urgency', 'TEXT', "'normal'"],
   ];
   for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
