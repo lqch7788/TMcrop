@@ -125,6 +125,9 @@ export interface TaskRecord {
     workers?: number;
     // 物资编码
     materialCode?: string;
+    // 2026-10-21：处理结果结论（全部完成/部分完成/延迟完成/无法继续/其他）
+    //   此前该字段只存在于表单内存，提交后即丢失 —— 验收人看不到执行人选的结论
+    resultStatus?: string;
   };
 
   // 扩展信息

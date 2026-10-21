@@ -1215,6 +1215,8 @@ export function useTasks(): UseTasksReturn {
       workloadDays?: number;
       workloadHours?: number;
       workers?: number;
+      /** 2026-10-21：处理结果结论（全部完成/部分完成/延迟完成/无法继续/其他），随反馈落库 */
+      resultStatus?: string;
     }
   ) => {
     const task = tasks.find(t => t.id === id);
@@ -1252,6 +1254,8 @@ export function useTasks(): UseTasksReturn {
       workloadHours: options?.workloadHours,
       workers: options?.workers,
       materialCode: options?.materialCode,
+      // 2026-10-21：处理结果结论随反馈落库（此前选择「延迟完成」提交后信息即丢失）
+      resultStatus: options?.resultStatus,
     };
 
     // 判断是否为临时任务
