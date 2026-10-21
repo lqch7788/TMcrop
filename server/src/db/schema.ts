@@ -1529,7 +1529,14 @@ export function initializeDatabase() {
       reason TEXT,
       feedback TEXT,
       action_time TEXT NOT NULL,
-      create_time TEXT NOT NULL
+      create_time TEXT NOT NULL,
+      -- 2026-10-21 追溯增强（第一批）
+      assignee_name_at_action TEXT,   -- 操作时的任务执行人快照（重派后历史不失真）
+      operator_ip TEXT,               -- 操作来源 IP（合规审计）
+      operator_user_agent TEXT,       -- 操作终端 UA（区分 Web/移动端/Electron）
+      -- 2026-10-21 追溯增强（第二批）
+      change_diff TEXT,               -- 字段级变更差异 JSON（编辑类操作）
+      linked_documents TEXT           -- 关联单据快照 JSON（领料单/SOP 等）
     )
   `);
 

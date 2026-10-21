@@ -4,41 +4,11 @@ import { CheckCircle, FileText } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
+import { TaskFlowTimeline } from '../../../common/TaskFlowTimeline';
 import { useUserStore, useProblemStore } from '../../../../stores';
-import { isProblemAwaitingAcceptance, problemStatusToCN } from '../../../../utils/problemStatus';
-
-/**
- * 流转记录状态徽章的配色类名
- * 2026-09-21：先经 problemStatusToCN 归一化再比对 —— 原实现直接用中文比对英文枚举，
- *   三个分支全部命中不到，所有状态都渲染成灰色兜底。
- */
-function getFlowStatusClass(status: string): string {
-  switch (problemStatusToCN(status)) {
-    case '已处理':
-      return 'bg-green-100 text-green-700';
-    case '待验收':
-      return 'bg-amber-100 text-amber-700';
-    case '处理中':
-      return 'bg-blue-100 text-blue-700';
-    default:
-      return 'bg-gray-100 text-gray-600';
-  }
-}
-
-// 动作类型中文映射
-const ACTION_LABELS: Record<string, string> = {
-  'report': '上报问题',
-  'dispatch': '分派任务',
-  'accept': '接单',
-  'reject': '拒绝任务',
-  'start': '开始处理',
-  'submit': '提交反馈',
-  'approve': '验收通过',
-  'reject_acceptance': '验收返工',
-  'complete': '完成',
-  'comment': '添加备注',
-  'progress': '进度更新',
-};
+import { isProblemAwaitingAcceptance } from '../../../../utils/problemStatus';
+// 2026-10-21：流转记录改用统一的 TaskFlowTimeline 组件
+//   （原 getFlowStatusClass / ACTION_LABELS / formatTime 随 inline 渲染一并移除）
 
 // 巡查记录类型
 interface InspectionRecord {
@@ -130,17 +100,6 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
         new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime()
       )
     : [];
-
-  // 格式化时间显示
-  const formatTime = (timeStr: string) => {
-    const date = new Date(timeStr);
-    return date.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   // 获取问题状态标签
   const getProblemStatusBadge = (status?: string) => {
@@ -629,217 +588,13 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
               )}
             </div>
 
-            {/* 流转记录区块 */}
-            {flowRecords.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                  <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                    <span>📋</span>
-                    处理流转记录（{flowRecords.length}条）
-                  </h4>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {flowRecords.map((record, index) => (
-                    <div key={record.id} className="p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start gap-4">
-                        {/* 时间线节点 */}
-                        <div className="flex flex-col items-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
-                            record.action === 'approve' ? 'bg-green-500' :
-                            record.action === 'reject_acceptance' ? 'bg-red-500' :
-                            record.action === 'submit' ? 'bg-amber-500' :
-                            record.action === 'dispatch' ? 'bg-blue-500' :
-                            record.action === 'report' ? 'bg-purple-500' :
-                            'bg-gray-500'
-                          }`}>
-                            {index + 1}
-                          </div>
-                          {index < flowRecords.length - 1 && (
-                            <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>
-                          )}
-                        </div>
-
-                        {/* 流转详情 —— 2026-10-20：改为横向排列，各字段之间用竖线分隔
-                            （此前操作人/动作/状态变化/进度/备注 逐行竖向堆叠，一条记录占 4~6 行） */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                            <span className="font-medium text-gray-900">{record.operatorName || '-'}</span>
-
-                            <span className="text-gray-300 select-none">|</span>
-                            <span className={`px-2 py-0.5 text-xs rounded-full ${
-                              record.action === 'approve' ? 'bg-green-100 text-green-700' :
-                              record.action === 'reject_acceptance' ? 'bg-red-100 text-red-700' :
-                              record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
-                              record.action === 'dispatch' ? 'bg-blue-100 text-blue-700' :
-                              record.action === 'report' ? 'bg-purple-100 text-purple-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {ACTION_LABELS[record.action] || record.action}
-                            </span>
-
-                            {/* 状态变化 */}
-                            {(record.fromStatus || record.toStatus) && (
-                              <>
-                                <span className="text-gray-300 select-none">|</span>
-                                <span className="flex items-center gap-1">
-                                  {record.fromStatus && (
-                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                                      {record.fromStatus}
-                                    </span>
-                                  )}
-                                  <span className="text-gray-400">→</span>
-                                  {record.toStatus && (
-                                    <span className={`px-2 py-0.5 text-xs rounded ${getFlowStatusClass(record.toStatus)}`}>
-                                      {/* 显示也需归一化：原样渲染会把 waiting_acceptance 这类英文枚举暴露给用户 */}
-                                      {problemStatusToCN(record.toStatus)}
-                                    </span>
-                                  )}
-                                </span>
-                              </>
-                            )}
-
-                            {/* 进度 */}
-                            {record.progress !== undefined && (
-                              <>
-                                <span className="text-gray-300 select-none">|</span>
-                                <span className="flex items-center gap-2">
-                                  <span className="w-[120px] bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                    <span
-                                      className="block h-full bg-blue-500 rounded-full"
-                                      style={{ width: `${record.progress}%` }}
-                                    />
-                                  </span>
-                                  <span className="text-xs text-gray-500">{record.progress}%</span>
-                                </span>
-                              </>
-                            )}
-
-                            {/* 备注/说明 */}
-                            {record.comment && (
-                              <>
-                                <span className="text-gray-300 select-none">|</span>
-                                <span className="text-gray-600 break-all">{record.comment}</span>
-                              </>
-                            )}
-
-                            <span className="text-gray-300 select-none">|</span>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">
-                              {formatTime(record.actionTime)}
-                            </span>
-                          </div>
-
-                          {/* 反馈数据展示（位置、照片、语音等） */}
-                          {record.feedbackData && (
-                            <div className="mt-2 space-y-2">
-                              {/* 解析 feedbackData，规范化嵌套的 workloadConfirm */}
-                              {(() => {
-                                const fd = record.feedbackData;
-                                // 规范化 workloadConfirm 嵌套结构
-                                const feedback = {
-                                  ...fd,
-                                  workloadDays: fd.workloadDays ?? fd.workloadConfirm?.days,
-                                  workloadHours: fd.workloadHours ?? fd.workloadConfirm?.hours,
-                                  workers: fd.workers ?? fd.workloadConfirm?.workers,
-                                };
-                                return (
-                                  <>
-                                    {/* GPS位置 */}
-                                    {feedback.gpsLocation && (
-                                      <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1">
-                                        <span>📍</span>
-                                        <span>位置打卡：</span>
-                                        <span className="font-mono">
-                                          {feedback.gpsLocation.lat?.toFixed(6) || '-'}, {feedback.gpsLocation.lng?.toFixed(6) || '-'}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* 作业前照片 */}
-                                    {feedback.photosBefore && feedback.photosBefore.length > 0 && (
-                                      <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
-                                        <span>📷</span>
-                                        <span>作业前照片：{feedback.photosBefore.length}张</span>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {feedback.photosBefore.map((img: string, idx: number) => (
-                                            <img
-                                              key={idx}
-                                              src={img}
-                                              alt={`作业前${idx + 1}`}
-                                              className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                              onClick={() => window.open(img, '_blank')}
-                                              title="点击查看原图"
-                                            />
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* 作业后照片 */}
-                                    {feedback.photosAfter && feedback.photosAfter.length > 0 && (
-                                      <div className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
-                                        <span>📷</span>
-                                        <span>作业后照片：{feedback.photosAfter.length}张</span>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {feedback.photosAfter.map((img: string, idx: number) => (
-                                            <img
-                                              key={idx}
-                                              src={img}
-                                              alt={`作业后${idx + 1}`}
-                                              className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                              onClick={() => window.open(img, '_blank')}
-                                              title="点击查看原图"
-                                            />
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* 物资编码 */}
-                                    {feedback.materialCode && (
-                                      <div className="text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
-                                        <span>📦</span>
-                                        <span>物资编码：{feedback.materialCode}</span>
-                                      </div>
-                                    )}
-
-                                    {/* 语音备注 */}
-                                    {feedback.voiceNote && (
-                                      <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1">
-                                        <span>🎤</span>
-                                        <span>语音备注（已录音）</span>
-                                      </div>
-                                    )}
-
-                                    {/* 工作量 */}
-                                    {(feedback.workloadDays !== undefined || feedback.workloadHours !== undefined || feedback.workers !== undefined) && (
-                                      <div className="text-xs text-cyan-600 bg-cyan-50 rounded px-2 py-1">
-                                        <span>⏱️</span>
-                                        <span>工作量：</span>
-                                        {feedback.workloadDays !== undefined && <span>{feedback.workloadDays}天</span>}
-                                        {feedback.workloadDays !== undefined && feedback.workloadHours !== undefined && <span> + </span>}
-                                        {feedback.workloadHours !== undefined && <span>{feedback.workloadHours}小时</span>}
-                                        {feedback.workers !== undefined && <span>，{feedback.workers}人</span>}
-                                      </div>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 无流转记录提示 */}
-            {flowRecords.length === 0 && (
-              <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
-                暂无流转记录
-              </div>
-            )}
+            {/* 流转记录 —— 2026-10-21：改用 TaskFlowTimeline（与农事任务详情同一组件同一套样式）
+                原为独立 inline 渲染（数字圆 + 卡片 + 自定义反馈区），与其余 3 个 tab 不一致。
+                TaskFlowTimeline 已补齐 feedbackData 渲染（GPS/作业前后照片/语音/物资编码），
+                故此处替换不会丢失任何证据信息。 */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <TaskFlowTimeline records={flowRecords as ProblemFlowRecord[]} showStatusChange showFeedback />
+            </div>
           </div>
         )}
 

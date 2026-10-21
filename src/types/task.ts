@@ -134,6 +134,20 @@ export interface TaskRecord {
   comment?: string;
   reason?: string;
 
+  // ========================================
+  // 2026-10-21 追溯增强
+  // ========================================
+  /** 操作时的任务执行人快照（任务被重派后，历史记录仍能回答"当时是谁在执行"） */
+  assigneeNameAtAction?: string;
+  /** 操作来源 IP（合规审计：证明操作来源真实） */
+  operatorIp?: string;
+  /** 操作终端 UA（区分 Web / 移动端 / Electron） */
+  operatorUserAgent?: string;
+  /** 字段级变更差异（编辑类操作）：{ [列名]: { label, from, to } } */
+  changeDiff?: Record<string, { label: string; from: string; to: string }>;
+  /** 关联单据快照，如 [{ type: 'material_request', code: 'MR...' }] */
+  linkedDocuments?: Array<{ type: string; code: string; label?: string }>;
+
   actionTime: string;
   createdAt: string;
 }
