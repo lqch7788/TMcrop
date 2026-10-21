@@ -13,11 +13,14 @@ import { AlertCircle, Camera, Clock, MapPin, Mic, Package, Save, Send, Upload, W
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import type { TaskConfigValues } from '../hooks/useTaskTypeConfig';
+// 2026-10-21：真实必填校验用（此前 required 只画红星、不拦提交）
+import { useTaskTypeConfig } from '../hooks/useTaskTypeConfig';
 import { todayLocal } from '@/lib/dateUtils';
-import { useUserStore, useTeamManageStore, useGreenhouseStore, usePlantingStore, useSeedlingStore } from '../../../../stores';
+// 2026-10-21：建单不再采集班组，useTeamManageStore 随之移除
+import { useUserStore, useGreenhouseStore, usePlantingStore, useSeedlingStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import type { UseTasksReturn } from '../../../../hooks/useTasks';
-import { getDictionaries } from '../../../../services/dictionaryService';
+// 2026-10-21：执行人改用登录账户（useUserStore）后，字典加载不再需要
 import { getTypeLabel, autoGenerateTaskCode, calculateEndDateTime } from '../../../../utils/farmTaskUtils';
 
 // 深度输入框样式
@@ -44,8 +47,6 @@ interface NewTaskState {
   cropRemarks: string;
   areaRemarks: string;
   assignee: string;
-  teamId: string;
-  teamName: string;
   planStart: string;
   planEnd: string;
   sopContent: string;
@@ -77,8 +78,6 @@ const initialNewTask: NewTaskState = {
   cropRemarks: '',
   areaRemarks: '',
   assignee: '',
-  teamId: '',
-  teamName: '',
   planStart: '',
   planEnd: '',
   sopContent: '',
@@ -99,17 +98,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   const loadUsers = useUserStore((state) => state.loadUsers);
   const plantingStore = usePlantingStore();
   const seedlingStore = useSeedlingStore();
-  const teams = useTeamManageStore((state) => state.teams);
-  const teamFetchData = useTeamManageStore((state) => state.fetchData);
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
   useEffect(() => {
     if (users.length === 0) loadUsers();
-    if (teams.length === 0) teamFetchData();
     if (greenhouses.length === 0) loadGreenhouses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users.length, teams.length, greenhouses.length]);
+  }, [users.length, greenhouses.length]);
 
   useEffect(() => { if (isOpen) { plantingStore.loadItems?.(); seedlingStore.loadItems?.(); } }, [isOpen]);
 
@@ -119,6 +115,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
   const [createStep] = useState(2);
   const [stepError, setStepError] = useState('');
+  // 2026-10-21：任务类型详细配置的字段级校验错误（key → 错误文案）
+  const [typeConfigErrors, setTypeConfigErrors] = useState<Record<string, string>>({});
+  // 2026-10-21：真实必填校验 —— 复用 useTaskTypeConfig 的 validateConfig
+  const { validateConfig } = useTaskTypeConfig();
   const [newTask, setNewTask] = useState<NewTaskState>(initialNewTask);
 
   const [areaTab, setAreaTab] = useState<'planting' | 'seedling'>('planting');
@@ -222,7 +222,42 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         [key]: value,
       },
     }));
+    // 2026-10-21：用户改动某字段后清掉该字段的校验错误（避免错误提示滞留）
+    setTypeConfigErrors(prev => {
+      if (!prev || !(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    // 顶部汇总提示也要跟着走 —— 否则「目标病虫害为必填项；防治药剂池为必填项」
+    //   会一直挂在错误栏里，即使用户已经补齐了全部字段。
+    setStepError(prevError => {
+      if (!prevError || !/必填项|未填写/.test(prevError)) return prevError;
+      // 用最新值重新算一次：还有错就保留更新后的汇总，无错则清空
+      const result = validateConfig(newTask.types[0], {
+        ...newTask.typeConfig,
+        [key]: value,
+      });
+      if (result.valid) return '';
+      const msgs = Object.keys(result.errors).map((k) => result.errors[k]);
+      return msgs.length <= 3 ? msgs.join('；') : `${msgs.slice(0, 3).join('；')} 等 ${msgs.length} 项未填写`;
+    });
   };
+
+  // 2026-10-21：真实必填校验（此前 required 只是 UI 上的红星，系统并不拦提交）
+  //   规则：只校验「当前选中的任务类型」的配置字段；多选任务类型时不校验详细配置
+  //   （多选时详细配置面板不展示，TaskTypeConfigPanel 会提示"请在SOP中描述"）。
+  const validateTypeConfig = useCallback((): string => {
+    if (newTask.types.length !== 1) return '';
+    const result = validateConfig(newTask.types[0], newTask.typeConfig || {});
+    setTypeConfigErrors(result.errors);
+    const keys = Object.keys(result.errors);
+    if (keys.length === 0) return '';
+    // 拼接全部错误，字段过多时只展示前 3 条 + 提示
+    const msgs = keys.map((k) => result.errors[k]);
+    if (msgs.length <= 3) return msgs.join('；');
+    return `${msgs.slice(0, 3).join('；')} 等 ${msgs.length} 项未填写`;
+  }, [newTask.types, newTask.typeConfig, validateConfig]);
 
   const handleCreateTask = (publish: boolean = true) => {
     const typeLabels = newTask.types.map(t => getTypeLabel(t)).join(',');
@@ -273,8 +308,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       // P0-5：任务回链种植实例与真实批次号
       plantingId: primaryPlanting?.id || '',
       batchCode: primaryPlanting?.code || '',
-      teamId: newTask.teamId || '',
-      teamName: newTask.teamName || '',
+      // 2026-10-21：建单不再采集班组（该字段实际填充率 20% 且零新增），
+      //   teamId/teamName 不再由此处写入；后端列与历史数据保持原样不动。
       cropName: cropValue,
       // 2026-10-20 修复：作物备注此前**完全没有提交**（后端也无此列），
       //   用户在「作物=其他」时填的说明被静默丢弃，列表「作物」列一直显示空括号。
@@ -333,6 +368,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       return;
     }
 
+    // 2026-10-21：草稿也校验详细配置必填项 —— 草稿同样会进列表并可能被直接发布，
+    //   放过去等于绕过校验。（若只想拦"发布"，把这里去掉即可）
+    const configError = validateTypeConfig();
+    if (configError) {
+      setStepError(configError);
+      return;
+    }
+
     setStepError('');
     handleCreateTask(false);
   };
@@ -354,6 +397,13 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       return;
     }
 
+    // 2026-10-21：真实必填校验 —— 未填「目标病虫害」等必填详细配置项时拦住发布
+    const configError = validateTypeConfig();
+    if (configError) {
+      setStepError(configError);
+      return;
+    }
+
     setStepError('');
     handleCreateTask(true);
   };
@@ -361,6 +411,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   const handleClose = () => {
     setShowCreateModal(false);
     setStepError('');
+    // 2026-10-21：关闭时一并清掉详细配置的字段级校验错误
+    setTypeConfigErrors({});
     setNewTask(initialNewTask);
     setAreaTab('planting'); setAreaSearch(''); setSelectedAreas([]); setShowAreaDropdown(false);
     // 2026-09-22：必须同步通知父组件关闭，否则父组件 isOpen 残留 true，
@@ -377,28 +429,23 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   // 但是我们需要在内部维护这个状态来控制关闭时的重置
   const [showCreateModal, setShowCreateModal] = useState(isOpen);
 
-  // 执行人列表状态（从数据字典加载）
-  const [responsiblePersons, setResponsiblePersons] = useState<{ code: string; name: string }[]>([]);
-
-  // 加载执行人列表
-  useEffect(() => {
-    async function loadResponsiblePersons() {
-      try {
-        const data = await getDictionaries('responsible_person');
-        // 转换为下拉框需要的格式
-        const persons = data.map(item => ({
-          code: item.code || '',
-          name: item.name || ''
-        })).filter(item => item.code || item.name);
-        setResponsiblePersons(persons);
-      } catch (error) {
-        // logger.error('加载执行人列表失败:', error);
-      }
-    }
-    if (showCreateModal) {
-      loadResponsiblePersons();
-    }
-  }, [showCreateModal]);
+  // 执行人列表（2026-10-21 用户要求）：改用**登录系统的账户**，不再用数据字典
+  //   responsible_person。原字典与登录账户两套体系几乎不重合：
+  //     · 字典里的「李明辉 / 张伟」根本不是登录账户（无法登录、无法在"我的任务"里匹配）
+  //     · 登录账户里的「张俊生 / 访客01 / 访客02」又不在字典中（无法被指派）
+  //   统一为登录账户后，执行人姓名与 currentUser.realName 同域，"我的任务"等
+  //   按姓名匹配的逻辑才能真正命中。
+  //   取值口径与 useAuthStore.currentUser.realName 对齐：
+  //   User（types/authority.ts）里姓名有三个可能来源 —— name（store 归一化后）、
+  //   real_name（后端原列）、username（账号名），按此顺序兜底。
+  const responsiblePersons = useMemo(
+    () =>
+      users.map((u) => ({
+        code: u.oid || u.id || '',
+        name: u.name || u.real_name || u.username || '',
+      })).filter((p) => p.name),
+    [users]
+  );
 
   // 当isOpen变化时同步状态
   React.useEffect(() => {
@@ -764,6 +811,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               taskTypes={newTask.types}
               configValues={newTask.typeConfig}
               onConfigChange={handleTypeConfigChange}
+              errors={typeConfigErrors}
             />
 
             {/* 2026-10-20 新增：工作内容。
@@ -823,7 +871,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         {/* ===== 资源与时间 ===== */}
         {createStep === 2 && (
           <div className="space-y-4 mt-6 pt-4 border-t">
-            {/* 优先级 | 班组（2列对齐） */}
+            {/* 优先级 | 执行人（2列对齐）
+                2026-10-21（用户要求）：执行人移到优先级右侧同行。
+                此前因删除「班组」「资源备注」，这两个字段各自独占半行、右侧留空。 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">优先级</Label>
@@ -842,47 +892,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 </Select>
               </div>
               <div>
-                <Label className="text-gray-700 mb-1">
-                  班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
-                </Label>
-                <Select
-                  value={newTask.teamId || ''}
-                  onValueChange={(val) => {
-                    const selectedTeam = teams.find(t => t.id === val);
-                    setNewTask({
-                      ...newTask,
-                      teamId: val,
-                      teamName: selectedTeam?.name || '',
-                    });
-                  }}
-                >
-                  <SelectTrigger className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">
-                    <SelectValue placeholder="不关联班组（直接选人）" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">不关联班组（直接选人）</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {newTask.teamId && (
-              <p className="text-xs text-blue-600 -mt-2">
-                已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
-              </p>
-            )}
-            {/* 2026-09-15：班组能力匹配 + 当日可用工时预览（实时校验派工合理性） */}
-            {/* 2026-10-11：taskType 取首个已选任务类型的中文名 —— team_task_capabilities.task_type
-                存的是中文技能标签（施肥/灌溉/…），必须与 getTypeLabel 的标签同域才能比对成功 */}
-            <TeamCapabilityPreview
-              teamId={newTask.teamId}
-              taskType={newTask.types[0] ? getTypeLabel(newTask.types[0]) : ''}
-            />
-            {/* 执行人 | 备注（2列对齐） */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
                 <Label className="text-gray-700 mb-1">执行人</Label>
                 <Select
                   value={newTask.assignee || ''}
@@ -898,19 +907,16 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                {/* 2026-10-20：原标签是「备注（可选）」但绑的是 toolsRemarks，
-                    容易被理解成任务备注。改名「资源备注」以匹配它的归属（所需工具区块）
-                    与展示位置（详情弹窗「所需工具」下的备注）。 */}
-                <Label className="text-gray-700 mb-1">资源备注（可选）</Label>
-                <TextArea
-                  value={newTask.toolsRemarks || ''}
-                  onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
-                  placeholder="补充说明资源相关要求"
-                  rows={2}
-                  className={deepInputClass}
-                />
-              </div>
+              {/* 2026-10-21（用户决策）：删除「班组」字段。
+                  依据：库内 39 条任务仅 8 条(20%)有班组，且全部是 2026-09/10 的老数据，
+                  最近新建的任务 0 条有班组 —— 是从未被真正使用的僵尸字段；
+                  而「分派」弹窗只支持改执行人、不支持设班组，删掉后班组无法在建单时补回。
+                  连带移除：班组→执行人的级联提示（该提示本就与代码不符 ——
+                  responsiblePersons 一直是全量字典，从未按班组过滤）、班组能力匹配预览组件。
+                  2026-10-21（用户要求）：删除「资源备注（可选）」输入框 ——
+                  已有「工作内容」字段承担描述职责，两个备注重复。
+                  注：toolsRemarks 的 state 与提交链路保留，任务详情弹窗仍会用它
+                  展示历史任务的既有内容（此处只是不再提供录入入口）。 */}
             </div>
             {/* 工作制 | 开始日期（2列对齐） */}
             <div className="grid grid-cols-2 gap-4">
@@ -948,7 +954,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 />
               </div>
             </div>
-            {/* 开始时间 | 天数（2列对齐） */}
+            {/* 开始时间 | 天数+小时（2列对齐）
+                2026-10-21（用户要求）：天数与小时并排放在同一格，共占半个弹窗宽度，
+                小时列因标签更长（「小时 (最大7)」）固定窄宽，天数占剩余空间。 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">开始时间</Label>
@@ -969,42 +977,46 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-gray-700 mb-1">天数</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={newTask.estimatedDays || 0}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
-                    setNewTask({ ...newTask, estimatedDays: isNaN(val) ? 0 : val });
-                  }}
-                  placeholder="0"
-                  className={deepInputClass}
-                />
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <Label className="text-gray-700 mb-1">天数</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={newTask.estimatedDays || 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
+                      setNewTask({ ...newTask, estimatedDays: isNaN(val) ? 0 : val });
+                    }}
+                    placeholder="0"
+                    className={deepInputClass}
+                  />
+                </div>
+                <div className="w-28 flex-shrink-0">
+                  <Label className="text-gray-700 mb-1">
+                    小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={newTask.estimatedHours || 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
+                      const maxHours = (newTask.workHoursPerDay || 8) - 1;
+                      if (!isNaN(val) && val >= 0 && val <= maxHours) {
+                        setNewTask({ ...newTask, estimatedHours: val });
+                      } else if (isNaN(val) || val === 0) {
+                        setNewTask({ ...newTask, estimatedHours: 0 });
+                      }
+                    }}
+                    placeholder="0"
+                    className={deepInputClass}
+                  />
+                </div>
               </div>
             </div>
-            {/* 小时 | 任务截止时间（2列对齐） */}
+            {/* 任务截止时间（2026-10-21：原与「小时」同行，小时并入上一行后独占半宽） */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={newTask.estimatedHours || 0}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
-                    const maxHours = (newTask.workHoursPerDay || 8) - 1;
-                    if (!isNaN(val) && val >= 0 && val <= maxHours) {
-                      setNewTask({ ...newTask, estimatedHours: val });
-                    } else if (isNaN(val) || val === 0) {
-                      setNewTask({ ...newTask, estimatedHours: 0 });
-                    }
-                  }}
-                  placeholder="0"
-                  className={deepInputClass}
-                />
-              </div>
               <div>
                 <Label className="text-gray-700 mb-1">任务截止时间</Label>
                 <div className="px-4 py-3 border border-blue-200 rounded-lg text-sm bg-blue-50 text-blue-900 font-medium flex items-center gap-2 min-h-[42px]">
@@ -1232,75 +1244,3 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   );
 }
 
-/**
- * 2026-09-15：班组能力匹配 + 当日可用性预览（实时校验派工合理性）
- * 选择班组后自动拉取该组的 task_capabilities（#3）+ team_daily_availability（#8）
- * 与当前选中的 taskType 比对，给出匹配/不匹配提示 + 可用工时警告
- */
-function TeamCapabilityPreview({ teamId, taskType }: { teamId: string; taskType: string }) {
-  const fetchCapabilities = useTeamManageStore((s) => s.fetchCapabilities);
-  const fetchAvailability = useTeamManageStore((s) => s.fetchAvailability);
-  const [caps, setCaps] = useState<string[]>([]);
-  const [avail, setAvail] = useState<{ available_hours: number; busy_hours: number; total_worker_count: number } | null>(null);
-  const today = todayLocal();
-
-  useEffect(() => {
-    if (!teamId) return;
-    let cancelled = false;
-    void (async () => {
-      const [c, a] = await Promise.all([
-        fetchCapabilities(teamId),
-        fetchAvailability(teamId, today),
-      ]);
-      if (cancelled) return;
-      setCaps(c.map((x) => x.task_type));
-      if (a) setAvail({ available_hours: a.available_hours, busy_hours: a.busy_hours, total_worker_count: a.total_worker_count });
-      else setAvail(null);
-    })();
-    return () => { cancelled = true; };
-  }, [teamId, today, fetchCapabilities, fetchAvailability]);
-
-  if (!teamId) return null;
-
-  const matched = taskType && caps.includes(taskType);
-  const noCapSet = caps.length === 0;
-  // 2026-09-22 修复：原 `available_hours <= 0` 直接报"已满排"，会把"班组无成员（total_worker_count=0）"
-  //   误判为满排（0×8 - 0 = 0）。三种情况分别处理：
-  //   - busy > 0 && available <= 0 → 真满排
-  //   - total_worker_count === 0 → 班组无成员（告警）
-  //   - busy === 0 && total_worker_count > 0 → 今日无排班（中性）
-  const noWorkers = avail && avail.total_worker_count === 0;
-  const warning = avail && avail.busy_hours > 0 && avail.available_hours <= 0;
-
-  return (
-    <div className="text-xs bg-emerald-50 border border-emerald-200 rounded p-2 -mt-2 space-y-1">
-      {taskType && (
-        <div>
-          {matched ? (
-            <span className="text-emerald-700">✓ 该班组可承接「{taskType}」任务</span>
-          ) : noCapSet ? (
-            <span className="text-gray-500">⚠ 该班组未配置任务能力（建议先在班组详情页添加）</span>
-          ) : (
-            <span className="text-orange-700">⚠ 该班组未声明可承接「{taskType}」（已有能力：{caps.join('、')}）</span>
-          )}
-        </div>
-      )}
-      {caps.length > 0 && (
-        <div className="text-gray-600">班组能力：{caps.join('、')}</div>
-      )}
-      <div>
-        {noWorkers ? (
-          <span className="text-orange-700">⚠ 该班组暂无在岗成员（先在班组详情页添加成员）</span>
-        ) : avail ? (
-          warning ? (
-            <span className="text-red-700">⚠ 该班组今日已满排（可用 {avail.available_hours}h / 已排 {avail.busy_hours}h）</span>
-          ) : (
-            <span className="text-gray-700">今日可用工时：{avail.available_hours}h / 已排 {avail.busy_hours}h（成员 {avail.total_worker_count} 人）</span>
-          )
-        ) : (
-          <span className="text-gray-400">今日暂无该班组排班数据</span>
-        )}
-      </div>
-    </div>
-  );
-}

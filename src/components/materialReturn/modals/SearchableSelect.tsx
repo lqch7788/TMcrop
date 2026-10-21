@@ -7,6 +7,10 @@ interface Option {
   value: string;
   label: string;
   cropCode?: string;
+  /** 2026-10-21：选项第二行的补充描述（品种/可用量等），不传则沿用旧的 cropCode 展示 */
+  description?: string;
+  /** 2026-10-21：置灰不可选（如可用量为 0 的记录），不传则可选 */
+  disabled?: boolean;
 }
 
 interface SearchableSelectProps {
@@ -16,6 +20,8 @@ interface SearchableSelectProps {
   onSearch?: (keyword: string) => Promise<Option[]>;
   placeholder?: string;
   className?: string;
+  /** 2026-10-21：禁用（透传给输入框并阻止打开下拉），不传则可交互 */
+  disabled?: boolean;
 }
 
 export function SearchableSelect({
@@ -25,6 +31,7 @@ export function SearchableSelect({
   onSearch,
   placeholder = '请选择',
   className = '',
+  disabled = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -119,6 +126,8 @@ export function SearchableSelect({
   const displayText = selectedOption?.label || '';
 
   const handleSelect = (opt: Option) => {
+    // 2026-10-21：置灰项（如可用量为 0）不可选中
+    if (opt.disabled) return;
     onChange(opt.value, opt.cropCode);
     setOpen(false);
     setSearch('');
@@ -133,7 +142,7 @@ export function SearchableSelect({
       <div
         className={`flex items-center border border-gray-400 rounded-lg bg-white ${
           open ? 'ring-2 ring-emerald-500 border-emerald-500' : ''
-        }`}
+        } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
       >
         <input
           ref={inputRef}
@@ -143,11 +152,14 @@ export function SearchableSelect({
             setSearch(e.target.value);
             if (!open) setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            if (!disabled) setOpen(true);
+          }}
+          disabled={disabled}
           placeholder={placeholder}
-          className="flex-1 px-3 py-2 text-sm bg-white rounded-l-lg focus:outline-none"
+          className="flex-1 px-3 py-2 text-sm bg-white rounded-l-lg focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
         />
-        {value && (
+        {value && !disabled && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -177,16 +189,24 @@ export function SearchableSelect({
             allOptions.map((opt, idx) => (
               <div
                 key={`${opt.value}-${idx}`}
-                className={`px-3 py-2 cursor-pointer hover:bg-emerald-100 ${
-                  opt.value === value ? 'bg-emerald-50 font-medium' : ''
-                }`}
+                className={`px-3 py-2 ${
+                  opt.disabled
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'cursor-pointer hover:bg-emerald-100'
+                } ${opt.value === value ? 'bg-emerald-50 font-medium' : ''}`}
                 // 阻止 mousedown 默认行为，避免选中选项时触发外部点击关闭逻辑
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(opt)}
               >
                 <div className="text-sm font-mono text-gray-900">{opt.label}</div>
+                {opt.description && (
+                  <div className="text-xs text-gray-500">{opt.description}</div>
+                )}
                 {opt.cropCode && (
                   <div className="text-xs text-gray-500">编码: {opt.cropCode}</div>
+                )}
+                {opt.disabled && (
+                  <div className="text-xs text-gray-400">可用量为 0，不可选择</div>
                 )}
               </div>
             ))
