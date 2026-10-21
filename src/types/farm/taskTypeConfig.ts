@@ -860,14 +860,10 @@ const seedlingTaskConfig: TaskTypeConfig = {
       dictCategory: 'propagation_mode',
       placeholder: '请选择繁殖方式',
     },
-    {
-      key: 'nurserySite',
-      label: '育苗场地',
-      type: 'dict',
-      dictCategory: 'seedling_site',
-      required: true,
-      placeholder: '请选择育苗场地',
-    },
+    // 2026-10-21（用户要求）：删除「育苗场地」——
+    //   弹窗上方「关联种植/育苗」已能选定具体的种植/育苗记录并带出任务区域
+    //   （selectedAreas → fields/greenhouseName），再选一次育苗场地属于重复录入，
+    //   且两处不一致时以哪个为准没有定论。
     {
       // 2026-10-21：不加 groupWithNext —— 该机制是给「值 + 单位」主从配对用的
       //   （值占剩余宽度、单位固定窄宽 w-24）。本字段自带 unit:'株'，
