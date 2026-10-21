@@ -271,7 +271,8 @@ describe('syncAfterDispatch 自动排班联动', () => {
     expect(mockToast.warning).not.toHaveBeenCalled();
   });
 
-  it('tempTask 源任务不应调 auto-assign（临时任务不在 farm_tasks 表里）', async () => {
+  // 2026-10-21（阶段 3）：临时任务模块已下线，此用例保留为「历史来源标记」兼容守卫
+  it('tempTask 源任务不应调 auto-assign（历史来源标记，保留兼容）', async () => {
     const { result } = renderHook(() => useDispatchScheduleBridge());
 
     await act(async () => {

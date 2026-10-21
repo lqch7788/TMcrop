@@ -7,17 +7,14 @@ export { DispatchPage } from './DispatchPage';
 
 // Tab组件
 export { FarmDispatchTab } from './components/dispatch/FarmDispatchTab';
-export { TempTaskTab } from './components/dispatch/TempTaskTab';
 export { SmartDispatchTab } from './components/dispatch/SmartDispatchTab';
 
 // 表格组件
 export { FarmTaskTable } from './components/dispatch/FarmTaskTable';
-export { TempTaskTable } from './components/dispatch/TempTaskTable';
 export { SmartTaskTable } from './components/dispatch/SmartTaskTable';
 
 // 表单组件
 export { FarmTaskForm } from './components/dispatch/FarmTaskForm';
-export { TempTaskForm } from './components/dispatch/TempTaskForm';
 export { SmartTaskForm } from './components/dispatch/SmartTaskForm';
 
 // 共享组件

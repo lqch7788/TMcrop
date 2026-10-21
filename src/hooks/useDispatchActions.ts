@@ -7,7 +7,6 @@
 import { useState, useCallback } from 'react';
 import { useToastStore } from '../stores/useToastStore';
 import { useTasks } from './useTasks';
-import { useTempTasks } from './useTempTasks';
 import { useAIOptimization } from './useAIOptimization';
 import type { UnifiedDispatchTask } from './useComprehensiveDispatch';
 import type { AIOptimizationSuggestion } from '../types/dispatch';
@@ -124,7 +123,6 @@ export interface UseDispatchActionsReturn {
 export function useDispatchActions(): UseDispatchActionsReturn {
   // 任务数据操作
   const { updateTask } = useTasks();
-  const { updateTempTask } = useTempTasks();
 
   // AI优化建议
   const { suggestion: optimizationSuggestion, acceptOptimization: acceptAIRecommendation, rejectOptimization: rejectAIRecommendation } = useAIOptimization();
@@ -167,37 +165,6 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         });
         success = true;
         message = `已成功派发给 ${workerName}`;
-      } else if (source === 'tempTask') {
-        // 临时任务：调用 /accept 记录接单操作，再调用 /submit-progress 记录开始执行
-        // 1. 调用 /accept 记录接单动作（状态变为 accepted）
-        fetch(`/api/temp-tasks/${sourceId}/accept`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-        }).then(ensureOk('tempTask accept')).catch(reportDispatchFailure('tempTask accept'));
-
-        // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
-        updateTempTask(sourceId, {
-          assigneeId: workerId,
-          assigneeName: workerName,
-        });
-
-        // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
-        setTimeout(() => {
-          fetch(`/api/temp-tasks/${sourceId}/submit-progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              progress: 0,
-              operator_id: workerId,
-              operator_name: workerName,
-              comment: '开始执行任务',
-            }),
-          }).then(ensureOk('submit-progress')).catch(reportDispatchFailure('submit-progress'));
-        }, 100);
-
-        success = true;
-        message = `已成功派发给 ${workerName}`;
       } else if (source === 'inspection') {
         // 巡查问题：需要创建新任务或直接分派
         success = true;
@@ -222,7 +189,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [updateTask, updateTempTask]);
+  }, [updateTask]);
 
   /**
    * 批量确认派工
@@ -250,14 +217,6 @@ export function useDispatchActions(): UseDispatchActionsReturn {
           });
           success = true;
           message = `任务已派发`;
-        } else if (source === 'tempTask') {
-          updateTempTask(sourceId, {
-            assigneeId: workerId,
-            assigneeName: '',
-            status: 'in_progress',
-          });
-          success = true;
-          message = `任务已派发`;
         }
 
         results.push({
@@ -274,7 +233,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [updateTask, updateTempTask]);
+  }, [updateTask]);
 
   /**
    * 更换执行人
@@ -312,18 +271,6 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         });
         success = true;
         message = `已更换执行人为 ${newWorkerName}`;
-      } else if (source === 'tempTask') {
-        // 临时任务：通过 PUT with reassign=true 记录重新分派操作
-        updateTempTask(sourceId, {
-          assigneeId: newWorkerId,
-          assigneeName: newWorkerName,
-          status: 'pending', // 重新分派后变为待接受状态
-          reassign: true, // 标记为重新分派，让后端记录 reassign 操作
-          operator_id: newWorkerId, // 记录操作人信息
-          operator_name: newWorkerName,
-        });
-        success = true;
-        message = `已更换执行人为 ${newWorkerName}`;
       }
 
       const result: DispatchActionResult = {
@@ -340,7 +287,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [updateTask, updateTempTask]);
+  }, [updateTask]);
 
   /**
    * 延后任务
@@ -380,13 +327,6 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         });
         success = true;
         message = `已延后 ${days} 天`;
-      } else if (source === 'tempTask') {
-        // 临时任务：目前没有专用的 delay 端点，使用 PUT 更新截止日期
-        updateTempTask(sourceId, {
-          dueDate: newDueDateStr,
-        });
-        success = true;
-        message = `已延后 ${days} 天`;
       }
 
       const result: DispatchActionResult = {
@@ -402,7 +342,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [updateTask, updateTempTask]);
+  }, [updateTask]);
 
   /**
    * 接受AI优化建议
@@ -439,18 +379,6 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         });
         success = true;
         message = `已接受优化建议，更换执行人为 ${suggestion.suggestedWorkerName}`;
-      } else if (source === 'tempTask') {
-        // 临时任务：通过 PUT with reassign=true 记录重新分派操作
-        updateTempTask(sourceId, {
-          assigneeId: suggestion.suggestedWorkerId,
-          assigneeName: suggestion.suggestedWorkerName,
-          status: 'pending',
-          reassign: true, // 标记为重新分派，让后端记录 reassign 操作
-          operator_id: suggestion.suggestedWorkerId, // 记录操作人信息
-          operator_name: suggestion.suggestedWorkerName,
-        });
-        success = true;
-        message = `已接受优化建议，更换执行人为 ${suggestion.suggestedWorkerName}`;
       }
 
       // 清除优化建议
@@ -470,7 +398,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [updateTask, updateTempTask, acceptAIRecommendation]);
+  }, [updateTask, acceptAIRecommendation]);
 
   /**
    * 拒绝AI优化建议

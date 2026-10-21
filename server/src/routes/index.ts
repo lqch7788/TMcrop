@@ -21,7 +21,6 @@ import problemAttachmentsRouter from './problemAttachments';
 import laborRouter from './labor';
 import overtimeRouter from './overtime';
 import leaveRouter from './leave';
-import tempTaskRouter from './tempTask';
 import purchasePlanRouter from './purchasePlan';
 import materialRequestRouter from './materialRequest';
 import basicDataRouter from './basicData';
@@ -279,8 +278,7 @@ router.use('/overtime', requireAuth, overtimeRouter);
 // 请假记录路由 - 需要认证
 router.use('/leave', requireAuth, leaveRouter);
 
-// 临时任务路由 - 需要认证
-router.use('/temp-tasks', requireAuth, tempTaskRouter);
+// 2026-10-21（阶段 3）：临时任务路由已下线，数据并入 /farm-tasks
 
 // 采购计划路由 - 需要认证
 router.use('/purchase-plans', requireAuth, purchasePlanRouter);

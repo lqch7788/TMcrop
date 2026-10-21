@@ -12,7 +12,6 @@ import { Check, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type FarmOperationRecordChild } from '../../../hooks/useOperationRecords';
 import { useTasks } from '../../../hooks/useTasks';
-import { useTempTasks } from '../../../hooks/useTempTasks';
 import { useExport } from '../../../hooks/farm/useExport';
 import { exportXlsx } from '../../../services/exporters/xlsx';
 import { todayLocal } from '@/lib/dateUtils';
@@ -76,8 +75,6 @@ export default function AgricultureRecordPage() {
 
   // 任务验收 Hook
   const { acceptTaskCompletion } = useTasks();
-  // 临时任务验收 Hook
-  const { acceptCompletion, rejectCompletion } = useTempTasks();
 
   // 权限检查 Hook - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -156,7 +153,8 @@ export default function AgricultureRecordPage() {
     return {
       total: records.length,
       task: records.filter(r => r.sourceType === 'task').length,
-      tempTask: records.filter(r => r.sourceType === 'tempTask').length,
+      // 2026-10-21（阶段 3）：临时任务已下线，统计卡改为「巡查反馈」
+      inspection: records.filter(r => r.sourceType === 'inspection').length,
       manual: records.filter(r => r.sourceType === 'manual').length,
     };
   }, [records]);
@@ -277,9 +275,8 @@ export default function AgricultureRecordPage() {
 
     if (record.sourceType === 'task') {
       acceptTaskCompletion(record.sourceId);
-    } else if (record.sourceType === 'tempTask') {
-      acceptCompletion(record.sourceId);
     } else {
+      // 2026-10-21（阶段 3）：临时任务已并入农事任务，不再有 tempTask 分支
       showAlert('该类型记录不支持快速验收');
       return;
     }
@@ -323,11 +320,8 @@ export default function AgricultureRecordPage() {
       } catch (error) {
         showAlert(`任务驳回失败：${error instanceof Error ? error.message : String(error)}`);
       }
-    } else if (record.sourceType === 'tempTask') {
-      // 使用 hook 返回的 rejectCompletion
-      rejectCompletion(record.sourceId, reason);
-      await refresh();
     }
+    // 2026-10-21（阶段 3）：临时任务已并入农事任务，rejectCompletion 分支删除
   };
 
   // ============================================

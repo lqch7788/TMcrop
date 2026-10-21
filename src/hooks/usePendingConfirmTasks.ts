@@ -6,7 +6,6 @@
 
 import { useMemo } from 'react';
 import { useTasks } from './useTasks';
-import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { useCropGrowthEngine } from './useCropGrowthEngine';
 import { useAIOptimization } from './useAIOptimization';
@@ -97,30 +96,6 @@ function normalizeFarmTask(task: ReturnType<typeof useTasks>['tasks'][0]): Unifi
   };
 }
 
-/** 标准化临时任务 */
-function normalizeTempTask(task: any): UnifiedDispatchTask {
-  return {
-    id: `tempTask-${task.id}`,
-    source: 'tempTask',
-    sourceId: task.id,
-    taskCode: task.taskCode,
-    title: task.title,
-    type: task.tempTaskType || 'default',
-    typeName: task.tempTaskType || '临时任务',
-    priority: task.priority,
-    workZone: task.workLocation || '',
-    greenhouse: task.workLocation || '',
-    cropName: '',
-    requiredSkills: [],
-    estimatedHours: task.estimatedHours || 2,
-    dueDate: task.dueDate || '',
-    description: task.description,
-    createdAt: task.createdAt || new Date().toISOString(),
-    assigneeId: task.assigneeId,
-    assigneeName: task.assigneeName,
-  };
-}
-
 /**
  * 获取任务对应的派工状态
  * 逻辑：
@@ -153,7 +128,6 @@ export function usePendingConfirmTasks(
 ) {
   // 获取各模块数据
   const { tasks: farmTasks } = useTasks();
-  const { tempTasks } = useTempTasks();
   const { pendingProblems } = useProblemDispatch();
   const { predictedTasks } = useCropGrowthEngine();
   const { suggestion: optimizationSuggestion } = useAIOptimization();
@@ -183,26 +157,7 @@ export function usePendingConfirmTasks(
         });
       });
 
-    // 2. 临时任务 - 待处理状态（pending）
-    tempTasks
-      .filter(t => t.status === 'pending')
-      .forEach(task => {
-        const normalizedTask = normalizeTempTask(task);
-        const hasAIRecommendation = !!getRecommendations;
-        const aiRecommendedWorkers = getRecommendations
-          ? getRecommendations(normalizedTask, 3)
-          : undefined;
-        const aiConfidenceScore = aiRecommendedWorkers?.[0]?.matchScore;
-
-        tasks.push({
-          ...normalizedTask,
-          dispatchStatus: getDispatchStatus(hasAIRecommendation, false, false),
-          isPredictedTask: false,
-          aiRecommendedWorkers,
-          aiConfidenceScore,
-          sourceLabel: getSourceLabel('tempTask'),
-        });
-      });
+    // 2. 2026-10-21（阶段 3）：临时任务已并入农事任务，统一由上面的 farmTasks 覆盖
 
     // 3. 巡查问题 - 待处理问题
     pendingProblems.forEach(problem => {
@@ -300,7 +255,7 @@ export function usePendingConfirmTasks(
     }
 
     return tasks;
-  }, [farmTasks, tempTasks, pendingProblems, predictedTasks, optimizationSuggestion, getRecommendations]);
+  }, [farmTasks, pendingProblems, predictedTasks, optimizationSuggestion, getRecommendations]);
 
   // 按状态分类统计
   const stats = useMemo<PendingConfirmStats>(() => ({

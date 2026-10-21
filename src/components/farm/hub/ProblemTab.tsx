@@ -11,7 +11,6 @@ import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatc
 import { useTasks } from '../../../hooks/useTasks';
 import { useUserStore } from '../../../stores';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { useTempTaskStore } from '../../../stores/useTempTaskStore';
 import { useInspectionDataStore } from '../../../stores/useInspectionDataStore';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
@@ -44,7 +43,19 @@ import { problemStatusToCN } from '../../../utils/problemStatus';
 import { STATUS_MAP } from './constants_taskDispatch';
 import { STATUS_CONFIG as INSPECTION_STATUS_CONFIG } from './InspectionTab';
 // 2026-10-21：优先级复用 types 里的共享紧急程度配置（含完整徽章 class）
-import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+/**
+ * 优先级徽章映射（2026-10-21 阶段 3）
+ * 原复用临时任务的 TEMP_TASK_URGENCY_CONFIG，临时任务下线后改为本地定义，
+ * 覆盖农事数据里实际出现的全部取值（含历史 medium/low）。
+ */
+const PRIORITY_META: Record<string, { label: string; badge: string }> = {
+  critical: { label: '非常紧急', badge: 'bg-red-500 text-white' },
+  urgent: { label: '紧急', badge: 'bg-amber-100 text-amber-700' },
+  high: { label: '高', badge: 'bg-orange-100 text-orange-700' },
+  medium: { label: '中', badge: 'bg-amber-100 text-amber-700' },
+  normal: { label: '普通', badge: 'bg-gray-100 text-gray-700' },
+  low: { label: '低', badge: 'bg-green-100 text-green-700' },
+};
 
 // 必填反馈选项常量（避免在组件内重复定义）
 const FEEDBACK_OPTIONS = [
@@ -462,8 +473,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           greenhouseName: problem.greenhouseName || undefined,
         });
       } catch (error) {
-        console.error('[ProblemTab] 派生临时任务失败:', error);
-        showAlert(`问题已分派，但派生临时任务失败：${(error as Error).message}`);
+        console.error('[ProblemTab] 派生农事任务失败:', error);
+        showAlert(`问题已分派，但派生农事任务失败：${(error as Error).message}`);
       }
     }
 
@@ -1086,7 +1097,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           </div>
         </div>
 
-        {/* 同时派临时任务（2026-09-21 新增，从不可达的 ProblemDispatchModal 迁入）
+        {/* 同时派一条应急农事任务（2026-09-21 新增；2026-10-21 阶段 3 起写入 farm_tasks）
             仅单条分派提供 —— 批量模式下问题数 × 执行人数会成倍放大，误建风险过高 */}
         {!dispatchModal.batchMode && (
           <div className="border-t border-gray-200 pt-4">
@@ -1099,7 +1110,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               />
               <div className="flex-1">
                 <div className="text-sm font-medium text-slate-700">
-                  同时派一条临时任务
+                  同时派一条应急农事任务
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5">
                   应急场景使用：现场先按临时任务处理，工单记录同样挂到当前问题下，
@@ -1268,10 +1279,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               ) : (
                 <div className="space-y-2">
                   {detailLinkedTasks.map((task: any) => {
-                    // 类型徽章：农事 / 临时 / 巡查
+                    // 类型徽章：农事 / 巡查（临时任务已并入农事，2026-10-21 阶段 3）
                     const typeConfig: Record<string, { label: string; bg: string; text: string }> = {
                       farm: { label: '农事', bg: 'bg-blue-100', text: 'text-blue-700' },
-                      tempTask: { label: '临时', bg: 'bg-amber-100', text: 'text-amber-700' },
                       inspection: { label: '巡查', bg: 'bg-emerald-100', text: 'text-emerald-700' },
                     };
                     const typeInfo = typeConfig[task.type] || { label: '未知', bg: 'bg-gray-100', text: 'text-gray-600' };
@@ -1286,13 +1296,11 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                       : farmMeta
                         ? `${farmMeta.bg} ${farmMeta.color}`
                         : 'bg-gray-100 text-gray-700';
-                    // 优先级：三类来源语义不同 ——
-                    //   农事任务 priority（high/medium/normal/urgent）、临时任务 urgency
-                    //   （critical/high/normal/urgent，回退 priority）走英文枚举映射；
+                    // 优先级：两类来源语义不同 ——
+                    //   农事任务走英文枚举（critical/urgent/high/medium/normal/low）；
                     //   巡查存的是中文严重程度（严重/中等/轻微），不在英文枚举里，原样显示。
-                    //   枚举映射复用 types 的 TEMP_TASK_URGENCY_CONFIG，另补它未收录的 medium / low。
                     const priorityRaw = String(task.priority || '');
-                    const urgMeta = TEMP_TASK_URGENCY_CONFIG[priorityRaw as keyof typeof TEMP_TASK_URGENCY_CONFIG];
+                    const urgMeta = PRIORITY_META[priorityRaw];
                     const priorityLabel = isInspection
                       ? (priorityRaw || '—')
                       : urgMeta?.label
@@ -1322,10 +1330,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                           onClick={() => {
                             if (task.type === 'farm') {
                               window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
-                            } else if (task.type === 'inspection') {
-                              window.dispatchEvent(new CustomEvent('open-inspection-detail', { detail: { recordId: task.id } }));
                             } else {
-                              showAlert('临时任务请到「临时任务」tab 查看详情');
+                              window.dispatchEvent(new CustomEvent('open-inspection-detail', { detail: { recordId: task.id } }));
                             }
                           }}
                           className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium flex-shrink-0"
@@ -1367,10 +1373,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 主渲染 ==========
-  // 2026-09-21：关联任务列表聚合三个表（farm_tasks / temp_tasks / inspections）。
-  //   此前只查 farm_tasks，所以临时任务和巡查记录即使 source_problem_id 有值也看不到。
-  //   现在补两 store + 统一字段映射（前端字段 camelCase，DB 列 snake_case）。
-  const tempTaskStoreAll = useTempTaskStore((s) => s.tasks);
+  // 2026-09-21：关联任务列表聚合 farm_tasks / inspections 两张表。
+  // 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，原先单列的 tempLinked 分支删除。
   const inspectionStoreAll = useInspectionDataStore((s) => s.records);
   // 2026-10-21：原「待我验收」快捷按钮依赖的 currentUserName 随「问题追踪」子Tab 一并删除。
   //   验收能力本身未丢失 —— 问题列表的「验收」按钮走下方 operatorId/operatorName 的
@@ -1400,25 +1404,6 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         createdAt: t.createdAt || '',
       }));
 
-    // 临时任务：DB 列 source_problem_id（snake_case）映射
-    const tempLinked = (tempTaskStoreAll as any[])
-      .filter((t) => t.source_problem_id || t.sourceProblemId)
-      .map((t) => ({
-        kind: 'tempTask' as const,
-        type: 'tempTask' as const,
-        id: t.id,
-        taskCode: t.task_code || t.taskCode || '',
-        title: t.title || '',
-        assigneeName: t.assignee_name || t.assigneeName || '',
-        assigneeId: t.assignee_id || t.assigneeId || '',
-        greenhouseName: t.greenhouse_name || t.greenhouseName || '',
-        dueDate: t.due_date || t.dueDate || '',
-        priority: t.urgency || t.priority || '',
-        status: t.status || '',
-        sourceProblemId: String(t.source_problem_id ?? t.sourceProblemId),
-        createdAt: t.create_time || t.createTime || '',
-      }));
-
     // 巡查记录：DB 列 source_problem_id（snake_case）映射
     const inspectLinked = (inspectionStoreAll as any[])
       .filter((i) => i.source_problem_id || i.sourceProblemId)
@@ -1439,8 +1424,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         recordCode: i.record_code || i.recordCode || '',
       }));
 
-    return [...farmLinked, ...tempLinked, ...inspectLinked];
-  }, [externalTasks, tasks, tempTaskStoreAll, inspectionStoreAll]);
+    return [...farmLinked, ...inspectLinked];
+  }, [externalTasks, tasks, inspectionStoreAll]);
 
   // 2026-10-21：「问题追踪」子Tab 已删除，问题→任务的正查入口迁移到问题详情弹窗。
   //   这里从同一份 linkedTasks 里按当前详情问题过滤（数据口径与原子Tab 完全一致，

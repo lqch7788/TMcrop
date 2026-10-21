@@ -6,7 +6,6 @@
 
 import { useMemo, useCallback } from 'react';
 import { useTasks, Task } from './useTasks';
-import { useTempTasks, TempTask } from './useTempTasks';
 import { usePersistentAttendance } from './usePersistentAttendance';
 
 // ============================================
@@ -60,7 +59,7 @@ export interface DailyWorkOrderReport {
 /**
  * 判断任务是否超期
  */
-function isTaskOverdue(task: Task | TempTask, targetDate: string): boolean {
+function isTaskOverdue(task: Task, targetDate: string): boolean {
   // 2026-10-11：status 在 Task/TempTask 上均存在，原 `'status' in task` 的 else 分支恒不可达（收窄为 never），
   //   运行时同样恒走 if 分支，故合并为一条判断
   if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
@@ -94,8 +93,8 @@ function calculateOverdueDays(dueDate: string, targetDate: string): number {
 /**
  * 判断是否提前完成
  */
-function isCompletedAhead(task: Task | TempTask, targetDate: string): boolean {
-  const completedAt = 'completedAt' in task ? task.completedAt : (task as TempTask).completedAt;
+function isCompletedAhead(task: Task, targetDate: string): boolean {
+  const completedAt = task.completedAt;
   if (!completedAt) return false;
 
   const completionDate = new Date(completedAt);
@@ -109,8 +108,8 @@ function isCompletedAhead(task: Task | TempTask, targetDate: string): boolean {
 /**
  * 判断是否按时完成
  */
-function isCompletedOnTime(task: Task | TempTask, targetDate: string): boolean {
-  const completedAt = 'completedAt' in task ? task.completedAt : (task as TempTask).completedAt;
+function isCompletedOnTime(task: Task, targetDate: string): boolean {
+  const completedAt = task.completedAt;
   if (!completedAt) return false;
 
   const completionDate = new Date(completedAt);
@@ -124,7 +123,7 @@ function isCompletedOnTime(task: Task | TempTask, targetDate: string): boolean {
 /**
  * 获取任务名称
  */
-function getTaskName(task: Task | TempTask): string {
+function getTaskName(task: Task): string {
   // 2026-10-11：title 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
   return task.title;
 }
@@ -132,7 +131,7 @@ function getTaskName(task: Task | TempTask): string {
 /**
  * 获取执行人名称
  */
-function getAssigneeName(task: Task | TempTask): string {
+function getAssigneeName(task: Task): string {
   // 2026-10-11：assigneeName 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
   return task.assigneeName;
 }
@@ -149,7 +148,6 @@ export function useDailyWorkOrderAnalysis() {
   const { tasks } = useTasks();
 
   // 获取临时任务数据
-  const { tempTasks } = useTempTasks();
 
   // 获取考勤数据
   const { attendance } = usePersistentAttendance();
@@ -175,23 +173,8 @@ export function useDailyWorkOrderAnalysis() {
       }
     });
 
-    // 分析临时任务
-    tempTasks.forEach(task => {
-      if (task.status === 'completed' && isCompletedAhead(task, targetDate)) {
-        aheadTasks.push({
-          taskId: task.taskCode,
-          taskName: task.title,
-          plannedDate: task.dueDate || '',
-          actualCompletionDate: task.completedAt,
-          progressStatus: 'ahead',
-          originalAssignee: task.assigneeName,
-          actualAssignee: task.assigneeName,
-        });
-      }
-    });
-
     return aheadTasks;
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   /**
    * 分析推迟完成的任务
@@ -219,28 +202,8 @@ export function useDailyWorkOrderAnalysis() {
       }
     });
 
-    // 分析临时任务（超期未完成的任务视为推迟）
-    tempTasks.forEach(task => {
-      if (task.status !== 'completed' && isTaskOverdue(task, targetDate)) {
-        const delayDays = task.dueDate
-          ? calculateOverdueDays(task.dueDate, targetDate)
-          : 0;
-
-        delayedTasks.push({
-          taskId: task.taskCode,
-          taskName: task.title,
-          plannedDate: task.dueDate || '',
-          progressStatus: 'delayed',
-          delayDays,
-          delayReason: `超期${delayDays}天`,
-          originalAssignee: task.assigneeName,
-          actualAssignee: task.assigneeName,
-        });
-      }
-    });
-
     return delayedTasks;
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   /**
    * 分析未完成的任务（已超期但未完成）
@@ -269,29 +232,8 @@ export function useDailyWorkOrderAnalysis() {
       }
     });
 
-    // 分析临时任务
-    tempTasks.forEach(task => {
-      // 未完成且已超期的任务
-      if (task.status !== 'completed' && isTaskOverdue(task, targetDate)) {
-        const delayDays = task.dueDate
-          ? calculateOverdueDays(task.dueDate, targetDate)
-          : 0;
-
-        unfinishedTasks.push({
-          taskId: task.taskCode,
-          taskName: task.title,
-          plannedDate: task.dueDate || '',
-          progressStatus: task.status === 'cancelled' ? 'cancelled' : 'delayed',
-          delayDays,
-          delayReason: delayDays > 0 ? `已超期${delayDays}天未完成` : '截止日期已到未完成',
-          originalAssignee: task.assigneeName,
-          actualAssignee: task.assigneeName,
-        });
-      }
-    });
-
     return unfinishedTasks;
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   /**
    * 分析按时进度的任务
@@ -326,35 +268,8 @@ export function useDailyWorkOrderAnalysis() {
       }
     });
 
-    // 分析临时任务
-    tempTasks.forEach(task => {
-      // 已完成且按时完成的任务
-      if (task.status === 'completed' && isCompletedOnTime(task, targetDate)) {
-        onTrackTasks.push({
-          taskId: task.taskCode,
-          taskName: task.title,
-          plannedDate: task.dueDate || '',
-          actualCompletionDate: task.completedAt,
-          progressStatus: 'on_track',
-          originalAssignee: task.assigneeName,
-          actualAssignee: task.assigneeName,
-        });
-      }
-      // 进行中但未超期的任务
-      else if (['pending', 'in_progress'].includes(task.status) && !isTaskOverdue(task, targetDate)) {
-        onTrackTasks.push({
-          taskId: task.taskCode,
-          taskName: task.title,
-          plannedDate: task.dueDate || '',
-          progressStatus: 'on_track',
-          originalAssignee: task.assigneeName,
-          actualAssignee: task.assigneeName,
-        });
-      }
-    });
-
     return onTrackTasks;
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   /**
    * 分析人员负荷
@@ -387,29 +302,7 @@ export function useDailyWorkOrderAnalysis() {
       }
     });
 
-    // 统计临时任务
-    tempTasks.forEach(task => {
-      if (!task.assigneeName) return;
-
-      if (!workerMap.has(task.assigneeName)) {
-        workerMap.set(task.assigneeName, {
-          workerId: task.assigneeId || task.assigneeName,
-          workerName: task.assigneeName,
-          todayTasks: 0,
-          completedTasks: 0,
-          completionRate: 0,
-          loadStatus: 'normal',
-          availability: 'available',
-        });
-      }
-
-      const analysis = workerMap.get(task.assigneeName)!;
-      analysis.todayTasks++;
-
-      if (task.status === 'completed') {
-        analysis.completedTasks++;
-      }
-    });
+    // 2026-10-21（阶段 3）：临时任务已并入农事任务，统一由上面的 tasks 统计
 
     // 计算完成率和负荷状态
     const workerLoads = Array.from(workerMap.values()).map(analysis => {
@@ -438,7 +331,7 @@ export function useDailyWorkOrderAnalysis() {
     });
 
     return workerLoads;
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   /**
    * 生成AI建议
@@ -519,20 +412,11 @@ export function useDailyWorkOrderAnalysis() {
     const onTrackTasks = analyzeOnTrackTasks(targetDate);
     const workerLoad = analyzeWorkerLoad(targetDate);
 
-    // 统计任务数量
-    const totalTasks = tasks.length + tempTasks.length;
-    const pendingTasks = [
-      ...tasks.filter(t => t.status === 'pending'),
-      ...tempTasks.filter(t => t.status === 'pending'),
-    ].length;
-    const inProgressTasks = [
-      ...tasks.filter(t => ['accepted', 'in_progress'].includes(t.status)),
-      ...tempTasks.filter(t => ['in_progress'].includes(t.status)),
-    ].length;
-    const completedTasks = [
-      ...tasks.filter(t => t.status === 'completed'),
-      ...tempTasks.filter(t => t.status === 'completed'),
-    ].length;
+    // 统计任务数量（2026-10-21 阶段 3：临时任务已并入 tasks）
+    const totalTasks = tasks.length;
+    const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+    const inProgressTasks = tasks.filter(t => ['accepted', 'in_progress'].includes(t.status)).length;
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
     // 计算超期任务数（去重）
     const overdueTaskIds = new Set([
@@ -565,7 +449,6 @@ export function useDailyWorkOrderAnalysis() {
     };
   }, [
     tasks,
-    tempTasks,
     analyzeAheadTasks,
     analyzeDelayedTasks,
     analyzeUnfinishedTasks,

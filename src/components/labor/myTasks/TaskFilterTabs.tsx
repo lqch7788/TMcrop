@@ -12,7 +12,7 @@ interface TaskFilterTabsProps {
     all: number;
     problem: number;
     production: number;
-    temp: number;
+    // 2026-10-21（阶段 3）：临时任务 tab 已删除
   };
   onFilterChange: (filter: TaskFilterType) => void;
 }
@@ -54,20 +54,6 @@ export function TaskFilterTabs({
           农事任务处理
           <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
             {taskCounts.production}
-          </span>
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => onFilterChange('temp')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
-            taskFilter === 'temp'
-              ? 'border-orange-500 text-orange-600 bg-orange-50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          临时任务处理
-          <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
-            {taskCounts.temp}
           </span>
         </Button>
         <Button

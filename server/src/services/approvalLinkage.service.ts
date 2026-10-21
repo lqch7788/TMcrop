@@ -657,15 +657,21 @@ export class ApprovalLinkageService {
         break;
 
       case 'recruitment':
+        // 2026-10-21（阶段 3）：原实现 UPDATE temp_tasks —— 错表，招聘数据在
+        //   recruitment_records。属"幽灵路径"：目标行永不匹配却恒返回成功。
+        //   与 routes/approvalLinkage.ts 的同名分支保持同一套字段与标签。
         try {
+          const recruitLabel = status === 'approved' ? '已通过'
+            : status === 'rejected' ? '已拒绝'
+              : status === 'cancelled' ? '已取消' : '待审批';
           db.run(`
-            UPDATE temp_tasks SET
+            UPDATE recruitment_records SET
               status = ?,
-              approval_code = ?,
-              approved_at = ?,
+              status_label = ?,
+              approve_time = ?,
               update_time = ?
             WHERE id = ?
-          `, [status, approvalCode, now, now, requestId]);
+          `, [status, recruitLabel, now, now, requestId]);
           return { success: true, message: '招聘状态已更新' };
         } catch (e) {
           return { success: false, message: '数据库更新失败' };

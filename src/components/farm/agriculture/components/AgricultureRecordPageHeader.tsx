@@ -8,7 +8,8 @@ import { Leaf } from 'lucide-react';
 interface AgricultureRecordStats {
   total: number;
   task: number;
-  tempTask: number;
+  /** 2026-10-21（阶段 3）：临时任务下线后，此卡改为巡查反馈 */
+  inspection: number;
   manual: number;
 }
 
@@ -25,7 +26,7 @@ export function AgricultureRecordPageHeader({ stats }: AgricultureRecordPageHead
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">农事操作记录</h1>
-          <p className="text-gray-500">统一展示任务派发、临时任务、手动录入的操作记录</p>
+          <p className="text-gray-500">统一展示任务派发、巡查反馈、手动录入的操作记录</p>
         </div>
       </div>
 
@@ -40,8 +41,8 @@ export function AgricultureRecordPageHeader({ stats }: AgricultureRecordPageHead
           <p className="text-2xl font-bold">{stats.task}</p>
         </div>
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white">
-          <p className="text-sm opacity-90">临时任务</p>
-          <p className="text-2xl font-bold">{stats.tempTask}</p>
+          <p className="text-sm opacity-90">巡查反馈</p>
+          <p className="text-2xl font-bold">{stats.inspection}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white">
           <p className="text-sm opacity-90">手动录入</p>

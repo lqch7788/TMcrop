@@ -72,7 +72,7 @@ const MIGRATION_CONFIG: Record<string, { apiEndpoint: string; name: string; tabl
 
   // 人工管理
   'yuanxingtu_attendance': { apiEndpoint: '/api/sync/attendance', name: '考勤数据', table: 'attendance_records' },
-  'yuanxingtu_tempTasks': { apiEndpoint: '/api/sync/temp-tasks', name: '临时任务', table: 'temp_tasks' },
+  // 2026-10-21（阶段 3）：临时任务模块已下线，不再提供 localStorage 临时任务导入
   'yuanxingtu_tasks': { apiEndpoint: '/api/sync/farm-tasks', name: '农事任务', table: 'farm_tasks' },
   'yuanxingtu_inspections': { apiEndpoint: '/api/sync/inspections', name: '巡检记录', table: 'inspections' },
   'yuanxingtu_daily_problems': { apiEndpoint: '/api/sync/problems', name: '日常问题', table: 'problems' },

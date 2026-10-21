@@ -21,7 +21,6 @@ import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import { TaskFilterTabs } from './TaskFilterTabs';
 import { WorkLogPage } from '../worklog/WorkLogPage';
 import { Pagination } from '@/components/ui';
-import { TempTaskTableRow } from './TempTaskTableRow';
 import { ProblemTaskTableRow } from './ProblemTaskTableRow';
 import { ProductionTaskTableRow } from './ProductionTaskTableRow';
 import { TaskDetailModal } from './TaskDetailModal';
@@ -110,15 +109,6 @@ function matchesProductionTabFilter(task: any): boolean {
   return true;
 }
 
-/** 「临时任务处理」tab：TT 开头且非草稿的临时任务 */
-function matchesTempTabFilter(task: any): boolean {
-  // 2026-10-21（阶段 2）：迁移后的任务 dispatchMode 已改为 'farm'，归入「农事任务处理」；
-  //   此处显式排除，避免同一个任务在两个 tab 重复出现。该 tab 在阶段 3 删除。
-  if (task.dispatchMode === 'farm') return false;
-  if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
-  if (task.status === 'draft') return false;
-  return task.sourceType === 'tempTask' || task.dispatchMode === 'tempTask';
-}
 
 export function MyTasksPage() {
   // 使用统一任务管理 Hook（数据闭环核心）
@@ -354,19 +344,7 @@ export function MyTasksPage() {
         return myTasks
           .filter(matchesProductionTabFilter)
           .sort(sortByCreatedAt);
-      case 'temp':
-        // 临时任务处理（过滤谓词见 matchesTempTabFilter，与徽章计数共用），按开始时间倒序
-        return myTasks
-          .filter(matchesTempTabFilter)
-          .sort((a, b) => {
-            const getTime = (t: TaskWithExtras): number => {
-              const timeStr = t.startDate || t.planStart || '';
-              if (!timeStr) return 0;
-              const date = new Date(timeStr);
-              return isNaN(date.getTime()) ? 0 : date.getTime();
-            };
-            return getTime(b as unknown as TaskWithExtras) - getTime(a as unknown as TaskWithExtras);
-          });
+      // 2026-10-21（阶段 3）：临时任务 tab 已删除，其任务归入「农事任务处理」
       default:
         // 全部任务也按创建时间倒序
         return [...myTasks].sort(sortByCreatedAt);
@@ -386,7 +364,6 @@ export function MyTasksPage() {
     all: myTasks.length,
     problem: myTasks.filter(matchesProblemTabFilter).length,
     production: myTasks.filter(matchesProductionTabFilter).length,
-    temp: myTasks.filter(matchesTempTabFilter).length,
   }), [myTasks]);
 
   // 详情弹窗状态
@@ -910,23 +887,7 @@ export function MyTasksPage() {
           <Table className="min-w-[1200px]">
             <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <TableRow>
-                {taskFilter === 'temp' ? (
-                  <>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">任务编号</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">任务名称</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">类型</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">工作地点</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">负责人</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">开始时间</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">预计结束</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">人工</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">总工时</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">紧急程度</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">超时</TableHead>
-                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
-                  </>
-                ) : taskFilter === 'problem' ? (
+                {taskFilter === 'problem' ? (
                   <>
                     <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查编号</TableHead>
                     <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查类型</TableHead>
@@ -966,26 +927,15 @@ export function MyTasksPage() {
             <TableBody className="divide-y divide-gray-300">
               {filteredTasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={taskFilter === 'temp' ? 13 : taskFilter === 'problem' ? 14 : 14} className="px-4 py-12 text-center text-gray-400">
+                  <TableCell colSpan={14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedTasks.map((task) => {
-                  const taskWithExtras = task as TaskWithExtras;
-                  const isTempTask = taskWithExtras.sourceType === 'tempTask';
                   return (
-                    <TableRow key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && taskWithExtras.urgency === 'critical' ? 'bg-red-50' : ''}`}>
-                      {taskFilter === 'temp' ? (
-                        <TempTaskTableRow
-                          task={task}
-                          onAccept={handleAccept}
-                          onReject={openRejectModal}
-                          onContinueExecution={handleContinueExecution}
-                          onOpenFeedbackModal={openFeedbackModal}
-                          onOpenDetailModal={openDetailModal}
-                        />
-                      ) : taskFilter === 'problem' ? (
+                    <TableRow key={task.id} className="hover:bg-blue-50 transition-colors">
+                      {taskFilter === 'problem' ? (
                         <ProblemTaskTableRow
                           task={task}
                           unifiedTasks={unifiedTasks}
