@@ -523,8 +523,11 @@ export function MyTasksPage() {
   const openFeedbackModal = (task: any) => {
     // 打开反馈弹窗
     setFeedbackModal({ isOpen: true, task });
+    // 2026-10-21：进度已满 100% 的任务（如返工后再次提交），预选「全部完成」，
+    //   避免用户每次都要手动选一次；进度未满则留空让用户主动选。
+    const initialProgress = task.progress || 0;
     setFeedbackForm({
-      resultStatus: '' as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
+      resultStatus: (initialProgress === 100 ? '全部完成' : '') as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
       resultText: '',
       progressText: '',
       progress: task.progress || 0,
@@ -694,6 +697,8 @@ export function MyTasksPage() {
           workloadDays: feedbackForm.workloadConfirm?.days,
           workloadHours: feedbackForm.workloadConfirm?.hours,
           workers: feedbackForm.workloadConfirm?.workers,
+          // 2026-10-21：把处理结果结论随反馈落库（此前只存在表单内存，验收人看不到）
+          resultStatus: feedbackForm.resultStatus,
         });
         }
 

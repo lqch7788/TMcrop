@@ -14,7 +14,94 @@ import { STATUS_MAP, PRIORITY_MAP, getTypeLabel } from './constants';
 import { Label } from '@/components/ui';
 
 // 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 2026-10-21：补 w-full —— 此前缺宽度类，下拉框和"其他"备注输入框只占内容默认宽度，
+//   与弹窗（size="xl"）严重不匹配，备注框尤其窄到无法正常书写。
+const deepInputClass = "w-full px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
+/* ========== 处理结果 ↔ 执行进度 联动规则（2026-10-21 新增）==========
+ *
+ * 矛盾背景：progress 是客观完成度，resultStatus 是主观处理结论。此前二者互不影响，
+ *   用户可以选「全部完成」但进度停在 0%，或拖到 100% 却选「部分完成」，
+ *   验收人看到的进度与结论自相矛盾。
+ *
+ * 规则（单一事实来源，UI 与提交校验共用）：
+ *   全部完成 / 延迟完成 → 进度强制 100%，滑块锁定
+ *   部分完成            → 进度允许 5~95%
+ *   无法继续            → 进度不适用（走 reject 通道），滑块锁定
+ *   其他                → 进度允许 5~100%（覆盖"进度满了但需额外说明"的特例）
+ *
+ * 「延迟完成」与「全部完成」进度同为 100%，区别在时间维度（超期 vs 按期），
+ *   故反向联动时「延迟完成」不被覆盖。
+ */
+interface ProgressRule {
+  /** 该结论下强制的进度值（设置后滑块锁定） */
+  requiredProgress?: number;
+  /** 该结论下允许的最小进度 */
+  minProgress?: number;
+  /** 该结论下允许的最大进度 */
+  maxProgress?: number;
+  /** 该结论下进度滑块是否禁用 */
+  lockProgress: boolean;
+}
+
+const RESULT_PROGRESS_RULES: Record<string, ProgressRule> = {
+  '全部完成': { requiredProgress: 100, lockProgress: true },
+  '部分完成': { minProgress: 5, maxProgress: 95, lockProgress: false },
+  '延迟完成': { requiredProgress: 100, lockProgress: true },
+  '无法继续': { lockProgress: true },
+  '其他': { minProgress: 5, maxProgress: 100, lockProgress: false },
+};
+
+/** 滑块步长（与 <input type="range" step> 保持一致） */
+const PROGRESS_STEP = 5;
+
+/**
+ * 选择处理结果后，规范化进度值
+ * - 有 requiredProgress 的（全部完成/延迟完成）直接强制
+ * - 有区间的（部分完成/其他）若当前值越界，取区间中点并对齐步长
+ */
+function normalizeProgressForResult(status: string, currentProgress: number): number {
+  const rule = RESULT_PROGRESS_RULES[status];
+  if (!rule) return currentProgress;
+  if (rule.requiredProgress !== undefined) return rule.requiredProgress;
+  if (rule.minProgress !== undefined && rule.maxProgress !== undefined) {
+    if (currentProgress < rule.minProgress || currentProgress > rule.maxProgress) {
+      const mid = Math.round((rule.minProgress + rule.maxProgress) / 2 / PROGRESS_STEP) * PROGRESS_STEP;
+      return mid;
+    }
+  }
+  return currentProgress;
+}
+
+/**
+ * 拖动进度滑块后，反推应有的处理结果
+ * - 100% → 全部完成（「延迟完成」是时间维度的标记，不被覆盖）
+ * - 1~95% → 若原本是完成类结论，自动降级为「部分完成」
+ * - 0% → 清空结论（还没开始干活，不可能有处理结论）
+ */
+function inferResultStatusFromProgress(progress: number, currentStatus: string): string {
+  if (progress >= 100) {
+    return currentStatus === '延迟完成' ? '延迟完成' : '全部完成';
+  }
+  if (progress > 0) {
+    if (currentStatus === '全部完成' || currentStatus === '延迟完成') return '部分完成';
+    return currentStatus;
+  }
+  return '';
+}
+
+/**
+ * 提交前一致性校验（双保险，防止联动逻辑被绕过）
+ * @returns true = 进度与处理结果自洽，允许提交
+ */
+function isProgressConsistent(status: string, progress: number): boolean {
+  if (!status) return false;
+  if (status === '无法继续') return true; // 走 reject 通道，进度不适用
+  if (status === '全部完成' || status === '延迟完成') return progress === 100;
+  if (status === '部分完成') return progress >= 5 && progress <= 95;
+  if (status === '其他') return progress >= 5;
+  return false;
+}
 
 interface TaskFeedbackModalProps {
   isOpen: boolean;
@@ -42,6 +129,13 @@ export function TaskFeedbackModal({
   onSubmit,
 }: TaskFeedbackModalProps) {
   if (!task) return null;
+
+  // 当前处理结果对应的进度规则（用于滑块锁定 / 提示文案）
+  const progressRule = feedbackForm.resultStatus
+    ? RESULT_PROGRESS_RULES[feedbackForm.resultStatus]
+    : undefined;
+  // 进度与结论是否自洽（提交前双保险）
+  const consistent = isProgressConsistent(feedbackForm.resultStatus, feedbackForm.progress);
 
   return (
     <Modal
@@ -76,6 +170,7 @@ export function TaskFeedbackModal({
                 ? !feedbackForm.cannotContinueReason.trim()  // 无法继续时只需要填写原因
                 : (!validateRequiredFeedback().valid ||  // 正常模式需要校验必填反馈
                    !feedbackForm.resultStatus ||  // 必须选择处理结果
+                   !consistent ||  // 2026-10-21：进度必须与处理结果自洽（如 100% 配"全部完成"）
                    ((feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && !feedbackForm.resultText.trim())  // 选择"其他"或"无法继续"时需要填写备注
                 )
             }
@@ -146,32 +241,8 @@ export function TaskFeedbackModal({
           </div>
         )}
 
-        {/* 执行进度（可操作） */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
-          <div className="flex items-center gap-4">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={feedbackForm.progress}
-              onChange={(e) => {
-                setFeedbackForm(prev => ({ ...prev, progress: parseInt(e.target.value, 10) }));
-              }}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
-              {feedbackForm.progress}%
-            </span>
-          </div>
-          <p className="text-xs text-gray-400 mt-1">
-            {feedbackForm.progress === 100 ? '已完成，可提交反馈' :
-             feedbackForm.progress === 0 ? '未开始' : '进行中'}
-          </p>
-        </div>
-
-        {/* 处理结果/进展情况（进度条下方 - 统一使用下拉选择） */}
+        {/* 处理结果（2026-10-21：移到执行进度上方 —— 先选结论，进度自动跟随，
+            符合"先表态再量化"的操作直觉；此前进度在上、结论在下，用户容易先拖滑块再发现结论被改） */}
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-2">
             处理结果 <span className="text-red-500">*</span>
@@ -179,25 +250,81 @@ export function TaskFeedbackModal({
           <select
             value={feedbackForm.resultStatus}
             onChange={(e) => {
-              const newStatus = e.target.value as '' | '全部完成' | '部分完成' | '延迟完成' | '无法继续' | '其他';
-              setFeedbackForm(prev => ({
-                ...prev,
-                resultStatus: newStatus,
-                resultText: '',
-                // 选择"无法继续"时自动设置 cannotContinue 为 true
-                cannotContinue: newStatus === '无法继续',
-                cannotContinueReason: newStatus === '无法继续' ? prev.cannotContinueReason : '',
-              }));
+              const newStatus = e.target.value;
+              setFeedbackForm(prev => {
+                // 正向联动：选择结论时同步规范化进度（全部完成→100，部分完成→5~95）
+                const nextProgress = normalizeProgressForResult(newStatus, prev.progress);
+                return {
+                  ...prev,
+                  resultStatus: newStatus as FeedbackFormData['resultStatus'],
+                  resultText: '',
+                  progress: nextProgress,
+                  // 选择"无法继续"时自动设置 cannotContinue 为 true
+                  cannotContinue: newStatus === '无法继续',
+                  cannotContinueReason: newStatus === '无法继续' ? prev.cannotContinueReason : '',
+                };
+              });
             }}
             className={deepInputClass}
           >
             <option value="">请选择处理结果</option>
-            <option value="全部完成">全部完成</option>
-            <option value="部分完成">部分完成</option>
-            <option value="延迟完成">延迟完成</option>
-            <option value="无法继续">无法继续</option>
-            <option value="其他">其他</option>
+            <option value="全部完成">全部完成（进度自动设为 100%）</option>
+            <option value="部分完成">部分完成（进度 5% ~ 95%）</option>
+            <option value="延迟完成">延迟完成（已完工但超期，进度 100%）</option>
+            <option value="无法继续">无法继续（转交他人处理）</option>
+            <option value="其他">其他（需填写备注说明）</option>
           </select>
+          {/* 联动状态提示：让用户明确知道进度已被自动设定 */}
+          {feedbackForm.resultStatus && RESULT_PROGRESS_RULES[feedbackForm.resultStatus]?.requiredProgress !== undefined && (
+            <p className="text-xs text-emerald-600 mt-1">
+              进度已根据处理结果自动设为 {feedbackForm.progress}%
+            </p>
+          )}
+        </div>
+
+        {/* 执行进度（可操作）—— 与「处理结果」双向联动，
+            结论为完成类时锁定 100%，拖到 100% 时自动切换结论 */}
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+            执行进度
+            {progressRule?.lockProgress && (
+              <span className="ml-2 text-xs font-normal text-gray-500">（由处理结果自动设定）</span>
+            )}
+          </h4>
+          <div className="flex items-center gap-4">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step={PROGRESS_STEP}
+              value={feedbackForm.progress}
+              disabled={progressRule?.lockProgress || feedbackForm.cannotContinue}
+              onChange={(e) => {
+                const newProgress = parseInt(e.target.value, 10);
+                setFeedbackForm(prev => {
+                  // 反向联动：进度变化同步修正处理结果，消除"100% + 部分完成"这类矛盾
+                  const inferred = inferResultStatusFromProgress(newProgress, prev.resultStatus);
+                  return {
+                    ...prev,
+                    progress: newProgress,
+                    resultStatus: inferred as FeedbackFormData['resultStatus'],
+                    // 从完成类结论降级时，清掉只属于"其他/无法继续"的备注
+                    resultText: inferred === prev.resultStatus ? prev.resultText : '',
+                  };
+                });
+              }}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <span className="w-14 text-sm font-medium text-gray-700 text-center bg-gray-100 rounded px-2 py-1">
+              {feedbackForm.progress}%
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {feedbackForm.cannotContinue ? '当前为"无法继续"模式，进度不适用' :
+             feedbackForm.progress === 100 ? '已完成，提交后进入待验收' :
+             feedbackForm.progress === 0 ? '未开始 —— 请拖动进度条或先选择处理结果' :
+             `进行中（还差 ${100 - feedbackForm.progress}%）`}
+          </p>
         </div>
         {/* 备注输入框 - 仅当选择"其他"或"无法继续"时显示 */}
         {(feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && (
@@ -287,7 +414,9 @@ export function TaskFeedbackModal({
           </div>
         )}
 
-        {/* 反馈提示信息（根据模式显示不同内容） */}
+        {/* 反馈提示信息（根据模式显示不同内容）
+            2026-10-21：判断依据由 task.progress（任务原始进度）改为 feedbackForm.progress
+            （用户本次选择的进度）—— 提交逻辑用后者决定是否进入待验收，此前提示与实际行为不符。 */}
         <div className={`rounded-lg p-3 ${
           feedbackForm.cannotContinue
             ? 'bg-red-50 border border-red-200'
@@ -298,9 +427,9 @@ export function TaskFeedbackModal({
           }`}>
             {feedbackForm.cannotContinue
               ? '确认无法继续后，任务将变为"已拒绝"状态，等待重新分派。'
-              : task.progress === 100
-                ? '提交反馈后，任务将进入"待验收"状态，等待管理者确认完成。'
-                : '提交进度反馈后，任务将继续进行，可再次提交直到100%。'}
+              : feedbackForm.progress === 100
+                ? `提交反馈后，任务将进入"待验收"状态，等待管理者确认完成（处理结果：${feedbackForm.resultStatus || '未选择'}）。`
+                : `提交进度反馈后，任务将继续进行（当前 ${feedbackForm.progress}%，可再次提交直到 100%）。`}
           </div>
         </div>
       </div>
