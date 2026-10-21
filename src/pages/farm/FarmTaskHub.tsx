@@ -190,6 +190,8 @@ export function FarmTaskHub() {
   const [taskRefresh, setTaskRefresh] = useState(0);
 
   // 2026-09-21：响应「待我验收」快捷按钮的自定义事件（从 ProblemTab 关联任务列表触发）
+  // 2026-10-21：同步响应「open-inspection-detail」—— ProblemTab 的「问题追踪」子Tab
+  //   任务编号列对 inspection 类型任务新增可点击入口，由本 listener 打开 InspectionDetailModal。
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ taskId: string }>).detail;
@@ -197,6 +199,16 @@ export function FarmTaskHub() {
     };
     window.addEventListener('open-task-detail', handler);
     return () => window.removeEventListener('open-task-detail', handler);
+  }, []);
+
+  // 2026-10-21：问题追踪列表点击 inspection 类型任务编号 → 打开巡查详情弹窗
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ recordId: string }>).detail;
+      if (detail?.recordId) setDetailInspectionId(detail.recordId);
+    };
+    window.addEventListener('open-inspection-detail', handler);
+    return () => window.removeEventListener('open-inspection-detail', handler);
   }, []);
 
   // 2026-09-20 卡死修复：tab 首次访问后保持挂载，仅用 CSS 隐藏非活动 tab。
