@@ -543,8 +543,17 @@ router.post('/', (req: Request, res: Response) => {
       res.status(201).json({ success: true, data: { id: newId } });
     }
   } catch (error) {
-    console.error('创建农事任务失败:', error);
-    res.status(500).json({ success: false, error: '创建农事任务失败' });
+    // 2026-10-21：把真实原因一并返回 —— 此前只回笼统文案「创建农事任务失败」，
+    //   而本文件的 console.error 只写 stdout（不进 logs/*.log），
+    //   用户报 500 时既看不到日志也拿不到 message，无法定位。
+    //   排查 SQLite 绑定/写盘类错误必须看到原始 message（如 NaN 绑定、no such column）。
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error('创建农事任务失败:', detail, error);
+    res.status(500).json({
+      success: false,
+      error: '创建农事任务失败',
+      detail,
+    });
   }
 });
 
