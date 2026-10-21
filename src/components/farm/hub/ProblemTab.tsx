@@ -111,6 +111,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
   // ========== 标签页状态 ==========
   const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
+  // 2026-10-21：hover 到「问题追踪」子Tab 时才显示该面板的功能说明（之前一直常驻占用屏幕首行）
+  const [showTasksHelp, setShowTasksHelp] = useState(false);
 
   // ========== 筛选状态 ==========
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled'>('all');
@@ -1089,7 +1091,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5">
                   应急场景使用：现场先按临时任务处理，工单记录同样挂到当前问题下，
-                  可在问题管理的「关联任务」里看到。
+                  可在问题管理的「问题追踪」里看到。
                 </div>
               </div>
             </Label>
@@ -1353,6 +1355,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           <Button
             variant="ghost"
             onClick={() => setActiveTab('tasks')}
+            onMouseEnter={() => setShowTasksHelp(true)}
+            onMouseLeave={() => setShowTasksHelp(false)}
+            onFocus={() => setShowTasksHelp(true)}
+            onBlur={() => setShowTasksHelp(false)}
             className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
               activeTab === 'tasks'
                 ? 'border-orange-500 text-orange-600 bg-orange-50'
@@ -1360,7 +1366,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             }`}
           >
             <List className="w-4 h-4" />
-            关联任务
+            问题追踪
             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
               {linkedTasks.length}
             </span>
@@ -1544,15 +1550,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         </div>
       )}
 
-      {/* 关联任务标签页 */}
+      {/* 问题追踪标签页 */}
       {activeTab === 'tasks' && (
         <div className="space-y-4">
-          {/* 提示信息 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          {/* 2026-10-21：提示框改为 hover「问题追踪」子Tab 按钮时才显示
+              （原常驻占用第一行屏幕；现仅在用户主动悬停时展开，避免视觉噪音） */}
+          {showTasksHelp && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-start gap-3">
               <List className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>
-                <div className="text-sm font-medium text-blue-800">关联任务说明</div>
+                <div className="text-sm font-medium text-blue-800">问题追踪说明</div>
                 {/* 2026-09-21：更新文案（更准确描述3 类任务的来源 + 验收流程） */}
                 {/* 2026-10-10（审核修复）：原文案称"与**本问题**关联"—— 本 tab 是总览页、
                     无"当前问题"上下文，列表实为全部已分派问题的关联任务，文案与内容不符 */}
@@ -1570,6 +1578,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               </div>
             </div>
           </div>
+          )}
 
           {/* 任务列表 */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1647,7 +1656,27 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                             </span>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-sm font-mono text-gray-600">
-                            {task.taskCode}
+                            {/* 2026-10-21：任务编号改为可点击 —— 三种 type 分流：
+                                  farm → dispatch 'open-task-detail'（FarmTaskHub 已监听，开 TaskDetailModal）
+                                  inspection → dispatch 'open-inspection-detail'（本次新增，开 InspectionDetailModal）
+                                  tempTask → TempTaskTab 的 inline modal 状态未外露，点击提示用户去对应 tab（最小侵入） */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (task.type === 'farm') {
+                                  window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
+                                } else if (task.type === 'inspection') {
+                                  window.dispatchEvent(new CustomEvent('open-inspection-detail', { detail: { recordId: task.id } }));
+                                } else if (task.type === 'tempTask') {
+                                  showAlert('临时任务请到「临时任务」tab 查看详情');
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                              title="点击查看任务详情"
+                            >
+                              {task.taskCode}
+                            </button>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">
                             {task.title}
