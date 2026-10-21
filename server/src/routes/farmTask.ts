@@ -511,6 +511,19 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
 
+    // 2026-10-21：补创建操作记录（此前 POST / 端点从未写过 action='create' 的流转记录，
+    //   导致任务"创建"操作人有 5/29 条 operator_name 为空）。
+    //   同时操作人字段从 req.user 兜底（演示模式注入"陆启闯"）。
+    const createdTaskCode = task_code || taskCode || newId;
+    const createdTaskTitle = task_title || taskTitle || title || '';
+    recordTaskOperation(
+      req, db, newId, createdTaskCode, createdTaskTitle,
+      create_by || createBy || '', // body 上的创建人标识
+      (req as any).user?.name || create_by || createBy || '', // 操作人姓名：优先 req.user.name
+      'create', '创建任务', undefined, normalizeTaskStatus(status || 'pending')
+    );
+    saveDatabase();
+
     // 查询刚创建的完整记录，返回给前端（避免Store乐观更新被空数据覆盖）
     // 使用 queryToObjects 自动将 snake_case 列名转为驼峰命名，确保 transformTaskFields 正确读取
     const createdItems = queryToObjects(db, 'SELECT * FROM farm_tasks WHERE id = ?', [newId]);
@@ -1162,9 +1175,17 @@ router.get('/records/export', (req: Request, res: Response) => {
 });
 
 /**
- * 记录任务操作
+ * 记录任务操作（含操作人兜底）
+ *
+ * 2026-10-21：
+ * 1. 调用方传 body.operator_id / operator_name 优先；
+ * 2. 为空时从 req.user 兜底（避免前端漏传或第三方调用丢操作人）；
+ * 3. 全表扫描确认 12 类操作有 12 类带 operator_name='' 历史脏数据
+ *    （create 5/29、publish 16/27、accept 26/168、status_change 23/47 等），
+ *    此次仅修未来写入链路 + 历史修复脚本由服务端一次补齐。
  */
 function recordTaskOperation(
+  req: Request,
   db: any,
   taskId: string,
   taskCode: string,
@@ -1183,11 +1204,16 @@ function recordTaskOperation(
   const id = `TOR${Date.now()}`;
   const now = new Date().toISOString();
 
+  // 2026-10-21：操作人为空时从 req.user 兜底（演示模式默认会注入 "陆启闯/demo_user"）
+  const fallbackUser = (req as any).user || {};
+  const finalOperatorId = operatorId || fallbackUser.userId || fallbackUser.aid || '';
+  const finalOperatorName = operatorName || fallbackUser.name || '';
+
   db.run(`
     INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
       action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
+  `, [id, taskId, taskCode, taskTitle, finalOperatorId, finalOperatorName, action, actionName,
       fromStatus !== undefined ? fromStatus : null, toStatus,
       progress !== undefined ? progress : null,
       comment !== undefined ? comment : null,
@@ -1445,7 +1471,7 @@ router.post('/:id/publish', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'pending', update_time = ? WHERE id = ?`,
         [now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'publish', '发布任务', fromStatus, 'pending');
     });
 
@@ -1492,7 +1518,7 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'draft', update_time = ? WHERE id = ?`,
         [now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'withdraw',
         reason ? `撤回任务：${reason}` : '撤回任务', fromStatus, 'draft');
     });
@@ -1547,7 +1573,7 @@ router.post('/:id/accept', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'accepted', accepted_at = ?, update_time = ? WHERE id = ?`,
         [now, now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'accept', '接受任务', fromStatus, 'accepted');
 
       syncTaskOperationRecord(db, task, {
@@ -1591,7 +1617,7 @@ router.post('/:id/start', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`,
         [now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'start', '开始执行', fromStatus, 'in_progress');
 
       syncTaskOperationRecord(db, task, {
@@ -1652,7 +1678,7 @@ router.post('/:id/progress', (req: Request, res: Response) => {
 
       // 将 feedback 对象转为 JSON 字符串存储
       const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'progress', '提交进度',
         task.status, normalizedStatus || task.status, newProgress, comment, undefined, feedbackStr);
 
@@ -1703,7 +1729,7 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
 
       // 将 feedback 对象转为 JSON 字符串存储
       const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment, undefined, feedbackStr);
 
       syncTaskOperationRecord(db, task, {
@@ -1780,7 +1806,7 @@ router.post('/:id/complete', (req: Request, res: Response) => {
         [now, actualHoursValue, actualHoursValue ? now : null, actualHoursValue ? (operator_id || '') : null,
          ratioValue, actualAreaValue, now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'complete', '验收通过', fromStatus, 'completed', 100, comments);
 
       syncTaskOperationRecord(db, task, {
@@ -1847,7 +1873,7 @@ router.post('/:id/reject', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = ?, rework_count = ?, update_time = ?, rejected_at = ?, rejected_by = ?, rejected_reason = ? WHERE id = ?`,
         [newStatus, reworkCount, now, now, operator_id || '', reason || '', id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'reject', '验收驳回', fromStatus, newStatus, undefined, reason);
 
       syncTaskOperationRecord(db, task, {
@@ -1887,7 +1913,7 @@ router.post('/:id/continue', (req: Request, res: Response) => {
 
     runInTransaction(db, () => {
       db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`, [now, id]);
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'continue', '继续执行', fromStatus, 'in_progress');
     });
 
@@ -1928,7 +1954,7 @@ router.post('/:id/cancel', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'cancelled', update_time = ?, cancelled_at = ?, cancelled_by = ?, cancelled_reason = ? WHERE id = ?`,
         [now, now, operator_id || '', reason || '', id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'cancel', '取消任务', fromStatus, 'cancelled', undefined, reason);
 
       syncTaskOperationRecord(db, task, {
@@ -1973,7 +1999,7 @@ router.post('/:id/abandon', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ?, abandoned_at = ?, abandoned_by = ?, abandoned_reason = ? WHERE id = ?`,
         [now, now, operator_id || '', reason || '', id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'abandon', '放弃任务', fromStatus, 'abandoned', undefined, reason);
 
       syncTaskOperationRecord(db, task, {
@@ -2025,7 +2051,7 @@ router.post('/:id/overtime-continue', (req: Request, res: Response) => {
     runInTransaction(db, () => {
       db.run(sql, params);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'overtime_continue', '超时继续', task.status, task.status);
     });
 
@@ -2066,7 +2092,7 @@ router.post('/:id/overtime-abandon', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ?, abandoned_at = ?, abandoned_by = ?, abandoned_reason = ? WHERE id = ?`,
         [now, now, operator_id || '', reason || '', id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'overtime_abandon', '超时放弃', fromStatus, 'abandoned', undefined, reason);
     });
 
@@ -2114,7 +2140,7 @@ router.post('/:id/reassign', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET assignee_id = ?, assignee_name = ?, status = 'pending', update_time = ? WHERE id = ?`,
         [assigneeId, assigneeName, now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'reassign', '重新派发', task.status, 'pending', undefined, reason);
     });
 
@@ -2152,7 +2178,7 @@ router.post('/:id/extend-deadline', (req: Request, res: Response) => {
       db.run(`UPDATE farm_tasks SET due_date = ?, update_time = ? WHERE id = ?`,
         [newDeadline, now, id]);
 
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'extend_deadline', '延期', task.status, task.status, undefined, reason);
     });
 
@@ -2185,7 +2211,7 @@ router.post('/:id/remind', (req: Request, res: Response) => {
 
     // P0-1：事务包裹（只有操作记录写入，但仍包事务保证一致性）
     runInTransaction(db, () => {
-      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      recordTaskOperation(req, db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'remind', '催办', task.status, task.status, undefined, message);
     });
 
