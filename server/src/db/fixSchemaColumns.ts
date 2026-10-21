@@ -220,6 +220,22 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
   }
 
+  // ============ task_operation_records（2026-10-21 流转记录追溯增强）============
+  // 背景：用户要求「方便后续对所有任务进行追溯查询」。现有记录缺三类信息：
+  //   1) 执行人快照 —— 任务被重派后，历史记录只能查到"当前执行人"，无法回答"当时是谁在干"
+  //   2) IP / 终端 —— 合规审计（《农产品质量安全法》第27条 生产记录留存 2 年）需要操作来源
+  //   3) 变更差异 / 关联单据 —— 编辑类操作无法追溯"改了什么"，单据删除后无从回溯
+  const taskOperationColumnsToAdd: Array<[string, string, string?]> = [
+    ['assignee_name_at_action', 'TEXT'],
+    ['operator_ip', 'TEXT'],
+    ['operator_user_agent', 'TEXT'],
+    ['change_diff', 'TEXT'],
+    ['linked_documents', 'TEXT'],
+  ];
+  for (const [col, typeDef, def] of taskOperationColumnsToAdd) {
+    addedColumns += safeAddColumn(db, 'task_operation_records', col, typeDef, def) ? 1 : 0;
+  }
+
   // ============ farm_operation_records（P0-2 任务↔作业记录关联）============
   // 客户端早先写入的父记录只有 source_id；本列用于后端按任务直连查询
   addedColumns += safeAddColumn(db, 'farm_operation_records', 'task_id', 'TEXT') ? 1 : 0;

@@ -27,6 +27,25 @@ interface LinkedMaterialRequest {
   materials: Array<{ name: string; qty: number; unit: string }>;
 }
 
+/**
+ * 2026-10-21：解析后端返回的 JSON 结构化字段（changeDiff / linkedDocuments）。
+ * 后端存的是 JSON 字符串，但查询层可能已解包成对象 —— 两种都兼容。
+ * 解析失败返回 undefined，不抛出（避免单条坏记录整页白屏）。
+ */
+function parseJsonObject<T>(raw: unknown): T | undefined {
+  if (!raw) return undefined;
+  if (typeof raw === 'object') return raw as T;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? (parsed as T) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 /** 解析领料单 materials（JSON 字符串或数组） */
 function parseLinkedMaterials(raw: unknown): Array<{ name: string; qty: number; unit: string }> {
   let list: any[] = [];
@@ -155,6 +174,12 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
               comment: r.comment ? String(r.comment) : undefined,
               reason: r.reason ? String(r.reason) : undefined,
               feedback,
+              // 2026-10-21 追溯增强字段（后端 snake→camel 后为 assigneeNameAtAction / operatorIp / ...）
+              assigneeNameAtAction: r.assigneeNameAtAction ? String(r.assigneeNameAtAction) : undefined,
+              operatorIp: r.operatorIp ? String(r.operatorIp) : undefined,
+              operatorUserAgent: r.operatorUserAgent ? String(r.operatorUserAgent) : undefined,
+              changeDiff: parseJsonObject<TaskRecord['changeDiff']>(r.changeDiff),
+              linkedDocuments: parseJsonObject<TaskRecord['linkedDocuments']>(r.linkedDocuments),
               actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
               createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
             };
@@ -641,10 +666,17 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
               </div>
             )}
 
-            {/* 处理流转记录 - 使用完整的时间线组件 */}
+            {/* 处理流转记录 - 使用完整的时间线组件
+                2026-10-21：透传 dueDate / 当前执行人，用于逾期标记与重派提示 */}
             {sortedRecords.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <TaskRecordTimeline records={sortedRecords} showStatusChange showFeedback />
+                <TaskRecordTimeline
+                  records={sortedRecords}
+                  showStatusChange
+                  showFeedback
+                  taskDueDate={task?.dueDate}
+                  currentAssigneeName={task?.assigneeName}
+                />
               </div>
             )}
 

@@ -191,7 +191,7 @@ router.post('/', (req: Request, res: Response) => {
     // 记录创建/分派操作
     recordTempTaskOperation(db, newId, taskCode, task_title || title || '',
       assigner_id || requester_id || '', assigner_name || requester_name || '',
-      'create', '创建任务', undefined, status || 'pending');
+      'create', '创建任务', undefined, status || 'pending', undefined, undefined, undefined, undefined, req);
 
     saveDatabase();
 
@@ -207,6 +207,10 @@ router.post('/', (req: Request, res: Response) => {
 
 /**
  * 记录临时任务操作流水
+ *
+ * 2026-10-21（追溯增强）：与农事任务 recordTaskOperation 对齐 ——
+ * 调用方可传 req 以自动采集 操作 IP / 终端 UA / 操作时执行人快照。
+ * req 为可选（部分调用点无请求上下文，如内部联动），缺省时这三个字段写 null。
  */
 function recordTempTaskOperation(
   db: any,
@@ -222,26 +226,58 @@ function recordTempTaskOperation(
   progress?: number,
   comment?: string,
   reason?: string,
-  feedback?: string
+  feedback?: string,
+  req?: Request,
+  /** 2026-10-21（追溯增强 第二批）：字段级变更差异 JSON */
+  changeDiff?: string
 ) {
-  const id = `TTO${Date.now()}`;
+  // 2026-10-21：ID 加随机后缀（同 farmTask.recordTaskOperation），避免同毫秒批量写入主键冲突
+  const id = `TTO${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
   const now = new Date().toISOString();
 
-  console.log('[recordTempTaskOperation] 插入记录:', {
-    id, taskId, operatorId, operatorName, action, actionName,
-    fromStatus, toStatus, progress, comment, feedback
-  });
+  // 2026-10-21：操作人为空时从 req.user 兜底（与农事任务 recordTaskOperation 对齐）——
+  //   此前 create/reassign 等调用点未传 operator，记录里 operator_name 恒为空串
+  const fallbackUser = (req as any)?.user || {};
+  const finalOperatorId = operatorId || fallbackUser.userId || fallbackUser.aid || '';
+  const finalOperatorName = operatorName || fallbackUser.name || '';
+
+  // ---- 追溯增强：自动采集 ----
+  let assigneeNameAtAction: string | null = null;
+  try {
+    const rows = queryToObjects(db, 'SELECT assignee_name FROM temp_tasks WHERE id = ?', [taskId]);
+    if (rows && rows.length > 0) {
+      const r = rows[0] as any;
+      assigneeNameAtAction = String(r.assigneeName ?? r.assignee_name ?? '') || null;
+    }
+  } catch {
+    // 表或列不存在时忽略
+  }
+
+  let operatorIp: string | null = null;
+  let operatorUserAgent: string | null = null;
+  if (req) {
+    const xff = req.headers['x-forwarded-for'];
+    const rawIp = (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim()
+      || req.ip
+      || (req.socket as any)?.remoteAddress
+      || '';
+    operatorIp = rawIp.replace(/^::ffff:/, '') || null;
+    operatorUserAgent = String(req.headers['user-agent'] || '').slice(0, 500) || null;
+  }
 
   db.run(`
     INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
-      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
+      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time,
+      assignee_name_at_action, operator_ip, operator_user_agent, change_diff)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [id, taskId, taskCode, taskTitle, finalOperatorId, finalOperatorName, action, actionName,
       fromStatus !== undefined ? fromStatus : null, toStatus,
       progress !== undefined ? progress : null,
       comment !== undefined ? comment : null,
       reason !== undefined ? reason : null,
-      feedback !== undefined ? feedback : null, now, now]);
+      feedback !== undefined ? feedback : null, now, now,
+      assigneeNameAtAction, operatorIp, operatorUserAgent,
+      changeDiff !== undefined ? changeDiff : null]);
 }
 
 /**
@@ -302,7 +338,7 @@ router.post('/:id/accept', (req: Request, res: Response) => {
 
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
       operator_id || '', operator_name || '', 'accept', '接受任务',
-      fromStatus, 'accepted', undefined, '已接受任务');
+      fromStatus, 'accepted', undefined, '已接受任务', undefined, undefined, req);
 
     saveDatabase();
     res.json({ success: true, data: { id, status: 'accepted' } });
@@ -385,7 +421,7 @@ router.post('/:id/submit-progress', (req: Request, res: Response) => {
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
       operator_id || '', operator_name || '', 'submit_progress', actionName,
       fromStatus, toStatus,
-      progress, comment || (progressNum >= 100 ? '处理完成，提交验收' : (progressNum === 0 ? '开始执行任务' : '进度更新')), undefined, feedbackStr);
+      progress, comment || (progressNum >= 100 ? '处理完成，提交验收' : (progressNum === 0 ? '开始执行任务' : '进度更新')), undefined, feedbackStr, req);
 
     saveDatabase();
     res.json({ success: true, data: { id, progress: progress || currentProgress } });
@@ -424,7 +460,7 @@ router.post('/:id/complete', (req: Request, res: Response) => {
 
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
       operator_id || '', operator_name || '', 'complete', '验收通过',
-      fromStatus, 'completed', 100, acceptance_remarks || '验收通过');
+      fromStatus, 'completed', 100, acceptance_remarks || '验收通过', undefined, undefined, req);
 
     saveDatabase();
     res.json({ success: true, data: { id, status: 'completed' } });
@@ -464,7 +500,7 @@ router.post('/:id/reject', (req: Request, res: Response) => {
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
       operator_id || '', operator_name || '', 'reject', '验收驳回',
       fromStatus, 'rejected', undefined,
-      reject_reason ? `返工原因：${reject_reason}` : '验收不通过，需要返工');
+      reject_reason ? `返工原因：${reject_reason}` : '验收不通过，需要返工', undefined, undefined, req);
 
     saveDatabase();
     res.json({ success: true, data: { id, status: 'rejected' } });
@@ -569,9 +605,12 @@ router.put('/:id', (req: Request, res: Response) => {
       // 如果 operator_id 为空，使用任务的 assignee 信息
       const operatorId = updates.operator_id || task.assignee_id || task.assigner_id || '';
       const operatorName = updates.operator_name || task.assignee_name || task.assigner_name || '';
+      // 2026-10-21（追溯增强 第二批）：状态变更也记录 diff
       recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operatorId, operatorName,
-        'status_change', actionName, oldStatus, newStatus);
+        'status_change', actionName, oldStatus, newStatus,
+        undefined, undefined, undefined, undefined, req,
+        JSON.stringify({ status: { label: '状态', from: String(oldStatus || ''), to: String(newStatus || '') } }));
     }
 
     // 重新分派记录
@@ -579,10 +618,12 @@ router.put('/:id', (req: Request, res: Response) => {
       // 如果 operator_id 为空，使用任务的 assignee 信息
       const operatorId = updates.operator_id || task.assignee_id || task.assigner_id || '';
       const operatorName = updates.operator_name || task.assignee_name || task.assigner_name || '';
+      // 2026-10-21（追溯增强 第二批）：重派记录执行人变更 diff
       recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operatorId, operatorName,
         'reassign', '重新分派', oldStatus, newStatus, undefined,
-        `重新分派给 ${newAssigneeName} 处理`);
+        `重新分派给 ${newAssigneeName} 处理`, undefined, undefined, req,
+        JSON.stringify({ assignee_name: { label: '执行人', from: String(oldAssigneeName || ''), to: String(newAssigneeName || '') } }));
     }
 
     saveDatabase();

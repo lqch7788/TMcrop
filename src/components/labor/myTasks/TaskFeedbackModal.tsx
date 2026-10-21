@@ -233,10 +233,9 @@ export function TaskFeedbackModal({
           </div>
         </div>
 
-        {/* 流转记录 */}
+        {/* 流转记录 —— 2026-10-21：去掉外层重复标题（TaskFlowTimeline 自带「流转记录（N条）」） */}
         {task.sourceProblemId && problemFlowRecords.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">流转记录</h4>
             <TaskFlowTimeline records={problemFlowRecords} />
           </div>
         )}

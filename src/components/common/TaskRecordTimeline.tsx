@@ -19,6 +19,7 @@ import {
   Image,
   MapPin,
   Mic,
+  Edit,
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../hooks/useTasks';
 import type { TaskRecord, TaskStatus } from '../../types/task';
@@ -41,18 +42,28 @@ const TASK_ACTION_CONFIG: Record<string, { icon: typeof CheckCircle; color: stri
   extend_deadline: { icon: Calendar, color: 'text-gray-500', bgColor: 'bg-gray-500', label: '延期' },
   continue: { icon: Play, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '继续执行' },
   create: { icon: Send, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '创建任务' },
+  // 2026-10-21（追溯增强 第二批）：编辑类操作 —— 此前 PUT /:id 完全不写记录
+  update: { icon: Edit, color: 'text-amber-500', bgColor: 'bg-amber-500', label: '修改任务' },
+  status_change: { icon: Clock, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '状态变更' },
+  batch_update: { icon: Edit, color: 'text-amber-500', bgColor: 'bg-amber-500', label: '批量修改' },
 };
 
 interface TaskRecordTimelineProps {
   records: TaskRecord[];
   showStatusChange?: boolean;
   showFeedback?: boolean;
+  /** 2026-10-21：任务截止日期（YYYY-MM-DD 或 ISO）。传入后可为逾期操作打标记 */
+  taskDueDate?: string;
+  /** 2026-10-21：任务当前执行人。与记录里的执行人快照不一致时提示"任务已重派" */
+  currentAssigneeName?: string;
 }
 
 export function TaskRecordTimeline({
   records,
   showStatusChange = true,
   showFeedback = true,
+  taskDueDate,
+  currentAssigneeName,
 }: TaskRecordTimelineProps) {
   if (!records || records.length === 0) {
     return (
@@ -66,6 +77,41 @@ export function TaskRecordTimeline({
   const sortedRecords = [...records].sort(
     (a, b) => new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime()
   );
+
+  /**
+   * 2026-10-21：格式化"距上一次操作的间隔"。
+   * 用于识别流程卡点 —— 例如"接单后隔了 3 天才开始执行"。
+   * < 1 分钟不显示（避免噪音）。
+   */
+  const formatGap = (prevIso: string | undefined, currIso: string): string | null => {
+    if (!prevIso) return null;
+    const diffMs = new Date(currIso).getTime() - new Date(prevIso).getTime();
+    if (!Number.isFinite(diffMs) || diffMs < 60_000) return null;
+    const mins = Math.floor(diffMs / 60_000);
+    if (mins < 60) return `${mins}分钟`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}小时${mins % 60 ? `${mins % 60}分` : ''}`;
+    const days = Math.floor(hours / 24);
+    return `${days}天${hours % 24 ? `${hours % 24}小时` : ''}`;
+  };
+
+  /**
+   * 2026-10-21：判断该条操作是否发生在任务截止日期之后（逾期操作）。
+   *
+   * 时区注意：`new Date('2026-10-19')` 会按 **UTC** 解析为当日 00:00，
+   * 而操作时间是带 Z 的 UTC ISO 串。若直接 +24h，截止点会变成 UTC 23:59:59，
+   * 比本地（UTC+8）当天末晚 8 小时 —— 凌晨 0~8 点的逾期操作会被漏判。
+   * 故对纯日期串显式按本地时区拼上 23:59:59.999。
+   */
+  const isOverdueAction = (actionTime: string): boolean => {
+    if (!taskDueDate) return false;
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(taskDueDate)
+      ? new Date(`${taskDueDate}T23:59:59.999`).getTime()
+      : new Date(taskDueDate).getTime();
+    const at = new Date(actionTime).getTime();
+    if (!Number.isFinite(due) || !Number.isFinite(at)) return false;
+    return at > due;
+  };
 
   // 格式化时间
   const formatTime = (timeStr: string) => {
@@ -131,8 +177,9 @@ export function TaskRecordTimeline({
                       {record.actionName || config.label}
                     </span>
 
-                    {/* 状态变化 */}
-                    {showStatusChange && (record.fromStatus || record.toStatus) && (
+                    {/* 状态变化 —— 2026-10-21：状态未变时不渲染（此前更新类记录会显示
+                        「待接受 → 待接受」这种无意义信息） */}
+                    {showStatusChange && (record.fromStatus || record.toStatus) && record.fromStatus !== record.toStatus && (
                       <>
                         <span className="text-gray-300 select-none">|</span>
                         <span className="flex items-center gap-1">
@@ -191,11 +238,73 @@ export function TaskRecordTimeline({
                       </>
                     )}
 
+                    {/* 2026-10-21：逾期操作标记（操作时间晚于任务截止日期） */}
+                    {isOverdueAction(record.actionTime) && (
+                      <>
+                        <span className="text-gray-300 select-none">|</span>
+                        <span className="px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 font-medium whitespace-nowrap">
+                          逾期操作
+                        </span>
+                      </>
+                    )}
+
+                    {/* 2026-10-21：距上一次操作的间隔（识别流程卡点） */}
+                    {(() => {
+                      const gap = index > 0 ? formatGap(sortedRecords[index - 1].actionTime, record.actionTime) : null;
+                      return gap ? (
+                        <>
+                          <span className="text-gray-300 select-none">|</span>
+                          <span className="text-xs text-gray-400 whitespace-nowrap">距上次 {gap}</span>
+                        </>
+                      ) : null;
+                    })()}
+
                     <span className="text-gray-300 select-none">|</span>
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       {formatTime(record.actionTime)}
                     </span>
                   </div>
+
+                  {/* 2026-10-21（追溯增强 第二批）：字段级变更差异 —— 回答"这次操作改了什么" */}
+                  {record.changeDiff && !Array.isArray(record.changeDiff) && Object.keys(record.changeDiff).length > 0 && (
+                    <div className="mt-2 rounded bg-amber-50 border border-amber-200 px-2 py-1">
+                      <div className="text-xs font-medium text-amber-700 mb-1">本次变更</div>
+                      <div className="space-y-0.5">
+                        {Object.entries(record.changeDiff).map(([col, d]) => (
+                          <div key={col} className="text-xs text-gray-700 break-all">
+                            <span className="text-gray-500">{d.label || col}：</span>
+                            <span className="text-gray-500 line-through">{d.from || '（空）'}</span>
+                            <span className="text-gray-400 mx-1">→</span>
+                            <span className="font-medium text-gray-900">{d.to || '（空）'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2026-10-21（追溯增强 第二批）：关联单据快照 */}
+                  {record.linkedDocuments && record.linkedDocuments.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {record.linkedDocuments.map((doc, i) => (
+                        <span
+                          key={`${doc.type}-${doc.code}-${i}`}
+                          className="px-2 py-0.5 text-xs rounded bg-cyan-50 text-cyan-700 border border-cyan-200"
+                          title={doc.label || doc.type}
+                        >
+                          {doc.label || doc.type}：{doc.code}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 2026-10-21：操作时的执行人快照（与当前执行人不同时高亮，提示任务已重派） */}
+                  {record.assigneeNameAtAction && record.assigneeNameAtAction !== currentAssigneeName && currentAssigneeName && (
+                    <div className="mt-1 text-xs text-gray-400">
+                      操作时执行人：<span className="text-gray-600">{record.assigneeNameAtAction}</span>
+                      <span className="mx-1">·</span>
+                      现执行人：<span className="text-gray-600">{currentAssigneeName}</span>
+                    </div>
+                  )}
 
                   {/* 反馈数据展示（位置、照片、语音等） */}
                   {showFeedback && record.feedback && (

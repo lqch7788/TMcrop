@@ -516,11 +516,20 @@ router.post('/', (req: Request, res: Response) => {
     //   同时操作人字段从 req.user 兜底（演示模式注入"陆启闯"）。
     const createdTaskCode = task_code || taskCode || newId;
     const createdTaskTitle = task_title || taskTitle || title || '';
+    // 2026-10-21（追溯增强 第二批）：创建时快照关联单据 —— 后续单据被删除/改号仍可回溯
+    const linkedDocs: Array<{ type: string; code: string; label: string }> = [];
+    if (batch_code || batchCode) linkedDocs.push({ type: 'batch', code: String(batch_code || batchCode), label: '批次' });
+    if (production_plan_code || productionPlanCode) linkedDocs.push({ type: 'production_plan', code: String(production_plan_code || productionPlanCode), label: '生产计划' });
+    if (planting_id || plantingId) linkedDocs.push({ type: 'planting', code: String(planting_id || plantingId), label: '种植实例' });
+    if (sop_content || sopContent) linkedDocs.push({ type: 'sop', code: 'SOP', label: '作业标准' });
     recordTaskOperation(
       req, db, newId, createdTaskCode, createdTaskTitle,
       create_by || createBy || '', // body 上的创建人标识
       (req as any).user?.name || create_by || createBy || '', // 操作人姓名：优先 req.user.name
-      'create', '创建任务', undefined, normalizeTaskStatus(status || 'pending')
+      'create', '创建任务', undefined, normalizeTaskStatus(status || 'pending'),
+      undefined, undefined, undefined, undefined,
+      undefined,
+      linkedDocs.length > 0 ? JSON.stringify(linkedDocs) : undefined,
     );
     saveDatabase();
 
@@ -538,6 +547,37 @@ router.post('/', (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: '创建农事任务失败' });
   }
 });
+
+/**
+ * 2026-10-21（追溯增强 第二批）：需要记录"字段级变更差异"的业务字段白名单。
+ *
+ * PUT /:id 会接收任意可写字段，但只有这些字段的变更值得审计（谁把执行人改了、
+ * 谁把截止日期推后了）。其余字段（update_time / version / feedback 大 JSON 等）
+ * 要么是噪音，要么会造成记录膨胀。
+ */
+const TRACKED_FIELD_LABELS: Record<string, string> = {
+  task_title: '任务标题',
+  task_type: '任务类型',
+  assignee_id: '执行人ID',
+  assignee_name: '执行人',
+  assigner_name: '派发人',
+  greenhouse_name: '任务区域',
+  area_name: '区域',
+  plan_date: '计划开始',
+  plan_end: '计划结束',
+  due_date: '截止日期',
+  priority: '优先级',
+  status: '状态',
+  progress: '进度',
+  crop: '作物',
+  crop_remarks: '作物备注',
+  estimated_hours: '预计工时',
+  estimated_days: '预计天数',
+  team_name: '班组',
+  description: '工作内容',
+  remarks: '备注',
+  sop_content: '作业标准',
+};
 
 // 前端驼峰字段名 → 数据库下划线列名映射
 const FIELD_NAME_MAP: Record<string, string> = {
@@ -716,6 +756,12 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
+    // 2026-10-21（追溯增强 第二批）：UPDATE 前取旧行快照，用于计算字段级变更差异。
+    //   此前 PUT /:id 完全不写流转记录 —— 改执行人/改截止日期/改优先级等操作零审计，
+    //   任务详情里查不到"谁在什么时候把执行人从张三改成了李四"。
+    const beforeRows = queryToObjects(db, 'SELECT * FROM farm_tasks WHERE id = ?', [id]);
+    const beforeRow = (beforeRows && beforeRows.length > 0 ? beforeRows[0] : null) as Record<string, any> | null;
+
     const setClauses = validKeys.map(k => `${toDbColumnName(k)} = ?`).join(', ');
     const values = validKeys.map(k => toDbValue(updates[k]));
     values.push(now, id);
@@ -741,6 +787,50 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (db.getRowsModified() === 0) {
       return res.status(404).json({ success: false, error: '农事任务不存在' });
     }
+
+    // 2026-10-21（追溯增强 第二批）：字段级变更差异落流转记录。
+    //   只跟踪业务关键字段（见 TRACKED_FIELD_LABELS），忽略 updated_at 之类的噪音。
+    //   注意：queryToObjects 返回的是 camelCase 键（mapToCamelCase），
+    //   直接用 snake_case 取值会静默拿到 undefined → diff 永远为空。
+    if (beforeRow) {
+      const readCol = (row: Record<string, any>, snake: string): unknown => {
+        const camel = snake.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+        return row[camel] !== undefined ? row[camel] : row[snake];
+      };
+      const diffObj: Record<string, { label: string; from: string; to: string }> = {};
+      for (const k of validKeys) {
+        const col = toDbColumnName(k);
+        if (!(col in TRACKED_FIELD_LABELS)) continue;
+        const rawOld = readCol(beforeRow, col);
+        const oldVal = rawOld === null || rawOld === undefined ? '' : String(rawOld);
+        const newVal = updates[k] === null || updates[k] === undefined ? '' : String(updates[k]);
+        if (oldVal !== newVal) {
+          diffObj[col] = { label: TRACKED_FIELD_LABELS[col], from: oldVal, to: newVal };
+        }
+      }
+      const diffKeys = Object.keys(diffObj);
+      if (diffKeys.length > 0) {
+        // 纯状态变更用 status_change，其余（含混合）统一 update
+        const onlyStatus = diffKeys.length === 1 && diffKeys[0] === 'status';
+        const rawBeforeStatus = readCol(beforeRow, 'status');
+        const beforeStatus = rawBeforeStatus ? String(rawBeforeStatus) : undefined;
+        const afterStatus = updates.status ? String(normalizeTaskStatus(updates.status)) : String(rawBeforeStatus || '');
+        recordTaskOperation(
+          req, db, id,
+          String(readCol(beforeRow, 'task_code') || ''),
+          String(readCol(beforeRow, 'task_title') || ''),
+          String(updates.operator_id || updates.operatorId || ''),
+          String(updates.operator_name || updates.operatorName || ''),
+          onlyStatus ? 'status_change' : 'update',
+          onlyStatus ? '状态变更' : '修改任务',
+          beforeStatus,
+          afterStatus,
+          undefined, undefined, undefined, undefined,
+          JSON.stringify(diffObj),
+        );
+      }
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
@@ -1059,14 +1149,65 @@ router.put('/batch', (req: Request, res: Response) => {
     }
 
     const placeholders = ids.map(() => '?').join(',');
+
+    // 2026-10-21（追溯增强 第二批）：批量更新同样要留痕 —— 批量派发/验收/重派/编辑
+    //   全部走本端点，此前这些操作零审计。先取旧行快照，UPDATE 后逐条写记录。
+    const beforeBatch = queryToObjects(
+      db,
+      `SELECT * FROM farm_tasks WHERE id IN (${placeholders})`,
+      ids,
+    ) as Record<string, any>[];
+
     db.run(`UPDATE farm_tasks SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
 
     // 2026-10-20：返回**真实**影响行数（此前恒为 ids.length，不存在的 id 也算成功）
     const affected = db.getRowsModified();
 
+    // 逐条写流转记录（每条任务的旧值不同，diff 需单独计算）
+    if (affected > 0 && beforeBatch.length > 0) {
+      const readCol = (row: Record<string, any>, snake: string): unknown => {
+        const camel = snake.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+        return row[camel] !== undefined ? row[camel] : row[snake];
+      };
+      for (const before of beforeBatch) {
+        const tid = String(readCol(before, 'id') || '');
+        if (!tid) continue;
+        const diffObj: Record<string, { label: string; from: string; to: string }> = {};
+        for (const k of validKeys) {
+          const col = toDbColumnName(k);
+          if (!(col in TRACKED_FIELD_LABELS)) continue;
+          const rawOld = readCol(before, col);
+          const oldVal = rawOld === null || rawOld === undefined ? '' : String(rawOld);
+          const rawNew = normalizedUpdates[k];
+          const newVal = rawNew === null || rawNew === undefined ? '' : String(rawNew);
+          if (oldVal !== newVal) {
+            diffObj[col] = { label: TRACKED_FIELD_LABELS[col], from: oldVal, to: newVal };
+          }
+        }
+        const diffKeys = Object.keys(diffObj);
+        if (diffKeys.length === 0) continue;
+        const onlyStatus = diffKeys.length === 1 && diffKeys[0] === 'status';
+        recordTaskOperation(
+          req, db, tid,
+          String(readCol(before, 'task_code') || ''),
+          String(readCol(before, 'task_title') || ''),
+          String(normalizedUpdates.operator_id || normalizedUpdates.operatorId || ''),
+          String(normalizedUpdates.operator_name || normalizedUpdates.operatorName || ''),
+          onlyStatus ? 'status_change' : 'batch_update',
+          onlyStatus ? '批量状态变更' : '批量修改',
+          String(readCol(before, 'status') || ''),
+          String(normalizedUpdates.status || readCol(before, 'status') || ''),
+          undefined, undefined, undefined, undefined,
+          JSON.stringify(diffObj),
+        );
+      }
+    }
+
     saveDatabase();
     res.json({ success: true, data: { ids, requested: ids.length, updated: affected } });
   } catch (error) {
+    // 2026-10-21：补充错误日志（原只有 res.status(500)，异常堆栈完全丢失）
+    console.error('批量更新农事任务失败:', error);
     res.status(500).json({ success: false, error: '批量更新农事任务失败' });
   }
 });
@@ -1175,7 +1316,7 @@ router.get('/records/export', (req: Request, res: Response) => {
 });
 
 /**
- * 记录任务操作（含操作人兜底）
+ * 记录任务操作（含操作人兜底 + 追溯信息自动采集）
  *
  * 2026-10-21：
  * 1. 调用方传 body.operator_id / operator_name 优先；
@@ -1183,6 +1324,9 @@ router.get('/records/export', (req: Request, res: Response) => {
  * 3. 全表扫描确认 12 类操作有 12 类带 operator_name='' 历史脏数据
  *    （create 5/29、publish 16/27、accept 26/168、status_change 23/47 等），
  *    此次仅修未来写入链路 + 历史修复脚本由服务端一次补齐。
+ * 4. 追溯增强（第一批）：自动采集 操作时执行人快照 / 操作来源 IP / 终端 UA；
+ *    调用方无需关心，全部由本函数从 req + db 读取。
+ * 5. 追溯增强（第二批）：可选传入 changeDiff / linkedDocuments。
  */
 function recordTaskOperation(
   req: Request,
@@ -1199,9 +1343,13 @@ function recordTaskOperation(
   progress?: number,
   comment?: string,
   reason?: string,
-  feedback?: string
+  feedback?: string,
+  changeDiff?: string,
+  linkedDocuments?: string
 ) {
-  const id = `TOR${Date.now()}`;
+  // 2026-10-21：ID 加随机后缀 —— 批量更新会在同一毫秒内循环写入多条，
+  //   仅用 Date.now() 会触发 UNIQUE constraint failed: task_operation_records.id
+  const id = `TOR${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
   const now = new Date().toISOString();
 
   // 2026-10-21：操作人为空时从 req.user 兜底（演示模式默认会注入 "陆启闯/demo_user"）
@@ -1209,16 +1357,44 @@ function recordTaskOperation(
   const finalOperatorId = operatorId || fallbackUser.userId || fallbackUser.aid || '';
   const finalOperatorName = operatorName || fallbackUser.name || '';
 
+  // ---- 追溯增强：自动采集（第一批） ----
+  // 1) 操作时的执行人快照：任务被重派后，历史记录仍需回答"当时是谁在执行"
+  let assigneeNameAtAction: string | null = null;
+  try {
+    const rows = queryToObjects(db, 'SELECT assignee_name FROM farm_tasks WHERE id = ?', [taskId]);
+    if (rows && rows.length > 0) {
+      assigneeNameAtAction = String((rows[0] as any).assigneeName ?? (rows[0] as any).assignee_name ?? '') || null;
+    }
+  } catch {
+    // 临时任务等表不存在该字段，忽略
+  }
+
+  // 2) 操作来源 IP：优先取代理转发的 x-forwarded-for 首段，其次 req.ip，最后 socket
+  const xff = req.headers['x-forwarded-for'];
+  const rawIp = (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim()
+    || req.ip
+    || (req.socket as any)?.remoteAddress
+    || '';
+  // 规范化 IPv6 映射地址（::ffff:192.168.1.1 → 192.168.1.1）
+  const operatorIp = rawIp.replace(/^::ffff:/, '');
+
+  // 3) 终端 UA：截断到 500 字符，避免异常长 UA 撑爆记录
+  const operatorUserAgent = String(req.headers['user-agent'] || '').slice(0, 500) || null;
+
   db.run(`
     INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
-      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time,
+      assignee_name_at_action, operator_ip, operator_user_agent, change_diff, linked_documents)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [id, taskId, taskCode, taskTitle, finalOperatorId, finalOperatorName, action, actionName,
       fromStatus !== undefined ? fromStatus : null, toStatus,
       progress !== undefined ? progress : null,
       comment !== undefined ? comment : null,
       reason !== undefined ? reason : null,
-      feedback !== undefined ? feedback : null, now, now]);
+      feedback !== undefined ? feedback : null, now, now,
+      assigneeNameAtAction, operatorIp || null, operatorUserAgent,
+      changeDiff !== undefined ? changeDiff : null,
+      linkedDocuments !== undefined ? linkedDocuments : null]);
 }
 
 /**

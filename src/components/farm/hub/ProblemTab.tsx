@@ -1228,12 +1228,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               </div>
             </div>
 
-            {/* 流转记录 - 石板灰背景 */}
+            {/* 流转记录 - 石板灰背景
+                2026-10-21：去掉外层标题 —— TaskFlowTimeline 自身已渲染「流转记录（N条）」，
+                此前两层标题叠加显示成「📋 流转记录 / 流转记录（1条）」 */}
             <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
-              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                流转记录
-              </h4>
               <TaskFlowTimeline
                 records={problem.flowRecords || []}
                 showStatusChange={true}
