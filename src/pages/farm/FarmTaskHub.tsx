@@ -189,9 +189,9 @@ export function FarmTaskHub() {
   // 任务刷新计数器
   const [taskRefresh, setTaskRefresh] = useState(0);
 
-  // 2026-09-21：响应「待我验收」快捷按钮的自定义事件（从 ProblemTab 关联任务列表触发）
-  // 2026-10-21：同步响应「open-inspection-detail」—— ProblemTab 的「问题追踪」子Tab
-  //   任务编号列对 inspection 类型任务新增可点击入口，由本 listener 打开 InspectionDetailModal。
+  // 2026-09-21：响应「待我验收」快捷按钮的自定义事件
+  // 2026-10-21：触发方由「问题追踪」子Tab 迁至问题详情弹窗的「关联任务」区块
+  //   （子Tab 已删除，任务编号仍可点击，此 listener 必须保留）。
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ taskId: string }>).detail;
@@ -201,7 +201,7 @@ export function FarmTaskHub() {
     return () => window.removeEventListener('open-task-detail', handler);
   }, []);
 
-  // 2026-10-21：问题追踪列表点击 inspection 类型任务编号 → 打开巡查详情弹窗
+  // 2026-10-21：问题详情弹窗「关联任务」区块点击 inspection 类型任务编号 → 打开巡查详情弹窗
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ recordId: string }>).detail;

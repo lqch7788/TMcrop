@@ -13,6 +13,15 @@ import type { TaskTimeout } from '../../../../types/task';
 import { showAlert } from '@/lib/dialogService';
 
 /**
+ * 来源问题的展示信息（由 TaskTab 从 useProblemStore 派生后经 TaskTable 逐层透传）
+ * key = problem.id；value = 问题编号 + 已转中文的状态
+ */
+export interface SourceProblemInfo {
+  code: string;
+  statusCn: string;
+}
+
+/**
  * 任务表格行任务类型
  * 用于统一任务管理中的任务数据结构
  */
@@ -86,6 +95,8 @@ interface TaskTableRowProps {
   isSelected: boolean;
   isSelectable: boolean;
   selectableReason?: string;
+  /** 来源问题索引（id → {code, statusCn}）；未传则该列显示占位符 */
+  problemMap?: Record<string, SourceProblemInfo>;
   onSelect: () => void;
   onViewDetail: () => void;
   onViewSop?: () => void;
@@ -121,6 +132,7 @@ interface TaskTableRowProps {
 export const TaskTableRow = React.memo<TaskTableRowProps>(({
   task,
   index,
+  problemMap,
   showCheckbox,
   isSelected,
   isSelectable,
@@ -286,6 +298,33 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             <OvertimeBadge timeout={task.timeout} size="sm" showLabel={true} />
           )}
         </div>
+      </td>
+
+      {/* 来源问题（2026-10-21 新增）
+          背景：「问题追踪」子Tab 删除后，任务→问题的反查能力在此列补齐。
+          数据：task.sourceProblemId → problemMap 命中后展示问题编号 + 问题状态；
+          problemMap 由 TaskTab 用 useProblemStore 统一派生（避免每行单独订阅 store 打乱 memo）。 */}
+      <td className="px-3 py-3 whitespace-nowrap">
+        {(() => {
+          const info = task.sourceProblemId ? problemMap?.[String(task.sourceProblemId)] : undefined;
+          if (!info) {
+            return <span className="text-gray-400">—</span>;
+          }
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-mono text-gray-600" title={info.code}>{info.code}</span>
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium self-start ${
+                info.statusCn === '已处理' ? 'bg-green-100 text-green-700' :
+                info.statusCn === '处理中' ? 'bg-amber-100 text-amber-700' :
+                info.statusCn === '待验收' ? 'bg-purple-100 text-purple-700' :
+                info.statusCn === '待处理' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {info.statusCn}
+              </span>
+            </div>
+          );
+        })()}
       </td>
 
       {/* 操作按钮 */}

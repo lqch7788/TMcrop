@@ -17,6 +17,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TaskTable } from './components/TaskTable';
 import { CalendarView } from './components/CalendarView';
 import { EDITABLE_STATUSES, BATCH_DISPATCH_STATUSES, BATCH_REASSIGN_STATUSES, BATCH_ACCEPT_STATUSES, STATUS_OPTIONS } from './constants_taskDispatch';
+// 2026-10-21：「来源问题」列的数据源（承接已删除的「问题追踪」子Tab 的任务→问题反查能力）
+import { useProblemStore } from '../../../stores';
+import { problemStatusToCN } from '../../../utils/problemStatus';
+import type { SourceProblemInfo } from './components/TaskTableRow';
 
 // 状态配置（从常量文件导入，与 taskDispatch 保持一致）
 const STATUS_FILTERS = STATUS_OPTIONS;
@@ -163,6 +167,32 @@ export function TaskTab({
       return true;
     });
   }, [tasks, filters]);
+
+  // 2026-10-21：问题索引（id → 编号/中文状态），供「来源问题」列使用
+  //   为什么要在这里单独拉 problems：问题列表（ProblemTab）受 FarmTaskHub 的
+  //   visitedTabs 懒挂载保护，只在用户进过问题管理 tab 后才挂载并 fetchProblems。
+  //   若用户从未进过该 tab，problems 为空会让「来源问题」列恒显"—"，补洞形同虚设。
+  //   useProblemStore 内置 in-flight 去重（见其 fetchProblems 注释），重复调用安全。
+  const fetchProblems = useProblemStore((s) => s.fetchProblems);
+  const problems = useProblemStore((s) => s.problems);
+  useEffect(() => {
+    if (problems.length === 0) {
+      fetchProblems();
+    }
+  }, [problems.length, fetchProblems]);
+
+  // 用 useMemo 固定引用，避免每次渲染都击穿 TaskTableRow 的 React.memo（43 行）
+  const problemMap = useMemo<Record<string, SourceProblemInfo>>(() => {
+    const map: Record<string, SourceProblemInfo> = {};
+    for (const p of problems as any[]) {
+      if (p?.id === undefined || p?.id === null) continue;
+      map[String(p.id)] = {
+        code: p.problemCode || String(p.id),
+        statusCn: problemStatusToCN(p.status),
+      };
+    }
+    return map;
+  }, [problems]);
 
   // 2026-09-21 修复：分页越界钳制。
   //   筛选条件或数据量变化后总页数可能变小，而 currentPage 仍停在旧值 →
@@ -508,6 +538,7 @@ export function TaskTab({
       /* 使用迁移的 TaskTable 组件 */
       <TaskTable
         tasks={filteredTasks as any}
+        problemMap={problemMap}
         stats={stats}
         currentPage={currentPage}
         pageSize={pageSize}

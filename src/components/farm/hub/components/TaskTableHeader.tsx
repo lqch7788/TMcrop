@@ -55,6 +55,8 @@ export function TaskTableHeader({
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">优先级</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+      {/* 2026-10-21：新增「来源问题」列 —— 承接「问题追踪」子Tab 删除后丢失的任务→问题反查能力 */}
+      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">来源问题</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作业标准</th>
