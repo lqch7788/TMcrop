@@ -8,12 +8,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { useReminder } from '../../hooks/useReminder';
-import { useTempTasks } from '../../hooks/useTempTasks';
 import { FarmHubHeader } from '../../components/farm/hub/FarmHubHeader';
 import { TaskTab } from '../../components/farm/hub/TaskTab';
 import { ProblemTab } from '../../components/farm/hub/ProblemTab';
 import { InspectionTab } from '../../components/farm/hub/InspectionTab';
-import { TempTaskTab } from '../../components/dispatch/components/dispatch/TempTaskTab';
 import { OperationRecordPanel } from '../../components/farm/hub/OperationRecordPanel';
 import { TaskDetailModal } from '../../components/farm/hub/TaskDetailModal';
 import { VerifyTaskModal } from '../../components/farm/hub/VerifyTaskModal';
@@ -44,9 +42,9 @@ import { ExportFormatAdapter } from '../../components/farm/hub/modals/ExportForm
 import { BatchEditAdapter } from '../../components/farm/hub/modals/BatchEditAdapter';
 
 // Tab配置
+// 2026-10-21（阶段 3）：临时任务已并入农事任务，「临时任务」tab 删除
 const TAB_CONFIG: { key: HubTab; label: string }[] = [
   { key: 'task', label: '农事任务' },
-  { key: 'tempTask', label: '临时任务' },
   { key: 'inspection', label: '巡查记录' },
   { key: 'problem', label: '问题管理' },
 ];
@@ -58,7 +56,6 @@ export function FarmTaskHub() {
   const tasksHook = useTasks();
   const hub = useFarmHub(tasksHook);
   const { sendReminder } = useReminder();
-  const { tempTasks } = useTempTasks();
   const users = useUserStore((state) => state.users);
   // 温室数据（替换硬编码 taskDispatchFields）
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
@@ -488,10 +485,6 @@ export function FarmTaskHub() {
                     return isActive
                       ? 'bg-orange-500 text-white font-bold'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
-                  } else if (tab.key === 'tempTask') {
-                    return isActive
-                      ? 'bg-purple-500 text-white font-bold'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
                   }
                   return 'bg-gray-100 text-gray-500';
                 };
@@ -506,7 +499,7 @@ export function FarmTaskHub() {
                     <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-medium ${
                       isActive ? 'bg-white/30' : 'bg-gray-200 text-gray-600'
                     }`}>
-                      {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : tab.key === 'inspection' ? hub.inspections.length : tempTasks.length}
+                      {tab.key === 'task' ? hub.tasks.length : tab.key === 'problem' ? hub.problems.length : hub.inspections.length}
                     </span>
                   </button>
                 );
@@ -630,11 +623,6 @@ export function FarmTaskHub() {
                   resolved: hub.problems.filter(p => p.status === '已处理').length,
                 }}
               />
-              </div>
-            )}
-            {visitedTabs.has('tempTask') && (
-              <div className={hub.state.activeTab === 'tempTask' ? '' : 'hidden'}>
-              <TempTaskTab />
               </div>
             )}
           </div>

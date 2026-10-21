@@ -37,8 +37,7 @@ describe('GET /api/schedules/occupations?teamId=', () => {
     // mock 2: schedules 查询（无排班）
     mockExec.mockReturnValueOnce([{ columns: [], values: [] }]);
     // mock 3: farm_tasks 查询（无任务）
-    mockExec.mockReturnValueOnce([{ columns: [], values: [] }]);
-    // mock 4: temp_tasks 查询（无任务）
+    // 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，不再单独查询
     mockExec.mockReturnValueOnce([{ columns: [], values: [] }]);
 
     const res = await request(app)
@@ -47,8 +46,8 @@ describe('GET /api/schedules/occupations?teamId=', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    // 验证：mock 至少被调用 4 次（team_members + schedules + farm_tasks + temp_tasks）
-    expect(mockExec.mock.calls.length).toBeGreaterThanOrEqual(4);
+    // 验证：mock 至少被调用 3 次（team_members + schedules + farm_tasks）
+    expect(mockExec.mock.calls.length).toBeGreaterThanOrEqual(3);
     // 第一次调用应是 team_members 查询
     expect(mockExec.mock.calls[0][0]).toContain('team_members');
   });
@@ -57,7 +56,6 @@ describe('GET /api/schedules/occupations?teamId=', () => {
     // 不带 teamId 应直接跳过 team_members 查询
     mockExec.mockReturnValueOnce([{ columns: [], values: [] }]); // schedules
     mockExec.mockReturnValueOnce([{ columns: [], values: [] }]); // farm_tasks
-    mockExec.mockReturnValueOnce([{ columns: [], values: [] }]); // temp_tasks
 
     const res = await request(app)
       .get('/api/schedules/occupations')

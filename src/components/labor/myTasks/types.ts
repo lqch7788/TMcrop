@@ -104,7 +104,8 @@ export interface ModalState<T = null> {
 }
 
 // 任务筛选类型
-export type TaskFilterType = 'all' | 'problem' | 'production' | 'temp' | 'worklog';
+// 2026-10-21（阶段 3）：临时任务 tab 已删除
+export type TaskFilterType = 'all' | 'problem' | 'production' | 'worklog';
 
 // 任务类型配置项
 export interface TaskTypeConfig {

@@ -542,10 +542,12 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 /**
- * 2026-09-21：为问题派生一条临时任务（应急处理场景）
+ * 2026-09-21：为问题派生一条应急任务（应急处理场景）
+ * 2026-10-21（阶段 3）：改写入 farm_tasks —— 临时任务模块已下线。
+ *   URL 保留 /dispatch-temp 不变（前端 service 与历史调用方无需改），语义已改为农事任务。
  * POST /api/problems/:id/dispatch-temp
  * body: { assigneeId, assigneeName, title, type, urgency, dueDate, estimatedHours, ... }
- * 临时任务的 source_problem_id 字段填入 :id，让"问题→关联任务"能展示临时任务
+ * source_problem_id 填入 :id，让「问题→关联任务」能展示
  */
 router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
   try {
@@ -573,34 +575,38 @@ router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'assigneeId / assigneeName 必填' });
     }
 
-    // 3. 生成临时任务编号（TT + 时间戳，简化版——避免引入 tempTask service 依赖）
-    const newId = `TEMP${Date.now()}`;
+    // 3. 生成任务编号
+    // 2026-10-21（阶段 3）：派生任务从 temp_tasks 改写入 farm_tasks ——
+    //   临时任务模块已下线，问题分派产生的应急任务统一进农事任务列表。
     const now = new Date().toISOString();
-    const taskCode = `TT${Date.now().toString().slice(-8)}`;
+    const dateCompact = now.slice(0, 10).replace(/-/g, '');
+    const newId = `NS${dateCompact}-${String(Date.now() % 1000).padStart(3, '0')}`;
+    // 沿用农事任务的 NS 编号规则，避免与历史 TT 编号混淆
+    const taskCode = newId;
+    const typeLabel = taskType === 'other' ? '其他' : taskType;
+    const taskTitle = title || `【问题处理】${problem.problem_code}`;
+    const taskContent = description || `从问题 ${problem.problem_code} 派发`;
 
     db.run(`
-      INSERT INTO temp_tasks (
-        id, task_code, task_title, task_type, task_content,
-        requester_id, requester_name, assignee_id, assignee_name,
+      INSERT INTO farm_tasks (
+        id, task_code, task_title, title, task_type, type_name, task_content, description,
+        assigner_id, assigner_name, assignee_id, assignee_name,
         greenhouse_name, area_name,
-        request_date, request_time, urgency, status,
-        create_time, update_time, due_date,
-        estimated_hours, worker_count,
-        actual_hours, progress, reject_count,
-        title, location,
+        plan_date, plan_time, due_date, plan_end,
+        priority, urgency, status, progress,
+        estimated_hours, estimated_days, worker_count, actual_hours,
+        rework_count, create_time, update_time,
         source_type, dispatch_mode, source_problem_id, version
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId, taskCode, title || `【问题处理】${problem.problem_code}`, taskType, description || `从问题 ${problem.problem_code} 派发`,
-      req.user?.userId || '', req.user?.name || '系统',
-      assigneeId, assigneeName,
+      newId, taskCode, taskTitle, taskTitle, taskType, typeLabel, taskContent, taskContent,
+      req.user?.userId || '', req.user?.name || '系统', assigneeId, assigneeName,
       greenhouseName, location || greenhouseName,
-      now.substring(0, 10), now.substring(11, 19), urgency, 'pending',
-      now, now, dueDate || now.substring(0, 10),
-      estimatedHours, 1,
-      0, 0, 0,
-      title, location,
-      'tempTask', 'tempTask', problemId, 1,
+      now.substring(0, 10), now.substring(11, 19), dueDate || now.substring(0, 10), dueDate || now.substring(0, 10),
+      urgency, urgency, 'pending', 0,
+      estimatedHours, 0, 1, 0,
+      0, now, now,
+      'problem', 'farm', problemId, 1,
     ]);
 
     // 4. 问题 status 自动从 pending → in_progress（如果当前是 pending）
@@ -613,17 +619,17 @@ router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
       [`log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
        req.user?.userId || '', req.user?.name || '系统',
        'dispatch_temp', '问题管理', 'problem', problemId,
-       `派生临时任务 ${taskCode} 派给 ${assigneeName}`, 'success', now]);
+       `派生农事任务 ${taskCode} 派给 ${assigneeName}`, 'success', now]);
 
     saveDatabase();
 
     res.json({
       success: true,
       data: { id: newId, taskCode, sourceProblemId: problemId },
-      message: "由问题 " + problem.problem_code + " 派发临时任务成功",
+      message: "由问题 " + problem.problem_code + " 派发农事任务成功",
     });
   } catch (error) {
-    console.error('为问题派生临时任务失败:', error);
+    console.error('为问题派生农事任务失败:', error);
     res.status(500).json({ success: false, error: '派生临时任务失败' });
   }
 });

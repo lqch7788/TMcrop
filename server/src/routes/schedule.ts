@@ -294,20 +294,11 @@ router.get('/occupations', (req: Request, res: Response) => {
     );
     const farmTasks = rowsToObjects(farmTaskExec);
 
-    // 3. 当日已派发的临时任务（temp_tasks.request_date 是 TEXT 存 YYYY-MM-DD）
-    const tempTaskExec = db.exec(
-      `SELECT id, task_code, task_title, task_type, priority, status, assignee_id, assignee_name, estimated_hours
-         FROM temp_tasks
-        WHERE request_date = ?
-          AND status IN ('pending', 'accepted', 'in_progress')
-          AND assignee_id IS NOT NULL
-          AND assignee_id != ''${assigneeInClause}`,
-      baseParams
-    );
-    const tempTasks = rowsToObjects(tempTaskExec);
+    // 3. 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，不再查 temp_tasks
+    //    （历史临时任务迁移后已带 plan_date，落在上面的 farm_tasks 查询里）
 
-    // 4. 合并员工 + 任务清单
-    const allTasks: any[] = [...farmTasks, ...tempTasks];
+    // 4. 员工 + 任务清单
+    const allTasks: any[] = [...farmTasks];
     const workerMap = new Map<string, any>();
 
     // 4a. 有排班的员工先初始化
@@ -336,7 +327,7 @@ router.get('/occupations', (req: Request, res: Response) => {
         ),
         tasks: tasks.map((t: any) => ({
           taskId: t.id,
-          source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+          source: 'farm',
           taskCode: t.task_code,
           title: t.task_title,
           priority: t.priority,
@@ -359,7 +350,7 @@ router.get('/occupations', (req: Request, res: Response) => {
           tasks: [
             {
               taskId: t.id,
-              source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+              source: 'farm',
               taskCode: t.task_code,
               title: t.task_title,
               priority: t.priority,
@@ -373,7 +364,7 @@ router.get('/occupations', (req: Request, res: Response) => {
         if (!occ.tasks.find((ot: any) => ot.taskId === t.id)) {
           occ.tasks.push({
             taskId: t.id,
-            source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+            source: 'farm',
             taskCode: t.task_code,
             title: t.task_title,
             priority: t.priority,

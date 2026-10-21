@@ -6,7 +6,7 @@
  *
  * 对接后端: /api/announcements/templates
  *
- * 设计模式参考: useTempTaskStore.ts (V2.1 标准模板)
+ * 设计模式参考: useSystemConfigStore.ts (V2.1 标准模板)
  */
 
 import { create } from 'zustand';

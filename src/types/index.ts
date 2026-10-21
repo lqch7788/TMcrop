@@ -194,24 +194,10 @@ export interface TempTask {
   planStart?: string;
 }
 
-// 临时任务配置
-export const TEMP_TASK_URGENCY_CONFIG = {
-  normal: { label: '普通', color: 'bg-gray-100 text-gray-600', badge: 'bg-gray-100 text-gray-700' },
-  high: { label: '高', color: 'bg-orange-100 text-orange-700', badge: 'bg-orange-100 text-orange-700' },
-  urgent: { label: '紧急', color: 'bg-amber-100 text-amber-700', badge: 'bg-amber-100 text-amber-700' },
-  critical: { label: '非常紧急', color: 'bg-red-100 text-red-700', badge: 'bg-red-500 text-white' },
-} as const;
-
-// 临时任务类型
-export const TEMP_TASK_TYPES = [
-  { value: 'farm_repair', label: '农事抢修' },
-  { value: 'equipment_repair', label: '设备维修' },
-  { value: 'facility_maintenance', label: '设施维护' },
-  { value: 'staff_dispatch', label: '人员调配' },
-  { value: 'cleaning', label: '清洁整理' },
-  { value: 'safety_check', label: '安全检查' },
-  { value: 'other', label: '其他' },
-] as const;
+// 2026-10-21（阶段 3）：TEMP_TASK_URGENCY_CONFIG / TEMP_TASK_TYPES 已随临时任务模块删除。
+//   类型标签统一由 src/types/farm/common.ts 的 FARM_OPERATION_TYPES 提供
+//   （该表已包含原临时任务的 7 个类型）。
+//   下方 TempTask 接口仅为 src/data/labor/laborData.ts 的历史 mock 数据保留。
 
 export interface Material {
   id: string;

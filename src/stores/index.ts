@@ -173,8 +173,6 @@ export type { User } from '../types/authority';
 export { useWorkerStore } from './useWorkerStore';
 export type { Worker } from '../types';
 
-export { useTempTaskStore } from './useTempTaskStore';
-export type { TempTaskData } from './useTempTaskStore';
 
 export { useInspectionDataStore } from './useInspectionDataStore';
 export type { InspectionData } from './useInspectionDataStore';

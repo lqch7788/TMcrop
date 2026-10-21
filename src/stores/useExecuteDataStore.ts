@@ -5,7 +5,7 @@
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  *
  * 对接后端: /api/material-executes
- * 参考样板: useTempTaskStore.ts (FIELD_MAP + normalize/denormalize 模式)
+ * 参考样板: useSystemConfigStore.ts (V2.1 标准模板)
  */
 
 import { create } from 'zustand';

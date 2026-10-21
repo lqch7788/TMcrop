@@ -6,7 +6,6 @@
 
 import { useCallback, useMemo, useEffect } from 'react';
 import { useTasks, Task } from './useTasks';
-import { useTempTasks, TempTask } from './useTempTasks';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { CropBatch } from '../types';
 import {
@@ -27,7 +26,7 @@ import type { WorkerRecommendation } from './useComprehensiveDispatch';
 /**
  * 判断任务是否超期
  */
-function isTaskOverdue(task: Task | TempTask, targetDate: string): boolean {
+function isTaskOverdue(task: Task, targetDate: string): boolean {
   // 2026-10-11：status 在 Task/TempTask 上均存在，原 `'status' in task` 的 else 分支恒不可达（收窄为 never），
   //   且运行时同样恒走 if 分支，故直接合并为一条判断
   if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
@@ -61,7 +60,7 @@ function calculateOverdueDays(dueDate: string, targetDate: string): number {
 /**
  * 获取任务名称
  */
-function getTaskName(task: Task | TempTask): string {
+function getTaskName(task: Task): string {
   // 2026-10-11：title 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
   return task.title;
 }
@@ -69,7 +68,7 @@ function getTaskName(task: Task | TempTask): string {
 /**
  * 获取执行人名称
  */
-function getAssigneeName(task: Task | TempTask): string {
+function getAssigneeName(task: Task): string {
   // 2026-10-11：assigneeName 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
   return task.assigneeName;
 }
@@ -107,7 +106,6 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const { tasks, createTask, updateTask } = useTasks();
 
   // 获取临时任务数据
-  const { tempTasks } = useTempTasks();
 
   // 获取考勤数据
   const { attendance } = usePersistentAttendance();
@@ -168,31 +166,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       }
     });
 
-    // 统计临时任务
-    tempTasks.forEach(task => {
-      if (!task.assigneeName) return;
-
-      if (!workerMap.has(task.assigneeName)) {
-        workerMap.set(task.assigneeName, {
-          workerId: task.assigneeId || task.assigneeName,
-          workerName: task.assigneeName,
-          todayTasks: 0,
-          completedTasks: 0,
-          completionRate: 0,
-          loadStatus: 'normal',
-          availability: 'available',
-          currentTasks: [],
-        });
-      }
-
-      const analysis = workerMap.get(task.assigneeName)!;
-      analysis.todayTasks++;
-      analysis.currentTasks?.push(task.title);
-
-      if (task.status === 'completed') {
-        analysis.completedTasks++;
-      }
-    });
+    // 2026-10-21（阶段 3）：临时任务已并入农事任务，统一由上面的 tasks 统计
 
     // 计算完成率和负荷状态
     return Array.from(workerMap.values()).map(analysis => {
@@ -217,7 +191,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
         availability,
       };
     });
-  }, [tasks, tempTasks]);
+  }, [tasks]);
 
   // ============================================
   // 获取天气信息（模拟数据）

@@ -61,7 +61,8 @@ export const DispatchTaskPool: React.FC<DispatchTaskPoolProps> = ({
       {/* 筛选器 */}
       {onSourceFilterChange && (
         <div className="px-4 py-2 border-b border-gray-100 flex gap-2">
-          {(['all', 'farm', 'tempTask', 'inspection'] as const).map(source => (
+          {/* 2026-10-21（阶段 3）：临时任务已并入农事，筛选器不再显示「临时」 */}
+          {(['all', 'farm', 'inspection'] as const).map(source => (
             <button
               key={source}
               onClick={() => onSourceFilterChange(source)}

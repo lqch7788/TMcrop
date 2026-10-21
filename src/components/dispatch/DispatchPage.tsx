@@ -1,13 +1,13 @@
 /**
  * 任务派发统一页面
- * 整合农事任务派发、临时任务、智能派工三个模块
+ * 整合农事任务派发、智能派工两个模块
  * 通过Tab切换显示不同模式
+ * （2026-10-21 阶段 3：临时任务模块已下线）
  */
 
 import React, { useState } from 'react';
-import { Truck, Clock, Sparkles } from 'lucide-react';
+import { Truck, Sparkles } from 'lucide-react';
 import { FarmDispatchTab } from './components/dispatch/FarmDispatchTab';
-import { TempTaskTab } from './components/dispatch/TempTaskTab';
 import { SmartDispatchTab } from './components/dispatch/SmartDispatchTab';
 import { DISPATCH_MODE_CONFIG } from './types/dispatch';
 import type { DispatchMode } from './types/dispatch';
@@ -21,11 +21,6 @@ const TABS: { key: DispatchMode; label: string; icon: React.ReactNode }[] = [
     key: 'farm',
     label: '农事任务',
     icon: <Truck className="w-4 h-4" />,
-  },
-  {
-    key: 'tempTask',
-    label: '临时任务',
-    icon: <Clock className="w-4 h-4" />,
   },
   {
     key: 'smart',
@@ -45,8 +40,6 @@ export const DispatchPage: React.FC = () => {
     switch (activeTab) {
       case 'farm':
         return <FarmDispatchTab />;
-      case 'tempTask':
-        return <TempTaskTab />;
       case 'smart':
         return <SmartDispatchTab />;
       default:
@@ -65,7 +58,7 @@ export const DispatchPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">农事任务派发</h1>
-              <p className="text-gray-500">统一管理农事任务、临时任务和智能派工</p>
+              <p className="text-gray-500">统一管理农事任务与智能派工</p>
             </div>
           </div>
         </div>

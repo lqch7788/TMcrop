@@ -3,7 +3,6 @@
  */
 
 import { TaskTypeConfig, StatusConfig, PriorityConfig } from './types';
-import { TEMP_TASK_TYPES } from '../../../types';
 import { getOperationTypeName, FARM_OPERATION_TYPES } from '../../../types/farm/common';
 
 // 任务类型定义
@@ -20,6 +19,10 @@ const TYPE_COLOR_MAP: Record<string, string> = {
   equipment_repair: 'bg-amber-600',
   cleaning: 'bg-slate-500',
   seedling: 'bg-teal-500',
+  // 2026-10-21（阶段 3）：临时任务合并新增的 3 类
+  facility_maintenance: 'bg-cyan-600',
+  staff_dispatch: 'bg-indigo-500',
+  safety_check: 'bg-amber-600',
   other: 'bg-gray-500',
 };
 export const TASK_TYPES: TaskTypeConfig[] = FARM_OPERATION_TYPES.map((t) => ({
@@ -74,14 +77,12 @@ export const getTypeColor = (type: string): string => {
 
 /**
  * 获取任务类型标签
- * 2026-10-11：多级回退 —— TaskType(9) → 临时任务类型字典（staff_dispatch 等仅此有）
- * → 农事操作总字典（farm_repair/cleaning/seedling 等），避免"任务类型"列显示英文 code
+ * 2026-10-11：多级回退 —— TaskType(9) → 农事操作总字典，避免"任务类型"列显示英文 code
+ * 2026-10-21（阶段 3）：临时任务类型已并入 FARM_OPERATION_TYPES，中间层删除
  */
 export const getTypeLabel = (type: string): string => {
   const taskType = TASK_TYPES.find(t => t.value === type);
   if (taskType) return taskType.label;
-  const tempType = (TEMP_TASK_TYPES as ReadonlyArray<{ value: string; label: string }>).find(t => t.value === type);
-  if (tempType) return tempType.label;
   return getOperationTypeName(type);
 };
 

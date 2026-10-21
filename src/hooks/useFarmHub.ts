@@ -43,7 +43,8 @@ const INITIAL_INSPECTION_FILTERS: InspectionSearchFilters = {
 /**
  * Tab类型
  */
-export type HubTab = 'task' | 'problem' | 'inspection' | 'tempTask';
+// 2026-10-21（阶段 3）：临时任务 tab 已删除
+export type HubTab = 'task' | 'problem' | 'inspection';
 
 /**
  * 统计数据

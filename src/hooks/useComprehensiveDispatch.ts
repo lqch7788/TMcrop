@@ -6,7 +6,6 @@
 
 import { useMemo, useCallback, useEffect } from 'react';
 import { useTasks } from './useTasks';
-import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { useEnvironmentData } from './useEnvironmentData';
@@ -14,8 +13,6 @@ import { useWorkerStore } from '../stores/useWorkerStore';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { todayLocal } from '../lib/dateUtils';
 import type { Task } from './useTasks';
-// 2026-10-11：TempTask 类型定义在 useTempTasks（useTasks 只导出 Task/TaskStatus/TaskRecord/ReminderRecord）
-import type { TempTask } from './useTempTasks';
 import type { AttendanceEntry } from './usePersistentAttendance';
 import type { DispatchConfig, ConfidenceLevel, SuggestedAction, EnhancedRecommendation } from '../types/dispatch';
 import { DEFAULT_DISPATCH_CONFIG } from '../types/dispatch';
@@ -615,31 +612,6 @@ function normalizeFarmTask(task: Task): UnifiedDispatchTask {
   };
 }
 
-/** 标准化临时任务为统一格式 */
-function normalizeTempTask(task: TempTask): UnifiedDispatchTask {
-  return {
-    id: `tempTask-${task.id}`,
-    source: 'tempTask',
-    sourceId: task.id,
-    taskCode: task.taskCode,
-    title: task.title,
-    type: task.tempTaskType || 'default',
-    typeName: task.tempTaskType || '临时任务',
-    // 2026-10-11：临时任务的 urgency 含 'critical'，统一派工模型的 priority 只到 urgent → critical 归一为 urgent
-    priority: task.priority === 'critical' ? 'urgent' : task.priority,
-    workZone: task.workLocation || '',
-    greenhouse: task.workLocation || '',
-    cropName: '',
-    requiredSkills: [], // 临时任务暂无技能要求
-    estimatedHours: task.estimatedHours || 2,
-    dueDate: task.dueDate || '',
-    description: task.description,
-    createdAt: task.createdAt || new Date().toISOString(),
-    assigneeId: task.assigneeId,
-    assigneeName: task.assigneeName,
-  };
-}
-
 /** 标准化巡查问题为统一格式 */
 // 2026-10-11：入参对齐 useProblemDispatch 实际传入的 ProblemData（各字段为可选，读取处均已兜底）
 function normalizeInspectionTask(problem: ProblemData): UnifiedDispatchTask {
@@ -694,7 +666,6 @@ function normalizeInspectionTask(problem: ProblemData): UnifiedDispatchTask {
 export function useComprehensiveDispatch() {
   // 1. 获取各模块数据
   const { tasks: farmTasks, updateTask } = useTasks();
-  const { tempTasks, updateTempTask } = useTempTasks();
   const { pendingProblems } = useProblemDispatch();
   const { attendance: attendanceRecords } = usePersistentAttendance();
 
@@ -737,17 +708,13 @@ export function useComprehensiveDispatch() {
     );
     unifiedTasks.push(...pendingFarmTasks.map(normalizeFarmTask));
 
-    // 临时任务 - 待处理状态（pending）
-    const pendingTempTasks = tempTasks.filter(
-      t => t.status === 'pending'
-    );
-    unifiedTasks.push(...pendingTempTasks.map(normalizeTempTask));
+    // 2026-10-21（阶段 3）：临时任务已并入农事任务，统一由上面的 pendingFarmTasks 覆盖
 
     // 巡查问题 - 待处理问题
     unifiedTasks.push(...pendingProblems.map(normalizeInspectionTask));
 
     return unifiedTasks;
-  }, [farmTasks, tempTasks, pendingProblems]);
+  }, [farmTasks, pendingProblems]);
 
   // 3. 构建员工综合状态
   const workers = useMemo((): WorkerComprehensiveStatus[] => {
@@ -765,10 +732,8 @@ export function useComprehensiveDispatch() {
       const workerTasks = farmTasks.filter(
         t => t.assigneeName === w.name && t.status === 'in_progress'
       );
-      const tempWorkerTasks = tempTasks.filter(
-        t => t.assigneeName === w.name && t.status === 'in_progress'
-      );
-      const taskLoad = (workerTasks.length + tempWorkerTasks.length) * 20; // 每任务约20%负荷
+      // 2026-10-21（阶段 3）：临时任务已并入 farmTasks，不再单独统计
+      const taskLoad = workerTasks.length * 20; // 每任务约20%负荷
 
       // 计算对各批次的熟悉度（基于历史任务数量估算）
       const batchFamiliarity: Record<string, number> = {};
@@ -799,7 +764,7 @@ export function useComprehensiveDispatch() {
         attendanceStatus: usedHours > 0 ? 'working' : 'off',
       };
     });
-  }, [farmTasks, tempTasks, attendanceRecords]);
+  }, [farmTasks, attendanceRecords]);
 
   // 4. AI推荐算法
   const getRecommendations = useCallback(
@@ -929,36 +894,6 @@ export function useComprehensiveDispatch() {
           });
           break;
         }
-        case 'tempTask': {
-          // 临时任务：调用 /accept 记录接单操作，再调用 /submit-progress 记录开始执行
-          // 1. 调用 /accept 记录接单动作（状态变为 accepted）
-          fetch(`/api/temp-tasks/${task.sourceId}/accept`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-          }).catch(() => { /* accept failed */ });
-
-          // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
-          updateTempTask(task.sourceId, {
-            assigneeId: workerId,
-            assigneeName: workerName,
-          });
-
-          // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
-          setTimeout(() => {
-            fetch(`/api/temp-tasks/${task.sourceId}/submit-progress`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                progress: 0,
-                operator_id: workerId,
-                operator_name: workerName,
-                comment: '开始执行任务',
-              }),
-            }).catch(() => { /* submit-progress failed */ });
-          }, 100);
-          break;
-        }
         case 'inspection': {
           // 巡查问题：需要创建新任务或直接分派（取决于业务逻辑）
           // 这里暂时标记问题已被处理
@@ -967,7 +902,7 @@ export function useComprehensiveDispatch() {
         }
       }
     },
-    [updateTask, updateTempTask]
+    [updateTask]
   );
 
   // 6. 按来源筛选任务
@@ -979,11 +914,10 @@ export function useComprehensiveDispatch() {
     [taskPool]
   );
 
-  // 7. 获取统计信息
+  // 7. 获取统计信息（2026-10-21 阶段 3：临时任务下线，不再统计 tempTask）
   const stats = useMemo(() => ({
     total: taskPool.length,
     farm: taskPool.filter(t => t.source === 'farm').length,
-    tempTask: taskPool.filter(t => t.source === 'tempTask').length,
     inspection: taskPool.filter(t => t.source === 'inspection').length,
   }), [taskPool]);
 

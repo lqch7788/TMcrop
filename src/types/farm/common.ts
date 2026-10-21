@@ -14,11 +14,10 @@ export const FARM_OPERATION_TYPES = [
   { value: 'pruning', label: '修剪' },
   { value: 'harvest', label: '采收' },
   { value: 'weeding', label: '中耕除草' },
-  // 2026-08-30：补临时任务常见 type 翻译（DB temp_tasks.task_type 用这些值）
+  // 2026-08-30：补维修/清洁类 type（原临时任务使用，2026-10-21 合并后统一由农事承载）
   { value: 'farm_repair', label: '农场维修' },
   { value: 'equipment_repair', label: '设备维修' },
-  // 2026-09-20：补临时任务 cleaning（清洁卫生）和农事任务 seedling（育苗）
-  //   来源：后端 /api/temp-tasks 和 /api/farm-tasks 的 type 值
+  // 2026-09-20：补 cleaning（清洁卫生）和 seedling（育苗）
   { value: 'cleaning', label: '清洁卫生' },
   { value: 'seedling', label: '育苗' },
   // 2026-10-21：临时任务合并前置 —— 补上临时任务独有、农事缺失的 3 类
@@ -230,7 +229,7 @@ export function getCompletionTimeLabel(value: string): string {
 /**
  * 2026-10-20 P0-10 枚举统一：
  * 全站任务优先级实际取值是 urgent / high / normal（见 constants_taskDispatch.TASK_PRIORITY_MAP、
- * useTempTasks.URGENCY_CONFIG、farmTaskStore.Task.priority）。
+ * farmTaskStore.Task.priority）。
  * 此前这里是 high / medium / low —— CreateTaskModal 用它渲染下拉，
  * 选「中」会写入 mission 不认识的 'medium'，导致列表优先级列显示空白。
  */

@@ -178,7 +178,6 @@ const SalaryBudget = lazy(() => import('./pages/SalaryBudget'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Contract = lazy(() => import('./pages/Contract'));
 const Team = lazy(() => import('./pages/Team'));
-const TempTask = lazy(() => import('./pages/TempTask'));
 const TaskCenterPage = lazy(() => import('./pages/farm/TaskCenterPage'));
 const FarmTaskHub = lazy(() => import('./pages/farm/FarmTaskHub'));
 // v0.3 P0-1：批次统一时间线
@@ -591,7 +590,8 @@ function AppContent() {
           <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
           {/* 2026-09-19：任务工单管理页已废弃，功能统一到农事任务中心；保留重定向避免旧链接白屏 */}
           <Route path="/tasks" element={<Navigate to="/farm-hub" replace />} />
-          <Route path="/temp-task" element={<TempTask />} />
+          {/* 2026-10-21（阶段 3）：临时任务模块已下线，旧书签重定向到农事任务中心 */}
+          <Route path="/temp-task" element={<Navigate to="/farm-hub" replace />} />
           <Route path="/personnel/staff" element={<StaffManagementPage />} />
           <Route path="/labor/personnel" element={<PersonnelPage />} />
           <Route path="/leave" element={<Leave />} />

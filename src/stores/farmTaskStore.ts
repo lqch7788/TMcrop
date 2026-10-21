@@ -50,6 +50,10 @@ export interface Task {
   workerCount?: number;
   /** 2026-10-21：紧急程度（仅迁移保真，新建任务统一用 priority） */
   urgency?: 'urgent' | 'high' | 'normal';
+  /** 后端 rejected_reason 的 camelCase（FIELD_NAME_MAP 映射为 rejectReason） */
+  rejectReason?: string;
+  /** 执行人拒绝次数（后端 executor_reject_count） */
+  executorRejectCount?: number;
   materials?: string[];
   tools?: string[];
   sopContent?: string;

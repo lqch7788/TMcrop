@@ -4,8 +4,8 @@
  *
  * 数据层：所有数据通过 API 直接读写数据库（V2.1 铁律）
  * - 农事任务：farmTaskStore (Zustand) → enhancedApiClient → API → DB
- * - 临时任务：useTempTaskStore (Zustand) → enhancedApiClient → API → DB
  * - 巡查记录：useInspectionDataStore (Zustand)
+ *   （2026-10-21 阶段 3：临时任务已并入农事任务，不再有独立数据源）
  * - 操作记录/催办记录：React 状态 + API 同步
  */
 
@@ -31,18 +31,14 @@ import {
   TASK_ACTION_CONFIG,
   STATUS_TRANSITIONS,
 } from '../config/taskConfig';
-import { TEMP_TASK_TYPES } from '../types';
 import { getOperationTypeName } from '../types/farm/common';
 
 /**
- * 2026-10-11：任务类型 code → 中文标签（临时任务字典优先，回退农事操作总字典）
- * 背景：临时任务转换层原把英文 code 直接写入 typeName 且缺 types 数组，
- *       导致"全部任务"tab 类型列空白、"临时任务"tab 类型列显示 equipment_repair 等英文
+ * 2026-10-11：任务类型 code → 中文标签
+ * 2026-10-21（阶段 3）：临时任务字典已并入 FARM_OPERATION_TYPES，直接用农事操作总字典
  */
 function resolveTypeLabel(type: string): string {
   if (!type) return '其他';
-  const tempType = (TEMP_TASK_TYPES as ReadonlyArray<{ value: string; label: string }>).find(t => t.value === type);
-  if (tempType) return tempType.label;
   return getOperationTypeName(type);
 }
 
@@ -72,25 +68,7 @@ type StoreTaskCompat = StoreTask & {
   tempTaskType?: string;
   planStart?: string;
 };
-// 导入临时任务 Store
-import { useTempTaskStore, TempTaskData } from '../stores/useTempTaskStore';
-type TempTaskDataCompat = TempTaskData & {
-  rejectedReason?: string;
-  rejectedAt?: string;
-  rejectedBy?: string;
-  acceptedAt?: string;
-  completedAt?: string;
-  cancelledReason?: string;
-  cancelledAt?: string;
-  cancelledBy?: string;
-  workDuration?: number;
-  inspectionType?: string;
-  // 2026-09-19：后端 GET /api/temp-tasks 实际返回的是这两个 camelCase 字段名
-  //   （DB 列 task_title/task_type 经服务端 camelCase 转换而来），
-  //   类型定义里原先缺失，导致转换时只读 title/task_title 而漏掉真实字段
-  taskTitle?: string;
-  taskType?: string;
-};
+// 2026-10-21（阶段 3）：临时任务 Store 已下线，数据统一从 farmTaskStore 读取
 // 导入巡查记录 Store
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
 // 导入增强版 API 客户端
@@ -106,30 +84,22 @@ import { useToastStore } from '../stores/useToastStore';
 /**
  * 根据任务来源路由到正确的 Zustand Store
  *
- * 2026-10-21（阶段 2）：判定改为**只看 dispatchMode**。
- *   迁移后临时任务的 dispatchMode 已改写为 'farm'（表也从 temp_tasks 换到 farm_tasks），
- *   但 sourceType 仍保留 'tempTask' 作为历史来源标记；若继续用 sourceType 判定，
- *   这些任务会被路由到**已清空的 tempTaskStore**，状态更新全部悬空。
+ * 2026-10-21（阶段 3）：临时任务模块已下线，只剩农事任务一个 Store。
+ *   保留函数形态是为了让调用点不必改动（后续清理可内联）。
  */
-function getStoreForTask(task: Task) {
-  if (task.dispatchMode === 'tempTask') {
-    return useTempTaskStore.getState();
-  }
+function getStoreForTask(_task: Task) {
   return useFarmTaskStore.getState();
 }
 
 /**
  * 该任务的动作是否应同步到 /farm-tasks 端点（2026-10-10 审核修复 M1）。
  *
- * 临时任务（tempTask）与巡查记录（inspection）此前也会发 POST /farm-tasks/:id/accept 等，
- * 产生必然 404 的噪音请求（"农事任务不存在"）；temp 的落库由 updateTask→PUT /temp-tasks 承担，
- * 巡查的动作走问题通道（acceptProblem / submitProblemFeedback）。此处仅 farm 任务发端点。
+ * 巡查记录（inspection）不发该端点 —— 它的动作走问题通道
+ * （acceptProblem / submitProblemFeedback）。其余任务统一走 /farm-tasks。
+ * 2026-10-21（阶段 3）：临时任务端点已下线，不再有 tempTask 分支。
  */
 function shouldSyncToFarmEndpoint(task: Task): boolean {
-  // 2026-10-21（阶段 2）：不再排除 sourceType==='tempTask' —— 迁移后的任务已经住在
-  //   farm_tasks 里，必须走 /farm-tasks 端点才能记录「接受/进度」等真实流转动作。
-  return task.dispatchMode !== 'tempTask'
-    && task.dispatchMode !== 'inspection' && task.sourceType !== 'inspection';
+  return task.dispatchMode !== 'inspection' && task.sourceType !== 'inspection';
 }
 
 /** 异步API同步（fire-and-forget）
@@ -343,97 +313,6 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     cropRemarks: (t as any).cropRemarks ?? '',
     acceptanceRecord: (t as any).acceptanceRecord ?? null,
   } as Task;
-}
-
-/** 将 useTempTaskStore 的 TempTaskData 转换为本地 Task 格式 */
-function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
-  // 统一字段（兼容 snake_case 和 camelCase）
-  const id = t.taskCode || t.id || '';
-  // 2026-09-19：补 taskTitle 兜底（与 useTempTasks.ts 的转换口径一致）
-  //   原来只读 t.title / t.task_title，而 temp_tasks 表经服务端 camelCase 转换后是 taskTitle，
-  //   导致部分临时任务 title 为空，被下游按 title 过滤的页面（如每日工单汇总）整条丢弃
-  const title = t.title || t.taskTitle || t.task_title || '';
-  const type = t.type || t.taskType || t.task_type || '';
-  const assigneeId = t.assigneeId || t.assignee_id || '';
-  const assigneeName = t.assigneeName || t.assignee_name || '';
-  const requesterId = t.requesterId || t.requester_id || '';
-  const requesterName = t.requesterName || t.requester_name || '';
-  const location = t.location || t.greenhouseName || t.greenhouse_name || t.area_name || '';
-  const greenhouseId = t.greenhouseId || t.greenhouse_id || '';
-  const greenhouseName = t.greenhouseName || t.greenhouse_name || location || '';
-  const createdAt = t.createdAt || t.createTime || t.create_time || new Date().toISOString();
-  const status = t.status || 'pending';
-
-  return {
-    id,
-    taskCode: id,
-    title,
-    type: type || 'other',
-    // 2026-10-11：typeName 由英文 code 改为中文标签；补 types 数组（原缺失导致"全部任务"tab 类型列空白）
-    typeName: resolveTypeLabel(type),
-    types: type ? [type] : [],
-    status: status as TaskStatus,
-    priority: (t.priority as 'urgent' | 'high' | 'normal') || (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
-    progress: t.progress || 0,
-    sourceType: 'tempTask',
-    dispatchMode: 'tempTask',
-    assigneeId,
-    assigneeName,
-    assignerId: requesterId,
-    assignerName: requesterName,
-    dueDate: t.dueDate || '',
-    feedbackRequirements: (() => {
-      const raw = t.requiredFeedback ?? (t as any).required_feedback;
-      if (Array.isArray(raw)) return raw.map((f: string) => {
-        const fbMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
-          gps: { type: 'gps', label: 'GPS位置', required: true },
-          photo_before: { type: 'image_before', label: '作业前照片', required: true },
-          photo_after: { type: 'image_after', label: '作业后照片', required: true },
-          material: { type: 'materials', label: '物料使用', required: true },
-        };
-        return fbMap[f] || { type: 'text' as const, label: f, required: false };
-      });
-      if (typeof raw === 'string') {
-        try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map((f: string) => {
-          const fbMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
-            gps: { type: 'gps', label: 'GPS位置', required: true },
-            photo_before: { type: 'image_before', label: '作业前照片', required: true },
-            photo_after: { type: 'image_after', label: '作业后照片', required: true },
-            material: { type: 'materials', label: '物料使用', required: true },
-          };
-          return fbMap[f] || { type: 'text' as const, label: f, required: false };
-        }) : []; } catch { return []; }
-      }
-      return [];
-    })(),
-    greenhouseId,
-    greenhouseName,
-    cropName: '',
-    field: location,
-    reworkCount: t.rejectCount || 0,
-    reworkHistory: [],
-    deadlineExtensions: [],
-    version: 1,
-    createdAt,
-    updatedAt: t.updatedAt || t.updateTime || t.update_time || createdAt,
-    acceptedAt: undefined,
-    completedAt: status === 'completed' ? new Date().toISOString() : undefined,
-    workLocation: location,
-    urgency: (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
-    tempTaskType: (type as any),
-    estimatedDays: 0,
-    estimatedHours: t.estimatedHours || 0,
-    workerCount: t.workerCount || 1,
-    remarks: t.remarks || t.description || '',
-    requiredFeedback: (() => {
-      const raw = t.requiredFeedback ?? (t as any).required_feedback;
-      // logger.warn('[useTasks] convertStoreTempTaskToTask requiredFeedback:', { id, title, raw, rawType: typeof raw, isArr: Array.isArray(raw), rawKeys: typeof raw === 'object' && raw !== null ? Object.keys(raw as object) : 'N/A' });
-      if (Array.isArray(raw)) return raw as string[];
-      if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
-      return [];
-    })(),
-    startDate: '',
-  };
 }
 
 const PROGRESS_MAP: Record<string, number> = {
@@ -818,28 +697,21 @@ export interface UseTasksReturn {
 export function useTasks(): UseTasksReturn {
   // ========== 响应式数据：从 Zustand Store 读取（升级方案V1.0：localStorage → Store）==========
   const storeTasks = useFarmTaskStore(s => s.tasks);
-  const tempTasks = useTempTaskStore(s => s.tasks);
   const inspectionRecords = useInspectionDataStore(s => s.records);
 
-  // 合并三类任务为统一 Task 格式（响应式派生）
+  // 合并农事任务 + 巡查记录为统一 Task 格式（响应式派生）
+  // 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，不再单独合并
   const tasks = useMemo(() => {
     const farmTasks = storeTasks.map(convertStoreFarmTaskToTask);
-    const convertedTempTasks = tempTasks.map(convertStoreTempTaskToTask);
     const convertedInspectionTasks = inspectionRecords.map(convertStoreInspectionToTask);
-    const all = [...farmTasks, ...convertedTempTasks, ...convertedInspectionTasks];
-    // logger.warn('[useTasks] useMemo 合并任务: 农事=', farmTasks.length, '临时=', convertedTempTasks.length, '巡查=', convertedInspectionTasks.length, '总计=', all.length);
-    // 打印临时任务的 requiredFeedback 字段
-    if (convertedTempTasks.length > 0) {
-      // logger.warn('[useTasks] 临时任务 requiredFeedback 示例:', convertedTempTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, rf: (t as Record<string, unknown>).requiredFeedback, rfLen: Array.isArray((t as Record<string, unknown>).requiredFeedback) ? (t as Record<string, unknown>).requiredFeedback?.length : 'NOT_ARRAY', status: t.status })));
-    }
+    const all = [...farmTasks, ...convertedInspectionTasks];
     return Array.isArray(all) ? all : [];
-  }, [storeTasks, tempTasks, inspectionRecords]);
+  }, [storeTasks, inspectionRecords]);
 
   // 初始化：触发所有 Store 从 API 拉取数据
   useEffect(() => {
     // logger.warn('[useTasks] 初始化 fetchTasks 调用');
     useFarmTaskStore.getState().fetchTasks();
-    useTempTaskStore.getState().fetchTasks();
     // P0：主动拉巡查记录 —— 否则 InspectionTab 没 mount 时 useInspectionDataStore.records 是空，
     //   useTasks 合并的 tasks 里就没有 inspection，所有用 useTasks 的页面（如每日工单汇总）看不到巡查记录。
     useInspectionDataStore.getState().fetchRecords();
@@ -1271,21 +1143,7 @@ export function useTasks(): UseTasksReturn {
       resultStatus: options?.resultStatus,
     };
 
-    // 判断是否为临时任务
-    // 2026-10-21（阶段 2）：只看 dispatchMode —— 迁移后的任务 sourceType 仍是 'tempTask'，
-    //   但它已经在 farm_tasks 里，提交进度必须走 /farm-tasks 端点。
-    const isTempTask = task.dispatchMode === 'tempTask';
-
-    // 对于临时任务，需要获取实际的数据库 id（而非 taskCode）
-    // useTempTaskStore.updateTask 内部也是通过相同逻辑查找 actual id
-    let actualDbId = id;
-    if (isTempTask) {
-      const store = useTempTaskStore.getState();
-      const existing = store.tasks.find(t => t.id === id || t.taskCode === id);
-      if (existing?.id) {
-        actualDbId = existing.id;
-      }
-    }
+    // 2026-10-21（阶段 3）：临时任务模块已下线，所有任务统一走 /farm-tasks 端点
 
     // 创建操作记录（包含反馈数据）
     const record = createTaskRecord(
@@ -1314,23 +1172,13 @@ export function useTasks(): UseTasksReturn {
         feedback: feedbackData,
       };
       if (options?.isFinal) {
-        // 最终提交：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
-        if (isTempTask) {
-          await enhancedApiClient.post(`/temp-tasks/${actualDbId}/submit-progress`, basePayload);
-        } else {
-          await enhancedApiClient.post(`/farm-tasks/${id}/submit-acceptance`, basePayload);
-        }
+        await enhancedApiClient.post(`/farm-tasks/${id}/submit-acceptance`, basePayload);
       } else {
-        // 进度更新：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
-        if (isTempTask) {
-          await enhancedApiClient.post(`/temp-tasks/${actualDbId}/submit-progress`, basePayload);
-        } else {
-          // P0-4：传 status 让后端同步状态机（修复刷新/重进页面 status 不更新 bug）
-          await enhancedApiClient.post(`/farm-tasks/${id}/progress`, {
-            ...basePayload,
-            status: newStatus,
-          });
-        }
+        // P0-4：传 status 让后端同步状态机（修复刷新/重进页面 status 不更新 bug）
+        await enhancedApiClient.post(`/farm-tasks/${id}/progress`, {
+          ...basePayload,
+          status: newStatus,
+        });
       }
     }, 'submitProgress');
 

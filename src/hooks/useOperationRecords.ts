@@ -173,7 +173,6 @@ export interface UseOperationRecordsReturn {
   addTaskRecord: (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => Promise<FarmOperationRecord | null>;
 
   /** 新增临时任务来源记录 */
-  addTempTaskRecord: (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>) => Promise<FarmOperationRecord | null>;
 
   /** 更新记录状态 */
   updateRecordStatus: (id: string, status: string) => Promise<boolean>;
@@ -867,22 +866,6 @@ export function useOperationRecords(): UseOperationRecordsReturn {
     }
   }, [addRecordApi, updateRecordApi]);
 
-  // 添加临时任务来源的操作记录
-  const addTempTaskRecord = useCallback(async (recordData: Omit<FarmOperationRecord, 'id' | 'recordCode' | 'sourceType' | 'createdAt' | 'updatedAt'>): Promise<FarmOperationRecord | null> => {
-    try {
-      const created = await addRecordApi({
-        ...recordData,
-        id: `OP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        recordCode: generateRecordCode(),
-        sourceType: 'tempTask',
-      });
-      return toHookRecord(created);
-    } catch (writeError) {
-      reportWriteError('记录临时任务操作', writeError);
-      return null;
-    }
-  }, [addRecordApi]);
-
   // 更新记录状态
   const updateRecordStatus = useCallback(async (id: string, status: string): Promise<boolean> => {
     try {
@@ -949,7 +932,6 @@ export function useOperationRecords(): UseOperationRecordsReturn {
     refresh,
     addRecord,
     addTaskRecord,
-    addTempTaskRecord,
     updateRecordStatus,
     getRecord,
     getRecordsBySource,

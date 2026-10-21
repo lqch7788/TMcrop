@@ -3585,31 +3585,10 @@ function seedBusinessInspectionRecords() {
  * 导入临时任务数据（完整版）
  */
 function seedBusinessTempTasks() {
-  const db = getDatabase();
-
-  const tempTasks = [
-    { id: 'TT001', task_code: 'TT20260418-001', task_title: '设备日常维护检查', task_type: 'equipment_repair', task_content: '对温室内的灌溉系统进行例行检查和维护', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: 'G001', greenhouse_name: '玻璃温室A区', priority: 'low', status: 'draft', due_date: '2026-04-25T08:00:00', create_time: '2026-04-18T09:00:00.000Z', update_time: '2026-04-18T09:00:00.000Z' },
-    { id: 'TT002', task_code: 'TT20260418-002', task_title: '紧急处理大棚A区虫害', task_type: 'farm_repair', task_content: '大棚A区发现蚜虫大量繁殖，需要紧急喷洒农药处理', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: 'G001', greenhouse_name: '大棚A区', priority: 'high', status: 'pending', due_date: '2026-04-20T17:00:00', create_time: '2026-04-18T08:00:00.000Z', update_time: '2026-04-18T08:00:00.000Z' },
-    { id: 'TT003', task_code: 'TT20260417-003', task_title: '外出协助兄弟基地', task_type: 'farm_repair', task_content: '协助南京绿野农场基地进行番茄移栽作业', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: '', greenhouse_name: '外出协助', priority: 'medium', status: 'accepted', due_date: '2026-04-20T17:00:00', create_time: '2026-04-17T10:00:00.000Z', update_time: '2026-04-17T14:00:00.000Z' },
-    { id: 'TT004', task_code: 'TT20260418-004', task_title: 'B区番茄追肥作业', task_type: 'farm_repair', task_content: '番茄进入结果期，需要追加钾肥促进果实发育', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: 'G002', greenhouse_name: '玻璃温室B区', priority: 'normal', status: 'in_progress', due_date: '2026-04-22T17:00:00', create_time: '2026-04-17T09:00:00.000Z', update_time: '2026-04-18T10:00:00.000Z' },
-    { id: 'TT005', task_code: 'TT20260416-005', task_title: 'D区黄瓜采摘', task_type: 'farm_repair', task_content: 'D区黄瓜已成熟，需要及时采摘', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: '', greenhouse_name: '大棚D区', priority: 'normal', status: 'waiting_acceptance', due_date: '2026-04-18T17:00:00', create_time: '2026-04-16T08:00:00.000Z', update_time: '2026-04-18T16:00:00.000Z' },
-    { id: 'TT006', task_code: 'TT20260415-006', task_title: '大棚B区消杀作业', task_type: 'farm_repair', task_content: '对大棚B区进行病虫害消杀作业', assignee_id: 'U013', assignee_name: '陆启闯', greenhouse_id: 'G002', greenhouse_name: '玻璃温室B区', priority: 'high', status: 'completed', due_date: '2026-04-18T12:00:00', create_time: '2026-04-15T08:00:00.000Z', update_time: '2026-04-16T16:00:00.000Z' },
-  ];
-
-  for (const task of tempTasks) {
-    db.run(`
-      INSERT OR IGNORE INTO temp_tasks
-      (id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
-       greenhouse_id, greenhouse_name, priority, status, due_date, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      task.id, task.task_code, task.task_title, task.task_type, task.task_content,
-      task.assignee_id, task.assignee_name, task.greenhouse_id, task.greenhouse_name,
-      task.priority, task.status, task.due_date, task.create_time, task.update_time
-    ]);
-  }
-
-  seedLog.info(`已导入 ${tempTasks.length} 条临时任务`);
+  // 2026-10-21（阶段 3）：临时任务模块已下线，不再导入临时任务种子数据。
+  //   存量 6 条 TT 种子已在阶段 2 迁入 farm_tasks；新库不再生成，
+  //   避免它们只躺在归档表 temp_tasks 里、任何页面都看不到。
+  seedLog.skip('临时任务种子已停用（模块下线）');
 }
 
 /**

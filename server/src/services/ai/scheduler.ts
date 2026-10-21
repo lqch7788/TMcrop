@@ -11,7 +11,7 @@
  *
  * V2 修复：
  *   - 真实从 DB 加载 employees + team_members JOIN
- *   - 真实从 DB 加载 farm_tasks + temp_tasks 合并
+ *   - 真实从 DB 加载 farm_tasks（2026-10-21 阶段 3 起临时任务已并入）
  *   - 排班策略：按 task.priority 倒序 + 任务 preferred_date 优先
  *   - 软约束（preferred_off_days）+ 硬约束（max_consecutive_days、daily_hours_limit）
  *   - CV 计算 + 合规率真实
@@ -128,7 +128,7 @@ function loadEmployeesFromDB(teamId?: string): EmployeeInput[] {
 }
 
 /**
- * 真实从 DB 加载任务（合并 farm_tasks + temp_tasks）
+ * 真实从 DB 加载任务（farm_tasks；临时任务已并入）
  */
 function loadTasksFromDB(startDate: string, days: number): TaskInput[] {
   const db = getDatabase();
@@ -147,16 +147,7 @@ function loadTasksFromDB(startDate: string, days: number): TaskInput[] {
     [startDate, endDate] as any[]
   );
 
-  // 2. temp_tasks（临时任务）
-  const tempResult = db.exec(
-    `SELECT id, task_type, required_skills, estimated_hours, priority, plan_date, assignee_id, batch_id
-     FROM temp_tasks
-     WHERE status IN ('pending', 'waiting_acceptance', 'accepted')
-       AND plan_date BETWEEN ? AND ?
-     ORDER BY plan_date`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [startDate, endDate] as any[]
-  );
+  // 2. 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，不再单独查询 temp_tasks
 
   const result: TaskInput[] = [];
   const cols = (r: { columns: string[]; values: unknown[][] }) => {
@@ -166,23 +157,6 @@ function loadTasksFromDB(startDate: string, days: number): TaskInput[] {
   };
 
   for (const r of farmResult) {
-    for (const row of r.values) {
-      const o: Record<string, unknown> = {};
-      r.columns.forEach((c, i) => (o[c] = row[i]));
-      result.push({
-        task_id: String(o.id),
-        task_type: String(o.task_type || 'other'),
-        required_skills: String(o.required_skills || '').split(',').filter(Boolean),
-        estimated_hours: Number(o.estimated_hours) || 4,
-        priority: (['urgent', 'high', 'normal', 'low'] as const).includes(o.priority as any)
-          ? (o.priority as any) : 'normal',
-        preferred_date: String(o.plan_date),
-        assignee_id: o.assignee_id ? String(o.assignee_id) : undefined,
-        batch_id: o.batch_id ? String(o.batch_id) : undefined,
-      });
-    }
-  }
-  for (const r of tempResult) {
     for (const row of r.values) {
       const o: Record<string, unknown> = {};
       r.columns.forEach((c, i) => (o[c] = row[i]));
