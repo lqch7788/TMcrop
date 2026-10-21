@@ -122,8 +122,11 @@ export function TaskRecordTimeline({
                     </span>
 
                     <span className="text-gray-300 select-none">|</span>
+                    {/* 2026-10-21：操作徽章原本 config.color + config.bgColor 是同色阶（-500/-500），
+                        深色字配深色底 → 文字完全看不见。改为浅底深字（背景 -100 + 文字 -700），
+                        仅颜色基底（蓝/绿/红等）保持一致。序号的圆形节点不动（深底+白字）。 */}
                     <span
-                      className={`px-2 py-0.5 text-xs rounded-full ${config.color} ${config.bgColor}`}
+                      className={`px-2 py-0.5 text-xs rounded-full ${config.bgColor.replace('-500', '-100')} ${config.color.replace('-500', '-700')}`}
                     >
                       {record.actionName || config.label}
                     </span>
@@ -134,17 +137,17 @@ export function TaskRecordTimeline({
                         <span className="text-gray-300 select-none">|</span>
                         <span className="flex items-center gap-1">
                           {record.fromStatus && (
-                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)}`}
-                              style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.fromStatus as TaskStatus]?.bg || '#f3f4f6'}` }}>
+                            /* 2026-10-21：状态徽章 background 字段是 Tailwind className 不是 hex，
+                               此前 style={{ backgroundColor }} 被浏览器忽略 → 徽章没底色只剩深字。
+                               改为直接 className 拼接底色。 */
+                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)} ${TASK_STATUS_CONFIG[record.fromStatus as TaskStatus]?.bg || 'bg-gray-100'}`}>
                               {getStatusLabel(record.fromStatus)}
                             </span>
                           )}
                           <span className="text-gray-400">→</span>
                           {record.toStatus && (
-                            <span
-                              className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}
-                              style={{ backgroundColor: `${TASK_STATUS_CONFIG[record.toStatus as TaskStatus]?.bg || '#f3f4f6'}` }}
-                            >
+                            /* 2026-10-21：同 fromStatus 修复（className 拼接底色，不再用无效的 inline style）。 */
+                            <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)} ${TASK_STATUS_CONFIG[record.toStatus as TaskStatus]?.bg || 'bg-gray-100'}`}>
                               {getStatusLabel(record.toStatus)}
                             </span>
                           )}
@@ -197,6 +200,16 @@ export function TaskRecordTimeline({
                   {/* 反馈数据展示（位置、照片、语音等） */}
                   {showFeedback && record.feedback && (
                     <div className="mt-2 space-y-2">
+                      {/* 2026-10-21：处理结果结论（全部完成/部分完成/延迟完成/其他）
+                          —— 执行人在提交弹窗选择的结论，此前只存在表单内存、提交后即丢失 */}
+                      {record.feedback.resultStatus && (
+                        <div className="flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 rounded px-2 py-1">
+                          <span>📋</span>
+                          <span>处理结果：</span>
+                          <span className="font-medium">{record.feedback.resultStatus}</span>
+                        </div>
+                      )}
+
                       {/* GPS位置 */}
                       {record.feedback.gpsLocation && (
                         <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1">
