@@ -38,7 +38,9 @@ const INSPECTION_TYPES = [
 ];
 
 // 状态配置
-const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+// 2026-10-21：导出供 ProblemTab 的「关联任务」区块复用（巡查的 status 语义空间
+//   与农事/临时任务不同：normal/attention/critical 是巡查结果关注度，不是任务进度）
+export const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   normal: { bg: 'bg-green-100', text: 'text-green-700', label: '正常' },
   attention: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '需关注' },
   critical: { bg: 'bg-red-100', text: 'text-red-700', label: '异常' },

@@ -25,14 +25,26 @@ import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
-import { AlertTriangle, Camera, Check, CheckCircle, Clock, Download, Eye, FileText, Hand, List, MapPin, Mic, Package, Plus, Send, Sparkles, Trash2, User, UserPlus, X } from 'lucide-react';
+// 2026-10-21：AlertTriangle 随「问题追踪」子Tab 按钮删除后已无引用，从 import 移除
+import { Camera, Check, CheckCircle, Clock, Download, Eye, FileText, Hand, List, MapPin, Mic, Package, Plus, Send, Sparkles, Trash2, User, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
-import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+// 2026-10-21：Table 系列（Table/TableHeader/TableBody/TableRow/TableHead/TableCell）
+//   随「问题追踪」子Tab 的 10 列表格删除后已无引用，从 import 移除；
+//   新增的详情弹窗「关联任务」区块用普通 div 布局，不再依赖 Table。
+import { Label, DatePicker } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import type { SourceModuleType } from '../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 import { problemStatusToCN } from '../../../utils/problemStatus';
+// 2026-10-21：关联任务区块的状态文案直接复用两个既有常量，避免自维护一份映射
+//   STATUS_MAP    —— 农事/临时任务（两表 status 枚举兼容，覆盖 draft/pending/accepted/
+//                   in_progress/waiting_acceptance/completed/rejected/failed/cancelled/abandoned）
+//   STATUS_CONFIG —— 巡查记录（normal/attention/critical，是巡查结果关注度，语义空间不同）
+import { STATUS_MAP } from './constants_taskDispatch';
+import { STATUS_CONFIG as INSPECTION_STATUS_CONFIG } from './InspectionTab';
+// 2026-10-21：优先级复用 types 里的共享紧急程度配置（含完整徽章 class）
+import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
 // 必填反馈选项常量（避免在组件内重复定义）
 const FEEDBACK_OPTIONS = [
@@ -87,7 +99,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   // 使用 useProblemDispatch 获取分派功能
   // 2026-09-20：补 waitingAcceptanceProblems —— hook 早已导出但组件从未消费，
   //   导致"待验收"状态的问题既不在"全部"列表、也没有筛选入口（后端 28 条只渲染 19 条）
-  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, totalCount, approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
+  // 2026-10-21：totalCount 随「问题追踪」子Tab 徽章删除后已无使用，从解构中去掉
+  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
   // 使用 useComprehensiveDispatch 获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
@@ -109,10 +122,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     return adminUser || users[0] || null;
   }, [users]);
 
-  // ========== 标签页状态 ==========
-  const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
-  // 2026-10-21：hover 到「问题追踪」子Tab 时才显示该面板的功能说明（之前一直常驻占用屏幕首行）
-  const [showTasksHelp, setShowTasksHelp] = useState(false);
+  // 2026-10-21：「问题追踪」子Tab 已删除。
+  //   问题→任务的正查入口迁入问题详情弹窗底部「关联任务」区块（见 detailLinkedTasks）；
+  //   任务→问题的反查入口迁入农事任务表格新增的「来源问题」列（见 TaskTab.problemMap）。
+  //   故此处不再需要子Tab 切换态与 hover 说明态。
 
   // ========== 筛选状态 ==========
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled'>('all');
@@ -129,11 +142,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [selectedRows, setSelectedRows] = useState<Array<number | string>>([]);
   const [selectedProblems, setSelectedProblems] = useState<Array<number | string>>([]);
 
-  // 2026-09-21：问题列表 + 关联任务分页（与农事任务表格一致：底部 Pagination 组件）
+  // 2026-09-21：问题列表分页（与农事任务表格一致：底部 Pagination 组件）
+  //   2026-10-21：原「关联任务分页」两个 state 随问题追踪子Tab 一并删除（详情弹窗内不分页）
   const [problemsCurrentPage, setProblemsCurrentPage] = useState(1);
   const [problemsPageSize, setProblemsPageSize] = useState(10);
-  const [linkedCurrentPage, setLinkedCurrentPage] = useState(1);
-  const [linkedPageSize, setLinkedPageSize] = useState(10);
 
   // ========== 弹窗状态 ==========
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1091,7 +1103,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5">
                   应急场景使用：现场先按临时任务处理，工单记录同样挂到当前问题下，
-                  可在问题管理的「问题追踪」里看到。
+                  可在问题详情的「关联任务」中查看。
                 </div>
               </div>
             </Label>
@@ -1237,6 +1249,117 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 showStatusChange={true}
               />
             </div>
+
+            {/* 2026-10-21 新增：关联任务区块（「问题追踪」子Tab 删除后的正查入口）
+                数据源仍是三表聚合的 linkedTasks，按当前问题 id 过滤；
+                编号点击复用 FarmTaskHub 已监听的 open-task-detail / open-inspection-detail 事件。 */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                  <List className="w-4 h-4" />
+                  关联任务
+                  <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
+                    {detailLinkedTasks.length}
+                  </span>
+                </h4>
+              </div>
+              {detailLinkedTasks.length === 0 ? (
+                <p className="text-sm text-gray-400 py-2">该问题暂无关联任务（尚未分派，或关联记录已删除）</p>
+              ) : (
+                <div className="space-y-2">
+                  {detailLinkedTasks.map((task: any) => {
+                    // 类型徽章：农事 / 临时 / 巡查
+                    const typeConfig: Record<string, { label: string; bg: string; text: string }> = {
+                      farm: { label: '农事', bg: 'bg-blue-100', text: 'text-blue-700' },
+                      tempTask: { label: '临时', bg: 'bg-amber-100', text: 'text-amber-700' },
+                      inspection: { label: '巡查', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                    };
+                    const typeInfo = typeConfig[task.type] || { label: '未知', bg: 'bg-gray-100', text: 'text-gray-600' };
+                    // 状态文案分两类语义空间（详见文件顶部 import 处的说明）：
+                    //   两个常量的字段名不同（color vs text），故分开取，不用联合类型。
+                    const isInspection = task.type === 'inspection';
+                    const inspMeta = isInspection ? INSPECTION_STATUS_CONFIG[task.status] : undefined;
+                    const farmMeta = isInspection ? undefined : STATUS_MAP[task.status];
+                    const statusLabel = inspMeta?.label || farmMeta?.label || task.status || '未知';
+                    const statusCls = inspMeta
+                      ? `${inspMeta.bg} ${inspMeta.text}`
+                      : farmMeta
+                        ? `${farmMeta.bg} ${farmMeta.color}`
+                        : 'bg-gray-100 text-gray-700';
+                    // 优先级：三类来源语义不同 ——
+                    //   农事任务 priority（high/medium/normal/urgent）、临时任务 urgency
+                    //   （critical/high/normal/urgent，回退 priority）走英文枚举映射；
+                    //   巡查存的是中文严重程度（严重/中等/轻微），不在英文枚举里，原样显示。
+                    //   枚举映射复用 types 的 TEMP_TASK_URGENCY_CONFIG，另补它未收录的 medium / low。
+                    const priorityRaw = String(task.priority || '');
+                    const urgMeta = TEMP_TASK_URGENCY_CONFIG[priorityRaw as keyof typeof TEMP_TASK_URGENCY_CONFIG];
+                    const priorityLabel = isInspection
+                      ? (priorityRaw || '—')
+                      : urgMeta?.label
+                        || (priorityRaw === 'medium' ? '中' : priorityRaw === 'low' ? '低' : '')
+                        || priorityRaw
+                        || '普通';
+                    const priorityCls = isInspection
+                      ? (priorityRaw === '严重' ? 'bg-red-100 text-red-700'
+                        : priorityRaw === '中等' ? 'bg-amber-100 text-amber-700'
+                          : priorityRaw === '轻微' ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700')
+                      : (urgMeta?.badge
+                        || (priorityRaw === 'medium' ? 'bg-amber-100 text-amber-700'
+                          : priorityRaw === 'low' ? 'bg-green-100 text-green-700'
+                            : '')
+                        || 'bg-gray-100 text-gray-700');
+                    return (
+                      <div
+                        key={`${task.type}-${task.id}`}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 hover:bg-emerald-50 transition-colors"
+                      >
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${typeInfo.bg} ${typeInfo.text}`}>
+                          {typeInfo.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (task.type === 'farm') {
+                              window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
+                            } else if (task.type === 'inspection') {
+                              window.dispatchEvent(new CustomEvent('open-inspection-detail', { detail: { recordId: task.id } }));
+                            } else {
+                              showAlert('临时任务请到「临时任务」tab 查看详情');
+                            }
+                          }}
+                          className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium flex-shrink-0"
+                          title="点击查看任务详情"
+                        >
+                          {task.taskCode || '—'}
+                        </button>
+                        <span className="text-sm text-gray-800 truncate flex-1" title={task.title}>
+                          {task.title || '—'}
+                        </span>
+                        {/* 温室（2026-10-21 补：原「问题追踪」tab 有此列，删除时未迁入，
+                            数据源 linkedTasks.greenhouseName 一直在） */}
+                        <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0 max-w-[110px] truncate" title={task.greenhouseName || ''}>
+                          {task.greenhouseName || '—'}
+                        </span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">
+                          {task.assigneeName || '—'}
+                        </span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
+                          {task.dueDate || '—'}
+                        </span>
+                        {/* 优先级（2026-10-21 补，同上） */}
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${priorityCls}`}>
+                          {priorityLabel}
+                        </span>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${statusCls}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
       </div>
       </Modal>
@@ -1249,14 +1372,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   //   现在补两 store + 统一字段映射（前端字段 camelCase，DB 列 snake_case）。
   const tempTaskStoreAll = useTempTaskStore((s) => s.tasks);
   const inspectionStoreAll = useInspectionDataStore((s) => s.records);
-  // 2026-09-21：当前登录用户（用于「待我验收」快捷按钮的条件判断）
-  //   必须用 realName 而不是 username —— 任务的 assigneeName 存的是真实姓名（"张三"），
-  //   而 username 是账号名，两者不是同一命名空间。原先比对 username，
-  //   导致「待我验收」按钮的第三个条件恒为 false、按钮永不出现。
-  //   （useAuthStore 同时提供 username 与 realName，见其 login 分支的 CurrentUser 构造）
-  const currentUserName = useAuthStore(
-    (s: any) => s.currentUser?.realName || s.currentUser?.username || ''
-  );
+  // 2026-10-21：原「待我验收」快捷按钮依赖的 currentUserName 随「问题追踪」子Tab 一并删除。
+  //   验收能力本身未丢失 —— 问题列表的「验收」按钮走下方 operatorId/operatorName 的
+  //   InspectionAcceptanceModal，与 currentUserName 无关。
   // 2026-10-10（审核修复）：验收等写操作的操作人取当前登录用户（原多处硬编码 U001/U013）
   const operatorId = useAuthStore((s: any) => s.currentUser?.oid || '');
   const operatorName = useAuthStore(
@@ -1324,57 +1442,22 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     return [...farmLinked, ...tempLinked, ...inspectLinked];
   }, [externalTasks, tasks, tempTaskStoreAll, inspectionStoreAll]);
 
-  // 2026-09-21：关联任务分页（10 条/页）
-  const paginatedLinkedTasks = useMemo(() => {
-    const start = (linkedCurrentPage - 1) * linkedPageSize;
-    return linkedTasks.slice(start, start + linkedPageSize);
-  }, [linkedTasks, linkedCurrentPage, linkedPageSize]);
+  // 2026-10-21：「问题追踪」子Tab 已删除，问题→任务的正查入口迁移到问题详情弹窗。
+  //   这里从同一份 linkedTasks 里按当前详情问题过滤（数据口径与原子Tab 完全一致，
+  //   避免出现两套聚合逻辑）。单问题实测最多 2-3 条关联任务，不分页。
+  const detailLinkedTasks = useMemo(() => {
+    if (!detailModal.isOpen || !detailModal.problem) return [];
+    const pid = String(detailModal.problem.id);
+    return (linkedTasks as any[]).filter((t) => String(t.sourceProblemId) === pid);
+  }, [linkedTasks, detailModal.isOpen, detailModal.problem]);
 
   return (
     <div className="space-y-6">
-      {/* 标签页切换 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-200 px-4">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('problems')}
-            className={`px-4 py-3 text-sm font-medium flex items-center gap-3 border-b-2 transition-colors ${
-              activeTab === 'problems'
-                ? 'border-orange-500 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span>问题列表</span>
-            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
-              {totalCount}
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('tasks')}
-            onMouseEnter={() => setShowTasksHelp(true)}
-            onMouseLeave={() => setShowTasksHelp(false)}
-            onFocus={() => setShowTasksHelp(true)}
-            onBlur={() => setShowTasksHelp(false)}
-            className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'tasks'
-                ? 'border-orange-500 text-orange-600 bg-orange-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            问题追踪
-            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
-              {linkedTasks.length}
-            </span>
-          </Button>
-        </div>
-      </div>
-
-      {/* 问题列表标签页 */}
-      {activeTab === 'problems' && (
-        <div className="space-y-4">
+      {/* 2026-10-21：「问题追踪」子Tab 与整个子Tab 切换条一并删除，
+          问题列表内容改为无条件渲染。
+          被删切换条上的「问题列表 / 总数 totalCount」徽章信息未丢失 ——
+          下方「问题管理列表」标题行的 displayStats 已完整呈现总数与四态统计。 */}
+      <div className="space-y-4">
         {/* 筛选工具栏 */}
         <ProblemFilterToolbar
           onBatchDispatch={() => {}}
@@ -1546,245 +1629,6 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           </div>
         )}
         </div>
-      )}
-
-      {/* 问题追踪标签页 */}
-      {activeTab === 'tasks' && (
-        <div className="space-y-4">
-          {/* 2026-10-21：提示框改为 hover「问题追踪」子Tab 按钮时才显示
-              （原常驻占用第一行屏幕；现仅在用户主动悬停时展开，避免视觉噪音） */}
-          {showTasksHelp && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-start gap-3">
-              <List className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <div className="text-sm font-medium text-blue-800">问题追踪说明</div>
-                {/* 2026-09-21：更新文案（更准确描述3 类任务的来源 + 验收流程） */}
-                {/* 2026-10-10（审核修复）：原文案称"与**本问题**关联"—— 本 tab 是总览页、
-                    无"当前问题"上下文，列表实为全部已分派问题的关联任务，文案与内容不符 */}
-                <div className="text-sm text-blue-600 mt-1 space-y-1">
-                  <div>
-                    本面板汇总列出<strong>所有已分派问题</strong>关联的全部任务与巡查记录，包含由"问题分派"接口派出的<strong>农事任务</strong>和<strong>临时任务</strong>，以及手工关联的<strong>巡查记录</strong>。
-                  </div>
-                  <div>
-                    完成任务后（农事/临时任务），需由分派员或验收员在任务详情页<strong>点击"验收通过"</strong>，才会自动将<strong>对应问题</strong>标记为"已处理"。
-                  </div>
-                  <div>
-                    点击表格中的<strong>任务编号</strong>可跳转到对应任务的详情/验收页。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* 任务列表 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <TableRow>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">类型</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务编号</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务标题</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">温室</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">执行人</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">截止日期</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">优先级</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">状态</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">来源问题</TableHead>
-                    {/* 2026-09-20：新增问题处理结果列（关联任务里原本只有任务侧字段，问题侧处理结果无处可见） */}
-                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">问题处理结果</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-100">
-                  {linkedTasks.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={11} className="px-4 py-12 text-center text-gray-400">
-                        暂无分派任务
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedLinkedTasks.map((task: any) => {
-                      // 2026-09-20：补 waitingAcceptanceProblems —— 原查找漏了"待验收"状态，
-                      //   处于待验收的问题在关联任务里会被当成"无来源问题"（显示 -）
-                      const problem = [
-                        ...pendingProblems,
-                        ...dispatchedProblems,
-                        ...waitingAcceptanceProblems,
-                        ...handledProblems,
-                      ].find(p => String(p.id) === String(task.sourceProblemId));
-                      // 问题处理结果：优先取 handle_result；为空则回退到流转记录里最后一次
-                      // submit/approve 的备注（本系统问题的处理结果正是由提交/验收写入）
-                      const flowRecords = ((problem as any)?.flowRecords || []) as any[];
-                      const lastFlow = [...flowRecords].reverse().find(
-                        (f) => f.action === 'approve' || f.action === 'submit'
-                      );
-                      const problemResult = (problem as any)?.handleResult || lastFlow?.comment || '';
-                      const problemResultDate =
-                        (problem as any)?.handleResult
-                          ? (problem as any)?.handleDate || ''
-                          : (lastFlow?.actionTime || '').slice(0, 10);
-                      // 2026-09-20：来源问题状态原来是英文（completed 等），改用中文映射；
-                      //   颜色分支同时改用中文比对（原来按中文比对英文值，永远走灰色默认）
-                      const problemStatusCn = problem ? getStatusCN((problem as any).status) : '';
-                      // 2026-09-21：任务类型徽章（农事/临时/巡查）+ 待我验收快捷按钮
-                      const taskTypeConfig: Record<string, { label: string; bg: string; text: string }> = {
-                        farm:       { label: '农事', bg: 'bg-blue-100',   text: 'text-blue-700' },
-                        tempTask:   { label: '临时', bg: 'bg-amber-100',  text: 'text-amber-700' },
-                        inspection: { label: '巡查', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-                      };
-                      const taskType = taskTypeConfig[task.type || task.kind] || { label: task.kind || '?', bg: 'bg-gray-100', text: 'text-gray-600' };
-                      // 「待我验收」快捷按钮可见条件：
-                      //   1. 任务状态为 waiting_acceptance
-                      //   2. 任务执行人姓名 === 当前登录用户的真实姓名
-                      //      （V1.1 的 assigneeName 是自由文本姓名，assigneeId 是姓名哈希，
-                      //       故只能用姓名比对；currentUserName 已取 realName，见本文件上方定义）
-                      //   3. 仅农事任务参与判断（临时任务 / 巡查的 assignee 字段未填）
-                      const isWaitingAcceptance = task.status === 'waiting_acceptance';
-                      const isMyAcceptanceTask =
-                        task.type === 'farm' &&
-                        currentUserName &&
-                        task.assigneeName === currentUserName;
-                      return (
-                        <TableRow key={task.id} className="hover:bg-emerald-50 transition-colors">
-                          <TableCell className="px-4 py-3">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${taskType.bg} ${taskType.text}`}>
-                              {taskType.label}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm font-mono text-gray-600">
-                            {/* 2026-10-21：任务编号改为可点击 —— 三种 type 分流：
-                                  farm → dispatch 'open-task-detail'（FarmTaskHub 已监听，开 TaskDetailModal）
-                                  inspection → dispatch 'open-inspection-detail'（本次新增，开 InspectionDetailModal）
-                                  tempTask → TempTaskTab 的 inline modal 状态未外露，点击提示用户去对应 tab（最小侵入） */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (task.type === 'farm') {
-                                  window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
-                                } else if (task.type === 'inspection') {
-                                  window.dispatchEvent(new CustomEvent('open-inspection-detail', { detail: { recordId: task.id } }));
-                                } else if (task.type === 'tempTask') {
-                                  showAlert('临时任务请到「临时任务」tab 查看详情');
-                                }
-                              }}
-                              className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
-                              title="点击查看任务详情"
-                            >
-                              {task.taskCode}
-                            </button>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">
-                            {task.title}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm text-gray-600">
-                            {task.greenhouseName}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm text-gray-600">
-                            {task.assigneeName}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {task.dueDate}
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              task.priority === 'high' || task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                              task.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {task.priority === 'high' || task.priority === 'urgent' ? '高' :
-                               task.priority === 'medium' ? '中' :
-                               task.priority === 'low' ? '低' : '普通'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex flex-col gap-1 items-start">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                task.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                task.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
-                                task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {task.status === 'pending' ? '待执行' :
-                                 task.status === 'in_progress' ? '进行中' :
-                                 task.status === 'completed' ? '已完成' :
-                                 task.status === 'cancelled' ? '已取消' :
-                                 task.status === 'not_started' ? '未开始' :
-                                 task.status === 'paused' ? '已暂停' : '未知'}
-                              </span>
-                              {/* 2026-09-21：「待我验收」快捷按钮（仅农事任务 + 任务执行人 = 当前用户时显示） */}
-                              {isWaitingAcceptance && isMyAcceptanceTask && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    // 跳转到任务详情弹窗（已在 FarmTaskHub 中通过 setDetailTaskId 控制）
-                                    // 这里用全局事件总线触发：dispatchEvent 模拟一次详情打开
-                                    // 简化方案：直接通过 window.history 跳到任务详情页
-                                    // 农事任务详情页路径：根据 App.tsx 通常是 /tasks/:id 或弹窗
-                                    // 这里采用 URL 跳转 + 后续 tab 状态保持（如有 hash）
-                                    if (task.type === 'farm') {
-                                      // 触发自定义事件，让 FarmTaskHub 打开 TaskDetailModal
-                                      window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
-                                    }
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors"
-                                  title="点击打开任务详情并直接进入验收"
-                                >
-                                  ✓ 待我验收
-                                </button>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {problem ? (
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  problemStatusCn === '已处理' ? 'bg-green-100 text-green-700' :
-                                  problemStatusCn === '处理中' ? 'bg-amber-100 text-amber-700' :
-                                  problemStatusCn === '待验收' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {problemStatusCn}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                          {/* 2026-09-20：问题处理结果（handle_result，空则回退流转记录备注） */}
-                          <TableCell className="px-4 py-3 text-sm text-gray-700">
-                            {problemResult ? (
-                              <span className="block max-w-[240px] truncate" title={problemResult}>
-                                {problemResult}
-                                {problemResultDate ? `（${problemResultDate}）` : ''}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* 2026-09-21：关联任务分页（与农事任务表格一致） */}
-            <Pagination
-              currentPage={linkedCurrentPage}
-              totalPages={Math.ceil(linkedTasks.length / linkedPageSize) || 1}
-              pageSize={linkedPageSize}
-              onPageChange={setLinkedCurrentPage}
-              onPageSizeChange={(size) => { setLinkedPageSize(size); setLinkedCurrentPage(1); }}
-              showPageSize={true}
-            />
-          </div>
-        </div>
-      )}
       {renderDispatchModal()}
 
       {/* 详情弹窗 */}

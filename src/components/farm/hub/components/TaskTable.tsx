@@ -8,6 +8,8 @@ import { Check, CheckCircle, ChevronDown, ChevronUp, Download, Edit2, Plus, Rota
 import { Button } from '@/components/ui';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
+// 2026-10-21：SourceProblemInfo 定义在 TaskTableRow 内（避免两文件互相 import type 成环）
+import type { SourceProblemInfo } from './TaskTableRow';
 import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody } from '@/components/ui';
 import {
@@ -41,11 +43,20 @@ interface Task {
   estimatedDays?: number;
   estimatedHours?: number;
   timeout?: any;
+  // 2026-10-21：新增「来源问题」列的数据源（替代已删除的「问题追踪」子Tab 的反查能力）
+  sourceProblemId?: string;
 }
+
+/**
+ * 来源问题的展示信息（由 TaskTab 从 useProblemStore 派生后传入）
+ * key = problem.id，value = 问题编号 + 中文状态
+ */
 
 interface TaskTableProps {
   // 数据
   tasks: Task[];
+  /** 来源问题索引（id → {code, statusCn}）；未传则「来源问题」列显示占位符 */
+  problemMap?: Record<string, SourceProblemInfo>;
   // 统计信息
   stats?: {
     total: number;
@@ -127,6 +138,7 @@ interface TaskTableProps {
 
 export function TaskTable({
   tasks,
+  problemMap,
   stats,
   currentPage,
   pageSize,
@@ -468,6 +480,7 @@ export function TaskTable({
                 <TaskTableRow
                   key={task.id}
                   task={task}
+                  problemMap={problemMap}
                   index={index}
                   showCheckbox={showCheckbox}
                   isSelected={selectedIds.includes(task.id)}
