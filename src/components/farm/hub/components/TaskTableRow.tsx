@@ -198,7 +198,11 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
           className="text-blue-600 hover:text-blue-800 font-medium"
           title="点击查看详情"
         >
-          {task.id}
+          {/* 2026-10-21（阶段 2）：显示业务编号而非内部主键 ——
+              迁移后的临时任务 id 是 TT1792544019112 这类历史主键，
+              taskCode 才是用户认识的 TT20260418-004；
+              农事任务两者相同，不影响原有显示。 */}
+          {task.taskCode || task.id}
         </Button>
       </td>
 

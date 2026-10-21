@@ -103,13 +103,18 @@ function matchesProblemTabFilter(task: any): boolean {
 function matchesProductionTabFilter(task: any): boolean {
   const dm = task.dispatchMode;
   if (dm === 'tempTask' || dm === 'problem' || dm === 'inspection') return false;
-  if (task.sourceType === 'tempTask') return false;
+  // 2026-10-21（阶段 2）：不再按 sourceType==='tempTask' 排除 ——
+  //   迁移后的任务 dispatchMode 已是 'farm'，sourceType 只是历史来源标记；
+  //   继续排除会让它们在「农事任务处理」和「临时任务处理」两个 tab 都不显示。
   if (task.sourceProblemId || task.sourceInspectionId) return false;
   return true;
 }
 
 /** 「临时任务处理」tab：TT 开头且非草稿的临时任务 */
 function matchesTempTabFilter(task: any): boolean {
+  // 2026-10-21（阶段 2）：迁移后的任务 dispatchMode 已改为 'farm'，归入「农事任务处理」；
+  //   此处显式排除，避免同一个任务在两个 tab 重复出现。该 tab 在阶段 3 删除。
+  if (task.dispatchMode === 'farm') return false;
   if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
   if (task.status === 'draft') return false;
   return task.sourceType === 'tempTask' || task.dispatchMode === 'tempTask';

@@ -145,8 +145,12 @@ export default function DailyWorkSummary() {
         const status = STATUS_LABELS[task.status] || task.status || '-';
 
         // 任务类别：dispatchMode → 中文
+        // 2026-10-21（阶段 2）：优先用 sourceType 判定历史临时任务 —— 迁移后它们的
+        //   dispatchMode 已统一为 'farm'，若只看 dispatchMode，类别列会全部变成
+        //   「农事任务」，丢掉历史来源。
         const mode = (task.dispatchMode || 'farm') as string;
-        const taskCategory = CATEGORY_LABELS[mode] || mode || '农事任务';
+        const categoryKey = task.sourceType === 'tempTask' ? 'tempTask' : mode;
+        const taskCategory = CATEGORY_LABELS[categoryKey] || categoryKey || '农事任务';
 
         return {
           id: task.id,

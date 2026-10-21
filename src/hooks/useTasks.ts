@@ -103,9 +103,16 @@ import { useToastStore } from '../stores/useToastStore';
 
 // ========== API 同步辅助函数 ==========
 
-/** 根据任务来源路由到正确的 Zustand Store */
+/**
+ * 根据任务来源路由到正确的 Zustand Store
+ *
+ * 2026-10-21（阶段 2）：判定改为**只看 dispatchMode**。
+ *   迁移后临时任务的 dispatchMode 已改写为 'farm'（表也从 temp_tasks 换到 farm_tasks），
+ *   但 sourceType 仍保留 'tempTask' 作为历史来源标记；若继续用 sourceType 判定，
+ *   这些任务会被路由到**已清空的 tempTaskStore**，状态更新全部悬空。
+ */
 function getStoreForTask(task: Task) {
-  if (task.dispatchMode === 'tempTask' || task.sourceType === 'tempTask') {
+  if (task.dispatchMode === 'tempTask') {
     return useTempTaskStore.getState();
   }
   return useFarmTaskStore.getState();
@@ -119,7 +126,9 @@ function getStoreForTask(task: Task) {
  * 巡查的动作走问题通道（acceptProblem / submitProblemFeedback）。此处仅 farm 任务发端点。
  */
 function shouldSyncToFarmEndpoint(task: Task): boolean {
-  return task.dispatchMode !== 'tempTask' && task.sourceType !== 'tempTask'
+  // 2026-10-21（阶段 2）：不再排除 sourceType==='tempTask' —— 迁移后的任务已经住在
+  //   farm_tasks 里，必须走 /farm-tasks 端点才能记录「接受/进度」等真实流转动作。
+  return task.dispatchMode !== 'tempTask'
     && task.dispatchMode !== 'inspection' && task.sourceType !== 'inspection';
 }
 
@@ -1263,7 +1272,9 @@ export function useTasks(): UseTasksReturn {
     };
 
     // 判断是否为临时任务
-    const isTempTask = task.dispatchMode === 'tempTask' || task.sourceType === 'tempTask';
+    // 2026-10-21（阶段 2）：只看 dispatchMode —— 迁移后的任务 sourceType 仍是 'tempTask'，
+    //   但它已经在 farm_tasks 里，提交进度必须走 /farm-tasks 端点。
+    const isTempTask = task.dispatchMode === 'tempTask';
 
     // 对于临时任务，需要获取实际的数据库 id（而非 taskCode）
     // useTempTaskStore.updateTask 内部也是通过相同逻辑查找 actual id
