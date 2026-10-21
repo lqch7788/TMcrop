@@ -56,6 +56,8 @@ interface NewTaskState {
   priority: string;
   estimatedDays: number;
   estimatedHours: number;
+  /** 2026-10-21：人工数量（总工时 =（天数×8+小时）×人工） */
+  workerCount: number;
   typeConfig: TaskConfigValues;
   toolsRemarks: string;
   remarks: string;
@@ -87,6 +89,7 @@ const initialNewTask: NewTaskState = {
   priority: 'normal',
   estimatedDays: 0,
   estimatedHours: 1,
+  workerCount: 1,
   typeConfig: {},
   toolsRemarks: '',
   remarks: '',
@@ -324,6 +327,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       dueDate: planEndTime?.split(' ')[0] || '',
       estimatedDays: newTask.estimatedDays || 0,
       estimatedHours: estimatedHours,
+      workerCount: newTask.workerCount || 1,
       // 2026-10-20 修复字段错接：
       //   · remarks 在任务详情里被渲染为「工作内容」、在列表里是「备注」列，
       //     此前却被写成 toolsRemarks（资源备注），导致同一条备注在两个语义位置重复出现，
@@ -1023,9 +1027,35 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
                   <span className="truncate">
                     {newTask.planStart ? calculateEndDateTime(newTask.planStart, newTask.estimatedDays || 0, newTask.estimatedHours || 0, newTask.workHoursPerDay || 8) : '-'}
-                    <span className="text-xs text-blue-500 ml-1">(共 {(newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)} 小时)</span>
+                    {/* 2026-10-21：总工时口径统一为「(天数×8+小时)×人工」，与列表列一致 */}
+                    <span className="text-xs text-blue-500 ml-1">(总工时 {((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)) * (newTask.workerCount || 1)} 小时)</span>
                   </span>
                 </div>
+              </div>
+              {/* 2026-10-21：人工数量（临时任务合并前置）——
+                  总工时按「(天数×8+小时)×人工」计算，与临时任务口径一致。
+                  与「任务截止时间」同行，补上原本空着的右半边。 */}
+              <div>
+                <Label className="text-gray-700 mb-1">人工数量</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={newTask.workerCount || 1}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
+                      setNewTask({ ...newTask, workerCount: isNaN(val) || val < 1 ? 1 : val });
+                    }}
+                    placeholder="1"
+                    className={deepInputClass}
+                  />
+                  <span className="text-sm text-gray-500 whitespace-nowrap">人</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  总工时 =（天数×{(newTask.workHoursPerDay || 8)}+小时）× 人工数量 =
+                  {' '}
+                  {(((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)) * (newTask.workerCount || 1)).toFixed(0)} 小时
+                </p>
               </div>
             </div>
             {/* 所需物资 | 所需工具（2列对齐） */}

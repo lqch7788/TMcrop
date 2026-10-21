@@ -21,6 +21,11 @@ export const FARM_OPERATION_TYPES = [
   //   来源：后端 /api/temp-tasks 和 /api/farm-tasks 的 type 值
   { value: 'cleaning', label: '清洁卫生' },
   { value: 'seedling', label: '育苗' },
+  // 2026-10-21：临时任务合并前置 —— 补上临时任务独有、农事缺失的 3 类
+  //   （合并完成后 7 类临时任务类型全部由农事任务承载）
+  { value: 'facility_maintenance', label: '设施维护' },
+  { value: 'staff_dispatch', label: '人员调配' },
+  { value: 'safety_check', label: '安全检查' },
   { value: 'other', label: '其他' },
 ] as const;
 

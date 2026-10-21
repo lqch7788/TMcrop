@@ -46,6 +46,10 @@ export interface Task {
   planEnd?: string;
   estimatedDays?: number;
   estimatedHours?: number;
+  /** 2026-10-21：人工数量（临时任务合并前置；总工时 =（天数×8+小时）×人工） */
+  workerCount?: number;
+  /** 2026-10-21：紧急程度（仅迁移保真，新建任务统一用 priority） */
+  urgency?: 'urgent' | 'high' | 'normal';
   materials?: string[];
   tools?: string[];
   sopContent?: string;

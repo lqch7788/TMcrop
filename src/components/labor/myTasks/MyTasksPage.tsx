@@ -795,7 +795,8 @@ export function MyTasksPage() {
 
     // 如果没有记录，从 progress 字段估算
     if (recordCount === 0 && selectedTask?.progress && selectedTask.progress > 0) {
-      const estimatedTotal = ((selectedTask.estimatedDays || 0) * 8 + (selectedTask.estimatedHours || 0));
+      // 2026-10-21 口径统一：estimated_hours 已含天数，总工时 = estimatedHours × 人工数量
+      const estimatedTotal = (selectedTask.estimatedHours || 0) * (selectedTask.workerCount || 1);
       if (estimatedTotal > 0) {
         totalHours = Math.round(estimatedTotal * (selectedTask.progress / 100) * 10) / 10;
       }

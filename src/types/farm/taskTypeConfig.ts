@@ -906,6 +906,222 @@ const seedlingTaskConfig: TaskTypeConfig = {
   ],
 };
 
+// ============================================================
+// 2026-10-21：临时任务合并前置 —— 补齐临时任务独有、农事缺失的 3 类配置
+//
+// 背景：临时任务的 7 个类型里，农事已有 4 个（farm_repair / equipment_repair /
+//   cleaning / other）。剩下 3 个（设施维护 / 人员调配 / 安全检查）在农事侧没有配置，
+//   选中后详细配置区域不渲染。这里按与既有 4 类相同的规范补齐。
+//
+// 设计原则与 2026-10-21 已确立的一致：
+//   1. 尽可能用下拉单选/多选，只有数量、时长用数字输入；
+//   2. key 统一加业务前缀（facility* / staff* / safety*），避免 typeConfig
+//      在所有任务类型间共用同一个对象时发生串值。
+// ============================================================
+
+/**
+ * 任务类型配置数据 - 设施维护
+ * 覆盖：棚体骨架 / 覆盖材料 / 灌溉管路 / 电路照明 / 排水设施 / 道路围栏
+ */
+const facilityMaintenanceConfig: TaskTypeConfig = {
+  value: 'facility_maintenance',
+  label: '设施维护',
+  icon: 'Wrench',
+  color: 'bg-cyan-600',
+  category: 'management',
+  configFields: [
+    {
+      key: 'facilityTarget',
+      label: '维护对象',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'structure', label: '棚体骨架（钢管/立柱/横梁）' },
+        { value: 'covering', label: '覆盖材料（棚膜/遮阳网/防虫网）' },
+        { value: 'irrigation_pipe', label: '灌溉管路（主管/支管/滴带）' },
+        { value: 'electric', label: '电路照明' },
+        { value: 'drainage', label: '排水设施（沟渠/集水井）' },
+        { value: 'road_fence', label: '道路与围栏' },
+        { value: 'other', label: '其他' },
+      ],
+    },
+    {
+      key: 'facilityWorkType',
+      label: '维护类型',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'periodic', label: '定期保养' },
+        { value: 'breakdown', label: '故障维修' },
+        { value: 'replacement', label: '部件更换' },
+        { value: 'rectification', label: '检查后整改' },
+      ],
+    },
+    {
+      key: 'facilityImpact',
+      label: '影响范围',
+      type: 'select',
+      options: [
+        { value: 'none', label: '不影响生产' },
+        { value: 'partial', label: '局部停用' },
+        { value: 'full', label: '整体停用' },
+      ],
+    },
+    {
+      key: 'facilityDowntimeHours',
+      label: '预计停机时长',
+      type: 'number',
+      unit: '小时',
+      min: 0,
+    },
+    {
+      key: 'facilitySpareParts',
+      label: '备件材料',
+      type: 'textarea',
+      placeholder: '如：棚膜 20 米、卡簧 2 包（可留空）',
+    },
+  ],
+};
+
+/**
+ * 任务类型配置数据 - 人员调配
+ * 覆盖：临时支援 / 跨区借调 / 岗位补位 / 集中作业
+ */
+const staffDispatchConfig: TaskTypeConfig = {
+  value: 'staff_dispatch',
+  label: '人员调配',
+  icon: 'Users',
+  color: 'bg-indigo-500',
+  category: 'management',
+  configFields: [
+    {
+      key: 'staffDispatchType',
+      label: '调配类型',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'support', label: '临时支援' },
+        { value: 'secondment', label: '跨区借调' },
+        { value: 'backfill', label: '岗位补位' },
+        { value: 'concentrated', label: '集中作业' },
+      ],
+    },
+    {
+      key: 'staffOrigin',
+      label: '原岗位 / 原区域',
+      type: 'text',
+      placeholder: '如：A 区育苗组',
+    },
+    {
+      key: 'staffTargetArea',
+      label: '调配去向',
+      type: 'text',
+      placeholder: '如：B 区采收线',
+    },
+    {
+      key: 'staffHeadcount',
+      label: '调配人数',
+      type: 'number',
+      required: true,
+      unit: '人',
+      min: 1,
+    },
+    {
+      key: 'staffReason',
+      label: '调配原因',
+      type: 'select',
+      options: [
+        { value: 'urgent_production', label: '生产急需' },
+        { value: 'absence', label: '人员缺勤' },
+        { value: 'skill_match', label: '技能匹配' },
+        { value: 'other', label: '其他' },
+      ],
+    },
+    {
+      key: 'staffEndDate',
+      label: '预计结束时间',
+      type: 'text',
+      placeholder: '如：2026-11-01（长期可留空）',
+    },
+  ],
+};
+
+/**
+ * 任务类型配置数据 - 安全检查
+ * 覆盖：用电 / 消防 / 农药存放 / 机械防护 / 高处作业 / 有限空间 / 防汛防台
+ */
+const safetyCheckConfig: TaskTypeConfig = {
+  value: 'safety_check',
+  label: '安全检查',
+  icon: 'ShieldCheck',
+  color: 'bg-amber-600',
+  category: 'management',
+  configFields: [
+    {
+      key: 'safetyCategories',
+      label: '检查类别',
+      type: 'multiSelect',
+      required: true,
+      placeholder: '可多选',
+      options: [
+        { value: 'electric', label: '用电安全' },
+        { value: 'fire', label: '消防安全' },
+        { value: 'pesticide_storage', label: '农药存放' },
+        { value: 'machine_guard', label: '机械防护' },
+        { value: 'work_at_height', label: '高处作业' },
+        { value: 'confined_space', label: '有限空间' },
+        { value: 'flood_typhoon', label: '防汛防台' },
+      ],
+    },
+    {
+      key: 'safetyFrequency',
+      label: '检查频次',
+      type: 'select',
+      options: [
+        { value: 'pre_shift', label: '班前' },
+        { value: 'daily', label: '每日' },
+        { value: 'weekly', label: '每周' },
+        { value: 'monthly', label: '每月' },
+        { value: 'special', label: '专项检查' },
+      ],
+    },
+    {
+      key: 'safetyIssueCount',
+      label: '发现问题数',
+      type: 'number',
+      unit: '项',
+      min: 0,
+    },
+    {
+      key: 'safetyIssues',
+      label: '发现的主要问题',
+      type: 'textarea',
+      placeholder: '简述发现的问题（无问题可留空）',
+    },
+    {
+      key: 'safetyRectify',
+      label: '整改要求',
+      type: 'select',
+      options: [
+        { value: 'immediate', label: '立即整改' },
+        { value: 'deadline', label: '限期整改' },
+        { value: 'none', label: '无需整改' },
+      ],
+    },
+    {
+      key: 'safetyConclusion',
+      label: '检查结论',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'pass', label: '合格' },
+        { value: 'basic_pass', label: '基本合格' },
+        { value: 'fail', label: '不合格' },
+      ],
+    },
+  ],
+};
+
 /**
  * 任务类型配置数据 - 其他
  */
@@ -943,6 +1159,10 @@ export const TASK_TYPE_CONFIGS: TaskTypeConfig[] = [
   equipmentRepairConfig,
   cleaningConfig,
   seedlingTaskConfig,
+  // 2026-10-21：临时任务合并前置——补上临时任务独有的 3 类
+  facilityMaintenanceConfig,
+  staffDispatchConfig,
+  safetyCheckConfig,
   otherConfig,
 ];
 

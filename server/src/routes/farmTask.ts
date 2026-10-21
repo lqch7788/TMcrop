@@ -411,6 +411,9 @@ router.post('/', (req: Request, res: Response) => {
       source_inspection_id, sourceInspectionId,
       source_id, sourceId,
       source_code, sourceCode,
+      // 2026-10-21：临时任务合并前置（人工数量 / 紧急程度）
+      worker_count, workerCount,
+      urgency,
     } = req.body;
 
     // planStart/planEnd 是组合格式 "yyyy-MM-dd HH:mm"，拆分为 date 和 time
@@ -429,7 +432,9 @@ router.post('/', (req: Request, res: Response) => {
         assignee_id, assignee_name, assigner_id, assigner_name,
         greenhouse_id, greenhouse_name, area_name,
         plan_date, plan_time, priority, status, create_by, create_time, update_time,
-        due_date, plan_end, progress, crop, crop_remarks, estimated_hours, estimated_days, remarks,
+        due_date, plan_end, progress, crop, crop_remarks, estimated_hours, estimated_days,
+        worker_count, urgency,
+        remarks,
         materials, tools,
         batch_id, batch_code,
         planting_id, production_plan_id, production_plan_code,
@@ -440,7 +445,7 @@ router.post('/', (req: Request, res: Response) => {
         team_id, team_name, tools_remarks,
         source_problem_id, source_inspection_id, source_id, source_code
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -469,6 +474,9 @@ router.post('/', (req: Request, res: Response) => {
       crop_remarks || cropRemarks || '',
       estimated_hours || estimatedHours || 0,
       estimated_days || estimatedDays || 0,
+      // 2026-10-21：人工数量默认 1；紧急程度默认 normal（仅迁移保真，新建走 priority）
+      Number(worker_count ?? workerCount) || 1,
+      urgency || 'normal',
       remarks || '',
       // P2-2：统一 toDbJson() 序列化
       toDbJson(materials),
@@ -607,6 +615,9 @@ const FIELD_NAME_MAP: Record<string, string> = {
   dueDate: 'due_date',
   estimatedHours: 'estimated_hours',
   estimatedDays: 'estimated_days',
+  // 2026-10-21：临时任务合并——人工数量 / 紧急程度（此前无映射，PUT 会被静默丢弃）
+  workerCount: 'worker_count',
+  urgency: 'urgency',
   batchId: 'batch_id',
   batchCode: 'batch_code',
   sourceType: 'source_type',
@@ -695,6 +706,8 @@ const FARM_TASK_DB_COLUMNS = new Set<string>([
   'paused_at', 'resumed_at', 'current_pause_reason', 'total_pause_seconds',
   'actual_start_at', 'actual_end_at', 'actual_hours', 'actual_hours_recorded_at',
   'actual_hours_recorded_by', 'estimated_hours', 'estimated_days', 'estimated_vs_actual_ratio',
+  // 2026-10-21：临时任务合并前置（人工数量 / 紧急程度）
+  'worker_count', 'urgency',
   // P0-8：实际作业面积（亩）→ 亩均成本
   'actual_area',
   // P0-5：种植实例 / 生产计划关联

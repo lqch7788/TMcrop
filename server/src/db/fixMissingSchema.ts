@@ -1321,6 +1321,11 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'rejected_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN rejected_reason TEXT' },
     { name: 'executor_reject_count', sql: 'ALTER TABLE farm_tasks ADD COLUMN executor_reject_count INTEGER DEFAULT 0' },
     { name: 'acceptance_record', sql: 'ALTER TABLE farm_tasks ADD COLUMN acceptance_record TEXT' },
+    // 2026-10-21：临时任务合并前置——人工数量 / 紧急程度
+    // 注意：启动白名单已禁用本函数，实际生效的是 fixSchemaColumns.ts；
+    //   这里保留是为了让独立迁移脚本调用 fixMissingSchema 时也能补列。
+    { name: 'worker_count', sql: 'ALTER TABLE farm_tasks ADD COLUMN worker_count INTEGER DEFAULT 1' },
+    { name: 'urgency', sql: "ALTER TABLE farm_tasks ADD COLUMN urgency TEXT DEFAULT 'normal'" },
   ];
   for (const col of farmTaskColumnsToAdd) {
     try {
