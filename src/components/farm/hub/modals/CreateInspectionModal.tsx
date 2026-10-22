@@ -6,7 +6,7 @@ import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Camera, ChevronDown, ChevronUp, Scan, Wand2, X } from 'lucide-react';
-import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
+import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS, INSPECTION_TYPES, type InspectionType } from '../../../../types/farm/common';
 import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
@@ -20,7 +20,9 @@ const CROP_STATUS_LABELS = CROP_STATUS_OPTIONS.map(s => s.label);
 // 巡查记录类型（用于表单）
 interface InspectionRecordFormData {
   recordCode: string;
-  inspectionType: 'farm' | 'equipment' | 'infrastructure' | 'other';
+  inspectionType: InspectionType;
+  /** 2026-10-21：安全检查的检查区域/场所 */
+  area: string;
   greenhouseId: string;
   cropName: string;
   inspectorId: string;
@@ -193,10 +195,9 @@ export function CreateInspectionModal({
               <SelectValue placeholder="种植区域巡查" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="farm">种植区域巡查</SelectItem>
-              <SelectItem value="equipment">设备保养巡查</SelectItem>
-              <SelectItem value="infrastructure">基础设施巡检</SelectItem>
-              <SelectItem value="other">其他</SelectItem>
+              {INSPECTION_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </FormField>
@@ -301,6 +302,30 @@ export function CreateInspectionModal({
                 readOnly
                 placeholder="自动填充"
                 className={deepInputClass + " bg-gray-50"}
+              />
+            </FormField>
+          </div>
+        )}
+
+        {/* 2026-10-21：安全检查并入巡查 —— 填写检查区域/场所（后端 area 列） */}
+        {newRecord.inspectionType === 'safety' && (
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="检查区域 / 场所" required error={errors.area}>
+              <Input
+                type="text"
+                value={newRecord.area || ''}
+                onChange={(e) => updateField('area', e.target.value)}
+                placeholder="如：全园区 / A 区配电房 / 农药仓库"
+                className={deepInputClass}
+              />
+            </FormField>
+            <FormField label="安全检查说明">
+              <Input
+                type="text"
+                value={newRecord.remarks}
+                onChange={(e) => updateField('remarks', e.target.value)}
+                placeholder="可补充检查范围或依据"
+                className={deepInputClass}
               />
             </FormField>
           </div>

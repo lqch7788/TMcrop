@@ -6,14 +6,11 @@
 import React, { useState, useMemo } from 'react';
 import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
-import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
+import { ALL_TASK_TYPE_OPTIONS } from '../../../../types/farm/common';
 import { useWorkerStore, useGreenhouseStore } from '../../../../stores';
 
-// 任务类型选项
-const taskTypes = FARM_OPERATION_TYPES.map(t => ({
-  value: t.value,
-  label: t.label,
-}));
+// 任务类型选项（含历史类型，保证编辑存量任务时下拉能回显）
+const taskTypes = ALL_TASK_TYPE_OPTIONS;
 
 // 2026-10-11：删除 getBatchCodes() 及 batchCodes prop —— BatchEditModal 既无此 prop 也无对应表单控件，
 //   传过去会被整段忽略（类型报错 TS2322）。若后续要做「批量改关联批次」，需先在弹窗内实现该字段。

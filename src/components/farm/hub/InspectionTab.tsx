@@ -27,14 +27,16 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Camera, Download, MapPin, Mic, Package, X } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
+import {
+  INSPECTION_TYPES as INSPECTION_TYPE_OPTIONS,
+  getInspectionTypeLabel,
+  type InspectionType,
+} from '../../../types/farm/common';
 
-// 巡查类型配置
+// 巡查类型筛选配置（2026-10-21：类型集中到 types/farm/common，新增 safety）
 const INSPECTION_TYPES = [
   { value: 'all', label: '全部' },
-  { value: 'farm', label: '种植巡查' },
-  { value: 'equipment', label: '设备巡查' },
-  { value: 'infrastructure', label: '设施巡查' },
-  { value: 'other', label: '其他巡查' },
+  ...INSPECTION_TYPE_OPTIONS,
 ];
 
 // 状态配置
@@ -262,7 +264,8 @@ export function InspectionTab({
   // 新建表单状态
   const [newRecord, setNewRecord] = useState({
     recordCode: '',
-    inspectionType: 'farm' as 'farm' | 'equipment' | 'infrastructure' | 'other',
+    inspectionType: 'farm' as InspectionType,
+    area: '',
     greenhouseId: '',
     cropName: '',
     inspectorId: '',
@@ -463,6 +466,7 @@ export function InspectionTab({
     setNewRecord({
       recordCode: '',
       inspectionType: 'farm',
+      area: '',
       greenhouseId: '',
       cropName: '',
       inspectorId: '',
@@ -552,6 +556,9 @@ export function InspectionTab({
       if (!newRecord.equipmentId) newErrors.equipmentId = '请选择设备';
     } else if (newRecord.inspectionType === 'infrastructure') {
       if (!newRecord.infrastructureId) newErrors.infrastructureId = '请选择基础设施';
+    } else if (newRecord.inspectionType === 'safety') {
+      // 2026-10-21：安全检查并入巡查，检查区域/场所必填
+      if (!newRecord.area?.trim()) newErrors.area = '请填写检查区域/场所';
     } else if (newRecord.inspectionType === 'other') {
       if (!newRecord.remarks) newErrors.remarks = '请输入其他说明';
     }
@@ -602,7 +609,7 @@ export function InspectionTab({
 
     // 问题推送逻辑 (V2.0: 通过 API Store 创建问题)
     let newProblemId: number | undefined;
-    // ????????????????????????"??"??????
+    // 仅当「需要反馈 + 已选反馈人 + 结果异常」时创建问题
     if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult === 'abnormal') {
       const presetIssues = newRecord.issuePresets?.join('、') || '';
       const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
@@ -663,6 +670,8 @@ export function InspectionTab({
     const record = {
       recordCode: newRecord.recordCode,
       inspectionType: newRecord.inspectionType,
+      // 2026-10-21：安全检查的检查区域/场所（后端 P2a 补列前会被忽略，不影响其它类型）
+      area: newRecord.area || undefined,
       greenhouseId,
       greenhouseName,
       cropName,
@@ -725,9 +734,9 @@ export function InspectionTab({
     const headers = ['巡查编号', '巡查类型', '巡查人员', '位置/对象', '巡查日期', '天气', '温度(°C)', '湿度(%)', '发现问题', '问题照片', '问题处理', '状态'];
     const exportData: any[] = selectedData.map((row: any) => ({
       '巡查编号': row.recordCode,
-      '巡查类型': row.inspectionType === 'farm' ? '种植' : row.inspectionType === 'equipment' ? '设备' : row.inspectionType === 'infrastructure' ? '设施' : row.inspectionType === 'other' ? '其他' : '-',
+      '巡查类型': row.inspectionType ? getInspectionTypeLabel(String(row.inspectionType)) : '-',
       '巡查人员': row.inspectorName,
-      '位置/对象': row.inspectionType === 'farm' ? row.greenhouseName : row.inspectionType === 'equipment' ? row.equipmentName : row.inspectionType === 'infrastructure' ? row.infrastructureName : row.remarks || '-',
+      '位置/对象': row.inspectionType === 'farm' ? row.greenhouseName : row.inspectionType === 'equipment' ? row.equipmentName : row.inspectionType === 'infrastructure' ? row.infrastructureName : row.inspectionType === 'safety' ? (row.area || row.remarks || '-') : row.remarks || '-',
       '巡查日期': row.checkDate,
       '天气': row.weather,
       '温度(°C)': row.temperature,

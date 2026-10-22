@@ -5,8 +5,8 @@
 
 import {
   Leaf, Droplets, Scissors, Bug, Edit, Trees, ShoppingBasket,
-  // 2026-10-21：临时任务合并新增的 3 类任务图标
-  Wrench, Users, ShieldCheck,
+  // 2026-10-21：巡查（系统类型）图标
+  ClipboardCheck,
 } from 'lucide-react';
 
 // ========== 任务状态映射（从 farmMockData 迁出，内联定义） ==========
@@ -38,7 +38,7 @@ const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
  * 2026-10-20 P0-10 枚举统一：取值从 FARM_OPERATION_TYPES 派生（本文件只补图标与颜色）。
  * 此前这里是独立副本，含 'pesticide'/'rootIrrigation' 等别名，与真相源不一致。
  */
-import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
+import { FARM_OPERATION_TYPES, resolveTaskTypeLabel } from '../../../types/farm/common';
 
 const TYPE_ICON_MAP: Record<string, { icon: typeof Leaf; color: string }> = {
   planting: { icon: Trees, color: 'bg-lime-500' },
@@ -52,10 +52,8 @@ const TYPE_ICON_MAP: Record<string, { icon: typeof Leaf; color: string }> = {
   equipment_repair: { icon: Edit, color: 'bg-amber-600' },
   cleaning: { icon: Edit, color: 'bg-slate-500' },
   seedling: { icon: Leaf, color: 'bg-teal-500' },
-  // 2026-10-21：临时任务合并新增的 3 类
-  facility_maintenance: { icon: Wrench, color: 'bg-cyan-600' },
-  staff_dispatch: { icon: Users, color: 'bg-indigo-500' },
-  safety_check: { icon: ShieldCheck, color: 'bg-amber-600' },
+  // 2026-10-21：巡查为系统类型（只由巡查计划生成），补图标与颜色
+  inspection: { icon: ClipboardCheck, color: 'bg-sky-600' },
   other: { icon: Edit, color: 'bg-gray-500' },
 };
 
@@ -141,18 +139,15 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50];
 export const getTypeLabel = (typeValue: string): string => {
   if (!typeValue) return '';
   // 2026-09-22：支持逗号分隔（DB 中 type_name 可能存的是 "施肥,灌溉" 或 "fertilization,irrigation"）
-  return typeValue.split(',').map(s => {
-    const v = s.trim();
-    const found = TASK_TYPES.find(t => t.value === v);
-    return found?.label || v;
-  }).join(',');
+  // 2026-10-21：兜底改用统一解析器 —— 兼容系统类型 inspection 与历史类型（staff_dispatch 等）
+  return typeValue.split(',').map((s) => resolveTaskTypeLabel(s.trim())).join(',');
 };
 
 /**
  * 根据任务类型值获取类型颜色
  */
 export const getTypeColor = (typeValue: string): string => {
-  const found = TASK_TYPES.find(t => t.value === typeValue);
+  const found = TYPE_ICON_MAP[typeValue];
   return found?.color || 'bg-gray-500';
 };
 

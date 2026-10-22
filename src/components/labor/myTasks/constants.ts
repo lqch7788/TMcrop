@@ -3,7 +3,7 @@
  */
 
 import { TaskTypeConfig, StatusConfig, PriorityConfig } from './types';
-import { getOperationTypeName, FARM_OPERATION_TYPES } from '../../../types/farm/common';
+import { resolveTaskTypeLabel, FARM_OPERATION_TYPES } from '../../../types/farm/common';
 
 // 任务类型定义
 // 2026-10-20 P0-10：取值从唯一真相源派生（此前含 pesticide/rootIrrigation 等失效别名）
@@ -19,10 +19,8 @@ const TYPE_COLOR_MAP: Record<string, string> = {
   equipment_repair: 'bg-amber-600',
   cleaning: 'bg-slate-500',
   seedling: 'bg-teal-500',
-  // 2026-10-21（阶段 3）：临时任务合并新增的 3 类
-  facility_maintenance: 'bg-cyan-600',
-  staff_dispatch: 'bg-indigo-500',
-  safety_check: 'bg-amber-600',
+  // 2026-10-21：巡查（系统类型）
+  inspection: 'bg-sky-600',
   other: 'bg-gray-500',
 };
 export const TASK_TYPES: TaskTypeConfig[] = FARM_OPERATION_TYPES.map((t) => ({
@@ -81,9 +79,8 @@ export const getTypeColor = (type: string): string => {
  * 2026-10-21（阶段 3）：临时任务类型已并入 FARM_OPERATION_TYPES，中间层删除
  */
 export const getTypeLabel = (type: string): string => {
-  const taskType = TASK_TYPES.find(t => t.value === type);
-  if (taskType) return taskType.label;
-  return getOperationTypeName(type);
+  // 2026-10-21：统一解析器（含系统类型 inspection 与历史类型兜底）
+  return resolveTaskTypeLabel(type);
 };
 
 /**

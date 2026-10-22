@@ -1,13 +1,13 @@
 import { Modal, FormField, Input, Select } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
-import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS, WEATHER_OPTIONS } from '../../../../types/farm/common';
+import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS, WEATHER_OPTIONS, INSPECTION_TYPES, type InspectionType } from '../../../../types/farm/common';
 import { todayLocal } from '@/lib/dateUtils';
 
 interface InspectionRecord {
   id: string;
   recordCode: string;
-  inspectionType: 'farm' | 'equipment' | 'infrastructure' | 'other';
+  inspectionType: InspectionType;
   greenhouseId: string;
   greenhouseName: string;
   cropName: string;
@@ -60,12 +60,7 @@ interface BatchEditModalProps {
 // 天气选项（从常量文件导入）
 // Select.options 需要可变数组，WEATHER_OPTIONS 是 as const 只读元组，故展开复制一份
 const weatherOptions = [...WEATHER_OPTIONS];
-const inspectionTypeOptions = [
-  { value: 'farm', label: '种植区域巡查' },
-  { value: 'equipment', label: '设备保养巡查' },
-  { value: 'infrastructure', label: '基础设施巡检' },
-  { value: 'other', label: '其他' },
-];
+const inspectionTypeOptions = [...INSPECTION_TYPES];
 const issueCategoryOptions = ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label }));
 const completionTimeOptions = COMPLETION_TIME_OPTIONS.map(t => ({ value: t.value, label: t.label }));
 

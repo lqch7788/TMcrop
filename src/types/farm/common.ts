@@ -20,20 +20,73 @@ export const FARM_OPERATION_TYPES = [
   // 2026-09-20：补 cleaning（清洁卫生）和 seedling（育苗）
   { value: 'cleaning', label: '清洁卫生' },
   { value: 'seedling', label: '育苗' },
-  // 2026-10-21：临时任务合并前置 —— 补上临时任务独有、农事缺失的 3 类
-  //   （合并完成后 7 类临时任务类型全部由农事任务承载）
-  { value: 'facility_maintenance', label: '设施维护' },
-  { value: 'staff_dispatch', label: '人员调配' },
-  { value: 'safety_check', label: '安全检查' },
   { value: 'other', label: '其他' },
 ] as const;
 
 export type FarmOperationType = typeof FARM_OPERATION_TYPES[number]['value'];
 
-// 获取操作类型名称
+/**
+ * 2026-10-21：系统任务类型 —— 只能由「巡查计划」生成，不进入新建任务下拉。
+ * 单独成表，避免污染 FARM_OPERATION_TYPES（该枚举被作业记录/派工表单/筛选器共用）。
+ */
+export const SYSTEM_TASK_TYPES = [
+  { value: 'inspection', label: '巡查' },
+] as const;
+
+/** 新建/编辑任务时可选的任务类型（当前与农事操作类型一致，系统类型不参与） */
+export const SELECTABLE_TASK_TYPES = FARM_OPERATION_TYPES;
+
+/**
+ * 历史类型标签兜底。
+ * 这些值已从新建下拉移除，但存量任务/记录仍可能保存这些 code，
+ * 列表与详情必须继续显示中文，不能回退成英文。
+ */
+export const LEGACY_OPERATION_TYPE_LABELS: Record<string, string> = {
+  facility_maintenance: '设施维护',
+  safety_check: '安全检查',
+  staff_dispatch: '人员调配',
+  pesticide: '植保',
+};
+
+/** 筛选器可选项：可选类型 + 历史类型（去重） */
+export const ALL_TASK_TYPE_OPTIONS: { value: string; label: string }[] = [
+  ...FARM_OPERATION_TYPES.map((t) => ({ value: t.value as string, label: t.label as string })),
+  ...Object.entries(LEGACY_OPERATION_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+/**
+ * 统一任务类型标签解析（唯一真相源）
+ * 顺序：农事操作类型 → 系统类型 → 历史类型 → 原值
+ */
+export function resolveTaskTypeLabel(type: string): string {
+  if (!type) return '';
+  const farm = FARM_OPERATION_TYPES.find((t) => t.value === type);
+  if (farm) return farm.label;
+  const system = SYSTEM_TASK_TYPES.find((t) => t.value === type);
+  if (system) return system.label;
+  return LEGACY_OPERATION_TYPE_LABELS[type] || type;
+}
+
+// 获取操作类型名称（保持原函数名，内部委托统一解析器）
 export function getOperationTypeName(type: string): string {
-  const found = FARM_OPERATION_TYPES.find(t => t.value === type);
-  return found?.label || type;
+  return resolveTaskTypeLabel(type);
+}
+
+// ============================================
+// 巡查类型（2026-10-21：集中定义，替代 7 处重复 union）
+// ============================================
+export const INSPECTION_TYPES = [
+  { value: 'farm', label: '种植区域巡查' },
+  { value: 'equipment', label: '设备保养巡查' },
+  { value: 'infrastructure', label: '基础设施巡检' },
+  { value: 'safety', label: '安全检查' },
+  { value: 'other', label: '其他' },
+] as const;
+
+export type InspectionType = typeof INSPECTION_TYPES[number]['value'];
+
+export function getInspectionTypeLabel(type: string): string {
+  return INSPECTION_TYPES.find((t) => t.value === type)?.label || type;
 }
 
 // ============================================
@@ -188,6 +241,8 @@ export const ISSUE_CATEGORIES = [
   { value: 'environment', label: '环境' },
   { value: 'growth', label: '长势' },
   { value: 'equipment', label: '设备' },
+  // 2026-10-21：安全检查并入巡查 —— 安全从"任务类型"改为"巡查问题分类"
+  { value: 'safety', label: '安全' },
   { value: 'other', label: '其他' },
 ] as const;
 
@@ -202,6 +257,7 @@ export const ISSUE_PRESETS: Record<IssueCategory, string[]> = {
   environment: ['温度过高', '温度过低', '湿度过大', '积水', '通风不良', '光照不足'],
   growth: ['叶片发黄', '萎蔫', '生长缓慢', '畸形', '落花落果', '徒长'],
   equipment: ['滴灌异常', '遮阳网故障', '通风异常', '灌溉系统故障', '施肥系统故障'],
+  safety: ['用电安全隐患', '消防设施缺失/过期', '农药存放不规范', '机械防护缺失', '高处作业无防护', '有限空间未审批', '防汛防台措施不足'],
   other: [],
 };
 
