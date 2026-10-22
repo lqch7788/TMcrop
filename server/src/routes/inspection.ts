@@ -481,6 +481,10 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
 
     db.run('DELETE FROM inspections WHERE id = ?', [id]);
+    // 2026-10-22（审核 L7）：0 行删除要 404，否则删一个不存在的 id 也返回成功（幽灵成功）
+    if (db.getRowsModified() === 0) {
+      return res.status(404).json({ success: false, error: '巡查记录不存在' });
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {

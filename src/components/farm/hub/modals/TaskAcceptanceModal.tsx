@@ -8,6 +8,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { AlertTriangle, Camera, Clock, FileText, MapPin, Mic, User, X } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
+// 2026-10-22（方案 §10.6）：验收弹窗展示关联巡查记录
+import type { InspectionRecordSummary } from './TaskAcceptanceAdapter';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -20,6 +22,12 @@ interface TaskAcceptanceModalProps {
   onAccept: (comments?: string, actualArea?: number) => void;
   onReject: (reason: string) => void;
   onClose: () => void;
+  /** 2026-10-22（方案 §10.6）：关联巡查记录摘要（计划任务才有） */
+  inspectionRecord?: InspectionRecordSummary | null;
+  /** 是否要求必须有巡查记录才能通过（巡查计划任务） */
+  requiresInspectionRecord?: boolean;
+  /** 提交中（防止重复点击） */
+  submitting?: boolean;
 }
 
 export function TaskAcceptanceModal({
@@ -30,6 +38,9 @@ export function TaskAcceptanceModal({
   onAccept,
   onReject,
   onClose,
+  inspectionRecord = null,
+  requiresInspectionRecord = false,
+  submitting = false,
 }: TaskAcceptanceModalProps) {
   const [mode, setMode] = useState<'confirm' | 'reject'>('confirm');
   const [remarks, setRemarks] = useState('');
@@ -295,6 +306,48 @@ export function TaskAcceptanceModal({
               </div>
             </div>
 
+            {/* 2026-10-22（方案 §10.6）：巡查记录区块 —— 计划任务的唯一完成凭证 */}
+            {requiresInspectionRecord && (
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-700">关联巡查记录</span>
+                  {inspectionRecord ? (
+                    <span className="text-xs text-emerald-600 font-medium">{inspectionRecord.recordCode}</span>
+                  ) : (
+                    <span className="text-xs text-red-600 font-medium">未提交</span>
+                  )}
+                </div>
+                {!inspectionRecord ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                    该巡查任务尚未提交巡查记录，不能验收通过。请让执行人在「我的任务」中先填写并提交巡查记录。
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-xs text-gray-500">检查项</span>
+                        <div className="text-gray-800">
+                          通过 {inspectionRecord.checklistResults.filter((c) => c.status === 'ok').length}
+                          {' / '}异常 {inspectionRecord.checklistResults.filter((c) => c.status === 'issue').length}
+                          {' / '}不适用 {inspectionRecord.checklistResults.filter((c) => c.status === 'na').length}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500">照片</span>
+                        <div className="text-gray-800">{inspectionRecord.issuePhotos.length} 张</div>
+                      </div>
+                    </div>
+                    {inspectionRecord.issueText && (
+                      <div>
+                        <span className="text-xs text-gray-500">问题描述</span>
+                        <div className="text-gray-800">{inspectionRecord.issueText}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 验收操作区 - 与临时任务验收弹窗一致的 Tab 切换布局 */}
             <div className="border-t border-gray-200 pt-4 space-y-4">
               {/* 模式切换 Tab */}
@@ -395,10 +448,15 @@ export function TaskAcceptanceModal({
                 </Button>
                 <Button
                   onClick={handleConfirm}
-                  disabled={mode === 'reject' && rejectReasonLen === 0}
+                  // 2026-10-22（方案 §10.6）：计划任务无巡查记录时禁用「通过」，避免发出必然 409 的请求
+                  disabled={
+                    (mode === 'reject' && rejectReasonLen === 0) ||
+                    (mode === 'confirm' && requiresInspectionRecord && !inspectionRecord) ||
+                    submitting
+                  }
                   className={mode === 'confirm' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}
                 >
-                  {mode === 'confirm' ? '确认验收通过' : '确认驳回'}
+                  {submitting ? '提交中…' : mode === 'confirm' ? '确认验收通过' : '确认驳回'}
                 </Button>
               </div>
             </div>

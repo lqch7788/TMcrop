@@ -11,6 +11,8 @@ import { InspectionSearch, InspectionSearchFilters } from './components/Inspecti
 import { InspectionToolbar } from './components/InspectionToolbar';
 // 2026-10-21 P3：巡查计划面板（与巡查记录并列视图）
 import { InspectionPlanPanel } from './inspection-plans/InspectionPlanPanel';
+// 2026-10-22：计划实例的巡查记录提交弹窗（与「我的任务」共用同一份表单逻辑）
+import { InspectionRecordModal } from './modals/InspectionRecordModal';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
 import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
@@ -200,7 +202,8 @@ export function InspectionTab({
   );
 
   // 巡查数据 Zustand Store - 替代 localStorage
-  const storeRecords = useInspectionDataStore((state) => state.records);
+  // 2026-10-22（审核 P3-7）：删除未使用的 storeRecords —— 表格数据来自 props `inspections`，
+  //   保留这个订阅只会让每次记录变化都触发一次无谓的组件重渲染。
   const fetchRecords = useInspectionDataStore((state) => state.fetchRecords);
   const createStoreRecord = useInspectionDataStore((state) => state.createRecord);
   const updateStoreRecord = useInspectionDataStore((state) => state.updateRecord);
@@ -259,6 +262,15 @@ export function InspectionTab({
   const [exportFormat, setExportFormat] = useState('excel');
   // 2026-10-21 P3：巡查计划 / 巡查记录视图切换（默认记录视图）
   const [viewMode, setViewMode] = useState<'records' | 'plans'>('records');
+
+  // 2026-10-22（审核 P0-2）：计划实例表的「填写记录」弹窗
+  //   此前只切 tab、丢掉 taskId，用户还得自己去记录视图里找。
+  const [planRecordModal, setPlanRecordModal] = useState<{
+    isOpen: boolean;
+    task: any | null;
+    existingRecord: { id: string; recordCode: string } | null;
+    checklist: Array<{ key: string; label: string; required?: boolean }>;
+  }>({ isOpen: false, task: null, existingRecord: null, checklist: [] });
 
   // 批量编辑相关状态
   const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
@@ -951,14 +963,60 @@ export function InspectionTab({
         ))}
       </div>
 
-      {/* 视图 1：巡查计划 */}
+      {/* 视图 1：巡查计划
+          2026-10-22（审核 P0-2）：三个行内入口原先只有 onSubmitRecord 且只是切 tab
+          （taskId 被丢弃）、onViewTask/onViewRecord 根本没传 → 点击静默无反应。
+          现在：填写记录 → 打开记录弹窗；任务编号 → 打开任务详情；记录编号 → 打开记录详情。 */}
       <div className={viewMode === 'plans' ? '' : 'hidden'}>
         <InspectionPlanPanel
           onScheduleTask={(taskId, date) => {
             // 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务
             window.location.href = `/schedule?tab=farm-task&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;
           }}
-          onSubmitRecord={() => setViewMode('records')}
+          onViewTask={(taskId) => {
+            // 复用本 tab 已有的记录详情机制：按任务找记录 → 打开 DetailInspectionModal；
+            // 没有记录时退化为切到记录视图，让用户看到任务对应的行
+            const rec = inspectionRecords.find(
+              (r: any) => String(r.inspectionTaskId || '') === String(taskId)
+            );
+            if (rec) {
+              onViewDetail(String(rec.id));
+            } else {
+              setViewMode('records');
+            }
+          }}
+          onViewRecord={(recordId) => onViewDetail(String(recordId))}
+          onSubmitRecord={(taskId) => {
+            const task = tasks.find((t: any) => String(t.id) === String(taskId));
+            const rec = inspectionRecords.find(
+              (r: any) => String(r.inspectionTaskId || '') === String(taskId)
+            );
+            setPlanRecordModal({
+              isOpen: true,
+              task: task
+                ? {
+                    id: String(task.id),
+                    taskCode: (task as any).taskCode || String(task.id),
+                    inspectionType: (task as any).inspectionType || 'farm',
+                    greenhouseName: (task as any).greenhouseName || '',
+                    assigneeId: (task as any).assigneeId || '',
+                    assigneeName: (task as any).assigneeName || '',
+                    planTime: (task as any).planTime || '',
+                    planOccurrenceDate: (task as any).planOccurrenceDate || '',
+                    area: (task as any).areaName || '',
+                  }
+                : { id: String(taskId), taskCode: String(taskId) },
+              existingRecord: rec
+                ? { id: String(rec.id), recordCode: String(rec.recordCode || rec.record_code || '') }
+                : null,
+              // P1-3：计划配置的检查项模板必须在执行表单里显示
+              checklist: (() => {
+                const cfg = (task as any)?.typeConfig;
+                const list = cfg?.checklist;
+                return Array.isArray(list) ? list : [];
+              })(),
+            });
+          }}
         />
       </div>
 
@@ -1039,6 +1097,16 @@ export function InspectionTab({
         />
       </div>
       </div>
+
+      {/* 2026-10-22（审核 P0-2）：计划实例的巡查记录弹窗 */}
+      <InspectionRecordModal
+        isOpen={planRecordModal.isOpen}
+        task={planRecordModal.task}
+        existingRecord={planRecordModal.existingRecord}
+        checklist={planRecordModal.checklist}
+        onClose={() => setPlanRecordModal({ isOpen: false, task: null, existingRecord: null, checklist: [] })}
+        onSubmitted={() => { fetchRecords(); }}
+      />
 
       {/* 新建弹窗 */}
       <CreateInspectionModal

@@ -53,12 +53,17 @@ export default function TaskSchedulePage() {
   const [selectedTaskId, setSelectedTaskId] = useState('');
 
   // 2026-10-21 P5：深链预选 —— 待排班列表到位后再选，否则那一刻它还是空数组
+  // 2026-10-22（审核 P3-5）：任务不在待排班列表时（已排班/已取消/已完成）明确告知，
+  //   而不是静默什么都不发生 —— 用户从计划面板点「去排班」落地后毫无反馈会很困惑。
   useEffect(() => {
-    if (!urlTaskId) return;
+    if (!urlTaskId || loading) return;
+    if (unscheduledTasks.length === 0) return;
     if (unscheduledTasks.some((t) => t.id === urlTaskId)) {
       setSelectedTaskId(urlTaskId);
+    } else {
+      showAlert('该任务已有排班或已不处于待排班状态，无需重新排班。');
     }
-  }, [urlTaskId, unscheduledTasks]);
+  }, [urlTaskId, unscheduledTasks, loading]);
   // 排班表单
   const [form, setForm] = useState({
     workerId: '',

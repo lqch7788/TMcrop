@@ -97,6 +97,33 @@ export function TaskDetailModal({
               </p>
             </div>
           </div>
+
+          {/* 2026-10-22（方案 §10.7）：巡查计划任务的来源计划 + 关联记录。
+              计划执行单的唯一完成凭证是记录，详情里必须能看到这两条线索。 */}
+          {(task.inspectionPlanId || task.inspectionRecordCode) && (
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 bg-sky-50 rounded-lg p-3">
+              {task.inspectionPlanId && (
+                <div>
+                  <Label className="text-xs text-gray-500">来源巡查计划</Label>
+                  <p className="font-semibold text-sky-700">
+                    {task.inspectionPlanCode || task.inspectionPlanId}
+                  </p>
+                </div>
+              )}
+              {task.planOccurrenceDate && (
+                <div>
+                  <Label className="text-xs text-gray-500">计划执行日</Label>
+                  <p className="font-semibold text-gray-900">{task.planOccurrenceDate}</p>
+                </div>
+              )}
+              <div>
+                <Label className="text-xs text-gray-500">巡查记录</Label>
+                <p className={`font-semibold ${task.inspectionRecordCode ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {task.inspectionRecordCode || '未提交'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 任务类型 - 单一类型显示详细信息，多类型显示SOP下载 */}

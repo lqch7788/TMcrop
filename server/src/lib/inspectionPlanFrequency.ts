@@ -146,7 +146,20 @@ export function matchesFrequency(plan: PlanFrequencyInput, date: Date): boolean 
  */
 export const MAX_SCAN_DAYS = 366;
 
-export function computeOccurrences(plan: PlanFrequencyInput, from: string, to: string): string[] {
+/**
+ * 计算区间内命中的日期。
+ *
+ * @param options.allowLongRange
+ *   `true` 时按 `MAX_SCAN_DAYS` 分段扫描，直到覆盖整个区间（**统计**场景用：
+ *   「全周期」区间可能跨多年，若被 366 天截断，expected 会少算）。
+ *   默认 `false`（**生成**场景用：只允许窗口内短期区间，超长直接截断防止跑死）。
+ */
+export function computeOccurrences(
+  plan: PlanFrequencyInput,
+  from: string,
+  to: string,
+  options: { allowLongRange?: boolean } = {}
+): string[] {
   const startFrom = parseLocalDate(from);
   const startTo = parseLocalDate(to);
   if (!startFrom || !startTo) return [];
@@ -165,10 +178,12 @@ export function computeOccurrences(plan: PlanFrequencyInput, from: string, to: s
   const out: string[] = [];
   const cursor = new Date(startFrom.getFullYear(), startFrom.getMonth(), startFrom.getDate());
   let scanned = 0;
-  while (cursor.getTime() <= end.getTime() && scanned < MAX_SCAN_DAYS) {
+  // allowLongRange：每扫满 MAX_SCAN_DAYS 就重置计数继续扫，直到覆盖 end
+  while (cursor.getTime() <= end.getTime()) {
     if (matchesFrequency(plan, cursor)) out.push(formatLocalDate(cursor));
     cursor.setDate(cursor.getDate() + 1);
     scanned++;
+    if (!options.allowLongRange && scanned >= MAX_SCAN_DAYS) break;
   }
   return out;
 }

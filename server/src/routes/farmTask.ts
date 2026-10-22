@@ -847,6 +847,18 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
       if (curStatus && curStatus !== updates.status) {
         if (!guardTransition(res, curStatus, String(updates.status))) return;
       }
+      // 2026-10-22（审核 H1）：**这是验收 UI 实际走的写入通道**。
+      //   前端 acceptCompletion 在 fire-and-forget 调 POST /complete 之后，
+      //   还会调 store.updateTask({status:'completed'}) → PUT /farm-tasks/:id。
+      //   POST /complete 的 409 会被吞掉，但这条 PUT 会把状态写成 completed 并落盘，
+      //   巡查记录守卫形同虚设（刷新后任务已完成、记录仍为空）。
+      //   因此 completed 目标状态必须在这里再校验一次。
+      if (String(updates.status) === 'completed') {
+        const violation = assertInspectionRecordBeforeComplete(db, id);
+        if (violation) {
+          return res.status(409).json({ success: false, error: violation, code: 'INSPECTION_RECORD_REQUIRED' });
+        }
+      }
     }
 
     // 过滤有效字段并转换为数据库列名（跳过不存在于 DB 的字段，避免 SQL 错误）
@@ -967,6 +979,28 @@ function lookupFarmTask(db: any, idOrCode: string): Record<string, any> | null {
 }
 
 /**
+ * 2026-10-22（审核 P1-1）：巡查时间必须是合法的 HH:mm。
+ *
+ * 实测脏数据：`XT20261022-005` 的 `check_time` 落成 `"2026-"` ——
+ *   前端把 `planStart`（"2026-10-22 11:00"）当成 planTime 传进弹窗，
+ *   弹窗再 `.slice(0, 5)` 就得到 `"2026-"`。
+ * 这里做最后一道兜底：只接受 HH:mm / H:mm，否则回落到任务计划时间，再否则空。
+ */
+function normalizeCheckTime(input: unknown, fallback: unknown): string {
+  const toHHmm = (v: unknown): string => {
+    const s = String(v ?? '').trim();
+    // 先取「日期时间串」里的时间部分，兼容 "2026-10-22 11:00"
+    const fromDateTime = /(\d{1,2}):(\d{2})/.exec(s);
+    if (!fromDateTime) return '';
+    const h = Number(fromDateTime[1]);
+    const m = Number(fromDateTime[2]);
+    if (h > 23 || m > 59) return '';
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  return toHHmm(input) || toHHmm(fallback) || '';
+}
+
+/**
  * 2026-10-21 P2c：巡查记录提交端点（计划 ↔ 任务 ↔ 记录 1:1 闭环核心）
  *
  * POST /api/farm-tasks/:id/inspection-record
@@ -1024,19 +1058,36 @@ router.post('/:id/inspection-record', (req: Request, res: Response) => {
     const recordCode = String(body.recordCode || nextRecordCode(db, formatLocalDateYYYYMMDD(parseLocalDate(occurrenceDate) || new Date())));
 
     // 2026-10-22：巡查类型以**计划**为准。
-    //   任务表上没有 inspection_type 列，前端也拿不到计划类型（MyTasks 只映射了任务字段），
-    //   直接回落到 'farm' 会让问题的 inspection_type 与真实巡查类型不符
-    //   （实测：设备分类的巡查记录建出的问题标成 farm）。
+    //   任务表上没有 inspection_type 列，前端 MyTasks 映射恒回落到 'farm'，
+    //   所以 body.inspectionType 几乎总是 'farm' —— 原优先级 body 在前会让计划类型永远不生效
+    //   （审核 P1-2：设备/设施计划提交的记录与问题被标成 farm，分派时选错任务类型）。
+    //   现改为 plan > body > task_type。
     let planInspectionType = '';
+    let planRow: any = null;
     if (task.inspection_plan_id) {
-      const planStmt = db.prepare('SELECT inspection_type FROM inspection_plans WHERE id = ?');
+      const planStmt = db.prepare('SELECT inspection_type, equipment_id, equipment_name, infrastructure_id, infrastructure_name, area FROM inspection_plans WHERE id = ?');
       planStmt.bind([task.inspection_plan_id]);
       if (planStmt.step()) {
-        planInspectionType = String((planStmt.getAsObject() as { inspection_type?: string }).inspection_type || '');
+        planRow = planStmt.getAsObject();
+        planInspectionType = String((planRow as { inspection_type?: string }).inspection_type || '');
       }
       planStmt.free();
     }
-    const inspectionType = body.inspectionType || planInspectionType || task.task_type || 'farm';
+    const inspectionType = planInspectionType || body.inspectionType || task.task_type || 'farm';
+
+    // 2026-10-22（审核 P1-1）：位置字段不能只信 body。
+    //   前端从「我的任务」提交时 greenhouseName 是空串（映射里没这个字段），
+    //   而 `??` 兜底不会把空串换成任务上的值 → 记录与问题都丢了温室。
+    //   这里改成 `||` 链：body 非空优先，其次任务快照，最后才空。
+    //   巡查对象（设备/设施/区域）同理，从计划取（任务表没有这些列）。
+    const resolvedGreenhouseId = body.greenhouseId || task.greenhouse_id || '';
+    const resolvedGreenhouseName = body.greenhouseName || task.greenhouse_name || '';
+    const resolvedCropName = body.cropName || task.crop || '';
+    const resolvedArea = body.area || task.area_name || (planRow?.area ? String(planRow.area) : '');
+    const resolvedEquipmentId = body.equipmentId || (planRow?.equipment_id ? String(planRow.equipment_id) : '');
+    const resolvedEquipmentName = body.equipmentName || (planRow?.equipment_name ? String(planRow.equipment_name) : '');
+    const resolvedInfrastructureId = body.infrastructureId || (planRow?.infrastructure_id ? String(planRow.infrastructure_id) : '');
+    const resolvedInfrastructureName = body.infrastructureName || (planRow?.infrastructure_name ? String(planRow.infrastructure_name) : '');
 
     let createdRecordId = '';
     let createdProblemId = '';
@@ -1058,21 +1109,24 @@ router.post('/:id/inspection-record', (req: Request, res: Response) => {
         inspectionType,
         inspectorId: body.inspectorId || task.assignee_id || '',
         inspectorName: body.inspectorName || task.assignee_name || '',
-        greenhouseId: body.greenhouseId ?? task.greenhouse_id ?? '',
-        greenhouseName: body.greenhouseName ?? task.greenhouse_name ?? '',
-        cropName: body.cropName ?? task.crop ?? '',
-        equipmentId: body.equipmentId ?? null,
-        equipmentName: body.equipmentName ?? null,
-        infrastructureId: body.infrastructureId ?? null,
-        infrastructureName: body.infrastructureName ?? null,
+        greenhouseId: resolvedGreenhouseId,
+        greenhouseName: resolvedGreenhouseName,
+        cropName: resolvedCropName,
+        equipmentId: resolvedEquipmentId,
+        equipmentName: resolvedEquipmentName,
+        infrastructureId: resolvedInfrastructureId,
+        infrastructureName: resolvedInfrastructureName,
         checkDate: body.checkDate || occurrenceDate,
-        checkTime: body.checkTime || task.plan_time || '',
-        weather: body.weather ?? '',
+        checkTime: normalizeCheckTime(body.checkTime, task.plan_time),
+        weather: body.weather || '',
         temperature: body.temperature ?? 0,
         humidity: body.humidity ?? 0,
-        cropStatus: body.cropStatus ?? '',
-        area: body.area ?? task.area_name ?? '',
-        status: body.result === 'normal' ? 'normal' : 'critical',
+        cropStatus: body.cropStatus || '',
+        area: resolvedArea,
+        // 2026-10-22（审核 L4）：不传 result 时不应默认按异常（critical）落库
+        status: body.result === 'normal' ? 'normal'
+          : body.result === 'abnormal' ? 'critical'
+          : String(body.status || 'normal'),
         issueCategories: body.issueCategories || [],
         issuePresets: body.issuePresets || [],
         issueText: body.issueText ?? '',
@@ -1111,12 +1165,13 @@ router.post('/:id/inspection-record', (req: Request, res: Response) => {
         `, [
           createdProblemId, problemCode, body.problem.category || 'other',
           String(body.problem.issueText).slice(0, 60), String(body.problem.issueText),
-          body.greenhouseName ?? task.greenhouse_name ?? '', body.greenhouseId ?? task.greenhouse_id ?? '',
+          // 2026-10-22（审核 P1-1）：与记录同源，避免空串把温室冲掉、时间写成 "2026-"
+          resolvedGreenhouseName, resolvedGreenhouseId,
           body.inspectorId || task.assignee_id || '', body.inspectorName || task.assignee_name || '',
           '', '', 'medium', 'pending',
-          body.cropName ?? task.crop ?? '', body.inspectorId || task.assignee_id || '',
+          resolvedCropName, body.inspectorId || task.assignee_id || '',
           body.inspectorName || task.assignee_name || '', body.checkDate || occurrenceDate,
-          body.checkTime || task.plan_time || '',
+          normalizeCheckTime(body.checkTime, task.plan_time),
           String(body.problem.issueText), body.problem.issueSeverity || '中等',
           JSON.stringify([{ id: `FR-${Date.now()}`, problemId: createdProblemId, operatorId: body.inspectorId || task.assignee_id || '', operatorName: body.inspectorName || task.assignee_name || '', action: 'report', fromStatus: '', toStatus: '待处理', actionTime: now }]),
           0,
@@ -1225,7 +1280,11 @@ router.post('/:id/inspection-record/resubmit', (req: Request, res: Response) => 
 
     runInTransaction(db, () => {
       updateRecordFields(db, String(record.id), writable, now);
-      // rejected → in_progress → waiting_acceptance（两次状态守卫 + 两条流转记录）
+      // 2026-10-22（审核 M7）：注释说「两次状态守卫」，实际两次都是裸 UPDATE。
+      //   当前状态表恰好允许这两条边，能跑通；但状态机一旦调整就会静默越权，
+      //   也与「所有流转都过守卫」的约束不符。这里显式校验。
+      assertTaskTransition('rejected', 'in_progress');
+      assertTaskTransition('in_progress', 'waiting_acceptance');
       db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`, [now, task.id]);
       db.run(
         `UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, progress_pct = 100, update_time = ? WHERE id = ?`,
@@ -1671,6 +1730,25 @@ router.delete('/batch', (req: Request, res: Response) => {
     }
 
     const db = getDatabase();
+
+    // 2026-10-22（审核 H2）：批量删除是**独立的删除通道**（frontend apiFarmTaskService 已在用），
+    //   原先这里没有巡查记录保护 —— 已提交记录的任务可被批量删掉，
+    //   inspections.inspection_task_id 变成悬空引用，计划执行率统计随之漂移。
+    //   逐条检查并列出被拦截的 id（与 PUT /batch 的 blocked 风格一致）。
+    const blockedIds: string[] = [];
+    for (const tid of idArray) {
+      const violation = assertTaskDeletable(db, String(tid));
+      if (violation) blockedIds.push(String(tid));
+    }
+    if (blockedIds.length > 0) {
+      return res.status(409).json({
+        success: false,
+        code: 'TASK_HAS_INSPECTION_RECORD',
+        error: `以下 ${blockedIds.length} 个任务已关联巡查记录，不可删除：${blockedIds.join('、')}`,
+        blockedIds,
+      });
+    }
+
     const placeholders = idArray.map(() => '?').join(',');
     db.run(`DELETE FROM farm_tasks WHERE id IN (${placeholders})`, idArray);
     // 2026-10-20：返回真实删除行数（此前恒为 idArray.length，不存在的 id 也算"已删除"）
@@ -2258,7 +2336,18 @@ router.post('/:id/start', (req: Request, res: Response) => {
 router.post('/:id/progress', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { progress, feedback, operator_id, operator_name, comment, status } = req.body;
+    const body = req.body || {};
+    // 2026-10-22（审核 H5）：本路由**实际生效**（farmTaskRouter 挂在 taskProgressRouter 之前），
+    //   而 taskProgress 版的 /progress 是死代码。前端 apiTaskProgressService 发的是 {pct}，
+    //   原先这里只解构 progress → undefined → newProgress 保持原值，返回 200 但进度没动
+    //   （QuickTaskCompletePage 会显示"进度已更新为 undefined%"）。
+    //   现在同时接受 pct 与 progress（pct 优先，与 taskProgress 的契约对齐）。
+    const rawProgress = body.pct !== undefined && body.pct !== null ? body.pct : body.progress;
+    const progress = rawProgress === undefined || rawProgress === null ? undefined : Number(rawProgress);
+    const { feedback, operator_id, operator_name, comment, status } = body;
+    if (progress !== undefined && Number.isNaN(progress)) {
+      return res.status(400).json({ success: false, error: '进度必须是数字' });
+    }
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');

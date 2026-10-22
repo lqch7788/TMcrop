@@ -1,14 +1,24 @@
 /**
- * 巡查计划表单弹窗（2026-10-21 P3）
+ * 巡查计划表单弹窗（2026-10-21 P3 / 2026-10-22 审核返修）
  *
  * 分区：基本信息 → 巡查对象 → 频率与时间 → 执行与排班 → 检查项模板
  * 校验与后端 §6.2 同口径（前端先拦一道，减少无谓往返；后端仍是权威）
+ *
+ * 审核返修（2026-10-22）：
+ *   · 日期默认值改 todayLocal()（原 toISOString().slice(0,10) 是 UTC，
+ *     北京时间 0:00–8:00 会得到「昨天」—— 项目已有同名事故记忆）
+ *   · 表单字段改用 FormField（label 字号/必填红星/错误样式与 CreateInspectionModal 一致）
+ *   · 输入框统一 deepInputClass；日期改 DatePicker；数字改 NumberInput
+ *     与同模块巡查创建弹窗同一套控件，避免「同页两种输入框」
+ *   · 星期/严重程度选择器对齐 CreateInspectionModal 的 border-2 rounded-lg 范式
+ *   · 取消用 Modal 内置 footer（对齐 px-6 py-4 / size="sm" / variant="secondary"），去掉内层双滚动
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Input, Label, Modal, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea } from '@/components/ui';
+import { Button, DatePicker, FormField, Input, Modal, NumberInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea } from '@/components/ui';
 import { useInspectionPlanStore, type InspectionPlan, type PlanChecklistItem } from '@/stores/useInspectionPlanStore';
 import { INSPECTION_TYPES } from '@/types/farm/common';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +26,9 @@ interface Props {
   onClose: () => void;
   onSaved?: (plan: InspectionPlan) => void;
 }
+
+/** 与 CreateInspectionModal 完全一致的输入框样式（同模块统一视觉 token） */
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner w-full";
 
 const WEEKDAY_OPTIONS = [
   { value: 1, label: '周一' }, { value: 2, label: '周二' }, { value: 3, label: '周三' },
@@ -48,7 +61,8 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     intervalValue: 1,
     weekdays: [1] as number[],
     dayOfMonth: 1,
-    startDate: new Date().toISOString().slice(0, 10),
+    // 本地日期（禁止 UTC 截取）
+    startDate: todayLocal(),
     endDate: '',
     windowDays: 14,
     defaultTime: '09:00',
@@ -61,7 +75,6 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     checklist: [] as PlanChecklistItem[],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,7 +99,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
         intervalValue: Number(plan.intervalValue ?? 1) || 1,
         weekdays: (weekdays as number[]).length > 0 ? (weekdays as number[]) : [1],
         dayOfMonth: Number(plan.dayOfMonth ?? 1) || 1,
-        startDate: plan.startDate || new Date().toISOString().slice(0, 10),
+        startDate: plan.startDate || todayLocal(),
         endDate: plan.endDate || '',
         windowDays: Number(plan.windowDays ?? 14) || 14,
         defaultTime: plan.defaultTime || '09:00',
@@ -101,7 +114,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
         title: '', inspectionType: 'farm', greenhouseName: '', cropName: '',
         equipmentName: '', infrastructureName: '', area: '',
         frequency: 'weekly', intervalValue: 1, weekdays: [1], dayOfMonth: 1,
-        startDate: new Date().toISOString().slice(0, 10), endDate: '',
+        startDate: todayLocal(), endDate: '',
         windowDays: 14, defaultTime: '09:00', durationHours: 1,
         assigneeId: '', assigneeName: '', autoSchedule: true, checklist: [],
       });
@@ -140,7 +153,6 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
 
   const handleSave = async () => {
     if (!validate()) return;
-    setSaving(true);
     const payload: Record<string, unknown> = {
       title: form.title.trim(),
       inspectionType: form.inspectionType,
@@ -164,29 +176,25 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
       checklist: form.checklist,
     };
 
-    try {
-      const result = isEdit && plan
-        ? await updatePlan(plan.id, payload)
-        : await createPlan(payload);
-      if (!result) {
-        showAlert('保存失败，请稍后重试');
-        return;
-      }
-      const gen = result.generate;
-      if (gen && gen.created.length > 0) {
-        showAlert(
-          `计划已保存，生成 ${gen.created.length} 条实例任务` +
-          (gen.scheduled ? `，已排班 ${gen.scheduled} 条` : '') +
-          (Object.keys(gen.unscheduledReasons || {}).length
-            ? `；${Object.keys(gen.unscheduledReasons).length} 条未排班（见详情）`
-            : '')
-        );
-      }
-      onSaved?.(result.plan);
-      onClose();
-    } finally {
-      setSaving(false);
+    const result = isEdit && plan
+      ? await updatePlan(plan.id, payload)
+      : await createPlan(payload);
+    if (!result) {
+      showAlert(`保存失败：${useInspectionPlanStore.getState().error || '请稍后重试'}`);
+      return;
     }
+    const gen = result.generate;
+    if (gen && (gen.created.length > 0 || Object.keys(gen.unscheduledReasons || {}).length > 0)) {
+      showAlert(
+        `计划已保存，生成 ${gen.created.length} 条实例任务` +
+        (gen.scheduled ? `，已排班 ${gen.scheduled} 条` : '') +
+        (Object.keys(gen.unscheduledReasons || {}).length
+          ? `；${Object.keys(gen.unscheduledReasons).length} 条未排班（见详情）`
+          : '')
+      );
+    }
+    onSaved?.(result.plan);
+    onClose();
   };
 
   return (
@@ -195,118 +203,119 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
       onClose={onClose}
       title={isEdit ? `编辑巡查计划 - ${plan?.planCode || ''}` : '新建巡查计划'}
       size="xl"
-      showFooter={false}
+      // 用内置 footer：与 CreateInspectionModal 一致（px-6 py-4 / size=sm / 取消=secondary）
+      onSubmit={handleSave}
+      submitText={isEdit ? '保存' : '创建并生成排期'}
+      cancelText="取消"
     >
-      <div className="space-y-5 max-h-[65vh] overflow-y-auto px-1">
+      <div className="space-y-5">
         {/* 基本信息 */}
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-slate-700">基本信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700">基本信息</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">计划名称 *</Label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="如：1号卷帘机每日巡检" />
-              {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title}</p>}
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">巡查类型 *</Label>
+            <FormField label="计划名称" required error={errors.title}>
+              <Input
+                className={deepInputClass}
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="如：1号卷帘机每日巡检"
+              />
+            </FormField>
+            <FormField label="巡查类型" required>
               <Select value={form.inspectionType} onValueChange={(v) => setForm({ ...form, inspectionType: v })}>
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={deepInputClass}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {INSPECTION_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value as string}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
         </div>
 
         {/* 巡查对象 */}
-        <div className="space-y-3 border-t border-gray-100 pt-4">
-          <h4 className="text-sm font-semibold text-slate-700">巡查对象</h4>
+        <div className="space-y-3 border-t border-gray-200 pt-4">
+          <h4 className="text-sm font-semibold text-gray-700">巡查对象</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {form.inspectionType === 'farm' && (
               <>
-                <div>
-                  <Label className="text-xs text-slate-600 mb-1 block">温室/区域</Label>
-                  <Input value={form.greenhouseName} onChange={(e) => setForm({ ...form, greenhouseName: e.target.value })} />
-                </div>
-                <div>
-                  <Label className="text-xs text-slate-600 mb-1 block">作物</Label>
-                  <Input value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} />
-                </div>
+                <FormField label="温室/区域">
+                  <Input className={deepInputClass} value={form.greenhouseName} onChange={(e) => setForm({ ...form, greenhouseName: e.target.value })} />
+                </FormField>
+                <FormField label="作物">
+                  <Input className={deepInputClass} value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} />
+                </FormField>
               </>
             )}
             {form.inspectionType === 'equipment' && (
               <div className="md:col-span-2">
-                <Label className="text-xs text-slate-600 mb-1 block">设备名称 *</Label>
-                <Input value={form.equipmentName} onChange={(e) => setForm({ ...form, equipmentName: e.target.value })} placeholder="如：1号卷帘机" />
-                {errors.equipmentName && <p className="text-xs text-red-600 mt-1">{errors.equipmentName}</p>}
+                <FormField label="设备名称" required error={errors.equipmentName}>
+                  <Input className={deepInputClass} value={form.equipmentName} onChange={(e) => setForm({ ...form, equipmentName: e.target.value })} placeholder="如：1号卷帘机" />
+                </FormField>
               </div>
             )}
             {form.inspectionType === 'infrastructure' && (
               <div className="md:col-span-2">
-                <Label className="text-xs text-slate-600 mb-1 block">设施名称 *</Label>
-                <Input value={form.infrastructureName} onChange={(e) => setForm({ ...form, infrastructureName: e.target.value })} />
-                {errors.infrastructureName && <p className="text-xs text-red-600 mt-1">{errors.infrastructureName}</p>}
+                <FormField label="设施名称" required error={errors.infrastructureName}>
+                  <Input className={deepInputClass} value={form.infrastructureName} onChange={(e) => setForm({ ...form, infrastructureName: e.target.value })} />
+                </FormField>
               </div>
             )}
             {(form.inspectionType === 'safety' || form.inspectionType === 'other') && (
               <div className="md:col-span-2">
-                <Label className="text-xs text-slate-600 mb-1 block">
-                  检查区域/场所{form.inspectionType === 'safety' ? ' *' : ''}
-                </Label>
-                <Input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="如：3号仓库配电间" />
-                {errors.area && <p className="text-xs text-red-600 mt-1">{errors.area}</p>}
+                <FormField
+                  label="检查区域/场所"
+                  required={form.inspectionType === 'safety'}
+                  error={errors.area}
+                >
+                  <Input className={deepInputClass} value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="如：3号仓库配电间" />
+                </FormField>
               </div>
             )}
           </div>
         </div>
 
         {/* 频率与时间 */}
-        <div className="space-y-3 border-t border-gray-100 pt-4">
-          <h4 className="text-sm font-semibold text-slate-700">频率与时间</h4>
+        <div className="space-y-3 border-t border-gray-200 pt-4">
+          <h4 className="text-sm font-semibold text-gray-700">频率与时间</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">频率 *</Label>
+            <FormField label="频率" required>
               <Select value={form.frequency} onValueChange={(v) => setForm({ ...form, frequency: v })}>
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={deepInputClass}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {FREQUENCY_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">间隔（倍数）</Label>
-              <Input
-                type="number" min={1}
-                value={String(form.intervalValue)}
-                onChange={(e) => setForm({ ...form, intervalValue: Number(e.target.value) || 1 })}
+            </FormField>
+            <FormField label="间隔（倍数）" error={errors.intervalValue}>
+              <NumberInput
+                className={deepInputClass}
+                value={form.intervalValue}
+                decimals={0}
+                onChange={(v) => setForm({ ...form, intervalValue: Number(v) || 1 })}
               />
-              {errors.intervalValue && <p className="text-xs text-red-600 mt-1">{errors.intervalValue}</p>}
-            </div>
+            </FormField>
             {form.frequency === 'monthly' && (
-              <div>
-                <Label className="text-xs text-slate-600 mb-1 block">每月几号</Label>
-                <Input
-                  type="number" min={1} max={28}
-                  value={String(form.dayOfMonth)}
-                  onChange={(e) => setForm({ ...form, dayOfMonth: Number(e.target.value) || 1 })}
+              <FormField label="每月几号" error={errors.dayOfMonth}>
+                <NumberInput
+                  className={deepInputClass}
+                  value={form.dayOfMonth}
+                  decimals={0}
+                  onChange={(v) => setForm({ ...form, dayOfMonth: Number(v) || 1 })}
                 />
-                {errors.dayOfMonth && <p className="text-xs text-red-600 mt-1">{errors.dayOfMonth}</p>}
-              </div>
+              </FormField>
             )}
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">默认时间</Label>
-              <Input type="time" value={form.defaultTime} onChange={(e) => setForm({ ...form, defaultTime: e.target.value })} />
-            </div>
+            <FormField label="默认时间">
+              <Input className={deepInputClass} type="time" value={form.defaultTime} onChange={(e) => setForm({ ...form, defaultTime: e.target.value })} />
+            </FormField>
           </div>
 
           {form.frequency === 'weekly' && (
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">周几 *</Label>
+            <FormField label="周几" required error={errors.weekdays}>
+              {/* 与 CreateInspectionModal 的问题分类选择器同款：border-2 rounded-lg */}
               <div className="flex flex-wrap gap-2">
                 {WEEKDAY_OPTIONS.map((d) => {
                   const active = form.weekdays.includes(d.value);
@@ -318,8 +327,10 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                         ...form,
                         weekdays: active ? form.weekdays.filter((x) => x !== d.value) : [...form.weekdays, d.value],
                       })}
-                      className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                        active ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-slate-600 hover:border-emerald-200'
+                      className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                        active
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                       }`}
                     >
                       {d.label}
@@ -327,56 +338,57 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                   );
                 })}
               </div>
-              {errors.weekdays && <p className="text-xs text-red-600 mt-1">{errors.weekdays}</p>}
-            </div>
+            </FormField>
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">开始日期 *</Label>
-              <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-              {errors.startDate && <p className="text-xs text-red-600 mt-1">{errors.startDate}</p>}
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">结束日期（空=无限期）</Label>
-              <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
-              {errors.endDate && <p className="text-xs text-red-600 mt-1">{errors.endDate}</p>}
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">生成窗口（天）</Label>
-              <Input
-                type="number" min={1} max={90}
-                value={String(form.windowDays)}
-                onChange={(e) => setForm({ ...form, windowDays: Number(e.target.value) || 14 })}
+            <FormField label="开始日期" required error={errors.startDate}>
+              <DatePicker
+                selected={form.startDate ? new Date(form.startDate) : undefined}
+                onChange={(d) => setForm({ ...form, startDate: d ? todayLocal(d) : '' })}
+                className={deepInputClass}
               />
-              {errors.windowDays && <p className="text-xs text-red-600 mt-1">{errors.windowDays}</p>}
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">预计时长（小时）</Label>
-              <Input
-                type="number" min={0.5} step={0.5}
-                value={String(form.durationHours)}
-                onChange={(e) => setForm({ ...form, durationHours: Number(e.target.value) || 1 })}
+            </FormField>
+            <FormField label="结束日期（空=无限期）" error={errors.endDate}>
+              <DatePicker
+                selected={form.endDate ? new Date(form.endDate) : undefined}
+                onChange={(d) => setForm({ ...form, endDate: d ? todayLocal(d) : '' })}
+                className={deepInputClass}
               />
-            </div>
+            </FormField>
+            <FormField label="生成窗口（天）" error={errors.windowDays}>
+              <NumberInput
+                className={deepInputClass}
+                value={form.windowDays}
+                decimals={0}
+                onChange={(v) => setForm({ ...form, windowDays: Number(v) || 14 })}
+              />
+            </FormField>
+            <FormField label="预计时长（小时）">
+              <NumberInput
+                className={deepInputClass}
+                value={form.durationHours}
+                decimals={1}
+                onChange={(v) => setForm({ ...form, durationHours: Number(v) || 1 })}
+              />
+            </FormField>
           </div>
         </div>
 
         {/* 执行与排班 */}
-        <div className="space-y-3 border-t border-gray-100 pt-4">
-          <h4 className="text-sm font-semibold text-slate-700">执行与排班</h4>
+        <div className="space-y-3 border-t border-gray-200 pt-4">
+          <h4 className="text-sm font-semibold text-gray-700">执行与排班</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-xs text-slate-600 mb-1 block">执行人 *</Label>
+            <FormField label="执行人" required error={errors.assigneeName}>
               <Input
+                className={deepInputClass}
                 value={form.assigneeName}
                 onChange={(e) => setForm({ ...form, assigneeName: e.target.value, assigneeId: e.target.value })}
                 placeholder="姓名（须与员工档案一致才能自动排班）"
               />
-              {errors.assigneeName && <p className="text-xs text-red-600 mt-1">{errors.assigneeName}</p>}
-            </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm text-slate-700 pb-2 cursor-pointer">
+            </FormField>
+            <div className="flex items-end pb-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.autoSchedule}
@@ -390,11 +402,12 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
         </div>
 
         {/* 检查项模板 */}
-        <div className="space-y-3 border-t border-gray-100 pt-4">
+        <div className="space-y-3 border-t border-gray-200 pt-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-700">检查项模板</h4>
+            <h4 className="text-sm font-semibold text-gray-700">检查项模板</h4>
             <Button
-              size="sm" variant="outline"
+              size="sm"
+              variant="outline"
               onClick={() => setForm({
                 ...form,
                 checklist: [...form.checklist, { key: `item_${form.checklist.length + 1}`, label: '', required: false }],
@@ -404,13 +417,13 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
             </Button>
           </div>
           {form.checklist.length === 0 ? (
-            <p className="text-xs text-slate-400">未设置检查项（可选）</p>
+            <p className="text-xs text-gray-400">未设置检查项（可选）</p>
           ) : (
             <div className="space-y-2">
               {form.checklist.map((item, idx) => (
                 <div key={item.key} className="flex items-center gap-2">
                   <Input
-                    className="flex-1"
+                    className={deepInputClass}
                     value={item.label}
                     placeholder={`检查项 ${idx + 1}`}
                     onChange={(e) => {
@@ -419,7 +432,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                       setForm({ ...form, checklist: next });
                     }}
                   />
-                  <label className="flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap">
+                  <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={!!item.required}
@@ -432,7 +445,9 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                     必填
                   </label>
                   <Button
-                    size="sm" variant="ghost"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700"
                     onClick={() => setForm({ ...form, checklist: form.checklist.filter((_, i) => i !== idx) })}
                   >
                     删除
@@ -442,13 +457,6 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex justify-end gap-2 mt-5 pt-3 border-t border-gray-100">
-        <Button variant="outline" onClick={onClose}>取消</Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? '保存中…' : isEdit ? '保存' : '创建并生成排期'}
-        </Button>
       </div>
     </Modal>
   );

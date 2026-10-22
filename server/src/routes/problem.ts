@@ -5,6 +5,9 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// 2026-10-22（审核 L12）：派生任务改用统一日序取号，避免 NS 编号撞主键
+import { nextTaskCode } from '../services/inspectionPlanService';
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -593,8 +596,10 @@ router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
     // 2026-10-21（阶段 3）：派生任务从 temp_tasks 改写入 farm_tasks ——
     //   临时任务模块已下线，问题分派产生的应急任务统一进农事任务列表。
     const now = new Date().toISOString();
-    const dateCompact = now.slice(0, 10).replace(/-/g, '');
-    const newId = `NS${dateCompact}-${String(Date.now() % 1000).padStart(3, '0')}`;
+    // 2026-10-22（审核 L12）：原实现用 `Date.now() % 1000` 当流水号且不查重。
+    //   计划任务也用 NS{日期}-{3位} 前缀，同一天任务一多就有可观概率撞主键
+    //   （重试同一秒内甚至必然相同）→ 分派 500。改走统一的日序取号。
+    const newId = nextTaskCode(db, formatLocalDateYYYYMMDD());
     // 沿用农事任务的 NS 编号规则，避免与历史 TT 编号混淆
     const taskCode = newId;
     const typeLabel = taskType === 'other' ? '其他' : taskType;
