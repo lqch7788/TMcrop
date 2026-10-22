@@ -9,6 +9,8 @@ import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems, useFarmTaskStore } from '../../../stores';
 import { InspectionSearch, InspectionSearchFilters } from './components/InspectionSearch';
 import { InspectionToolbar } from './components/InspectionToolbar';
+// 2026-10-21 P3：巡查计划面板（与巡查记录并列视图）
+import { InspectionPlanPanel } from './inspection-plans/InspectionPlanPanel';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
 import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
@@ -255,6 +257,8 @@ export function InspectionTab({
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+  // 2026-10-21 P3：巡查计划 / 巡查记录视图切换（默认记录视图）
+  const [viewMode, setViewMode] = useState<'records' | 'plans'>('records');
 
   // 批量编辑相关状态
   const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
@@ -651,6 +655,10 @@ export function InspectionTab({
         images: (newRecord.issuePhotos || []) as any,
         sourceModule: 'inspection',
         sourceId: newRecord.recordCode,
+        // 2026-10-21：带上巡查类型与结构化问题分类 ——
+        //   分派时据此映射任务类型（此前只能靠关键词猜，设备故障会被派成施肥）
+        inspectionType: newRecord.inspectionType,
+        issueCategories: newRecord.issueCategories || [],
         flowRecords: [{
           id: `FR-${Date.now()}`,
           problemId: 0, // 将在创建后更新
@@ -919,6 +927,43 @@ export function InspectionTab({
 
   return (
     <div className="space-y-4">
+      {/* 2026-10-21 P3：视图切换（巡查计划 / 巡查记录）
+          两个视图**同时挂载 + CSS hidden**，不做条件渲染 ——
+          方案 §10.1：切 tab 卸载 40+ Radix Select 会触发 commit 阶段 setState 级联死循环
+          （既有事故：Radix Select 卸载风暴卡死）。 */}
+      <div className="flex items-center gap-2">
+        {([
+          { key: 'records', label: `巡查记录（${stats?.total ?? filteredRecords.length}）` },
+          { key: 'plans', label: '巡查计划' },
+        ] as const).map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            onClick={() => setViewMode(v.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === v.key
+                ? 'bg-emerald-600 text-white'
+                : 'bg-white text-slate-600 border border-gray-200 hover:border-emerald-300'
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 视图 1：巡查计划 */}
+      <div className={viewMode === 'plans' ? '' : 'hidden'}>
+        <InspectionPlanPanel
+          onScheduleTask={(taskId, date) => {
+            // 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务
+            window.location.href = `/schedule?tab=farm-task&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;
+          }}
+          onSubmitRecord={() => setViewMode('records')}
+        />
+      </div>
+
+      {/* 视图 2：巡查记录 */}
+      <div className={viewMode === 'plans' ? 'hidden' : 'space-y-4'}>
       {/* 搜索栏 */}
       <InspectionSearch
         filters={filters}
@@ -992,6 +1037,7 @@ export function InspectionTab({
           tasks={tasks as any}
           onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
         />
+      </div>
       </div>
 
       {/* 新建弹窗 */}

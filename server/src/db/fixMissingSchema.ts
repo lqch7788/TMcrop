@@ -1338,6 +1338,89 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 36.5 problems 表添加巡查类型 / 问题分类（2026-10-21）
+  // 注意：启动白名单已禁用本函数，实际生效的是 fixSchemaColumns.ts；
+  //   这里保留是为了脚本调用时也能补列。
+  const problemColumnsToAdd = [
+    { name: 'inspection_type', sql: 'ALTER TABLE problems ADD COLUMN inspection_type TEXT' },
+    { name: 'issue_categories', sql: "ALTER TABLE problems ADD COLUMN issue_categories TEXT DEFAULT '[]'" },
+  ];
+  for (const col of problemColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ problems 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• problems.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 36.6 巡查计划 ↔ 农事任务 ↔ 巡查记录 关联列（2026-10-21 P2a）
+  // 注意：启动白名单已禁用本函数，实际生效的是 fixSchemaColumns.ts；
+  //   这里保留是为了脚本调用时也能补列。
+  const p2aColumnsToAdd: Array<{ table: string; name: string; sql: string }> = [
+    { table: 'farm_tasks', name: 'inspection_plan_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN inspection_plan_id TEXT' },
+    { table: 'farm_tasks', name: 'plan_occurrence_date', sql: 'ALTER TABLE farm_tasks ADD COLUMN plan_occurrence_date TEXT' },
+    { table: 'inspections', name: 'inspection_plan_id', sql: 'ALTER TABLE inspections ADD COLUMN inspection_plan_id TEXT' },
+    { table: 'inspections', name: 'inspection_task_id', sql: 'ALTER TABLE inspections ADD COLUMN inspection_task_id TEXT' },
+    { table: 'inspections', name: 'checklist_results', sql: "ALTER TABLE inspections ADD COLUMN checklist_results TEXT DEFAULT '[]'" },
+    { table: 'inspections', name: 'record_version', sql: 'ALTER TABLE inspections ADD COLUMN record_version INTEGER DEFAULT 1' },
+    { table: 'inspections', name: 'area', sql: 'ALTER TABLE inspections ADD COLUMN area TEXT' },
+  ];
+  for (const col of p2aColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ ${col.table} 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• ${col.table}.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 36.7 巡查计划表（P2a 新表）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS inspection_plans (
+        id TEXT PRIMARY KEY,
+        plan_code TEXT NOT NULL,
+        title TEXT NOT NULL,
+        inspection_type TEXT NOT NULL DEFAULT 'farm',
+        greenhouse_id TEXT, greenhouse_name TEXT,
+        crop_name TEXT,
+        equipment_id TEXT, equipment_name TEXT,
+        infrastructure_id TEXT, infrastructure_name TEXT,
+        area TEXT,
+        checklist TEXT DEFAULT '[]',
+        frequency TEXT NOT NULL DEFAULT 'weekly',
+        interval_value INTEGER DEFAULT 1,
+        weekdays TEXT DEFAULT '[]',
+        day_of_month INTEGER,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        window_days INTEGER DEFAULT 14,
+        default_time TEXT DEFAULT '09:00',
+        duration_hours REAL DEFAULT 1,
+        assignee_id TEXT, assignee_name TEXT,
+        team_id TEXT, team_name TEXT,
+        auto_schedule INTEGER DEFAULT 1,
+        shift_code TEXT,
+        pause_ranges TEXT DEFAULT '[]',
+        status TEXT DEFAULT 'active',
+        created_by TEXT, created_by_name TEXT,
+        create_time TEXT, update_time TEXT,
+        tenant_id INTEGER DEFAULT 1,
+        version INTEGER DEFAULT 1
+      )
+    `);
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS uk_inspection_plans_code ON inspection_plans(plan_code)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_inspection_plans_status ON inspection_plans(status, start_date)`);
+    seedLog.info('✓ inspection_plans 表已就绪');
+  } catch (e: any) {
+    seedLog.skip('• inspection_plans 表创建失败:', e?.message || e);
+  }
+
   // 37. harvest_records 表添加缺失的列
   const harvestColumnsToAdd = [
     { name: 'greenhouse_id', sql: 'ALTER TABLE harvest_records ADD COLUMN greenhouse_id TEXT' },

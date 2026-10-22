@@ -44,6 +44,8 @@ let dailyJob: any = null;
 let monthlyJob: any = null;
 let reminderJob: any = null;
 let auditRetentionJob: any = null;
+// 2026-10-21 P2b：巡查计划窗口补齐
+let inspectionPlanJob: any = null;
 
 /**
  * 操作日志保留天数
@@ -227,6 +229,43 @@ function scheduleReminderScan(): void {
 }
 
 /**
+ * 巡查计划窗口补齐（每日 00:10）
+ * 2026-10-21 P2b：巡查计划实例任务靠「创建时生成 + 每日补齐」维持未来窗口不断档。
+ *   幂等（backfillAllPlans → occurrenceExists + 唯一索引），重复跑不会产生重复任务。
+ *
+ * 注意：generateOccurrences 内部已显式 saveDatabase（sql.js 只有显式调用一条落盘路径）。
+ * 刻意**不**用 scheduleReminderScan 那套 fetch 自调本机 API 的写法 ——
+ *   那是提醒规则场景（需要走 HTTP 才能复用其副作用），
+ *   计划生成直接调 service 更可控，也不会在启动期自请求造成竞态。
+ */
+function scheduleInspectionPlanBackfill(): void {
+  if (!cron) return;
+  inspectionPlanJob = cron.schedule(
+    '10 0 * * *',
+    () => {
+      void (async () => {
+        try {
+          const { getDatabase } = await import('../db');
+          const { backfillAllPlans } = await import('./inspectionPlanService');
+          const r = await backfillAllPlans(getDatabase());
+          if (r.created > 0 || r.failed > 0) {
+            console.log(
+              `[scheduler] 巡查计划窗口补齐 — 计划 ${r.plans} 个，新增实例 ${r.created} 条，失败 ${r.failed} 个`
+            );
+          } else {
+            console.log(`[scheduler] 巡查计划窗口补齐 — 计划 ${r.plans} 个，无新增实例`);
+          }
+        } catch (e: any) {
+          console.error('[scheduler] 巡查计划窗口补齐失败:', e?.message || e);
+        }
+      })();
+    },
+    { timezone: 'Asia/Shanghai' }
+  );
+  console.log('[scheduler] 巡查计划窗口补齐已注册（cron: 10 0 * * *）');
+}
+
+/**
  * 启动所有 cron 任务
  */
 export function startScheduler(): void {
@@ -252,8 +291,9 @@ export function startScheduler(): void {
   scheduleMonthlyBackup();
   scheduleReminderScan();
   scheduleAuditLogRetention();
+  scheduleInspectionPlanBackfill();
 
-  console.log('[scheduler] 调度服务已启动（4 个任务）');
+  console.log('[scheduler] 调度服务已启动（5 个任务）');
 }
 
 /**
@@ -276,6 +316,10 @@ export function stopScheduler(): void {
   if (reminderJob) {
     reminderJob.stop();
     reminderJob = null;
+  }
+  if (inspectionPlanJob) {
+    inspectionPlanJob.stop();
+    inspectionPlanJob = null;
   }
   console.log('[scheduler] 调度服务已停止');
 }

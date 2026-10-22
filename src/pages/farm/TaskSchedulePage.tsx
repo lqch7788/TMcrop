@@ -21,10 +21,14 @@ import { todayLocal } from '@/lib/dateUtils';
 import TaskScheduleEditModal, { type TaskScheduleEditTarget } from './TaskScheduleEditModal';
 
 export default function TaskSchedulePage() {
-  // URL 参数：date（初始日期）/ teamId（预选班组），由班组分配页跳转带进来
+  // URL 参数：date（初始日期）/ teamId（预选班组）/ taskId（预选待排班任务），由班组分配页、巡查计划面板跳转带进来
   const [searchParams] = useSearchParams();
   const urlDate = searchParams.get('date');
   const urlTeamId = searchParams.get('teamId');
+  // 2026-10-21 P5：巡查计划实例「去排班」深链 —— /schedule?date=...&taskId=...
+  //   未排班的巡查任务本来就在「待排班任务」列表里（status='pending' 且无排班行），
+  //   这里把选中的那条预选上，用户落地即可直接排班，不必在列表里再找一遍。
+  const urlTaskId = searchParams.get('taskId');
 
   const [date, setDate] = useState(urlDate || todayLocal());
   const { schedules, unscheduledTasks, shifts, loading, error, createSchedule, updateSchedule, deleteSchedule, refresh } =
@@ -47,6 +51,14 @@ export default function TaskSchedulePage() {
 
   // 选中待排班任务
   const [selectedTaskId, setSelectedTaskId] = useState('');
+
+  // 2026-10-21 P5：深链预选 —— 待排班列表到位后再选，否则那一刻它还是空数组
+  useEffect(() => {
+    if (!urlTaskId) return;
+    if (unscheduledTasks.some((t) => t.id === urlTaskId)) {
+      setSelectedTaskId(urlTaskId);
+    }
+  }, [urlTaskId, unscheduledTasks]);
   // 排班表单
   const [form, setForm] = useState({
     workerId: '',

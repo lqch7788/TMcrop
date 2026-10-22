@@ -19,7 +19,6 @@ import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
 import { ExportFormatModal } from '../problemDispatch/modals'
 import { todayLocal } from '@/lib/dateUtils';;
 import { showAlert } from '@/lib/dialogService';
-import { dispatchTempTaskForProblem } from '../../../services/apiProblemService';
 import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
@@ -31,7 +30,8 @@ import { Input } from '@/components/ui';
 // 2026-10-21：Table 系列（Table/TableHeader/TableBody/TableRow/TableHead/TableCell）
 //   随「问题追踪」子Tab 的 10 列表格删除后已无引用，从 import 移除；
 //   新增的详情弹窗「关联任务」区块用普通 div 布局，不再依赖 Table。
-import { Label, DatePicker } from '@/components/ui';
+import { Label, DatePicker, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { DISPATCH_TASK_TYPE_OPTIONS, resolveProblemTaskType } from '@/utils/problemTaskType';
 import { Pagination } from '@/components/ui';
 import type { SourceModuleType } from '../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
@@ -202,12 +202,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [customDueDate, setCustomDueDate] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [requiredFeedback, setRequiredFeedback] = useState<string[]>(['workload_confirm']);
-  // 2026-09-21：分派的同时派生一条临时任务（应急场景：现场先处理，再走农事任务闭环）。
-  //   该能力原先只存在于 hub/ProblemDispatchModal.tsx，但那个组件整体不可达 ——
-  //   FarmTaskHub 的 setDispatchProblemId 从未被赋值过，弹窗恒不渲染，
-  //   连带后端 /problems/:id/dispatch-temp 接口在 UI 层无从触达。
-  //   而本组件已经有一个功能更完整的自建分派弹窗，故把入口移到这里。
-  const [alsoDispatchTempTask, setAlsoDispatchTempTask] = useState(true);
+  // 2026-10-21：分派时可人工指定任务类型；默认按「巡查类型 + 问题分类」映射预选
+  const [dispatchTaskType, setDispatchTaskType] = useState<string>('');
 
   // ========== 新增表单状态 ==========
   const [formData, setFormData] = useState({
@@ -412,13 +408,26 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     }
   };
 
+  // ========== 打开分派弹窗（单条） ==========
+  // 2026-10-21：按「来源巡查类型 + 问题分类」预选任务类型（人工可改）。
+  //   此前分派只有文本关键词兜底，实测「通风异常/遮阳网故障」等设备类问题
+  //   会被派成「施肥」，设备维修/农场维修两个对口类型一次都没被用上。
+  const openDispatchModal = (problem: ProblemEntry) => {
+    const resolved = resolveProblemTaskType({
+      inspectionType: problem.inspectionType,
+      issueCategories: problem.issueCategories,
+      issueText: problem.issueText,
+    });
+    setDispatchTaskType(resolved.type);
+    setDispatchModal({ isOpen: true, problem, batchMode: false });
+  };
+
   // ========== 处理分派（支持多选执行人） ==========
   // 2026-09-21 修复：
   //   ① 原先在 forEach 里调 dispatchProblem，既不 await 也无任何错误处理 ——
   //      失败时弹窗照关、零提示，用户以为已分派成功；
-  //   ② 新增「同时派一条临时任务」，该能力原在 hub/ProblemDispatchModal.tsx 中，
-  //      但那个组件整体不可达（FarmTaskHub 的 setDispatchProblemId 从未被赋值），
-  //      导致后端 POST /problems/:id/dispatch-temp 在 UI 层无从触发，故迁至此处。
+  //   ② 2026-10-21：移除「同时派一条应急农事任务」勾选项 —— 临时任务已并入
+  //      农事任务，同一问题双派造成重复工单，故一并去掉。
   const handleDispatch = async () => {
     if (!dispatchModal.problem || selectedWorkers.length === 0) return;
     const problem = dispatchModal.problem;
@@ -432,6 +441,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     setCustomDueDate('');
     setSelectedPriority('medium');
     setRequiredFeedback(['workload_confirm']);
+    setDispatchTaskType('');
 
     // 注意：dispatchProblem 是【同步函数】，返回 Task | null，
     //   其内部的 createTask / updateProblemInStore 为 fire-and-forget（不返回 Promise），
@@ -448,33 +458,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           defaultInspector?.name || '系统管理员',
           dueDate,
           requiredFeedback,
-          selectedPriority
+          selectedPriority,
+          // 2026-10-21：人工指定的任务类型优先（为空则按巡查类型/问题分类自动映射）
+          dispatchTaskType || undefined
         );
         if (!created) failed++;
       } catch (error) {
         failed++;
         console.error('[ProblemTab] 分派失败:', worker.name, error);
-      }
-    }
-
-    // 同时派生一条临时任务（应急场景；只取首位执行人，避免派生出多条）
-    if (alsoDispatchTempTask && dispatchTargets.length > 0) {
-      const worker = dispatchTargets[0];
-      try {
-        await dispatchTempTaskForProblem(String(problem.id), {
-          assigneeId: worker.id,
-          assigneeName: worker.name,
-          title: problem.issueText?.slice(0, 30) || '问题应急处理',
-          taskType: 'other',
-          urgency:
-            selectedPriority === 'high' ? 'urgent' : selectedPriority === 'low' ? 'normal' : 'high',
-          dueDate,
-          description: problem.issueText || '',
-          greenhouseName: problem.greenhouseName || undefined,
-        });
-      } catch (error) {
-        console.error('[ProblemTab] 派生农事任务失败:', error);
-        showAlert(`问题已分派，但派生农事任务失败：${(error as Error).message}`);
       }
     }
 
@@ -505,6 +496,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     setCustomDueDate('');
     setSelectedPriority('medium');
     setRequiredFeedback(['workload_confirm']);
+    setDispatchTaskType('');
     setBatchDispatchMode(false);
 
     // dispatchProblem 为同步函数（见上方 handleDispatch 的说明），此处同样逐条 try/catch
@@ -522,7 +514,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             '系统管理员',
             dueDate,
             requiredFeedback,
-            selectedPriority
+            selectedPriority,
+            // 2026-10-21：人工指定的任务类型优先（为空则各问题按自身巡查类型/分类自动映射）
+            dispatchTaskType || undefined
           );
           if (!created) failed++;
         } catch (error) {
@@ -1002,6 +996,30 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           )}
         </div>
 
+        {/* 任务类型（2026-10-21）：默认按「来源巡查类型 + 问题分类」预选，可人工改 */}
+        <div className="border-t border-gray-200 pt-4">
+          <div className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <List className="w-5 h-5 text-indigo-500" />
+            任务类型
+          </div>
+          <Select
+            value={dispatchTaskType}
+            onValueChange={(val) => setDispatchTaskType(val)}
+          >
+            <SelectTrigger className="w-full h-10 px-4 py-2 border-2 border-violet-200 rounded-lg text-base focus:outline-none focus:border-violet-500">
+              <SelectValue placeholder="请选择任务类型" />
+            </SelectTrigger>
+            <SelectContent>
+              {DISPATCH_TASK_TYPE_OPTIONS.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="mt-2 text-sm text-slate-500">
+            默认按问题来源的巡查类型与问题分类自动推荐；批量分派留空则每条问题各自映射。
+          </div>
+        </div>
+
         {/* 期望完成时间 */}
         <div className="border-t border-gray-200 pt-4">
           <div className="text-base font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -1097,29 +1115,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           </div>
         </div>
 
-        {/* 同时派一条应急农事任务（2026-09-21 新增；2026-10-21 阶段 3 起写入 farm_tasks）
-            仅单条分派提供 —— 批量模式下问题数 × 执行人数会成倍放大，误建风险过高 */}
-        {!dispatchModal.batchMode && (
-          <div className="border-t border-gray-200 pt-4">
-            <Label className="flex items-start gap-3 px-3 py-3 rounded-lg border-2 cursor-pointer transition-all border-gray-200 bg-white hover:border-amber-200">
-              <Input
-                type="checkbox"
-                checked={alsoDispatchTempTask}
-                onChange={(e) => setAlsoDispatchTempTask(e.target.checked)}
-                className="mt-0.5 w-4 h-4"
-              />
-              <div className="flex-1">
-                <div className="text-sm font-medium text-slate-700">
-                  同时派一条应急农事任务
-                </div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  应急场景使用：现场先按临时任务处理，工单记录同样挂到当前问题下，
-                  可在问题详情的「关联任务」中查看。
-                </div>
-              </div>
-            </Label>
-          </div>
-        )}
+        {/* 2026-10-21：原「同时派一条应急农事任务」勾选项已移除 ——
+            临时任务已并入农事任务，同一问题双派会生成两条重复工单。 */}
       </div>
     </Modal>
   );
@@ -1475,7 +1472,11 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             setBatchDispatchMode(false);
             setSelectedProblems([]);
           }}
-          onConfirmDispatch={() => setDispatchModal({ isOpen: true, problem: null, batchMode: true })}
+          onConfirmDispatch={() => {
+            // 批量分派默认不锁类型：每条问题按自身巡查类型/分类各自映射
+            setDispatchTaskType('');
+            setDispatchModal({ isOpen: true, problem: null, batchMode: true });
+          }}
           onConfirmExport={() => setShowExportModal(true)}
           onConfirmDelete={() => setShowDeleteWarning(true)}
         />
@@ -1572,7 +1573,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           onToggleSelect={toggleSelect}
           onToggleSelectAll={handleBatchSelectAll}
           onBatchSelectAll={toggleSelectAll}
-          onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
+          onSingleDispatch={(problem) => openDispatchModal(problem)}
           // 2026-10-10（审核修复）：「验收」按钮接真实验收动作（原只打开详情）
           // （as any：两个模块各自定义的同名 ProblemEntry 类型不互通，与上方既有 prop 同款处理）
           onAcceptance={((problem: any) => setAcceptanceModal({ isOpen: true, problem })) as any}

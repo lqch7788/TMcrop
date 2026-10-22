@@ -12,7 +12,10 @@ export type ProblemSourceType = 'inspection' | 'manual' | 'production' | 'equipm
 
 // 问题记录类型
 export interface ProblemEntry {
-  id: number;
+  // 2026-10-22：后端 problems.id 实际是 'PRB' + 时间戳 的字符串（DB 里全部如此），
+  //   原类型声明为 number 会让 mapApiProblemToEntry 用 parseInt 解析成 0，
+  //   导致按 id 查找/分派全部失效。改为联合类型，调用点按真实值透传。
+  id: number | string;
   problemCode: string;  // 问题编号：PD + 年月日(8位) + 流水号(3位)，如 PD20260415001
   // 巡查管理字段
   greenhouseId: string;
@@ -59,6 +62,9 @@ export interface ProblemEntry {
   sourceModule?: ProblemSourceType;  // 来源模块：inspection-巡查, manual-手动, production-生产, equipment-设备, other-其他
   sourceId?: string;               // 原始单据ID（如巡查记录ID）
   sourceDetail?: string;             // 来源详情描述
+  // 2026-10-21：来源巡查类型 + 结构化问题分类（分派时映射任务类型，见 utils/problemTaskType）
+  inspectionType?: string;
+  issueCategories?: string[];
 }
 
 // ProblemFlowRecord 类型从 useProblemDispatch 导入（包含完整的 feedbackData 字段）
@@ -291,7 +297,7 @@ try {
   const stored = localStorage.getItem(STORAGE_KEYS.DAILY_PROBLEMS);
   if (stored) {
     problemsState = JSON.parse(stored);
-    const maxId = Math.max(0, ...problemsState.map(p => p.id));
+    const maxId = Math.max(0, ...problemsState.map(p => (typeof p.id === 'number' ? p.id : 0)));
     nextProblemId = maxId + 1;
   }
 } catch {
@@ -330,13 +336,14 @@ export function usePersistentProblems() {
   // 添加问题记录
   const addProblem = useCallback((entry: Omit<ProblemEntry, 'id' | 'problemCode'>): number => {
     const problemCode = generateProblemCode(entry.checkDate);
+    const newId = nextProblemId++;
     const newEntry: ProblemEntry = {
       ...entry,
-      id: nextProblemId++,
+      id: newId,
       problemCode,
     };
     persistProblems([newEntry, ...problemsState]);
-    return newEntry.id;
+    return newId;
   }, []);
 
   // 更新问题记录

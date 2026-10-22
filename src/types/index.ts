@@ -360,6 +360,15 @@ export interface InspectionRecord {
   expectedCompletion?: string;
   // 关联问题ID（用于关联问题分派记录）
   problemId?: number;
+  // 2026-10-21（P2a）：巡查计划 / 任务关联 + 检查项结果 + 记录版本
+  /** 来源巡查计划 ID */
+  inspectionPlanId?: string;
+  /** 来源任务 ID（任务 ↔ 记录 1:1；手工创建的巡查记录为空） */
+  inspectionTaskId?: string;
+  /** 计划检查项执行结果 */
+  checklistResults?: Array<{ key: string; status: 'ok' | 'issue' | 'na'; note?: string }>;
+  /** 记录版本（返工重提时服务端 +1） */
+  recordVersion?: number;
 }
 
 export interface HarvestRecord {

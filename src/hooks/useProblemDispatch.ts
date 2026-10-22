@@ -12,6 +12,8 @@ import type { Task } from '../types';
 import { useWorkerStore } from '../stores/useWorkerStore';
 import { useInspectionDataStore } from '../stores/useInspectionDataStore';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-10-21：问题 → 任务类型映射（巡查类型 + 问题分类优先，关键词兜底）
+import { resolveProblemTaskType, getTaskTypeName } from '../utils/problemTaskType';
 
 /**
  * 2026-10-20 修复（HIGH）：问题通道动作后主动刷新巡查记录。
@@ -77,7 +79,7 @@ const SEVERITY_PRIORITY_MAP: Record<string, Task['priority']> = {
 // 分派记录类型
 interface DispatchRecord {
   id: string;
-  problemId: number;
+  problemId: number | string;
   taskId: string;
   dispatchTime: string;
   dispatcherId: string;
@@ -87,7 +89,7 @@ interface DispatchRecord {
 // 问题流转记录类型
 export interface ProblemFlowRecord {
   id: string;
-  problemId: number;
+  problemId: number | string;
   operatorId: string;
   operatorName: string;
   action: 'report' | 'dispatch' | 'accept' | 'reject' | 'start' | 'submit' | 'approve' | 'complete' | 'comment' | 'progress' | 'reject_acceptance';
@@ -223,7 +225,7 @@ export function useProblemDispatch() {
 
   // 获取问题关联的任务
   const getTaskForProblem = useCallback(
-    (problemId: number): Task | undefined => {
+    (problemId: number | string): Task | undefined => {
       return (tasks as any).find((t: any) => t.sourceProblemId === problemId);
     },
     [tasks]
@@ -231,29 +233,34 @@ export function useProblemDispatch() {
 
   // 分派问题给员工
   const dispatchProblem = useCallback((
-    problemId: number,
+    problemId: number | string,
     assigneeId: string,
     assigneeName: string,
     dispatcherId: string = 'U001',
     dispatcherName: string = '系统管理员',
     expectedCompletion?: string,
     requiredFeedback?: string[],
-    customPriority?: 'high' | 'medium' | 'low'
+    customPriority?: 'high' | 'medium' | 'low',
+    // 2026-10-21：分派弹窗人工指定的任务类型（优先于自动映射）
+    taskTypeOverride?: string
   ): Task | null => {
-    const problem = storeProblems.find(p => p.id === problemId);
+    // 2026-10-22：problemId 现在可能是 'PRB'+时间戳 字符串（后端 problems.id 真实形态），
+    //   而 store 里的 id 同样是字符串；用 String 比较避免数字/字符串混型时静默匹配不到。
+    const problem = storeProblems.find(p => String(p.id) === String(problemId));
     if (!problem) return null;
 
     const issueText = getIssueText(problem);
     const severity = getIssueSeverity(problem);
 
-    // 判断问题类型
-    const getProblemType = (text: string): { type: any; typeName: string } => {
-      if (text.includes('虫') || text.includes('蚜')) return { type: 'pesticide', typeName: '植保' };
-      if (text.includes('病') || text.includes('斑') || text.includes('灰霉')) return { type: 'pesticide', typeName: '植保' };
-      if (text.includes('水') || text.includes('旱')) return { type: 'irrigation', typeName: '灌溉' };
-      if (text.includes('肥')) return { type: 'fertilization', typeName: '施肥' };
-      return { type: 'other', typeName: '其他' };
-    };
+    // 2026-10-21：任务类型改为「巡查类型 + 问题分类」映射，
+    //   关键词猜测降级为兜底 —— 此前设备故障会被派成施肥任务。
+    const resolvedType = taskTypeOverride
+      ? { type: taskTypeOverride, typeName: getTaskTypeName(taskTypeOverride) }
+      : resolveProblemTaskType({
+          inspectionType: problem.inspectionType || problem.inspection_type,
+          issueCategories: problem.issueCategories || problem.issue_categories,
+          issueText,
+        });
 
     // 确定优先级
     const priority: Task['priority'] = customPriority || SEVERITY_PRIORITY_MAP[severity] || 'medium';
@@ -261,8 +268,8 @@ export function useProblemDispatch() {
     // 通过 useTasks.createTask 创建任务
     const newTask = createTask({
       title: `【问题处理】${issueText.slice(0, 30)}`,
-      type: getProblemType(issueText).type,
-      typeName: getProblemType(issueText).typeName,
+      type: resolvedType.type,
+      typeName: resolvedType.typeName,
       priority,
       status: 'pending',
       batchId: '',
@@ -327,14 +334,16 @@ export function useProblemDispatch() {
   // 批量分派问题
   const batchDispatchProblems = useCallback((
     dispatches: Array<{
-      problemId: number;
+      problemId: number | string;
       assigneeId: string;
       assigneeName: string;
       dispatcherId?: string;
       dispatcherName?: string;
     }>,
     expectedCompletion?: string,
-    requiredFeedback?: string[]
+    requiredFeedback?: string[],
+    // 2026-10-21：批量分派同样支持人工指定任务类型
+    taskTypeOverride?: string
   ): Task[] => {
     const createdTasks: Task[] = [];
     dispatches.forEach(dispatch => {
@@ -345,7 +354,9 @@ export function useProblemDispatch() {
         dispatch.dispatcherId || 'U001',
         dispatch.dispatcherName || '系统管理员',
         expectedCompletion,
-        requiredFeedback
+        requiredFeedback,
+        undefined,
+        taskTypeOverride
       );
       if (task) {
         createdTasks.push(task);
@@ -356,7 +367,7 @@ export function useProblemDispatch() {
 
   // 更新问题处理结果
   const updateProblemResult = useCallback((
-    problemId: number,
+    problemId: number | string,
     handleResult: string
   ) => {
     updateProblemInStore(problemId, {
@@ -368,7 +379,7 @@ export function useProblemDispatch() {
 
   // 接单问题
   const acceptProblem = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string
   ) => {
@@ -398,7 +409,7 @@ export function useProblemDispatch() {
 
   // 拒绝问题
   const rejectProblem = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string,
     reason: string
@@ -433,7 +444,7 @@ export function useProblemDispatch() {
 
   // 提交反馈
   const submitProblemFeedback = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string,
     feedback: {
@@ -469,7 +480,7 @@ export function useProblemDispatch() {
 
   // 记录进度
   const addProgressRecord = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string,
     progress: number,
@@ -501,7 +512,7 @@ export function useProblemDispatch() {
 
   // 验收完成
   const approveProblemCompletion = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string,
     comment?: string
@@ -538,7 +549,7 @@ export function useProblemDispatch() {
 
   // 验收返工
   const rejectAcceptance = useCallback((
-    problemId: number,
+    problemId: number | string,
     operatorId: string,
     operatorName: string,
     reason: string
@@ -587,7 +598,7 @@ export function useProblemDispatch() {
   }, [storeProblems, updateProblemInStore, updateTaskStatus, tasks]);
 
   // 获取问题流转记录
-  const getProblemFlowRecords = useCallback((problemId: number): ProblemFlowRecord[] => {
+  const getProblemFlowRecords = useCallback((problemId: number | string): ProblemFlowRecord[] => {
     const problem = storeProblems.find(p => p.id === problemId);
     return getFlowRecords(problem!) as any;
   }, [storeProblems]);
@@ -595,9 +606,14 @@ export function useProblemDispatch() {
   // 获取员工列表
   const storeWorkers = useWorkerStore((s) => s.workers);
   const workerList = useMemo(() => {
+    // 2026-10-22：status 取值有中英两套 —— 后端 employees 表与 /labor/workers/active
+    //   返回的是英文 'active'（labor.repository.findActiveEmployees 里 WHERE status='active'），
+    //   而前端多处按中文 '在职' 过滤 → 候选执行人列表恒为空，
+    //   分派弹窗显示「暂无可用执行人」且「确认分派」永远禁用（问题分派整条链路不可用）。
+    //   口径与 useWorkerPersonnel / AddOperationRecordModal 的 legacyActive 保持一致。
+    const legacyActive = 'active' as string;
     const filtered = storeWorkers
-      // 2026-10-11：Worker.status 取值为中文枚举（在职/离职/退休），原 'active' 恒不成立 → 候选执行人列表一直为空
-      .filter(w => w.status === '在职')
+      .filter(w => w.status === '在职' || w.status === legacyActive)
       .map(w => ({
         id: w.id,
         workerId: w.workerId,

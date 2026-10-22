@@ -58,6 +58,18 @@ export interface InspectionData {
   update_time?: string;
   updateTime?: string;
   updatedAt?: string;
+  // 2026-10-21（P2a）：巡查计划 / 任务关联 + 检查项结果 + 记录版本 + 检查区域
+  inspection_plan_id?: string;
+  inspectionPlanId?: string;
+  inspection_task_id?: string;
+  inspectionTaskId?: string;
+  checklist_results?: string;
+  checklistResults?: Array<{ key: string; status: 'ok' | 'issue' | 'na'; note?: string }>;
+  record_version?: number;
+  recordVersion?: number;
+  area?: string;
+  /** 2026-10-21（P1b）：结构化问题分类（与 issueCategories 同源，分派映射任务类型用） */
+  issueCategories?: string[];
 }
 
 /** 后端→前端字段映射 */
@@ -70,6 +82,10 @@ function normalize(db: Record<string, unknown>): InspectionData {
     check_result: 'checkResult', issue_severity: 'issueSeverity',
     issue_text: 'issueText', feedback_users: 'feedbackUsers',
     create_time: 'createdAt', update_time: 'updatedAt',
+    // 2026-10-21（P2a）
+    inspection_plan_id: 'inspectionPlanId', inspection_task_id: 'inspectionTaskId',
+    checklist_results: 'checklistResults', record_version: 'recordVersion',
+    issue_categories: 'issueCategories',
   };
   const r: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(db)) {
@@ -88,6 +104,16 @@ function normalize(db: Record<string, unknown>): InspectionData {
     try { r.images = JSON.parse(r.images as string); } catch { r.images = []; }
   }
   if (!Array.isArray(r.images)) r.images = [];
+  // 2026-10-21（P2a）：检查项结果 / 问题分类在 DB 里是 JSON 字符串，不解析则恒为空数组
+  for (const key of ['checklistResults', 'issueCategories'] as const) {
+    if (typeof r[key] === 'string' && r[key]) {
+      try {
+        const parsed = JSON.parse(r[key] as string);
+        r[key] = Array.isArray(parsed) ? parsed : [];
+      } catch { r[key] = []; }
+    }
+    if (!Array.isArray(r[key])) r[key] = [];
+  }
   // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
   return r as unknown as InspectionData;
 }

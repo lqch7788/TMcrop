@@ -48,6 +48,8 @@ const PROBLEM_DB_COLUMNS = new Set<string>([
   'expected_completion', 'remarks', 'images', 'source_module', 'source_id',
   'source_detail', 'rectification_progress', 'recheck_required', 'recheck_result', 'recheck_at',
   'rechecker_id', 'recurrence_count', 'tenant_id',
+  // 2026-10-21：来源巡查类型 / 结构化问题分类（分派映射任务类型用）
+  'inspection_type', 'issue_categories',
 ]);
 
 /**
@@ -147,6 +149,8 @@ router.post('/', (req: Request, res: Response) => {
       expectedCompletion: 'expected_completion',
       sourceModule: 'source_module', sourceDetail: 'source_detail',
       cropName: 'crop_name',
+      // 2026-10-21：巡查类型 / 问题分类（分派映射任务类型）
+      inspectionType: 'inspection_type', issueCategories: 'issue_categories',
     };
     for (const [camel, snake] of Object.entries(POST_FIELD_MAP)) {
       if (body[camel] !== undefined && body[snake] === undefined) {
@@ -172,6 +176,8 @@ router.post('/', (req: Request, res: Response) => {
       // 其他
       completion_time, expected_completion, remarks, images,
       source_module, source_id, source_detail,
+      // 2026-10-21：巡查类型 / 问题分类
+      inspection_type, issue_categories,
     } = body;
 
     const newId = id || `PRB${Date.now()}`;
@@ -207,8 +213,9 @@ router.post('/', (req: Request, res: Response) => {
         rejected_by, rejected_reason, rejected_time,
         completion_time, expected_completion, remarks, images,
         source_module, source_id, source_detail,
+        inspection_type, issue_categories,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId, finalProblemCode, problem_type, title, description, greenhouse_name, greenhouse_id || '',
       reporter_id, reporter_name, assignee_id, assignee_name, priority || 'medium', normalizeProblemStatus(status),
@@ -221,6 +228,9 @@ router.post('/', (req: Request, res: Response) => {
       rejected_by || '', rejected_reason || '', rejected_time || '',
       completion_time || '', expected_completion || '', remarks || '', typeof images === 'string' ? images : JSON.stringify(images || []),
       source_module || '', source_id || '', source_detail || '',
+      // 2026-10-21：巡查类型 / 问题分类（JSON 数组统一序列化）
+      inspection_type || '',
+      typeof issue_categories === 'string' ? issue_categories : JSON.stringify(issue_categories || []),
       now, now,
     ]);
 
@@ -286,6 +296,10 @@ router.put('/:id', (req: Request, res: Response) => {
     }
     if (updates.feedback_data !== undefined && typeof updates.feedback_data !== 'string') {
       updates.feedback_data = JSON.stringify(updates.feedback_data);
+    }
+    // 2026-10-21：问题分类为 JSON 数组
+    if (updates.issue_categories !== undefined && typeof updates.issue_categories !== 'string') {
+      updates.issue_categories = JSON.stringify(updates.issue_categories);
     }
 
     const db = getDatabase();

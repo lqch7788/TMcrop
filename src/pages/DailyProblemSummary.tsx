@@ -20,7 +20,7 @@ import {
   useExport,
 } from '../components/summary';
 import { useDailyProblemSummary, useProblemDispatch, usePersistentProblems } from '../hooks';
-import { getProblems, dispatchTempTaskForProblem, type Problem as ApiProblem } from '../services/apiProblemService';
+import { getProblems, type Problem as ApiProblem } from '../services/apiProblemService';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
 import { problemStatusToCN, isProblemStatus } from '../utils/problemStatus';
 import type { TableColumn } from '../components/summary/types';
@@ -52,7 +52,10 @@ function mapApiProblemToEntry(p: ApiProblem): ProblemEntry {
   // 用 unknown cast 取值，兼容两种取值（priority 英文 / severity 中文历史数据）
   const raw = p as unknown as { priority?: string; severity?: string };
   return {
-    id: typeof p.id === 'string' ? parseInt(p.id, 10) || 0 : Number(p.id),
+    // 2026-10-22：后端 problems.id 是 'PRB'+时间戳 的字符串（DB 中全部如此），
+    //   原 `parseInt(p.id, 10) || 0` 把它解析成 0 —— 本页所有问题的 id 都变成 0，
+    //   按 id 分派/查找必然落空。直接透传原始 id。
+    id: p.id,
     problemCode: p.problemCode,
     greenhouseId: p.greenhouseId || '',
     greenhouseName: p.greenhouseName || '-',
@@ -722,23 +725,18 @@ export default function DailyProblemSummary({ hideHeader = false, dateRange }: D
                 onClick={async () => {
                   if (!selectedWorker || !dispatchModal.problem) return;
                   const problem = dispatchModal.problem;
-                  const problemIdStr = String(problem.id);
                   setDispatching(true);
                   try {
-                    // P1-1：先调后端真正派单（V2.1 铁律：API 直连）
-                    const result = await dispatchTempTaskForProblem(problemIdStr, {
-                      assigneeId: selectedWorker.id,
-                      assigneeName: selectedWorker.name,
-                      title: `[问题]${problem.issueText.slice(0, 30)}`,
-                      greenhouseName: problem.greenhouseName,
-                      urgency: problem.issueSeverity === '严重' ? 'urgent' : problem.issueSeverity === '中等' ? 'high' : 'normal',
-                      description: problem.issueText,
-                    });
-                    if (!result) {
-                      throw new Error('后端返回为空');
+                    // 2026-10-21：改为只走 useProblemDispatch.dispatchProblem 一条路径。
+                    //   原先这里先调 POST /problems/:id/dispatch-temp（写一条 farm_tasks），
+                    //   再调 dispatchProblem（又写一条 farm_tasks）—— 同一问题双派，
+                    //   且前者 task_type 恒为 'other'，绕开了「巡查类型 + 问题分类」映射。
+                    //   dispatchProblem 内部 createTask → farmTaskStore.addTask → POST /farm-tasks，
+                    //   并同步问题状态与流转记录。
+                    const created = dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
+                    if (!created) {
+                      throw new Error('问题不存在或分派失败');
                     }
-                    // 后端派单成功 → 再触发本地 lifecycle 记录（保持兼容性）
-                    dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
                     setDispatchModal({ isOpen: false, problem: null });
                     setSelectedWorker(null);
                     setDetailModal({ isOpen: false, data: null });

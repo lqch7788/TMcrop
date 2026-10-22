@@ -21,6 +21,8 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+// 2026-10-21 P2c：巡查记录完成前置校验（与 farmTask.ts 成对，防路由顺序开口）
+import { assertInspectionRecordBeforeComplete } from '../lib/inspectionRecordGuard';
 
 const router = Router();
 
@@ -32,12 +34,21 @@ function updateProgress(
   newPct: number,
   userId: string | undefined,
   eventType: 'start' | 'pause' | 'resume' | 'complete' | 'progress'
-): { success: boolean; progressPct: number; autoCompleted: boolean; message?: string } {
+): { success: boolean; progressPct: number; autoCompleted: boolean; message?: string; code?: string } {
   if (newPct < 0 || newPct > 100) {
     return { success: false, progressPct: 0, autoCompleted: false, message: 'pct 必须在 0-100' };
   }
 
   const db = getDatabase();
+
+  // 2026-10-21 P2c：进度推到 100% 会自动置 completed（见下方 autoCompleted），
+  //   这条路径此前完全绕过验收校验 —— 巡查计划任务不提交记录也能「完成」。
+  if (newPct >= 100) {
+    const violation = assertInspectionRecordBeforeComplete(db, taskId);
+    if (violation) {
+      return { success: false, progressPct: 0, autoCompleted: false, message: violation, code: 'INSPECTION_RECORD_REQUIRED' };
+    }
+  }
 
   // 读取当前进度（用于只增不减 + 返回最新值）
   const currentResult = db.exec('SELECT progress_pct, status FROM farm_tasks WHERE id = ?', [taskId]);
@@ -72,7 +83,7 @@ function updateProgress(
     if (userId) {
       db.exec(
         `INSERT INTO task_operation_records
-         (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, created_at)
+         (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, action_time)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
         [
           `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -108,17 +119,31 @@ function updateProgress(
 router.post('/:id/progress', (req: Request, res: Response): void => {
   try {
     const { id } = req.params;
-    const { pct } = req.body as { pct?: number };
+    // 2026-10-21 P2c：此前只读 pct，而前端 useTasks 发送的是 {progress, status}
+    //   → 永远命中「pct 必填」400，任务进度更新整条链路不可用。
+    //   现两个键都接受（pct 优先），保持旧调用方兼容。
+    const body = req.body as { pct?: number; progress?: number };
+    const raw = body.pct !== undefined && body.pct !== null ? body.pct : body.progress;
     const userId = (req as Request & { user?: { userId?: string } }).user?.userId;
 
-    if (pct === undefined || pct === null) {
-      res.status(400).json({ success: false, error: 'pct 必填' });
+    if (raw === undefined || raw === null) {
+      res.status(400).json({ success: false, error: 'pct（或 progress）必填' });
+      return;
+    }
+    const pct = Number(raw);
+    if (Number.isNaN(pct)) {
+      res.status(400).json({ success: false, error: '进度必须是数字' });
       return;
     }
 
     const result = updateProgress(id, pct, userId, 'progress');
     if (!result.success) {
-      res.status(400).json({ success: false, error: result.message });
+      const isRecordRequired = result.code === 'INSPECTION_RECORD_REQUIRED';
+      res.status(isRecordRequired ? 409 : 400).json({
+        success: false,
+        error: result.message,
+        ...(result.code ? { code: result.code } : {}),
+      });
       return;
     }
     res.json({
@@ -144,7 +169,12 @@ router.post('/:id/complete', (req: Request, res: Response): void => {
     const userId = (req as Request & { user?: { userId?: string } }).user?.userId;
     const result = updateProgress(id, 100, userId, 'complete');
     if (!result.success) {
-      res.status(400).json({ success: false, error: result.message });
+      const isRecordRequired = result.code === 'INSPECTION_RECORD_REQUIRED';
+      res.status(isRecordRequired ? 409 : 400).json({
+        success: false,
+        error: result.message,
+        ...(result.code ? { code: result.code } : {}),
+      });
       return;
     }
     res.json({
@@ -210,7 +240,7 @@ router.post('/:id/pause', (req: Request, res: Response): void => {
       if (userId) {
         db.exec(
           `INSERT INTO task_operation_records
-           (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, reason, created_at)
+           (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, reason, action_time)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
           [
             `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -265,7 +295,7 @@ router.post('/:id/resume', (req: Request, res: Response): void => {
       if (userId) {
         db.exec(
           `INSERT INTO task_operation_records
-           (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, created_at)
+           (id, task_id, task_code, action, progress, from_status, to_status, operator_id, operator_name, action_time)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
           [
             `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,

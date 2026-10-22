@@ -9,7 +9,7 @@ import cors from './middleware/cors';
 import { requestLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
-import { initDatabase, saveDatabase } from './db/index';
+import { initDatabase, saveDatabase, getDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
 import path from 'path';
 import fs from 'fs';
@@ -349,6 +349,24 @@ async function start() {
       }
     } catch (e: any) {
       console.warn('[fixSchemaColumns] 启动补齐失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-10-21 P2b：巡查计划启动补齐 —— 对每个 active 计划补一次未来窗口的实例任务。
+    // 顺序铁律：必须在 fixSchemaColumns 之后（inspection_plans 表与 farm_tasks 新列由它建），
+    //   且在 app.listen 之前（避免 API 已可访问但窗口还没补，列表页数对不上）。
+    // 幂等：backfillAllPlans → occurrenceExists 预查 + uk_farm_tasks_plan_occurrence 唯一索引，
+    //   重启重复跑不会产生重复任务。单条计划失败不中断，但必须打印「成功 N / 失败 M」。
+    try {
+      const { backfillAllPlans } = await import('./services/inspectionPlanService');
+      const planResult = await backfillAllPlans(getDatabase());
+      console.log(
+        `[inspectionPlan] 启动窗口补齐：计划 ${planResult.plans} 个，新增实例 ${planResult.created} 条，失败 ${planResult.failed} 个`
+      );
+      if (planResult.failed > 0) {
+        console.warn(`[inspectionPlan] 有 ${planResult.failed} 个计划补齐失败，其窗口实例可能缺失，需人工检查`);
+      }
+    } catch (e: any) {
+      console.warn('[inspectionPlan] 启动窗口补齐失败（不影响主流程）:', e?.message || e);
     }
 
     // 2026-08-14：启动时回填种植"已入库量"（plantings.harvest_to_inventory_qty）

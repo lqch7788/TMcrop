@@ -176,6 +176,9 @@ export type { Worker } from '../types';
 
 export { useInspectionDataStore } from './useInspectionDataStore';
 export type { InspectionData } from './useInspectionDataStore';
+// 2026-10-21 P3：巡查计划（模板）Store，与巡查记录（实例）分开
+export { useInspectionPlanStore, parsePlanChecklist, describePlanFrequency } from './useInspectionPlanStore';
+export type { InspectionPlan, PlanOccurrence, PlanStats, PlanGenerateResult, PlanChecklistItem } from './useInspectionPlanStore';
 
 export { useProblemStore } from './useProblemStore';
 export type { ProblemData } from './useProblemStore';

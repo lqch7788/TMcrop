@@ -57,12 +57,14 @@ function safeAddColumn(db: any, table: string, column: string, typeDef: string, 
 /**
  * 安全 CREATE INDEX（用 IF NOT EXISTS 幂等）
  */
-function safeCreateIndex(db: any, name: string, sql: string) {
+function safeCreateIndex(db: any, name: string, sql: string): boolean {
   try {
     db.run(sql);
     seedLog.info(`✓ 索引 ${name} 已就绪`);
+    return true;
   } catch (e: any) {
     seedLog.skip(`• 索引 ${name}: ${e.message}`);
+    return false;
   }
 }
 
@@ -227,6 +229,28 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
   }
 
+  // ============ problems（2026-10-21 巡查类型 / 问题分类）============
+  // 背景：问题分派此前只能用 issue_text 做关键词猜测任务类型（实测设备故障被派成施肥）。
+  //   补两列保存来源巡查的类型与结构化问题分类，供分派时按映射选类型。
+  addedColumns += safeAddColumn(db, 'problems', 'inspection_type', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'problems', 'issue_categories', 'TEXT', "'[]'") ? 1 : 0;
+
+  // ============ P2a：巡查计划 ↔ 农事任务 ↔ 巡查记录 三向关联 ============
+  // 背景：巡查计划（模板）实例化成农事任务后，执行人提交巡查记录，
+  //   三者必须能互相反查，否则「计划有没有被执行」无法验证、统计口径算不出。
+  //   现有表没有任何计划概念，这 6 列是整条链路的地基。
+  // farm_tasks 两列：来源计划 + 该实例的执行日（幂等与查重的判定依据）。
+  addedColumns += safeAddColumn(db, 'farm_tasks', 'inspection_plan_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'farm_tasks', 'plan_occurrence_date', 'TEXT') ? 1 : 0;
+  // inspections 四列：来源计划 + 来源任务（1:1）+ 检查项结果 + 记录版本（乐观并发/返工重提）。
+  addedColumns += safeAddColumn(db, 'inspections', 'inspection_plan_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'inspections', 'inspection_task_id', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'inspections', 'checklist_results', 'TEXT', "'[]'") ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'inspections', 'record_version', 'INTEGER', '1') ? 1 : 0;
+  // 2026-10-21（P1a 已在前端加了 area 输入，这里补后端列）：
+  //   安全检查/其他巡查的「检查区域/场所」此前无处落库，前端提交后被静默丢弃。
+  addedColumns += safeAddColumn(db, 'inspections', 'area', 'TEXT') ? 1 : 0;
+
   // ============ task_operation_records（2026-10-21 流转记录追溯增强）============
   // 背景：用户要求「方便后续对所有任务进行追溯查询」。现有记录缺三类信息：
   //   1) 执行人快照 —— 任务被重派后，历史记录只能查到"当前执行人"，无法回答"当时是谁在干"
@@ -274,6 +298,50 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   addedColumns += safeAddColumn(db, 'pesticide_records', 'delete_reason', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'harvest_records', 'deleted_by', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'harvest_records', 'delete_reason', 'TEXT') ? 1 : 0;
+
+  // ============ 巡查计划表（P2a 新表）============
+  // 巡查计划是「模板」：定义谁、多久查一次、查什么、查多久；
+  // 实例化出来的执行单仍是 farm_tasks（不新建第二套任务/排班/状态系统）。
+  // 建表放在启动白名单通道（与 compliance_certificates 同款），
+  // 因为 initializeDatabase 只保证 schema.ts 里的表存在，两处都写才能覆盖「既有库 + 全新库」。
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS inspection_plans (
+        id TEXT PRIMARY KEY,
+        plan_code TEXT NOT NULL,
+        title TEXT NOT NULL,
+        inspection_type TEXT NOT NULL DEFAULT 'farm',
+        greenhouse_id TEXT, greenhouse_name TEXT,
+        crop_name TEXT,
+        equipment_id TEXT, equipment_name TEXT,
+        infrastructure_id TEXT, infrastructure_name TEXT,
+        area TEXT,
+        checklist TEXT DEFAULT '[]',
+        frequency TEXT NOT NULL DEFAULT 'weekly',
+        interval_value INTEGER DEFAULT 1,
+        weekdays TEXT DEFAULT '[]',
+        day_of_month INTEGER,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        window_days INTEGER DEFAULT 14,
+        default_time TEXT DEFAULT '09:00',
+        duration_hours REAL DEFAULT 1,
+        assignee_id TEXT, assignee_name TEXT,
+        team_id TEXT, team_name TEXT,
+        auto_schedule INTEGER DEFAULT 1,
+        shift_code TEXT,
+        pause_ranges TEXT DEFAULT '[]',
+        status TEXT DEFAULT 'active',
+        created_by TEXT, created_by_name TEXT,
+        create_time TEXT, update_time TEXT,
+        tenant_id INTEGER DEFAULT 1,
+        version INTEGER DEFAULT 1
+      )
+    `);
+    addedIndexes += 1;
+  } catch (e: any) {
+    seedLog.skip('• inspection_plans 表创建失败:', e?.message || e);
+  }
 
   // ============ P1-3 承诺达标合格证 ============
   // 《农产品质量安全承诺达标合格证管理办法》（2026-02-01 施行）
@@ -383,6 +451,50 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     `CREATE INDEX IF NOT EXISTS idx_material_executes_task ON material_executes(task_id)`
   );
   addedIndexes += 1;
+
+  // ============ P2a：巡查计划关联索引 ============
+  // 计划编号唯一
+  safeCreateIndex(db,
+    'uk_inspection_plans_code',
+    `CREATE UNIQUE INDEX IF NOT EXISTS uk_inspection_plans_code ON inspection_plans(plan_code)`
+  );
+  // 计划列表按「状态 + 起始日」过滤（对应 GET /inspection-plans 的默认查询）
+  safeCreateIndex(db,
+    'idx_inspection_plans_status',
+    `CREATE INDEX IF NOT EXISTS idx_inspection_plans_status ON inspection_plans(status, start_date)`
+  );
+  // 计划实例幂等：一个计划同一天只能有一条任务。
+  //   WHERE 子句排除 status='cancelled'，让「暂停后恢复、同日重建」不被历史取消记录堵死；
+  //   两列均要求非空，避免 NULL 绕过唯一约束。
+  //   safeCreateIndex 失败只写 skip 日志，故此处显式 console.error —— 约束缺失会导致重复生成任务。
+  if (!safeCreateIndex(db,
+    'uk_farm_tasks_plan_occurrence',
+    `CREATE UNIQUE INDEX IF NOT EXISTS uk_farm_tasks_plan_occurrence
+     ON farm_tasks(inspection_plan_id, plan_occurrence_date)
+     WHERE inspection_plan_id IS NOT NULL AND inspection_plan_id <> ''
+       AND plan_occurrence_date IS NOT NULL AND plan_occurrence_date <> ''
+       AND status <> 'cancelled'`
+  )) {
+    console.error('[fixSchemaColumns] uk_farm_tasks_plan_occurrence 创建失败：计划实例幂等约束缺失，重复生成将产生重复任务');
+  }
+  // 巡查记录 ↔ 任务 1:1：一个任务最多一条记录
+  if (!safeCreateIndex(db,
+    'uk_inspections_task',
+    `CREATE UNIQUE INDEX IF NOT EXISTS uk_inspections_task
+     ON inspections(inspection_task_id)
+     WHERE inspection_task_id IS NOT NULL AND inspection_task_id <> ''`
+  )) {
+    console.error('[fixSchemaColumns] uk_inspections_task 创建失败：巡查记录与任务 1:1 约束缺失');
+  }
+  safeCreateIndex(db,
+    'idx_inspections_plan',
+    `CREATE INDEX IF NOT EXISTS idx_inspections_plan ON inspections(inspection_plan_id)`
+  );
+  safeCreateIndex(db,
+    'idx_farm_tasks_plan_occurrence',
+    `CREATE INDEX IF NOT EXISTS idx_farm_tasks_plan_occurrence
+     ON farm_tasks(inspection_plan_id, plan_occurrence_date)`
+  );
 
   return { addedColumns, addedIndexes };
 }
