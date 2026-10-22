@@ -7,6 +7,7 @@ import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
 import { TaskFlowTimeline } from '../../../common/TaskFlowTimeline';
 import { useUserStore, useProblemStore } from '../../../../stores';
 import { isProblemAwaitingAcceptance } from '../../../../utils/problemStatus';
+import type { InspectionType } from '../../../../types/farm/common';
 // 2026-10-21：流转记录改用统一的 TaskFlowTimeline 组件
 //   （原 getFlowStatusClass / ACTION_LABELS / formatTime 随 inline 渲染一并移除）
 
@@ -14,7 +15,7 @@ import { isProblemAwaitingAcceptance } from '../../../../utils/problemStatus';
 interface InspectionRecord {
   id: string;
   recordCode: string;
-  inspectionType?: 'farm' | 'equipment' | 'infrastructure' | 'other';
+  inspectionType?: InspectionType;
   inspectorName: string;
   greenhouseName?: string;
   cropName?: string;
@@ -141,6 +142,9 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
           {record.inspectionType === 'infrastructure' && (
             <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full">设施</span>
           )}
+          {record.inspectionType === 'safety' && (
+            <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">安全</span>
+          )}
           {record.inspectionType === 'other' && (
             <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">其他</span>
           )}
@@ -166,6 +170,15 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
               <div>
                 <label className="text-xs text-blue-600">巡查区域</label>
                 <p className="font-semibold text-gray-900">{record.greenhouseName}</p>
+              </div>
+            )}
+
+            {/* 种植区域特有 */}
+            {/* 安全检查：检查区域/场所 */}
+            {record.inspectionType === 'safety' && (record as any).area && (
+              <div>
+                <label className="text-xs text-blue-600">检查区域/场所</label>
+                <p className="font-semibold text-gray-900">{(record as any).area}</p>
               </div>
             )}
 

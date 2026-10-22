@@ -331,7 +331,7 @@ export interface InspectionRecord {
   updateTime?: string;
   updateBy?: string;
   // 巡查类型（扩展字段，合并原 string 声明，避免重复属性）
-  inspectionType?: string | 'farm' | 'equipment' | 'infrastructure' | 'other';
+  inspectionType?: string | 'farm' | 'equipment' | 'infrastructure' | 'safety' | 'other';
   [key: string]: any;
   // 位置信息（二维码扫描）
   locationCode?: string;
@@ -342,6 +342,8 @@ export interface InspectionRecord {
   // 基础设施巡检专用
   infrastructureId?: string;
   infrastructureName?: string;
+  // 安全检查专用（2026-10-21）
+  area?: string;
   // 问题分类（多选）
   issueCategories?: string[];
   // 快速勾选的问题

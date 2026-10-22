@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TextArea } from '@/components/ui';
 import { AlertCircle, Camera, Clock, MapPin, Mic, Package, Save, Send, Upload, Wand2, Search, X } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
-import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
+import { SELECTABLE_TASK_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import type { TaskConfigValues } from '../hooks/useTaskTypeConfig';
 // 2026-10-21：真实必填校验用（此前 required 只画红星、不拦提交）
 import { useTaskTypeConfig } from '../hooks/useTaskTypeConfig';
@@ -519,7 +519,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                       <span className="text-gray-400 text-sm">请选择任务类型</span>
                     )}
                     {(newTask.types || []).map((typeValue: string) => {
-                      const type = FARM_OPERATION_TYPES.find(t => t.value === typeValue);
+                      const type = SELECTABLE_TASK_TYPES.find(t => t.value === typeValue);
                       return (
                         <span
                           key={typeValue}
@@ -544,7 +544,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </div>
                   {showTaskTypeDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {FARM_OPERATION_TYPES.map(t => (
+                      {SELECTABLE_TASK_TYPES.map(t => (
                         <Label
                           key={t.value}
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"

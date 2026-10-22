@@ -4,6 +4,7 @@
  */
 
 import { format, parse, addHours } from 'date-fns';
+import { resolveTaskTypeLabel } from '../types/farm/common';
 
 /** 任务类型 → 中文标签映射 */
 const TYPE_LABEL_MAP: Record<string, string> = {
@@ -30,9 +31,9 @@ const TYPE_LABEL_MAP: Record<string, string> = {
   cleaning: '清洁卫生',
 };
 
-/** 根据任务类型编码返回中文标签 */
+/** 根据任务类型编码返回中文标签（本地别名优先，兜底统一解析器） */
 export function getTypeLabel(type: string): string {
-  return TYPE_LABEL_MAP[type] || type;
+  return TYPE_LABEL_MAP[type] || resolveTaskTypeLabel(type);
 }
 
 /** 自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001） */
