@@ -662,7 +662,11 @@ export interface UseTasksReturn {
   ) => void;
 
   // 验收通过
-  acceptCompletion: (id: string, comments?: string) => void;
+  /**
+ * 验收通过（方案 §10.6：await 服务端成功后才更新本地状态）
+ * @returns true=已落库成功；false=被拒（本地状态未变，调用方应保持弹窗打开）
+ */
+  acceptCompletion: (id: string, comments?: string, actualArea?: number) => Promise<boolean>;
   /** 2026-10-11：acceptCompletion 的别名（AgricultureRecordPage 按该名调用，语义一致） */
   acceptTaskCompletion: (id: string, comments?: string, actualArea?: number) => void;
 
@@ -1306,12 +1310,12 @@ export function useTasks(): UseTasksReturn {
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 验收通过
-  const acceptCompletion = useCallback((id: string, comments?: string, actualArea?: number) => {
+  const acceptCompletion = useCallback(async (id: string, comments?: string, actualArea?: number): Promise<boolean> => {
     const task = tasks.find(t => t.id === id);
-    if (!task) return;
-    if (!validateTransition(task, 'completed')) { reportIllegalTransition(task, 'completed'); return; }
+    if (!task) return false;
+    if (!validateTransition(task, 'completed')) { reportIllegalTransition(task, 'completed'); return false; }
     // 2026-09-22：接入权限矩阵（verify 限 assigner / admin）
-    if (!ensureTaskPermission('verify', task)) return;
+    if (!ensureTaskPermission('verify', task)) return false;
 
     // 2026-09-21：最小权限校验 —— 执行人不得验收自己执行的任务。
     //   完整的角色权限体系需要先给 CurrentUser 建模 role 字段
@@ -1335,7 +1339,12 @@ export function useTasks(): UseTasksReturn {
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // P0-3：改用 enhancedApiClient.post
-    syncToApi(async () => {
+    // 2026-10-22（方案 §10.6）：改为 **await 成功后才更新本地状态**。
+    //   原先 syncToApi 是 fire-and-forget，本地无条件乐观置为 completed：
+    //   服务端返回 409（如「巡查任务尚未提交巡查记录」）时，界面显示已完成、
+    //   刷新后任务又变回待验收 —— 用户以为验收成功，实际没有。
+    //   syncToApi 失败时已弹 toast（含服务端真实原因），这里只需拒绝本地变更。
+    const synced = await syncToApi(async () => {
       await enhancedApiClient.post(`/farm-tasks/${id}/complete`, {
         // 2026-09-21：操作人改为当前登录用户。原先是 task.assignerId / assignerName，
         //   导致无论谁点验收，审计里记的都是派发人，事后无法追溯真实操作者。
@@ -1346,6 +1355,10 @@ export function useTasks(): UseTasksReturn {
         ...(actualArea !== undefined && actualArea !== null ? { actual_area: actualArea } : {}),
       });
     }, 'acceptCompletion');
+    if (!synced) {
+      // 服务端拒绝（409/400/500）：不改本地状态，验收弹窗由调用方保持打开
+      return false;
+    }
 
     // 更新考勤记录状态为已完成
     const attendanceRecord = attendance.find(a => a.taskId === task.id);
@@ -1384,6 +1397,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     } as any);
+    return true;
   }, [tasks, attendance, updateAttendance, createTaskRecord, saveTaskRecords]);
 
   // 验收驳回

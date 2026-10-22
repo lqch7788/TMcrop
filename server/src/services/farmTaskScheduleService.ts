@@ -124,19 +124,33 @@ export async function getSchedules(filters: ScheduleFilters = {}): Promise<FarmT
  * 获取待排班任务（已派工但未排班的农事任务）
  * @returns 待排班任务列表
  */
-export async function getUnscheduledTasks(): Promise<any[]> {
+export async function getUnscheduledTasks(date?: string): Promise<any[]> {
   try {
     const db = getDatabase();
 
-    const stmt = db.prepare(`
+    // 2026-10-22（审核 P3-5）：
+    //   · 传入 date 时按 plan_date 收敛（深链 ?date=…&taskId=… 用），不传保持原行为；
+    //   · JOIN 条件补 `status <> 'cancelled'` —— 任务被取消后排班行会被置 cancelled，
+    //     原 `fts.id IS NULL` 会因为仍存在 cancelled 行而不成立，任务永远进不了待排班列表。
+    let sql = `
       SELECT ft.*
       FROM farm_tasks ft
-      LEFT JOIN farm_task_schedules fts ON ft.id = fts.task_id
+      LEFT JOIN farm_task_schedules fts
+        ON ft.id = fts.task_id AND fts.status <> 'cancelled'
       WHERE ft.status IN ('pending', 'accepted')
         AND ft.assignee_id IS NOT NULL
+        AND ft.assignee_id <> ''
         AND fts.id IS NULL
-      ORDER BY ft.plan_date ASC, ft.plan_time ASC
-    `);
+    `;
+    const params: any[] = [];
+    if (date) {
+      sql += ' AND ft.plan_date = ?';
+      params.push(date);
+    }
+    sql += ' ORDER BY ft.plan_date ASC, ft.plan_time ASC';
+
+    const stmt = db.prepare(sql);
+    if (params.length > 0) stmt.bind(params);
 
     const tasks: any[] = [];
     while (stmt.step()) {

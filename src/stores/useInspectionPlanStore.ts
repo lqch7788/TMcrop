@@ -91,14 +91,39 @@ export interface PlanOccurrence {
   inspectionRecordCode?: string;
 }
 
-/** 计划统计（口径见方案 §8.3） */
+/**
+ * 计划统计（口径见方案 §8.3）
+ *
+ * 2026-10-22 审核返修：补齐 §8.3 规定的 8 项指标。
+ *   原实现只有 total/已提交/缺记录/执行率，且 total 把 cancelled 也算作「应执行」，
+ *   暂停或编辑取消的实例会让执行率虚低。
+ */
 export interface PlanStats {
   range: { from: string; to: string };
-  total: number;
-  byStatus: Record<string, number>;
-  submittedRecords: number;
-  missingRecords: number;
+  /** 应执行：按当前频率算出的窗口日期数 − 暂停区间日期数 */
+  expected: number;
+  /** 已生成：窗口内实例任务数（排除 cancelled） */
+  generated: number;
+  /** 已取消：窗口内 status='cancelled' 的实例数 */
+  cancelled: number;
+  /** 已排班：存在非 cancelled 排班行的 distinct 任务数 */
+  scheduled: number;
+  /** 已记录：存在巡查记录的 distinct 任务数 */
+  recorded: number;
+  /** 已验收：任务 completed 且存在记录 */
+  verified: number;
+  /** 逾期未执行：执行日已过、无记录、未取消未完成 */
+  overdue: number;
+  /** 未闭环问题：由该计划记录产生、状态未完成的问题 */
+  openProblems: number;
+  /** 执行率 = 已记录 / 应执行 */
   completionRate: number;
+
+  // ==== 兼容旧字段（旧版后端仍在返回，保留读取以防部署错位）====
+  total?: number;
+  byStatus?: Record<string, number>;
+  submittedRecords?: number;
+  missingRecords?: number;
 }
 
 /** 生成结果 */
@@ -124,7 +149,13 @@ interface InspectionPlanState {
   fetchPlans: (filters?: { status?: string; inspection_type?: string; keyword?: string }) => Promise<void>;
   fetchPlan: (id: string) => Promise<InspectionPlan | null>;
   createPlan: (payload: Record<string, unknown>) => Promise<{ plan: InspectionPlan; generate: PlanGenerateResult } | null>;
-  updatePlan: (id: string, payload: Record<string, unknown>) => Promise<{ plan: InspectionPlan; generate?: PlanGenerateResult; pause?: { cancelledTasks: string[] } } | null>;
+  updatePlan: (id: string, payload: Record<string, unknown>) => Promise<{
+    plan: InspectionPlan;
+    generate?: PlanGenerateResult;
+    pause?: { cancelledTasks: string[] };
+    resync?: { updated: number; cancelled: number; conflicts: Array<{ taskId: string; date: string; reason: string }> };
+    resyncError?: string;
+  } | null>;
   archivePlan: (id: string) => Promise<boolean>;
   generateOccurrences: (id: string, range?: { from?: string; to?: string }) => Promise<PlanGenerateResult | null>;
   fetchOccurrences: (id: string) => Promise<void>;
@@ -184,6 +215,8 @@ export const useInspectionPlanStore = create<InspectionPlanState>()((set, get) =
   updatePlan: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
+      // 2026-10-22（审核 P2-1）：enhancedApiClient 只返回响应里的 `data`，
+      //   而后端已把 pause / generate / resync 放进 data —— 这里从 data 对象上取。
       const res = await enhancedApiClient.put<any>(`/inspection-plans/${encodeURIComponent(id)}`, payload);
       const plan = res as InspectionPlan;
       set((state) => ({
@@ -193,8 +226,10 @@ export const useInspectionPlanStore = create<InspectionPlanState>()((set, get) =
       }));
       return {
         plan,
-        generate: (res as any).generate,
-        pause: (res as any).pause,
+        generate: (res as any)?.generate,
+        pause: (res as any)?.pause,
+        resync: (res as any)?.resync,
+        resyncError: (res as any)?.resyncError,
       };
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });

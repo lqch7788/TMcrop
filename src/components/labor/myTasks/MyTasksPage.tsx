@@ -395,16 +395,28 @@ export function MyTasksPage() {
     isOpen: boolean;
     task: any | null;
     existingRecord: { id: string; recordCode: string } | null;
-  }>({ isOpen: false, task: null, existingRecord: null });
+    /** true = 只读查看（已提交且非驳回态）；false = 填写或重提 */
+    readOnly: boolean;
+  }>({ isOpen: false, task: null, existingRecord: null, readOnly: false });
 
+  /**
+   * 打开巡查记录弹窗
+   *
+   * 2026-10-22（审核 P1-6）：要区分三种语义，原实现全走 resubmit：
+   *   · 无记录              → 首次提交
+   *   · 有记录 + 任务 rejected → 修改并重提（走 resubmit 端点）
+   *   · 有记录 + 其它状态      → **只读查看**（此时 resubmit 必 409「仅驳回态允许」）
+   */
   const openRecordModal = (task: any) => {
     const hasRecord = !!(task.inspectionRecordId || task.inspectionRecordCode);
+    const canResubmit = String(task.status) === 'rejected';
     setRecordModal({
       isOpen: true,
       task,
       existingRecord: hasRecord
         ? { id: task.inspectionRecordId, recordCode: task.inspectionRecordCode }
         : null,
+      readOnly: hasRecord && !canResubmit,
     });
   };
 
@@ -1098,16 +1110,31 @@ export function MyTasksPage() {
         task={recordModal.task ? {
           id: recordModal.task.id,
           taskCode: recordModal.task.taskCode,
+          // 2026-10-22（审核 P1-2）：不要在这里回落到 'farm' —— 后端以计划类型为准，
+          //   前端传 'farm' 只会在日志里制造混淆（后端已改为 plan > body）。
           inspectionType: recordModal.task.inspectionType,
-          greenhouseName: recordModal.task.greenhouseName,
+          // 2026-10-22（审核 P1-1）：映射对象里没有 greenhouseName，只有 field/location；
+          //   传 undefined 会让后端拿到空串，最终记录与问题都丢温室。
+          greenhouseName: recordModal.task.greenhouseName || recordModal.task.field || '',
           assigneeId: recordModal.task.assigneeId,
           assigneeName: recordModal.task.assigneeName,
-          planTime: recordModal.task.planStart,
-          planOccurrenceDate: recordModal.task.planStart?.slice(0, 10),
-          area: recordModal.task.area,
+          // 2026-10-22（审核 P1-1）：planStart 是 "2026-10-22 11:00"，
+          //   直接当 planTime 会被弹窗 .slice(0,5) 截成 "2026-"。
+          //   这里只取时间部分。
+          planTime: String(recordModal.task.planStart || '').split(' ')[1] || '',
+          planOccurrenceDate: recordModal.task.planOccurrenceDate
+            || String(recordModal.task.planStart || '').slice(0, 10),
+          area: recordModal.task.area || recordModal.task.location || '',
         } : null}
+        // 2026-10-22（审核 P1-3）：计划配置的检查项模板必须进执行表单，
+        //   否则「查什么」在执行侧完全丢失（checklistResults 恒为空数组）
+        checklist={(() => {
+          const list = recordModal.task?.typeConfig?.checklist;
+          return Array.isArray(list) ? list : [];
+        })()}
         existingRecord={recordModal.existingRecord}
-        onClose={() => setRecordModal({ isOpen: false, task: null, existingRecord: null })}
+        readOnly={recordModal.readOnly}
+        onClose={() => setRecordModal({ isOpen: false, task: null, existingRecord: null, readOnly: false })}
         onSubmitted={() => { setRefreshKey(prev => prev + 1); }}
       />
         </>

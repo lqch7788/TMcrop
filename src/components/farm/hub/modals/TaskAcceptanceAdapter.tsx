@@ -10,6 +10,7 @@ import { TaskAcceptanceModal } from './TaskAcceptanceModal';
 import { TaskInputUsageModal, type TaskInputUsageTarget } from './TaskInputUsageModal';
 import { Task, TaskRecord } from '../../../../types/task';
 import { getTaskRecords } from '../../../../services/apiFarmTaskService';
+import { enhancedApiClient } from '../../../../lib/apiClient';
 
 /** P0-3：施肥/用药类任务验收后提示补录实际用量 */
 function isInputUsageTask(task: Task): boolean {
@@ -25,10 +26,25 @@ interface TaskAcceptanceAdapterProps {
   tasks: Task[];
   /** 从父组件传入的任务记录获取函数 */
   getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
-  /** 验收通过 */
-  onAcceptCompletion: (taskId: string, comments?: string, actualArea?: number) => void;
+  /**
+   * 验收通过
+   * 2026-10-22（方案 §10.6）：返回 false 表示服务端拒绝（如巡查任务缺记录），
+   * 此时**不关闭**弹窗，让用户看到真实原因。
+   */
+  onAcceptCompletion: (taskId: string, comments?: string, actualArea?: number) => Promise<boolean> | void;
   /** 驳回返工 */
   onRejectForRework: (taskId: string, reason: string) => void;
+}
+
+/** 巡查记录摘要（验收弹窗展示用，方案 §10.6） */
+export interface InspectionRecordSummary {
+  id: string;
+  recordCode: string;
+  checklistResults: Array<{ key: string; status: 'ok' | 'issue' | 'na'; note?: string }>;
+  issueText: string;
+  issuePhotos: string[];
+  /** 该记录产生的问题中未闭环的数量 */
+  openProblemCount: number;
 }
 
 export function TaskAcceptanceAdapter({
@@ -45,11 +61,17 @@ export function TaskAcceptanceAdapter({
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   // P0-3：验收通过后待补录投入品的任务
   const [usageTask, setUsageTask] = useState<TaskInputUsageTarget | null>(null);
+  // 2026-10-22（方案 §10.6）：巡查计划任务的关联记录（无记录则禁止验收通过）
+  const [inspectionRecord, setInspectionRecord] = useState<InspectionRecordSummary | null>(null);
+  const [isPlanTask, setIsPlanTask] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!taskId) {
       setTask(null);
       setRecords([]);
+      setInspectionRecord(null);
+      setIsPlanTask(false);
       return;
     }
 
@@ -57,6 +79,9 @@ export function TaskAcceptanceAdapter({
     const foundTask = tasks.find((t) => t.id === taskId);
     if (foundTask) {
       setTask(foundTask);
+      // 巡查计划任务：必须先有巡查记录才能验收
+      const planId = (foundTask as unknown as { inspectionPlanId?: string }).inspectionPlanId;
+      setIsPlanTask(!!planId);
     }
 
     // 从后端 API 加载任务记录（优先），同时合并本地记录
@@ -76,6 +101,44 @@ export function TaskAcceptanceAdapter({
       .finally(() => {
         setIsLoadingRecords(false);
       });
+
+    // 2026-10-22：加载巡查记录摘要（无记录 / 有记录两种状态都要能显示）
+    let cancelled = false;
+    enhancedApiClient
+      .get<Array<Record<string, unknown>>>('/inspections?limit=500')
+      .then((list) => {
+        if (cancelled) return;
+        const hit = (Array.isArray(list) ? list : []).find(
+          (r) => String(r.inspectionTaskId || '') === String(taskId)
+        );
+        if (!hit) {
+          setInspectionRecord(null);
+          return;
+        }
+        const checklist = Array.isArray(hit.checklistResults)
+          ? (hit.checklistResults as InspectionRecordSummary['checklistResults'])
+          : [];
+        const photos = Array.isArray(hit.issuePhotos)
+          ? (hit.issuePhotos as string[])
+          : typeof hit.issuePhotos === 'string'
+            ? (() => { try { const p = JSON.parse(hit.issuePhotos as string); return Array.isArray(p) ? p : []; } catch { return []; } })()
+            : [];
+        setInspectionRecord({
+          id: String(hit.id || ''),
+          recordCode: String(hit.recordCode || hit.record_code || ''),
+          checklistResults: checklist,
+          issueText: String(hit.issueText || ''),
+          issuePhotos: photos,
+          openProblemCount: Number(
+            (hit as Record<string, unknown>).openProblemCount ?? 0
+          ),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setInspectionRecord(null);
+      });
+
+    return () => { cancelled = true; };
   }, [taskId, tasks, getTaskRecordsByTaskId]);
 
   // 合并本地记录和后端记录，按时间倒序
@@ -130,22 +193,30 @@ export function TaskAcceptanceAdapter({
     );
   };
 
-  const handleAccept = useCallback((comments?: string, actualArea?: number) => {
+  const handleAccept = useCallback(async (comments?: string, actualArea?: number) => {
     if (!task) return;
-    onAcceptCompletion(task.id, comments, actualArea);
-    // P0-3：施肥/用药任务先补录用量，关闭后再通知父组件验收完成
-    if (isInputUsageTask(task)) {
-      setUsageTask({
-        id: task.id,
-        taskCode: (task as any).taskCode,
-        type: (task as any).type,
-        typeName: (task as any).typeName,
-        greenhouseName: (task as any).greenhouseName,
-        crop: (task as any).crop || (task as any).cropName,
-      });
-      return;
+    // 2026-10-22（方案 §10.6）：await 服务端结果，失败则保持弹窗打开
+    setSubmitting(true);
+    try {
+      const result = onAcceptCompletion(task.id, comments, actualArea);
+      const ok = result instanceof Promise ? await result : true;
+      if (!ok) return;
+      // P0-3：施肥/用药任务先补录用量，关闭后再通知父组件验收完成
+      if (isInputUsageTask(task)) {
+        setUsageTask({
+          id: task.id,
+          taskCode: (task as any).taskCode,
+          type: (task as any).type,
+          typeName: (task as any).typeName,
+          greenhouseName: (task as any).greenhouseName,
+          crop: (task as any).crop || (task as any).cropName,
+        });
+        return;
+      }
+      onVerified();
+    } finally {
+      setSubmitting(false);
     }
-    onVerified();
   }, [task, onAcceptCompletion, onVerified]);
 
   const closeUsage = useCallback(() => {
@@ -184,6 +255,10 @@ export function TaskAcceptanceAdapter({
       onAccept={handleAccept}
       onReject={handleReject}
       onClose={onClose}
+      // 2026-10-22（方案 §10.6）：巡查计划任务必须展示关联记录，无记录禁止通过
+      inspectionRecord={inspectionRecord}
+      requiresInspectionRecord={isPlanTask}
+      submitting={submitting}
     />
   );
 }

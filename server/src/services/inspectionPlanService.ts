@@ -20,7 +20,7 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper'; // 仅路由层响应序列化用；本服务内部一律用 queryRows 保留蛇形列名
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
-import { generateId } from '../utils/id';
+import { generateId, maxNumericSuffix } from '../utils/id';
 import {
   computeOccurrences,
   validateFrequencyInput,
@@ -28,7 +28,7 @@ import {
   parseLocalDate,
   type PlanFrequencyInput,
 } from '../lib/inspectionPlanFrequency';
-import { autoAssignSchedule } from './farmTaskScheduleService';
+import { autoAssignSchedule, resolveEmployeeId } from './farmTaskScheduleService';
 
 // ========== 类型 ==========
 
@@ -199,24 +199,28 @@ export function nextPlanCode(db: any, ymd: string = formatLocalDateYYYYMMDD()): 
   const prefix = `XHJH${ymd}-`;
   const rows = queryRows<{ plan_code: string }>(
     db,
-    'SELECT plan_code FROM inspection_plans WHERE plan_code LIKE ? ORDER BY plan_code DESC LIMIT 1',
+    'SELECT plan_code FROM inspection_plans WHERE plan_code LIKE ?',
     [`${prefix}%`]
   );
-  const last = String(rows[0]?.plan_code || '');
-  const seq = last ? (parseInt(last.slice(-3), 10) || 0) + 1 : 1;
-  return `${prefix}${String(seq).padStart(3, '0')}`;
+  // 2026-10-22（审核 L3）：合并到 maxNumericSuffix —— 原 slice(-3) 在 4 位序号时取错位
+  const seq = maxNumericSuffix(rows.map((r) => String(r.plan_code || ''))) + 1;
+  return `${prefix}${String(seq).padStart(seq > 999 ? 4 : 3, '0')}`;
 }
 
 /** 任务编号 NS{YYYYMMDD}-{3位日序}，当日 MAX+1；>999 扩为 4 位（方案 §4.5） */
 export function nextTaskCode(db: any, ymd: string): string {
   const prefix = `NS${ymd}-`;
+  // 当日编号最多约 1000 条，全量取回在内存里比数值，代价可忽略
   const rows = queryRows<{ task_code: string }>(
     db,
-    'SELECT task_code FROM farm_tasks WHERE task_code LIKE ? ORDER BY task_code DESC LIMIT 1',
+    'SELECT task_code FROM farm_tasks WHERE task_code LIKE ?',
     [`${prefix}%`]
   );
-  const last = String(rows[0]?.task_code || '');
-  const n = last ? (parseInt(last.slice(last.lastIndexOf('-') + 1), 10) || 0) + 1 : 1;
+  // 2026-10-22（审核 L3）：不能只取字符串最大的一条。
+  //   ORDER BY task_code DESC 走字符串比较，"…-999" > "…-1000"（'9' > '1'），
+  //   当日第 1000 条会算成 1000 → 与已存在的 NS…-1000 撞唯一约束。
+  //   改为取当日全部编号后在内存里按数值求最大。
+  const n = maxNumericSuffix(rows.map((r) => String(r.task_code || ''))) + 1;
   return `${prefix}${String(n).padStart(n > 999 ? 4 : 3, '0')}`;
 }
 
@@ -288,8 +292,13 @@ export function listActivePlans(db: any): InspectionPlanRow[] {
   );
 }
 
-/** 计划对应的实例任务（含已取消，作为台账） */
-export function listOccurrences(db: any, planId: string): OccurrenceRow[] {
+/**
+ * 计划对应的实例任务（含已取消，作为台账）
+ *
+ * 2026-10-22（审核 L2）：加 LIMIT。计划跑一年后详情页会一次拉几百行；
+ *   默认 500 条与全站列表口径一致（apiLimits.LIST_FETCH_LIMIT），超出时由调用方分页。
+ */
+export function listOccurrences(db: any, planId: string, limit = 500): OccurrenceRow[] {
   return queryRows<OccurrenceRow>(
     db,
     `SELECT id AS task_id, task_code, task_title, task_type, status,
@@ -297,8 +306,9 @@ export function listOccurrences(db: any, planId: string): OccurrenceRow[] {
             estimated_hours, description, inspection_plan_id
      FROM farm_tasks
      WHERE inspection_plan_id = ? AND inspection_plan_id <> ''
-     ORDER BY plan_occurrence_date ASC`,
-    [planId]
+     ORDER BY plan_occurrence_date ASC
+     LIMIT ?`,
+    [planId, limit]
   );
 }
 
@@ -384,15 +394,33 @@ export function updatePlan(db: any, id: string, input: Partial<InspectionPlanInp
   for (const [key, value] of Object.entries(input)) {
     if (value === undefined) continue;
     const col = PLAN_UPDATABLE_COLUMNS[key];
+    // 2026-10-22（审核 L11）：status 不走通用字段更新。
+    //   生命周期（active/paused/archived）由 PUT 的专用分支与 DELETE 处理，
+    //   放进白名单会让 `PUT {status:'archived'}` 绕过「归档要取消未来实例」的副作用。
+    if (key === 'status') { dropped.push(key); continue; }
     if (!col) { dropped.push(key); continue; }
+
+    // 先算出要写的值，算不出合法值就整列跳过（不能先 push set 再 continue，否则
+    // sets 与 values 错位 → SQL 绑定参数个数不匹配）
+    let normalized: any;
+    if (key === 'checklist' || key === 'weekdays') {
+      normalized = typeof value === 'string' ? value : JSON.stringify(value || []);
+    } else if (key === 'autoSchedule') {
+      normalized = value === false || value === 0 ? 0 : 1;
+    } else if (key === 'windowDays' || key === 'intervalValue' || key === 'durationHours') {
+      // 2026-10-22（审核 L10）：Number(null)=0 会把「清空输入」写成 0。
+      //   windowDays=0 会被 generate 钳到 1 天、durationHours=0 会生成零时长任务 ——
+      //   语义上应是「不修改」，而不是「改成 0」。
+      if (value === null || value === '') continue;
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) { dropped.push(key); continue; }
+      normalized = n;
+    } else {
+      normalized = value as any;
+    }
+
     sets.push(`${col} = ?`);
-    if (key === 'checklist') values.push(typeof value === 'string' ? value : JSON.stringify(value || []));
-    else if (key === 'weekdays') values.push(typeof value === 'string' ? value : JSON.stringify(value || []));
-    else if (key === 'autoSchedule') values.push(value === false || value === 0 ? 0 : 1);
-    else if (key === 'windowDays') values.push(Number(value));
-    else if (key === 'intervalValue') values.push(Number(value));
-    else if (key === 'durationHours') values.push(Number(value));
-    else values.push(value as any);
+    values.push(normalized);
   }
 
   if (sets.length === 0) return { dropped };
@@ -406,11 +434,50 @@ export function updatePlan(db: any, id: string, input: Partial<InspectionPlanInp
   return { dropped };
 }
 
-/** 归档（软删除）：状态置 archived，不物理删除（方案 §7.5） */
-export function archivePlan(db: any, id: string): boolean {
+/**
+ * 归档（软删除）：状态置 archived，不物理删除（方案 §7.5）
+ *
+ * 2026-10-22（审核 M4）：归档必须同时取消**未来 pending 实例**。
+ *   原先只改计划状态 —— 归档后未来 14 天的实例仍是 pending、仍出现在「我的任务」、
+ *   仍要求执行人提交记录，而统计又把归档计划排除，形成「要求执行但不计入」的矛盾。
+ *   与 pause 同款处理：写原因、不物理删，历史台账保留。
+ */
+export function archivePlan(db: any, id: string): { cancelledTasks: string[] } {
   const now = new Date().toISOString();
-  db.run("UPDATE inspection_plans SET status = 'archived', update_time = ? WHERE id = ?", [now, id]);
-  return true;
+  const today = formatLocalDateISO();
+  const result = { cancelledTasks: [] as string[] };
+
+  runInTransaction(db, () => {
+    const targets = queryRows<{ id: string }>(
+      db,
+      `SELECT id FROM farm_tasks
+       WHERE inspection_plan_id = ? AND inspection_plan_id <> ''
+         AND status IN ('pending', 'accepted') AND plan_occurrence_date >= ?`,
+      [id, today]
+    );
+    if (targets.length > 0) {
+      const ids = targets.map((t) => t.id);
+      result.cancelledTasks = ids;
+      const ph = ids.map(() => '?').join(',');
+      db.run(
+        `UPDATE farm_tasks SET status = 'cancelled', cancelled_at = ?, cancelled_by = '巡查计划',
+                cancelled_reason = '计划已归档', update_time = ?
+         WHERE id IN (${ph})`,
+        [now, now, ...ids]
+      );
+      db.run(
+        `UPDATE farm_task_schedules SET status = 'cancelled', updated_at = ?
+         WHERE task_id IN (${ph}) AND status <> 'cancelled'`,
+        [now, ...ids]
+      );
+    }
+    db.run(
+      "UPDATE inspection_plans SET status = 'archived', update_time = ? WHERE id = ?",
+      [now, id]
+    );
+  });
+
+  return result;
 }
 
 export interface PauseResult {
@@ -486,10 +553,16 @@ export function pausePlan(db: any, plan: InspectionPlanRow, reason: string): Pau
  */
 export function resumePlan(db: any, plan: InspectionPlanRow): void {
   const now = new Date().toISOString();
+  // 2026-10-22（审核 M6）：暂停区间的 to 必须用**本地日期**。
+  //   now.substring(0,10) 取的是 UTC 日期，中国时区 00:00-07:59 恢复会写成「昨天」，
+  //   于是 pause_ranges 出现 {from:'2026-10-22', to:'2026-10-21'} 这种倒挂区间，
+  //   isDatePaused 的日期比较会把整段判成未暂停。同文件其它地方都用 formatLocalDateISO。
+  const today = formatLocalDateISO();
   const ranges = safeParseArray(plan.pause_ranges);
   for (let i = ranges.length - 1; i >= 0; i--) {
     const r = ranges[i];
-    if (r && !r.to) ranges[i] = { ...r, to: now.substring(0, 10) };
+    // 收口时保证 to >= from，避免历史脏区间继续倒挂
+    if (r && !r.to) ranges[i] = { ...r, to: r.from && r.from > today ? r.from : today };
   }
   db.run(
     `UPDATE inspection_plans SET status = 'active', pause_ranges = ?, update_time = ?, version = COALESCE(version,1)+1 WHERE id = ?`,
@@ -518,13 +591,13 @@ export interface ResyncResult {
  *   · 执行人/时间变化 → 更新任务并重排；冲突则**保留旧排班并记录**（不静默删）
  *   · 新频率多出的日期不在本函数生成（跨进程抢唯一索引不安全），由调用方再跑一次生成
  */
-export function resyncFutureOccurrences(
+export async function resyncFutureOccurrences(
   db: any,
   plan: InspectionPlanRow,
   next: Partial<InspectionPlanInput>,
   rangeFrom?: string,
   rangeTo?: string
-): ResyncResult {
+): Promise<ResyncResult> {
   const result: ResyncResult = { updated: [], conflicts: [], cancelled: [], toGenerate: [] };
   const today = formatLocalDateISO();
   const from = rangeFrom || (String(plan.start_date) > today ? String(plan.start_date) : today);
@@ -541,7 +614,19 @@ export function resyncFutureOccurrences(
   const windowDays = Math.min(Math.max(Number(next.windowDays ?? plan.window_days ?? 14), 1), MAX_WINDOW_DAYS);
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + windowDays);
-  const to = rangeTo || formatLocalDate(endDate);
+  // 2026-10-22（审核 M3）：终点不能只用窗口末端。
+  //   若用户此前用「生成排期」造了 90 天实例，再随便编辑一次计划（默认窗口 14 天），
+  //   第 15–90 天那些**仍符合频率**的 pending 实例会被判成「不再命中」而批量取消。
+  //   因此扫描终点取 max(窗口末端, 现有实例最远执行日)，保证只取消真正不命中新频率的日期。
+  const existingMaxRow = queryRows<{ d: string }>(
+    db,
+    `SELECT MAX(plan_occurrence_date) AS d FROM farm_tasks
+     WHERE inspection_plan_id = ? AND inspection_plan_id <> ''
+       AND status <> 'cancelled'`,
+    [plan.id]
+  )[0];
+  const existingMax = String(existingMaxRow?.d || '');
+  const to = rangeTo || (existingMax > formatLocalDate(endDate) ? existingMax : formatLocalDate(endDate));
 
   const expectedDates = new Set(computeOccurrences(freqInput, from, to));
   const newAssigneeId = next.assigneeId ?? plan.assignee_id ?? '';
@@ -550,6 +635,13 @@ export function resyncFutureOccurrences(
   const newDuration = Number(next.durationHours ?? plan.duration_hours ?? 1);
   const endTime = addHoursToTime(String(newDefaultTime), newDuration);
   const now = new Date().toISOString();
+
+  // 2026-10-22（审核 H3）：排班表的 worker_id 是 employees.id，
+  //   而计划表单把 assigneeId 填成了**姓名**。必须在事务外先归一化
+  //   （resolveEmployeeId 是异步的，事务体是同步的，不能放进去）。
+  const resolvedAssignee = newAssigneeId || newAssigneeName
+    ? await resolveEmployeeId(newAssigneeId, newAssigneeName)
+    : null;
 
   runInTransaction(db, () => {
     // 待同步的实例：未来 + pending + 无巡查记录
@@ -581,29 +673,46 @@ export function resyncFutureOccurrences(
       }
 
       // 命中频率：更新任务快照
+      // 2026-10-22（审核 P3-4）：标题/描述也一起更新 ——
+      //   生成时 task_title = `【巡查】${plan.title}`，若改名后不更新，
+      //   未来实例会一直显示旧计划名，执行人看到的和计划列表对不上。
       db.run(
         `UPDATE farm_tasks
-         SET assignee_id = ?, assignee_name = ?, plan_time = ?, plan_end = ?,
+         SET task_title = ?, task_content = ?,
+             assignee_id = ?, assignee_name = ?, plan_time = ?, plan_end = ?,
              estimated_hours = ?, update_time = ?
          WHERE id = ?`,
-        [newAssigneeId, newAssigneeName, newDefaultTime, `${row.plan_occurrence_date} ${endTime}`, newDuration, now, row.id]
+        [
+          `【巡查】${next.title ?? plan.title}`,
+          next.title ?? plan.title,
+          newAssigneeId, newAssigneeName, newDefaultTime,
+          `${row.plan_occurrence_date} ${endTime}`, newDuration, now, row.id,
+        ]
       );
       result.updated.push(row.id);
 
       // 排班同步：执行人变了就重排；冲突保留旧排班并记录
       if (newAssigneeId) {
+        if (!resolvedAssignee) {
+          result.conflicts.push({
+            taskId: row.id,
+            date: row.plan_occurrence_date,
+            reason: `执行人「${newAssigneeName || newAssigneeId}」不在员工档案中，保留原排班未改动`,
+          });
+          continue;
+        }
         const own = queryRows<{ id: string; worker_id: string }>(
           db,
           `SELECT id, worker_id FROM farm_task_schedules WHERE task_id = ? AND status <> 'cancelled' LIMIT 1`,
           [row.id]
         )[0];
-        if (own && own.worker_id !== newAssigneeId) {
+        if (own && own.worker_id !== resolvedAssignee.id) {
           // 同日该员工是否还有别的排班
           const conflict = queryRows<{ c: number }>(
             db,
             `SELECT COUNT(*) AS c FROM farm_task_schedules
              WHERE worker_id = ? AND plan_date = ? AND status <> 'cancelled' AND id <> ?`,
-            [newAssigneeId, row.plan_occurrence_date, own.id]
+            [resolvedAssignee.id, row.plan_occurrence_date, own.id]
           )[0]?.c ?? 0;
           if (conflict > 0) {
             result.conflicts.push({
@@ -615,7 +724,7 @@ export function resyncFutureOccurrences(
             db.run(
               `UPDATE farm_task_schedules SET worker_id = ?, worker_name = ?, updated_at = ?
                WHERE id = ?`,
-              [newAssigneeId, newAssigneeName, now, own.id]
+              [resolvedAssignee.id, resolvedAssignee.name, now, own.id]
             );
           }
         }
@@ -732,12 +841,22 @@ export async function generateOccurrences(
           plan.greenhouse_id || '', plan.greenhouse_name || '', plan.area || null, plan.crop_name || '',
           date, defaultTime, `${date} ${endTime}`, date,
           durationHours,
-          // 计划快照：设备/设施台账后续可能变，任务上留一份当时的检查项
+          // 计划快照：设备/设施台账后续可能变，任务上留一份当时的检查项与巡查对象。
+          // 2026-10-22（审核 P1-3/P1-4）：farm_tasks 没有 equipment_* 列，
+          //   若不在这里快照，「巡检哪台设备」在任务侧完全丢失 ——
+          //   执行人在「我的任务」看不到对象，记录里的 equipmentName 也只能是空。
           JSON.stringify({
             planId: plan.id,
             planCode: plan.plan_code,
             planName: plan.title,
             checklist: safeParseArray(checklistSnapshot),
+            inspectionTarget: {
+              equipmentId: plan.equipment_id || '',
+              equipmentName: plan.equipment_name || '',
+              infrastructureId: plan.infrastructure_id || '',
+              infrastructureName: plan.infrastructure_name || '',
+              area: plan.area || '',
+            },
           }),
           plan.id, plan.plan_code,
           plan.id, date,
@@ -760,9 +879,17 @@ export async function generateOccurrences(
   // 混进生成事务会形成长事务 + 嵌套落盘。
   if (plan.auto_schedule !== 0) {
     for (const date of result.created) {
+      // 2026-10-22（审核 H4）：必须排除 cancelled。
+      //   暂停→恢复（或重新生成已取消的日期）后，同一天会同时存在
+      //   「旧 cancelled 行 + 新 pending 行」；原查询无 status 过滤，
+      //   LIMIT 1 大概率取到较早的 cancelled 行 → 排班挂到已取消任务上，
+      //   新任务永远排不上，返回值却计入 scheduled++。
       const rows = queryRows<{ id: string }>(
         db,
-        'SELECT id FROM farm_tasks WHERE inspection_plan_id = ? AND plan_occurrence_date = ? LIMIT 1',
+        `SELECT id FROM farm_tasks
+         WHERE inspection_plan_id = ? AND plan_occurrence_date = ?
+           AND status <> 'cancelled'
+         ORDER BY rowid DESC LIMIT 1`,
         [plan.id, date]
       );
       const taskId = rows[0]?.id;

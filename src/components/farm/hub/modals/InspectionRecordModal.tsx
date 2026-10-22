@@ -7,7 +7,7 @@
  *
  * 表单状态与提交逻辑全部走 useInspectionRecordForm（与两处入口共用一份）。
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Input, Label, Modal, TextArea } from '@/components/ui';
 import {
   useInspectionRecordForm,
@@ -15,6 +15,7 @@ import {
   ISSUE_CATEGORIES,
 } from '@/hooks/useInspectionRecordForm';
 import { showAlert } from '@/lib/dialogService';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 export interface InspectionRecordModalProps {
   isOpen: boolean;
@@ -31,23 +32,68 @@ export interface InspectionRecordModalProps {
     planOccurrenceDate?: string | null;
     area?: string | null;
   } | null;
-  /** 已有记录 → 走重提；无记录 → 走首次提交 */
+  /** 已有记录 → 回填并走重提；无记录 → 走首次提交 */
   existingRecord?: { id: string; recordCode: string } | null;
+  /**
+   * 只读查看（2026-10-22 审核 P1-6）：
+   *   任务已有记录但不在「返工中」时，resubmit 必然 409「仅驳回态允许」。
+   *   这类场景应当只读展示原记录，而不是给一个必然失败的空白表单。
+   */
+  readOnly?: boolean;
   checklist?: Array<{ key: string; label: string; required?: boolean }>;
   onClose: () => void;
   onSubmitted?: () => void;
 }
 
 export function InspectionRecordModal({
-  isOpen, task, existingRecord, checklist = [], onClose, onSubmitted,
+  isOpen, task, existingRecord, readOnly = false, checklist = [], onClose, onSubmitted,
 }: InspectionRecordModalProps) {
-  const isResubmit = !!existingRecord;
-  const { form, update, toggleCategory, togglePreset, currentPresets, submitting, setSubmitting, reset } =
+  const isResubmit = !!existingRecord && !readOnly;
+  const { form, setForm, update, toggleCategory, togglePreset, currentPresets, submitting, setSubmitting, reset } =
     useInspectionRecordForm(task);
+  const [loadingRecord, setLoadingRecord] = useState(false);
 
   useEffect(() => {
     if (isOpen) reset();
   }, [isOpen, task?.id]);
+
+  // 2026-10-22（审核 P1-6）：有记录时把原记录回填进表单
+  //   （查看时直接读到内容；重提时基于原值修改，而不是从空白开始）
+  useEffect(() => {
+    if (!isOpen || !existingRecord?.id) return;
+    let cancelled = false;
+    setLoadingRecord(true);
+    enhancedApiClient
+      .get<any>(`/inspections/${encodeURIComponent(existingRecord.id)}`)
+      .then((raw) => {
+        if (cancelled || !raw) return;
+        const rec = (raw as any).data ?? raw;
+        const parseArr = (v: unknown): any[] => {
+          if (Array.isArray(v)) return v;
+          if (typeof v === 'string' && v) { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; } }
+          return [];
+        };
+        setForm({
+          result: String(rec.status || '') === 'normal' ? 'normal' : 'abnormal',
+          checklistResults: parseArr(rec.checklistResults),
+          issueCategories: parseArr(rec.issueCategories),
+          issuePresets: parseArr(rec.issuePresets),
+          issueText: String(rec.issueText || ''),
+          issueSeverity: (rec.issueSeverity || '中等') as '轻微' | '中等' | '严重',
+          createProblem: false,
+          weather: String(rec.weather || '晴'),
+          temperature: rec.temperature ? String(rec.temperature) : '',
+          humidity: rec.humidity ? String(rec.humidity) : '',
+          cropStatus: String(rec.cropStatus || '良好'),
+          area: String(rec.area || ''),
+          remarks: String(rec.remarks || ''),
+          checkTime: String(rec.checkTime || ''),
+        });
+      })
+      .catch(() => { /* 读取失败保持空表单，用户仍可编辑 */ })
+      .finally(() => { if (!cancelled) setLoadingRecord(false); });
+    return () => { cancelled = true; };
+  }, [isOpen, existingRecord?.id]);
 
   if (!isOpen || !task) return null;
 
@@ -87,7 +133,7 @@ export function InspectionRecordModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${isResubmit ? '修改并重提' : '填写'}巡查记录 - ${task.taskCode || ''}`}
+      title={`${readOnly ? '查看' : isResubmit ? '修改并重提' : '填写'}巡查记录 - ${task.taskCode || ''}`}
       size="lg"
       showFooter={false}
     >
@@ -274,11 +320,19 @@ export function InspectionRecordModal({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-5 pt-3 border-t border-gray-100">
-        <Button variant="outline" onClick={onClose}>取消</Button>
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? '提交中…' : isResubmit ? '重新提交' : '提交记录'}
-        </Button>
+      {/* 2026-10-22：footer 对齐系统（size=sm / 取消=secondary）；
+          只读模式只保留「关闭」，不提供必然失败的提交按钮 */}
+      <div className="flex items-center justify-end gap-3 mt-5 pt-3 border-t border-gray-200">
+        {readOnly ? (
+          <Button size="sm" variant="secondary" onClick={onClose}>关闭</Button>
+        ) : (
+          <>
+            <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
+            <Button size="sm" onClick={handleSubmit} disabled={submitting || loadingRecord}>
+              {submitting ? '提交中…' : isResubmit ? '重新提交' : '提交记录'}
+            </Button>
+          </>
+        )}
       </div>
     </Modal>
   );

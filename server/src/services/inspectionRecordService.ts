@@ -11,7 +11,7 @@
  * 列清单与 `/api/inspections` POST 保持一致（同一张表、同一批字段），
  * 刻意不新建第二套映射 —— 两份列清单必然漂移。
  */
-import { generateId } from '../utils/id';
+import { generateId, maxNumericSuffix } from '../utils/id';
 
 export interface InspectionRecordInput {
   /** 记录主键；不传则生成 */
@@ -164,9 +164,12 @@ export function nextRecordCode(db: any, ymd: string): string {
     'SELECT record_code FROM inspections WHERE record_code LIKE ? ORDER BY record_code DESC LIMIT 1'
   );
   stmt.bind([`${prefix}%`]);
-  let last = '';
-  if (stmt.step()) last = String((stmt.getAsObject() as { record_code?: string }).record_code || '');
+  // 2026-10-22（审核 L3）：按数值求最大，不能用字符串序（"-999" 会排在 "-1000" 之后 → 回绕撞唯一约束）
+  const codes: string[] = [];
+  while (stmt.step()) {
+    codes.push(String((stmt.getAsObject() as { record_code?: string }).record_code || ''));
+  }
   stmt.free();
-  const n = last ? (parseInt(last.slice(last.lastIndexOf('-') + 1), 10) || 0) + 1 : 1;
+  const n = maxNumericSuffix(codes) + 1;
   return `${prefix}${String(n).padStart(n > 999 ? 4 : 3, '0')}`;
 }

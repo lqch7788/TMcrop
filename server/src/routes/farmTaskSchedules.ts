@@ -38,9 +38,14 @@ router.get('/list', requireAuth, async (req, res) => {
  * 获取待排班任务
  * GET /unscheduled
  */
+// 2026-10-22（审核 P3-5）：`date` 参数此前被忽略，深链「?date=…&taskId=…」只有在任务
+//   恰好落在"无排班"集合时才会预选。这里把 date 透传给 service 用于按日期收敛候选集
+//   （不改变原有语义：不传 date 时行为与之前完全一致）。
 router.get('/unscheduled', requireAuth, async (req, res) => {
   try {
-    const tasks = await farmTaskScheduleService.getUnscheduledTasks();
+    const tasks = await farmTaskScheduleService.getUnscheduledTasks(
+      (req.query.date as string) || undefined
+    );
     res.json({ success: true, data: tasks });
   } catch (error) {
     console.error('获取待排班任务失败:', error);

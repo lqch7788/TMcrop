@@ -1,11 +1,20 @@
 /**
- * 巡查计划列表面板（2026-10-21 P3）
+ * 巡查计划列表面板（2026-10-21 P3 / 2026-10-22 审核返修）
  *
  * 与「巡查记录」并列展示在 InspectionTab 内，由父组件通过 CSS hidden 切换两个视图
  * （方案 §10.1：禁止条件渲染/卸载 —— 40+ Radix Select 同时卸载会触发渲染风暴，见既有事故）。
+ *
+ * 审核返修（2026-10-22）：
+ *   · window.confirm → showConfirm（系统唯一确认弹窗入口，Electron 兼容）
+ *   · 表头/行高/hover/工具栏对齐 InspectionTable + InspectionToolbar
+ *   · 状态徽章改模块 span 写法并复用全局文案（STATUS_MAP 体系）
+ *   · 操作按钮分主次（详情=link、编辑=ghost、暂停/恢复=outline、归档=danger 语义色），带图标
+ *   · 补加载态与错误态（store.error 此前从未展示，失败时用户只看到「暂无计划」）
+ *   · 截断单元格补 title
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Plus, RefreshCw, Play, Pause, Archive } from 'lucide-react';
 import {
   useInspectionPlanStore,
   describePlanFrequency,
@@ -13,8 +22,8 @@ import {
 } from '@/stores/useInspectionPlanStore';
 import { INSPECTION_TYPES, getInspectionTypeLabel } from '@/types/farm/common';
 import { InspectionPlanFormModal } from './InspectionPlanFormModal';
-import { InspectionPlanDetailDrawer } from './InspectionPlanDetailDrawer';
-import { showAlert } from '@/lib/dialogService';
+import { InspectionPlanDetailModal } from './InspectionPlanDetailModal';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface Props {
   onViewTask?: (taskId: string) => void;
@@ -24,15 +33,15 @@ interface Props {
   onScheduleTask?: (taskId: string, date: string) => void;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  paused: 'bg-amber-100 text-amber-700',
-  archived: 'bg-gray-200 text-gray-600',
+/** 计划状态 → 文案与配色（复用系统语义色，与任务状态同一套 token） */
+export const PLAN_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  active: { label: '运行中', color: 'text-green-600', bg: 'bg-green-100' },
+  paused: { label: '已暂停', color: 'text-amber-600', bg: 'bg-amber-100' },
+  archived: { label: '已归档', color: 'text-gray-500', bg: 'bg-gray-100' },
 };
-const STATUS_TEXT: Record<string, string> = { active: '运行中', paused: '已暂停', archived: '已归档' };
 
 export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, onScheduleTask }: Props) {
-  const { plans, isLoading, fetchPlans, archivePlan, updatePlan } = useInspectionPlanStore();
+  const { plans, isLoading, error, fetchPlans, archivePlan, updatePlan } = useInspectionPlanStore();
   const [keyword, setKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -56,19 +65,39 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
     );
   }), [plans, typeFilter, keyword]);
 
+  const reload = () => {
+    void fetchPlans({ status: statusFilter === 'all' ? undefined : statusFilter });
+  };
+
   const handleArchive = async (plan: InspectionPlan) => {
-    if (!window.confirm(`确认归档计划「${plan.title}」？\n归档后不再生成新的实例任务，已生成的历史实例保留。`)) return;
-    const ok = await archivePlan(plan.id);
-    showAlert(ok ? '计划已归档' : '归档失败');
+    const ok = await showConfirm(
+      `确认归档计划「${plan.title}」？\n归档后不再生成新的实例任务，已生成的历史实例保留为台账。`
+    );
+    if (!ok) return;
+    const done = await archivePlan(plan.id);
+    showAlert(done ? '计划已归档' : `归档失败：${useInspectionPlanStore.getState().error || '请稍后重试'}`);
+  };
+
+  const handleTogglePause = async (plan: InspectionPlan) => {
+    const isPaused = plan.status === 'paused';
+    const res = await updatePlan(plan.id, isPaused
+      ? { status: 'active' }
+      : { status: 'paused', pauseReason: '列表暂停' });
+    if (!res) {
+      showAlert(`操作失败：${useInspectionPlanStore.getState().error || '请稍后重试'}`);
+      return;
+    }
+    showAlert(isPaused
+      ? `已恢复，新增实例 ${res.generate?.created.length ?? 0} 条`
+      : `已暂停，取消未来实例 ${res.pause?.cancelledTasks.length ?? 0} 条`);
   };
 
   return (
     <div className="space-y-3">
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          onClick={() => { setEditing(null); setShowForm(true); }}
-        >
+        <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
+          <Plus className="w-4 h-4" />
           新建计划
         </Button>
         <Input
@@ -95,90 +124,111 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
             <SelectItem value="archived">已归档</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="ghost" onClick={() => { void fetchPlans({ status: statusFilter === 'all' ? undefined : statusFilter }); }}>
+        <Button size="sm" variant="ghost" onClick={reload} title="刷新">
+          <RefreshCw className="w-4 h-4" />
           刷新
         </Button>
-        <span className="text-sm text-slate-500 ml-auto">
-          共 {visible.length} 个计划
+        <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
+          共
+          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
+            {visible.length}
+          </span>
+          个计划
         </span>
       </div>
 
+      {/* 错误态：store 的 error 此前从未展示，请求失败时只看到「暂无数据」 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+          加载巡查计划失败：{error}
+          <Button size="sm" variant="ghost" className="ml-2 text-red-700" onClick={reload}>重试</Button>
+        </div>
+      )}
+
       {/* 列表 */}
-      {visible.length === 0 && !isLoading ? (
-        <div className="text-center text-sm text-slate-400 py-10 bg-white rounded-xl border border-gray-100">
+      {isLoading && visible.length === 0 ? (
+        <div className="text-center text-sm text-gray-500 py-10 bg-white rounded-xl shadow-sm border border-gray-100">
+          加载中…
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="text-center text-sm text-gray-400 py-10 bg-white rounded-xl shadow-sm border border-gray-100">
           暂无巡查计划。点击「新建计划」设置巡查频率后，系统会自动生成对应的巡查任务。
         </div>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl border border-gray-100">
+        <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-100">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-slate-600">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">编号</th>
-                <th className="px-3 py-2 text-left font-medium">名称</th>
-                <th className="px-3 py-2 text-left font-medium">类型</th>
-                <th className="px-3 py-2 text-left font-medium">巡查对象</th>
-                <th className="px-3 py-2 text-left font-medium">频率</th>
-                <th className="px-3 py-2 text-left font-medium">执行人</th>
-                <th className="px-3 py-2 text-left font-medium">实例数</th>
-                <th className="px-3 py-2 text-left font-medium">状态</th>
-                <th className="px-3 py-2 text-left font-medium">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">巡查对象</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">频率</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">执行人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实例数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {visible.map((plan) => (
-                <tr key={plan.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">{plan.planCode}</td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="text-blue-600 hover:text-blue-800 font-medium text-left"
-                      onClick={() => setDetail(plan)}
-                    >
-                      {plan.title}
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-slate-600">{getInspectionTypeLabel(plan.inspectionType)}</td>
-                  <td className="px-3 py-2 text-slate-600 max-w-[160px] truncate">
-                    {plan.equipmentName || plan.infrastructureName || plan.greenhouseName || plan.area || '全基地'}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{describePlanFrequency(plan)}</td>
-                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{plan.assigneeName || '-'}</td>
-                  <td className="px-3 py-2 text-slate-600">{plan.occurrenceCount ?? 0}</td>
-                  <td className="px-3 py-2">
-                    <Badge className={STATUS_STYLE[plan.status || 'active'] || 'bg-gray-100 text-gray-600'}>
-                      {STATUS_TEXT[plan.status || 'active'] || plan.status}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setDetail(plan)}>详情</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditing(plan); setShowForm(true); }}>编辑</Button>
-                      {plan.status === 'active' ? (
-                        <Button
-                          size="sm" variant="ghost"
-                          onClick={async () => {
-                            const res = await updatePlan(plan.id, { status: 'paused', pauseReason: '列表暂停' });
-                            showAlert(res ? '计划已暂停' : '暂停失败');
-                          }}
-                        >
-                          暂停
-                        </Button>
-                      ) : plan.status === 'paused' ? (
-                        <Button
-                          size="sm" variant="ghost"
-                          onClick={async () => {
-                            const res = await updatePlan(plan.id, { status: 'active' });
-                            showAlert(res ? `已恢复，新增实例 ${res.generate?.created.length ?? 0} 条` : '恢复失败');
-                          }}
-                        >
-                          恢复
-                        </Button>
-                      ) : null}
-                      <Button size="sm" variant="ghost" onClick={() => handleArchive(plan)}>归档</Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-gray-300">
+              {visible.map((plan) => {
+                const st = PLAN_STATUS_MAP[plan.status || 'active'] || PLAN_STATUS_MAP.active;
+                const target = plan.equipmentName || plan.infrastructureName || plan.greenhouseName || plan.area || '全基地';
+                return (
+                  <tr key={plan.id} className="hover:bg-blue-100 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-700 whitespace-nowrap">{plan.planCode}</td>
+                    <td className="px-4 py-3">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-emerald-600 hover:text-emerald-800 font-medium px-0 text-left"
+                        onClick={() => setDetail(plan)}
+                      >
+                        {plan.title}
+                      </Button>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{getInspectionTypeLabel(plan.inspectionType)}</td>
+                    <td className="px-4 py-3 text-gray-600 min-w-[8em] max-w-[15em] truncate" title={target}>
+                      {target}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{describePlanFrequency(plan)}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{plan.assigneeName || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{plan.occurrenceCount ?? 0}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs ${st.bg} ${st.color}`}>{st.label}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setDetail(plan)}>详情</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditing(plan); setShowForm(true); }}>编辑</Button>
+                        {plan.status === 'active' && (
+                          <Button size="sm" variant="ghost" onClick={() => handleTogglePause(plan)} title="暂停计划">
+                            <Pause className="w-3.5 h-3.5" />
+                            暂停
+                          </Button>
+                        )}
+                        {plan.status === 'paused' && (
+                          <Button size="sm" variant="ghost" onClick={() => handleTogglePause(plan)} title="恢复计划">
+                            <Play className="w-3.5 h-3.5" />
+                            恢复
+                          </Button>
+                        )}
+                        {plan.status !== 'archived' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleArchive(plan)}
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                            归档
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -189,12 +239,12 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
         isOpen={showForm}
         plan={editing}
         onClose={() => { setShowForm(false); setEditing(null); }}
-        onSaved={() => { void fetchPlans({ status: statusFilter === 'all' ? undefined : statusFilter }); }}
+        onSaved={reload}
       />
-      <InspectionPlanDetailDrawer
+      <InspectionPlanDetailModal
         isOpen={!!detail}
         plan={detail}
-        onClose={() => setDetail(null)}
+        onClose={() => { setDetail(null); reload(); }}
         onEdit={(p) => { setDetail(null); setEditing(p); setShowForm(true); }}
         onViewTask={onViewTask}
         onViewRecord={onViewRecord}

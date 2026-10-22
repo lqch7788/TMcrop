@@ -222,11 +222,18 @@ router.use('/crop-instances', requireAuth, cropInstanceRouter);
 router.use('/farm-tasks', requireAuth, farmTaskRouter);
 // v0.3 P0-1：批次统一时间线
 router.use('/batch-timeline', requireAuth, batchTimelineRouter);
-// v0.3 P0-2：任务进度跟踪（必须先注册，因为端点路径如 /:id/progress 与 farmTaskRouter 冲突）
-// 注意：taskProgressRouter 使用 v0.3 新增字段 progress_pct，farmTaskRouter 使用旧字段 progress
-// v0.3 路径覆盖 v0.2 路径（taskProgressRouter 先注册优先匹配）
+// v0.3 P0-2：任务进度跟踪
+//
+// 2026-10-22 更正（审核 H5，实测确认）：
+//   上面的 farmTaskRouter **先**注册，所以 `/progress`、`/complete` 实际命中的是 farmTask 版，
+//   taskProgress 版的这两个端点是**死代码**。原注释「taskProgressRouter 先注册优先匹配」写反了。
+//   实测依据：POST /farm-tasks/__probe__/complete 返回 farmTask 的 404「农事任务不存在」
+//   （taskProgress 会返回 400「任务不存在」）；而 /pause 返回 taskProgress 的 400「reason 必填」。
+//
+// 处置：不调整挂载顺序（taskProgress 用 progress_pct、farmTask 用 progress，语义不同，
+//   换顺序会让一批调用方读到另一个字段），改为让 farmTask 的 /progress 同时接受 {pct}，
+//   并在两侧都保留巡查记录守卫。taskProgress 独有的 /start /pause /resume 仍由它服务。
 router.use('/farm-tasks', requireAuth, taskProgressRouter);
-router.use('/farm-tasks', requireAuth, farmTaskRouter);
 // v0.3 P0-R + P0-S：监管报告导出 + 合规血缘
 router.use('/compliance-report', requireAuth, complianceReportRouter);
 // P1-3：承诺达标合格证（按批次开具，留存 ≥6 个月）
