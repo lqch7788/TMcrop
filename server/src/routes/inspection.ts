@@ -50,6 +50,19 @@ function transformInspectionRecord(db: any) {
     try { feedbackUsers = JSON.parse(feedbackUsers); } catch { feedbackUsers = []; }
   }
   if (!Array.isArray(feedbackUsers)) feedbackUsers = [];
+  // 2026-10-21：问题分类 / 预设 / 照片在 DB 里是 JSON 字符串，此前未解析，
+  //   导致新建巡查时勾选的「设备」等分类在列表「发现问题」列整列不显示。
+  //   解析方式与 feedbackUsers 保持一致。
+  const parseJsonArray = (raw: any): any[] => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
+    }
+    return [];
+  };
   return {
     ...db,
     // 确保必要字段存在
@@ -65,9 +78,9 @@ function transformInspectionRecord(db: any) {
     leafCount: db.leafCount || db.leaf_count || 0,
     duration: db.duration || 0,
     // 问题相关字段
-    issueCategories: Array.isArray(db.issueCategories) ? db.issueCategories : [],
-    issuePresets: Array.isArray(db.issuePresets) ? db.issuePresets : [],
-    issuePhotos: Array.isArray(db.issuePhotos) ? db.issuePhotos : [],
+    issueCategories: parseJsonArray(db.issueCategories ?? db.issue_categories),
+    issuePresets: parseJsonArray(db.issuePresets ?? db.issue_presets),
+    issuePhotos: parseJsonArray(db.issuePhotos ?? db.issue_photos),
     feedbackUsers: feedbackUsers,
     // 2026-10-10：只透传显式字段，兜底推导移交 resolveIssueStatus()（路由层，可访问 problems 表）。
     //   原兜底「非 attention 一律 resolved」会把 critical 等未处理巡查误标为"已解决"，
@@ -91,6 +104,14 @@ function transformInspectionRecord(db: any) {
     equipmentName: db.equipmentName || db.equipment_name || '',
     infrastructureId: db.infrastructureId || db.infrastructure_id || '',
     infrastructureName: db.infrastructureName || db.infrastructure_name || '',
+    // 2026-10-21（P2a）：巡查计划 / 任务关联 + 检查项结果 + 记录版本 + 检查区域。
+    //   checklistResults 走 parseJsonArray —— 与 issueCategories 同理，DB 存的是 JSON 字符串，
+    //   不解析的话前端拿到的恒是空数组（计划检查项就显示不出来）。
+    inspectionPlanId: db.inspectionPlanId || db.inspection_plan_id || '',
+    inspectionTaskId: db.inspectionTaskId || db.inspection_task_id || '',
+    checklistResults: parseJsonArray(db.checklistResults ?? db.checklist_results),
+    recordVersion: db.recordVersion ?? db.record_version ?? 1,
+    area: db.area || '',
   };
 }
 
@@ -246,6 +267,20 @@ router.post('/', (req: Request, res: Response) => {
     const soil_moisture = body.soil_moisture ?? body.soilMoisture ?? 0;
     const soil_ec = body.soil_ec ?? body.soilEc ?? 0;
     const soil_ph = body.soil_ph ?? body.soilPh ?? 0;
+    // 2026-10-21（P2a）：检查项结果 + 检查区域/场所
+    const checklist_results = body.checklist_results || body.checklistResults || [];
+    const area = body.area || '';
+
+    // 2026-10-21（P2a）：巡查计划 / 任务关联字段**只允许专用端点写入**。
+    //   这两列由 POST /farm-tasks/:id/inspection-record 在同一事务内写入并保证
+    //   「任务 ↔ 记录 1:1」；若通用 POST 也接受，客户端可以随手伪造关联，
+    //   绕过唯一索引与状态守卫，把记录挂到无关任务上。这里显式拒绝。
+    if (body.inspection_task_id || body.inspectionTaskId || body.inspection_plan_id || body.inspectionPlanId) {
+      return res.status(400).json({
+        success: false,
+        error: '巡查计划/任务关联字段不可通过通用创建接口写入，请使用任务巡查记录端点',
+      });
+    }
 
     const newId = id || `INS${Date.now()}`;
     const now = new Date().toISOString();
@@ -260,11 +295,12 @@ router.post('/', (req: Request, res: Response) => {
         plant_height, leaf_count, duration,
         weather, temperature, humidity, crop_status,
         issue_categories, issue_presets, issue_photos,
+        checklist_results, area, record_version,
         problem_id, remarks,
         air_temperature, air_humidity, light_intensity, co2_concentration,
         soil_temperature, soil_moisture, soil_ec, soil_ph,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
       check_date, check_time, check_result, issue_severity, issue_text, images, status,
@@ -278,6 +314,10 @@ router.post('/', (req: Request, res: Response) => {
       JSON.stringify(issue_categories),
       JSON.stringify(issue_presets),
       JSON.stringify(issue_photos),
+      // 2026-10-21（P2a）：检查项结果（JSON）+ 检查区域
+      JSON.stringify(checklist_results),
+      area,
+      1,
       problem_id, remarks,
       air_temperature,
       air_humidity,
@@ -323,6 +363,9 @@ const INSPECTION_FIELD_MAP: Record<string, string> = {
   lightIntensity: 'light_intensity', co2Concentration: 'co2_concentration',
   soilTemperature: 'soil_temperature', soilMoisture: 'soil_moisture',
   soilEc: 'soil_ec', soilPh: 'soil_ph',
+  // 2026-10-21（P2a）：检查项结果 / 检查区域
+  checklistResults: 'checklist_results', checklist_results: 'checklist_results',
+  area: 'area',
   createTime: 'create_time', updateTime: 'update_time',
 };
 
@@ -335,6 +378,11 @@ const INSPECTION_DB_COLUMNS = new Set<string>([
   'equipment_id', 'equipment_name', 'infrastructure_id', 'infrastructure_name',
   'plant_height', 'leaf_count', 'duration', 'weather', 'temperature', 'humidity',
   'issue_categories', 'issue_presets', 'issue_photos', 'problem_id', 'source_problem_id',
+  // 2026-10-21（P2a）：检查项结果 / 检查区域。
+  //   注意 inspection_plan_id / inspection_task_id / record_version **刻意不在白名单**：
+  //   这三列只由专用端点（任务巡查记录提交 / 驳回重提）在事务内写入，
+  //   通用 PUT 若能改，就能绕过「任务↔记录 1:1」唯一约束与记录版本递增。
+  'checklist_results', 'area',
   'remarks', 'air_temperature', 'air_humidity', 'light_intensity', 'co2_concentration',
   'soil_temperature', 'soil_moisture', 'soil_ec', 'soil_ph',
   'create_time', 'update_time',
@@ -343,6 +391,7 @@ const INSPECTION_DB_COLUMNS = new Set<string>([
 /** 需序列化为 JSON 字符串存储的列 */
 const INSPECTION_JSON_COLUMNS = new Set<string>([
   'images', 'feedback_users', 'issue_categories', 'issue_presets', 'issue_photos',
+  'checklist_results',
 ]);
 
 router.put('/:id', (req: Request, res: Response) => {
@@ -375,6 +424,25 @@ router.put('/:id', (req: Request, res: Response) => {
     const values: any[] = Object.values(updates);
     values.push(now, id);
 
+    // 2026-10-21 P2c：任务关联记录只允许在「任务返工中 / 执行中」时修订，
+    //   且 record_version 由**服务端** +1（方案 §6.4）。
+    //   通用 PUT 不做版本递增与变更差异，所以任务关联的记录一律走 resubmit 端点。
+    const linkStmt = db.prepare('SELECT inspection_task_id FROM inspections WHERE id = ?');
+    linkStmt.bind([id]);
+    let linkedTaskId = '';
+    if (linkStmt.step()) {
+      linkedTaskId = String((linkStmt.getAsObject() as { inspection_task_id?: string }).inspection_task_id || '');
+    }
+    linkStmt.free();
+    if (linkedTaskId) {
+      return res.status(409).json({
+        success: false,
+        code: 'TASK_LINKED_INSPECTION_RECORD',
+        error: '任务关联的巡查记录不可直接修改，请在任务上使用「重新提交」修订（会自动记录版本与变更差异）',
+        data: { taskId: linkedTaskId },
+      });
+    }
+
     db.run(`UPDATE inspections SET ${fields}, update_time = ? WHERE id = ?`, values);
     // 2026-10-10：0 行更新 → 404（Fail Loud，防幽灵成功）
     if (db.getRowsModified() === 0) {
@@ -392,6 +460,26 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
+
+    // 2026-10-21 P2c：任务关联的巡查记录不可删除（方案 §6.4）
+    //   删掉后 inspections.inspection_task_id 变成悬空引用，
+    //   且任务端会重新变成「未提交记录」→ 计划执行率统计随之漂移。
+    const check = db.prepare('SELECT inspection_task_id FROM inspections WHERE id = ?');
+    check.bind([id]);
+    let taskRef = '';
+    if (check.step()) {
+      taskRef = String((check.getAsObject() as { inspection_task_id?: string }).inspection_task_id || '');
+    }
+    check.free();
+    if (taskRef) {
+      return res.status(409).json({
+        success: false,
+        code: 'TASK_LINKED_INSPECTION_RECORD',
+        error: '任务关联的巡查记录不可删除。如记录有误请在任务上「重新提交」修订。',
+        data: { taskId: taskRef },
+      });
+    }
+
     db.run('DELETE FROM inspections WHERE id = ?', [id]);
     saveDatabase();
     res.json({ success: true, data: { id } });

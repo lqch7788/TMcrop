@@ -273,6 +273,13 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     workLocation: (t as any).workLocation || '',
     sourceProblemId: t.sourceProblemId || undefined,
     sourceInspectionId: t.sourceInspectionId || undefined,
+    // 2026-10-21（P2a）：巡查计划实例标记 + 已提交记录标记。
+    //   后端 transformTaskFields 已透传，转换层不接就等于没有 —— 巡查记录 tab 判断
+    //   「这条计划任务有没有回填记录」会全部落空。inspectionRecordId 空串 = 尚未提交。
+    inspectionPlanId: (t as any).inspectionPlanId ?? '',
+    planOccurrenceDate: (t as any).planOccurrenceDate ?? '',
+    inspectionRecordId: (t as any).inspectionRecordId ?? '',
+    inspectionRecordCode: (t as any).inspectionRecordCode ?? '',
     reworkCount: t.reworkCount || 0,
     reworkHistory: t.reworkHistory || [],
     deadlineExtensions: t.deadlineExtensions || [],
@@ -703,7 +710,12 @@ export function useTasks(): UseTasksReturn {
   // 2026-10-21（阶段 3）：临时任务已并入 farm_tasks，不再单独合并
   const tasks = useMemo(() => {
     const farmTasks = storeTasks.map(convertStoreFarmTaskToTask);
-    const convertedInspectionTasks = inspectionRecords.map(convertStoreInspectionToTask);
+    const convertedInspectionTasks = inspectionRecords
+      // 2026-10-21 P4：伪任务去重 —— 巡查记录若已绑定任务（inspection_task_id 非空），
+      //   它已经作为 farm_tasks 的一行进列表了；再转一次会得到同一份工作的两条记录
+      //   （一条任务、一条"伪任务"），验收时看到两条互相矛盾的条目。
+      .filter((r) => !r.inspectionTaskId)
+      .map(convertStoreInspectionToTask);
     const all = [...farmTasks, ...convertedInspectionTasks];
     return Array.isArray(all) ? all : [];
   }, [storeTasks, inspectionRecords]);

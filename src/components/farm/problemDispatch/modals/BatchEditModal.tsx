@@ -12,15 +12,16 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 
 interface BatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
+  // 2026-10-22：后端 problems.id 是 'PRB'+时间戳 字符串，ProblemEntry.id 已放宽为联合类型
+  selectedRows: Array<number | string>;
   problems: ProblemEntry[];
-  editedProblemCodes: number[];
-  editedProblems: Record<number, Partial<ProblemEntry>>;
-  selectedProblemId: number | null;
+  editedProblemCodes: Array<number | string>;
+  editedProblems: Record<string, Partial<ProblemEntry>>;
+  selectedProblemId: number | string | null;
   /** 2026-10-11：允许 null —— 选「请选择问题编号」空项时回传 null（与 selectedProblemId 的可空语义一致） */
-  onSelectedProblemIdChange: (id: number | null) => void;
-  onEditedProblemsChange: (problems: Record<number, Partial<ProblemEntry>>) => void;
-  onEditedProblemCodesChange: (codes: number[]) => void;
+  onSelectedProblemIdChange: (id: number | string | null) => void;
+  onEditedProblemsChange: (problems: Record<string, Partial<ProblemEntry>>) => void;
+  onEditedProblemCodesChange: (codes: Array<number | string>) => void;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -104,7 +105,7 @@ export function BatchEditModal({
         <FormField label="选择问题编号">
           <Select
             value={selectedProblemId?.toString() || ''}
-            onChange={(e) => onSelectedProblemIdChange(Number(e.target.value) || null)}
+            onChange={(e) => onSelectedProblemIdChange(e.target.value === '' ? null : e.target.value)}
             options={[
               { value: '', label: '请选择问题编号' },
               ...selectedProblems.map(p => ({

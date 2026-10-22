@@ -2,7 +2,7 @@
  * 生产任务表格行组件
  */
 
-import { CheckCircle, XCircle, Play, Eye, Edit2, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Play, Eye, Edit2, FileText, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
 import type { Task } from '../../../hooks/useTasks';
@@ -40,6 +40,8 @@ interface ProductionTaskTableRowProps {
   onOpenFeedbackModal: (task: TaskDispatchTask) => void;
   onOpenDetailModal: (task: TaskDispatchTask) => void;
   onOpenSopModal: (task: TaskDispatchTask, e: React.MouseEvent) => void;
+  /** 2026-10-21 P4：巡查计划任务 → 打开「填写/重提巡查记录」弹窗 */
+  onSubmitInspectionRecord?: (task: TaskDispatchTask) => void;
 }
 
 /**
@@ -77,9 +79,13 @@ export function ProductionTaskTableRow({
   onOpenFeedbackModal,
   onOpenDetailModal,
   onOpenSopModal,
+  onSubmitInspectionRecord,
 }: ProductionTaskTableRowProps) {
   const taskWithExtras = task as TaskWithExtras;
   const types = task.types || [];
+  // 2026-10-21 P4：巡查计划实例任务 —— 有专属的「填写巡查记录」入口，
+  //   不走通用「提交进度」（那条路不产记录，会被后端 409 挡住）
+  const isPlanInspection = !!taskWithExtras.inspectionPlanId;
 
   // 2026-10-10（审核修复 H3）：巡查来源的动作按钮仅在关联了整改问题时显示（同 ProblemTaskTableRow）
   const isInspectionTask = !!(task as { sourceInspectionId?: string }).sourceInspectionId;
@@ -102,6 +108,15 @@ export function ProductionTaskTableRow({
       {/* 任务类型 */}
       <td className="px-3 py-3 whitespace-nowrap">
         {renderTypeCell(task)}
+        {/* 2026-10-21 P4：巡查计划实例徽章 + 计划编号（方案 §10.5） */}
+        {isPlanInspection && (
+          <div className="mt-0.5">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-xs">
+              <ClipboardCheck className="w-3 h-3" />
+              巡查计划
+            </span>
+          </div>
+        )}
       </td>
       {/* 任务区域 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
@@ -209,6 +224,32 @@ export function ProductionTaskTableRow({
             <Edit2 className="w-4 h-4" />
             提交进度
           </Button>
+        )}
+        {/* 2026-10-21 P4：巡查计划任务的记录入口 */}
+        {isPlanInspection && onSubmitInspectionRecord && (
+          <div className="flex items-center gap-1">
+            {taskWithExtras.inspectionRecordId ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onSubmitInspectionRecord(task)}
+                title={`已提交记录 ${taskWithExtras.inspectionRecordCode || ''}，点击查看/重提`}
+              >
+                <Eye className="w-4 h-4" />
+                {task.status === 'rejected' ? '修改记录并重提' : '查看记录'}
+              </Button>
+            ) : ['pending', 'accepted', 'in_progress', 'rejected'].includes(task.status) ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => onSubmitInspectionRecord(task)}
+                title="填写巡查记录（提交时自动接受并转待验收）"
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                {task.status === 'rejected' ? '修改记录并重提' : '填写巡查记录'}
+              </Button>
+            ) : null}
+          </div>
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">

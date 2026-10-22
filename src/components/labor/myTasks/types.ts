@@ -49,6 +49,11 @@ export interface TaskWithExtras {
   sourceId?: string;
   recordCode?: string;
   inspectionType?: string;
+  // 2026-10-21 P4：巡查计划实例标记
+  inspectionPlanId?: string;
+  planOccurrenceDate?: string;
+  inspectionRecordId?: string;
+  inspectionRecordCode?: string;
   submitterId?: string;
   submitterName?: string;
   assignerName?: string;

@@ -115,6 +115,11 @@ export interface ProblemData {
   sourceModule?: string;
   source_detail?: string;
   sourceDetail?: string;
+  // 2026-10-21：来源巡查类型 / 结构化问题分类（分派时映射任务类型）
+  inspection_type?: string;
+  inspectionType?: string;
+  issue_categories?: string;
+  issueCategories?: string[];
   // 状态标签（API返回）
   statusLabel?: string;
 }
@@ -147,6 +152,8 @@ function normalize(db: Record<string, unknown>): ProblemData {
     completion_time: 'completionTime',
     expected_completion: 'expectedCompletion',
     source_module: 'sourceModule', source_detail: 'sourceDetail',
+    // 2026-10-21：巡查类型 / 问题分类
+    inspection_type: 'inspectionType', issue_categories: 'issueCategories',
   };
   const r: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(db)) {
@@ -166,6 +173,14 @@ function normalize(db: Record<string, unknown>): ProblemData {
   if (typeof r.images === 'string' && r.images) {
     try { r.images = JSON.parse(r.images as string); } catch { r.images = []; }
   }
+  // 2026-10-21：问题分类 JSON 解析（分派映射任务类型用）
+  if (typeof r.issueCategories === 'string' && r.issueCategories) {
+    try {
+      const parsed = JSON.parse(r.issueCategories as string);
+      r.issueCategories = Array.isArray(parsed) ? parsed : [];
+    } catch { r.issueCategories = []; }
+  }
+  if (!r.issueCategories) r.issueCategories = [];
   // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
   return r as unknown as ProblemData;
 }

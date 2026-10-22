@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { applyListLimit } from '../config/apiLimits';
 
 // ========== 类型定义 ==========
 
@@ -170,7 +171,17 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           // 尝试从API获取
           // API返回格式: { success: true, data: Task[], meta: {...} }
-          const apiData = await enhancedApiClient.get<Task[]>('/farm-tasks');
+          // 2026-10-21（P2a）：显式传 limit。后端 GET /farm-tasks 默认 limit=200，
+          //   而本 Store 既不传 limit 也不读 meta.total，却在这个数组上做全量
+          //   统计 / 筛选 / 徽章计数 —— 记录超 200 条后第 201 条起静默消失。
+          //   （后端默认值见 server/src/routes/farmTask.ts 的 router.get('/')）
+          const params = new URLSearchParams();
+          applyListLimit(params);
+          // 说明：巡查计划实例任务（source_type='inspection_plan'）在此**仍然拉取**——
+          //   「我的任务」要显示它们。只有农事任务中心列表才传 exclude_source_type 排除，
+          //   那是 UI 层的取舍（P3/P4），不能写死在本 Store 里，否则「我的任务」会丢失计划任务。
+          const query = params.toString();
+          const apiData = await enhancedApiClient.get<Task[]>(`/farm-tasks?${query}`);
 
           // 正确处理 API 返回的 { success, data, meta } 结构
           // API 正常返回（含空数组）即以此为准，空数组清空旧数据避免陈旧残留

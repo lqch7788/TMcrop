@@ -12,6 +12,17 @@ import { permissionGuard } from '../middleware/permissionGuard';
 import { z } from 'zod';
 // 2026-10-20 P0-10：后端权威状态转移守卫（此前转移表只在前端，后端 17 个流转端点零守卫）
 import { assertTaskTransition } from '../constants';
+// 2026-10-21 P2c：巡查记录守卫（完成前置校验 / 删除保护）+ 记录写入服务
+import { assertInspectionRecordBeforeComplete, assertTaskDeletable } from '../lib/inspectionRecordGuard';
+import {
+  insertRecord,
+  updateRecordFields,
+  getRecordByTaskId,
+  nextRecordCode,
+} from '../services/inspectionRecordService';
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+import { parseLocalDate } from '../lib/inspectionPlanFrequency';
+import { generateId } from '../utils/id';
 
 const router = Router();
 
@@ -142,6 +153,47 @@ function getTaskStatusLabel(status: string): string {
 }
 
 /**
+ * 2026-10-21（P2a）：给当前页任务批量补上「已提交的巡查记录」标记。
+ *
+ * 为什么要单独查而不是 JOIN：queryHelper.execCount 用正则把 COUNT(*) 从 SQL 里摘出来，
+ *   而正则会停在子查询**内部**的 FROM 处 —— 列表 SQL 里一旦出现子查询，分页总数必错
+ *   （execCount 双别名 SQL 事故的同型陷阱）。所以主 SELECT 保持 `SELECT * FROM farm_tasks`，
+ *   记录标记用一次 IN 查询补齐：当前页 N 条任务 = 1 次查询，不是 N+1。
+ *
+ * 就地写入 item.inspectionRecordId / inspectionRecordCode（供 transformTaskFields 透传）。
+ * 查不到记录的任务保持空串，前端据此渲染「未提交巡查记录」。
+ */
+function attachInspectionRecords(db: any, items: any[]): void {
+  if (!items || items.length === 0) return;
+  // 最多 200 条（列表默认 limit=200），单条 IN 查询足够；不额外分批以免引入半截数据。
+  const ids = items.map((i) => i.id).filter(Boolean);
+  if (ids.length === 0) return;
+
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = queryToObjects<any>(
+    db,
+    `SELECT inspection_task_id, id, record_code FROM inspections
+     WHERE inspection_task_id IN (${placeholders})`,
+    ids
+  );
+  if (!rows || rows.length === 0) return;
+
+  // inspection_task_id 受唯一索引约束，一个任务最多一条记录；防御性取首条。
+  const byTaskId = new Map<string, any>();
+  for (const row of rows) {
+    const key = String(row.inspectionTaskId || row.inspection_task_id || '');
+    if (key && !byTaskId.has(key)) byTaskId.set(key, row);
+  }
+  for (const item of items) {
+    const hit = byTaskId.get(String(item.id));
+    if (hit) {
+      item.inspectionRecordId = hit.id || '';
+      item.inspectionRecordCode = hit.recordCode || hit.record_code || '';
+    }
+  }
+}
+
+/**
  * 转换数据库字段名为前端期望的字段名
  * queryToObjects 已将下划线字段转为驼峰格式，这里做补充映射
  */
@@ -194,6 +246,13 @@ function transformTaskFields(item: any): any {
     sourceCode: item.sourceCode || '',
     sourceProblemId: item.sourceProblemId || '',
     sourceInspectionId: item.sourceInspectionId || '',
+    // 2026-10-21（P2a）：巡查计划实例标记
+    //   inspectionRecordId / inspectionRecordCode 由列表端点批量回填（见 GET / 的批注）；
+    //   此处只透传任务自身的计划归属，单条 GET 也能拿到。
+    inspectionPlanId: item.inspectionPlanId || '',
+    planOccurrenceDate: item.planOccurrenceDate || '',
+    inspectionRecordId: item.inspectionRecordId || '',
+    inspectionRecordCode: item.inspectionRecordCode || '',
     // 反馈要求
     feedbackRequirements: parseJsonField(item.feedbackRequirements, []),
     requiredFeedback: parseJsonField(item.feedbackRequirements, []),
@@ -257,12 +316,22 @@ function toDbJson(value: any, fallback: string = '[]'): string {
 
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { task_type, status, assignee_name, greenhouse_name, keyword, page = 1, limit = 200 } = req.query;
+    const { task_type, status, assignee_name, greenhouse_name, keyword, page = 1, limit = 200,
+            exclude_source_type } = req.query;
     const db = getDatabase();
 
     // 构建基础SQL和参数
     let sql = 'SELECT * FROM farm_tasks WHERE 1=1';
     const params: any[] = [];
+
+    // 2026-10-21（P2a）：排除某类来源任务。
+    //   农事任务中心传 exclude_source_type=inspection_plan，把巡查计划实例任务从
+    //   农事任务列表里滤掉（它由「巡查记录」tab 承载，避免两个列表重复渲染同一批任务）。
+    //   「我的任务」不传此参数，保留计划任务 —— 执行人要在那里看到自己的巡查安排。
+    if (exclude_source_type) {
+      sql += ' AND (source_type IS NULL OR source_type <> ?)';
+      params.push(exclude_source_type);
+    }
 
     if (task_type) {
       sql += ' AND task_type LIKE ?';
@@ -319,6 +388,12 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
+    // 2026-10-21（P2a）：批量回填「该任务是否已有巡查记录」。
+    //   刻意不用子查询 JOIN —— queryHelper.execCount 会用正则从子查询内部的 FROM 处截断
+    //   COUNT(*)（见 execCount 双别名事故），列表 SQL 一旦带子查询，分页总数必错。
+    //   因此先取回当前页，再用 task ids 单独批量查一次 inspections。
+    attachInspectionRecords(db, items);
+
     // 转换数据库字段名为前端期望的字段名
     const itemsWithLabels = items.map((item: any) => transformTaskFields(item));
 
@@ -342,6 +417,9 @@ router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (!item || Object.keys(item).length === 0) {
       return res.status(404).json({ success: false, error: '农事任务不存在' });
     }
+
+    // 2026-10-21 P2c：与列表端点一致回填「已提交巡查记录」标记
+    attachInspectionRecords(db, items);
 
     // 转换字段并添加状态标签
     const transformedItem = transformTaskFields(item);
@@ -414,6 +492,9 @@ router.post('/', (req: Request, res: Response) => {
       // 2026-10-21：临时任务合并前置（人工数量 / 紧急程度）
       worker_count, workerCount,
       urgency,
+      // 2026-10-21（P2a）：巡查计划实例标记（由计划生成端点写入；普通新建任务为空）
+      inspection_plan_id, inspectionPlanId,
+      plan_occurrence_date, planOccurrenceDate,
     } = req.body;
 
     // planStart/planEnd 是组合格式 "yyyy-MM-dd HH:mm"，拆分为 date 和 time
@@ -443,9 +524,10 @@ router.post('/', (req: Request, res: Response) => {
         rework_history, deadline_extensions,
         type_config, sop_content, description,
         team_id, team_name, tools_remarks,
-        source_problem_id, source_inspection_id, source_id, source_code
+        source_problem_id, source_inspection_id, source_id, source_code,
+        inspection_plan_id, plan_occurrence_date
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       task_code || taskCode || newId,
@@ -506,6 +588,9 @@ router.post('/', (req: Request, res: Response) => {
       source_inspection_id || sourceInspectionId || null,
       source_id || sourceId || null,
       source_code || sourceCode || null,
+      // 2026-10-21（P2a）：巡查计划实例标记
+      inspection_plan_id || inspectionPlanId || null,
+      plan_occurrence_date || planOccurrenceDate || null,
     ]);
 
     // 2026-10-10（审核修复）：任务由问题分派创建时（source_problem_id 有值），把真实任务 id
@@ -716,6 +801,8 @@ const FARM_TASK_DB_COLUMNS = new Set<string>([
   'source_problem_id', 'source_inspection_id',
   'feedback_requirements', 'deadline_extensions', 'type_config', 'type_name', 'sop_content',
   'materials', 'tools', 'tools_remarks', 'remarks', 'outsource_cost',
+  // 2026-10-21（P2a）：巡查计划实例标记
+  'inspection_plan_id', 'plan_occurrence_date',
   'version', 'create_time', 'update_time',
 ]);
 
@@ -861,6 +948,313 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * 按 id 查任务，兼容 task_code（AI 训练样本的 id 为 NULL，见 DELETE /:id 的同款兜底）
+ */
+function lookupFarmTask(db: any, idOrCode: string): Record<string, any> | null {
+  const byId = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
+  byId.bind([idOrCode]);
+  let task: Record<string, any> | null = null;
+  if (byId.step()) task = byId.getAsObject() as unknown as Record<string, any>;
+  byId.free();
+  if (task) return task;
+
+  const byCode = db.prepare('SELECT * FROM farm_tasks WHERE task_code = ?');
+  byCode.bind([idOrCode]);
+  if (byCode.step()) task = byCode.getAsObject() as unknown as Record<string, any>;
+  byCode.free();
+  return task;
+}
+
+/**
+ * 2026-10-21 P2c：巡查记录提交端点（计划 ↔ 任务 ↔ 记录 1:1 闭环核心）
+ *
+ * POST /api/farm-tasks/:id/inspection-record
+ *
+ * 单事务步骤（方案 §6.3）：
+ *   1. 取任务；必须带 inspection_plan_id，状态 ∈ pending/accepted/in_progress
+ *   2. 校验该任务尚无巡查记录 → 否则 409
+ *   3. pending → accepted（自动接受，状态守卫 + 流转记录）
+ *   4. 服务端生成记录编号并插入 inspections（plan_id / task_id / checklist / area）
+ *   5. payload.problem 存在时同事务建问题（problem_code NOT NULL 必须生成）
+ *   6. accepted/in_progress → waiting_acceptance，progress=100（状态守卫 + 流转记录）
+ *   7. 一次 COMMIT + 一次落盘
+ *
+ * 为什么不用通用 POST /inspections：它无法保证「记录 + 任务状态 + 问题」三者原子，
+ * 任何一步失败都会留下「有记录但任务还停在 pending」的半截数据。
+ */
+router.post('/:id/inspection-record', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 1. 取任务（id 为主，task_code 兜底）
+    const task = lookupFarmTask(db, id);
+    if (!task) return res.status(404).json({ success: false, error: '农事任务不存在' });
+
+    if (!task.inspection_plan_id) {
+      return res.status(400).json({
+        success: false,
+        error: '该任务不是巡查计划任务，请通过「巡查记录 → 新增」提交记录',
+      });
+    }
+
+    const allowedStatuses = ['pending', 'accepted', 'in_progress'];
+    if (!allowedStatuses.includes(String(task.status))) {
+      return res.status(409).json({
+        success: false,
+        error: `当前状态「${task.status}」不允许提交巡查记录（允许：${allowedStatuses.join(' / ')}）`,
+      });
+    }
+
+    // 2. 1:1 校验
+    const existing = getRecordByTaskId(db, String(task.id));
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        code: 'INSPECTION_RECORD_EXISTS',
+        error: `该任务已提交过巡查记录（${existing.record_code}），不能重复提交`,
+        data: { recordId: existing.id, recordCode: existing.record_code },
+      });
+    }
+
+    const body = req.body || {};
+    const occurrenceDate = String(task.plan_occurrence_date || body.checkDate || '').slice(0, 10);
+    const recordCode = String(body.recordCode || nextRecordCode(db, formatLocalDateYYYYMMDD(parseLocalDate(occurrenceDate) || new Date())));
+
+    // 2026-10-22：巡查类型以**计划**为准。
+    //   任务表上没有 inspection_type 列，前端也拿不到计划类型（MyTasks 只映射了任务字段），
+    //   直接回落到 'farm' 会让问题的 inspection_type 与真实巡查类型不符
+    //   （实测：设备分类的巡查记录建出的问题标成 farm）。
+    let planInspectionType = '';
+    if (task.inspection_plan_id) {
+      const planStmt = db.prepare('SELECT inspection_type FROM inspection_plans WHERE id = ?');
+      planStmt.bind([task.inspection_plan_id]);
+      if (planStmt.step()) {
+        planInspectionType = String((planStmt.getAsObject() as { inspection_type?: string }).inspection_type || '');
+      }
+      planStmt.free();
+    }
+    const inspectionType = body.inspectionType || planInspectionType || task.task_type || 'farm';
+
+    let createdRecordId = '';
+    let createdProblemId = '';
+    const flowSteps: Array<{ from: string; to: string; action: string; actionName: string; comment: string }> = [];
+
+    runInTransaction(db, () => {
+      // 3. pending → accepted（自动接受）
+      let currentStatus = String(task.status);
+      if (currentStatus === 'pending') {
+        assertTaskTransition(currentStatus, 'accepted');
+        db.run(`UPDATE farm_tasks SET status = 'accepted', update_time = ? WHERE id = ?`, [now, task.id]);
+        flowSteps.push({ from: currentStatus, to: 'accepted', action: 'accept', actionName: '自动接受', comment: '提交巡查记录时自动接受' });
+        currentStatus = 'accepted';
+      }
+
+      // 4. 插入巡查记录（1:1 由唯一索引兜底）
+      createdRecordId = insertRecord(db, {
+        recordCode,
+        inspectionType,
+        inspectorId: body.inspectorId || task.assignee_id || '',
+        inspectorName: body.inspectorName || task.assignee_name || '',
+        greenhouseId: body.greenhouseId ?? task.greenhouse_id ?? '',
+        greenhouseName: body.greenhouseName ?? task.greenhouse_name ?? '',
+        cropName: body.cropName ?? task.crop ?? '',
+        equipmentId: body.equipmentId ?? null,
+        equipmentName: body.equipmentName ?? null,
+        infrastructureId: body.infrastructureId ?? null,
+        infrastructureName: body.infrastructureName ?? null,
+        checkDate: body.checkDate || occurrenceDate,
+        checkTime: body.checkTime || task.plan_time || '',
+        weather: body.weather ?? '',
+        temperature: body.temperature ?? 0,
+        humidity: body.humidity ?? 0,
+        cropStatus: body.cropStatus ?? '',
+        area: body.area ?? task.area_name ?? '',
+        status: body.result === 'normal' ? 'normal' : 'critical',
+        issueCategories: body.issueCategories || [],
+        issuePresets: body.issuePresets || [],
+        issueText: body.issueText ?? '',
+        issueSeverity: body.issueSeverity ?? '中等',
+        issuePhotos: body.issuePhotos || [],
+        checklistResults: body.checklistResults || [],
+        remarks: body.remarks ?? '',
+        inspectionPlanId: task.inspection_plan_id,
+        inspectionTaskId: task.id,
+        recordVersion: 1,
+      }, now);
+
+      // 5. 异常建问题（problem_code 为 NOT NULL，必须服务端生成）
+      if (body.problem && String(body.problem.issueText || '').trim()) {
+        const d = new Date();
+        const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        const lastStmt = db.prepare(
+          'SELECT problem_code FROM problems WHERE problem_code LIKE ? ORDER BY problem_code DESC LIMIT 1'
+        );
+        lastStmt.bind([`PD${ymd}%`]);
+        let lastCode = '';
+        if (lastStmt.step()) lastCode = String((lastStmt.getAsObject() as { problem_code?: string }).problem_code || '');
+        lastStmt.free();
+        const seq = lastCode ? (parseInt(lastCode.slice(-3), 10) || 0) + 1 : 1;
+        const problemCode = `PD${ymd}${String(seq).padStart(3, '0')}`;
+        createdProblemId = generateId('PRB');
+        db.run(`
+          INSERT INTO problems (
+            id, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id,
+            reporter_id, reporter_name, assignee_id, assignee_name, priority, status,
+            crop_name, inspector_id, inspector_name, check_date, check_time,
+            issue_text, issue_severity, flow_records, rework_count,
+            source_module, source_id, inspection_type, issue_categories, images,
+            create_time, update_time
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          createdProblemId, problemCode, body.problem.category || 'other',
+          String(body.problem.issueText).slice(0, 60), String(body.problem.issueText),
+          body.greenhouseName ?? task.greenhouse_name ?? '', body.greenhouseId ?? task.greenhouse_id ?? '',
+          body.inspectorId || task.assignee_id || '', body.inspectorName || task.assignee_name || '',
+          '', '', 'medium', 'pending',
+          body.cropName ?? task.crop ?? '', body.inspectorId || task.assignee_id || '',
+          body.inspectorName || task.assignee_name || '', body.checkDate || occurrenceDate,
+          body.checkTime || task.plan_time || '',
+          String(body.problem.issueText), body.problem.issueSeverity || '中等',
+          JSON.stringify([{ id: `FR-${Date.now()}`, problemId: createdProblemId, operatorId: body.inspectorId || task.assignee_id || '', operatorName: body.inspectorName || task.assignee_name || '', action: 'report', fromStatus: '', toStatus: '待处理', actionTime: now }]),
+          0,
+          'inspection', recordCode,
+          inspectionType,
+          JSON.stringify(body.problem.issueCategories || body.issueCategories || []),
+          JSON.stringify(body.problem.images || []),
+          now, now,
+        ]);
+        db.run('UPDATE inspections SET problem_id = ? WHERE id = ?', [createdProblemId, createdRecordId]);
+      }
+
+      // 6. → waiting_acceptance，progress=100
+      assertTaskTransition(currentStatus, 'waiting_acceptance');
+      db.run(
+        `UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, progress_pct = 100,
+                update_time = ? WHERE id = ?`,
+        [now, task.id]
+      );
+      flowSteps.push({ from: currentStatus, to: 'waiting_acceptance', action: 'submit_progress', actionName: '提交巡查记录', comment: `已提交巡查记录 ${recordCode}` });
+    });
+
+    // 流转记录写在事务之外：recordTaskOperation 需要 req（IP/UA 采集）且自带审计副作用，
+    //   失败不应把已落库的记录回滚掉。
+    let stepFrom = String(task.status);
+    for (const step of flowSteps) {
+      recordTaskOperation(
+        req, db, String(task.id), String(task.task_code || task.id), String(task.task_title || ''),
+        body.inspectorId || task.assignee_id || '', body.inspectorName || task.assignee_name || '',
+        step.action, step.actionName, step.from, step.to,
+        step.to === 'waiting_acceptance' ? 100 : undefined, step.comment
+      );
+      stepFrom = step.to;
+    }
+    saveDatabase();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        recordId: createdRecordId,
+        recordCode,
+        problemId: createdProblemId || null,
+        taskStatus: 'waiting_acceptance',
+      },
+      message: createdProblemId ? '巡查记录已提交，并已生成待处理问题' : '巡查记录已提交',
+    });
+  } catch (error) {
+    console.error('[farm-tasks] 提交巡查记录失败:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const isTransition = (error as { code?: string })?.code === 'ILLEGAL_TASK_TRANSITION';
+    res.status(isTransition ? 409 : 500).json({ success: false, error: `提交巡查记录失败：${msg}` });
+  }
+});
+
+/**
+ * 2026-10-21 P2c：驳回后重提（方案 §6.4）
+ * 刻意不使用通用 PUT /inspections —— 那条路径不做版本递增、不写变更差异，
+ * 也无法保证任务状态回到待验收。
+ * POST /api/farm-tasks/:id/inspection-record/resubmit
+ */
+router.post('/:id/inspection-record/resubmit', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const task = lookupFarmTask(db, id);
+    if (!task) return res.status(404).json({ success: false, error: '农事任务不存在' });
+
+    const record = getRecordByTaskId(db, String(task.id));
+    if (!record) {
+      return res.status(409).json({ success: false, error: '该任务尚无巡查记录，无法重提' });
+    }
+    if (String(task.status) !== 'rejected') {
+      return res.status(409).json({
+        success: false,
+        error: `当前状态「${task.status}」不允许重提（仅驳回态允许）`,
+      });
+    }
+
+    const body = req.body || {};
+    // camelCase → snake_case：前端天然发驼峰，只认蛇形会静默丢字段（实测 issueCategories 被丢弃）
+    const RESUBMIT_FIELD_MAP: Record<string, string> = {
+      issueText: 'issue_text', issueSeverity: 'issue_severity',
+      issueCategories: 'issue_categories', issuePresets: 'issue_presets',
+      issuePhotos: 'issue_photos', checklistResults: 'checklist_results',
+      remarks: 'remarks', area: 'area', cropStatus: 'crop_status',
+      weather: 'weather', temperature: 'temperature', humidity: 'humidity',
+      status: 'status',
+    };
+    const writable: Record<string, unknown> = {};
+    for (const [rawKey, value] of Object.entries(body)) {
+      if (value === undefined) continue;
+      const col = RESUBMIT_FIELD_MAP[rawKey] || rawKey;
+      writable[col] = value;
+    }
+    const allowed = new Set(Object.values(RESUBMIT_FIELD_MAP));
+    for (const key of Object.keys(writable)) {
+      if (!allowed.has(key)) delete writable[key];
+    }
+    if (Object.keys(writable).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: `没有可更新的字段（可更新：${[...allowed].join('、')}）`,
+      });
+    }
+
+    runInTransaction(db, () => {
+      updateRecordFields(db, String(record.id), writable, now);
+      // rejected → in_progress → waiting_acceptance（两次状态守卫 + 两条流转记录）
+      db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`, [now, task.id]);
+      db.run(
+        `UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, progress_pct = 100, update_time = ? WHERE id = ?`,
+        [now, task.id]
+      );
+    });
+
+    recordTaskOperation(
+      req, db, String(task.id), String(task.task_code || task.id), String(task.task_title || ''),
+      body.operatorId || '', body.operatorName || '',
+      'resubmit', '重新提交巡查记录', 'rejected', 'waiting_acceptance', 100,
+      `记录 ${record.record_code} 修订后重提`,
+      undefined, undefined,
+      JSON.stringify(writable)
+    );
+    saveDatabase();
+
+    res.json({
+      success: true,
+      data: { recordId: record.id, recordCode: record.record_code, taskStatus: 'waiting_acceptance' },
+      message: '巡查记录已重新提交',
+    });
+  } catch (error) {
+    console.error('[farm-tasks] 重提巡查记录失败:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ success: false, error: `重提巡查记录失败：${msg}` });
+  }
+});
+
 router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
   // 静态路由让行（/batch），否则批量删除会被当成 id='batch'
   if (STATIC_ROUTE_SEGMENTS.has(req.params.id)) return next();
@@ -892,6 +1286,14 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
 
     if (!targetId) {
       return res.status(404).json({ success: false, error: '农事任务不存在' });
+    }
+
+    // 2026-10-21 P2c：已关联巡查记录的任务不可删除。
+    //   校验用解析后的 targetId（含 task_code 兜底路径），否则按编号删除能绕过检查，
+    //   留下 inspection_task_id 指向空任务的孤儿记录。
+    const deleteViolation = assertTaskDeletable(db, String(targetId));
+    if (deleteViolation) {
+      return res.status(409).json({ success: false, error: deleteViolation, code: 'TASK_HAS_INSPECTION_RECORD' });
     }
 
     db.run('DELETE FROM farm_tasks WHERE id = ?', [targetId]);
@@ -1167,6 +1569,24 @@ router.put('/batch', (req: Request, res: Response) => {
         if (r.status && r.status !== normalizedUpdates.status) {
           if (!guardTransition(res, r.status, String(normalizedUpdates.status))) return;
         }
+      }
+    }
+
+    // 2026-10-21 P2c：批量改到 completed 时，巡查计划任务必须已提交巡查记录。
+    //   逐条检查并**列出违规 id**，而不是整体 500 —— 批量操作里一条不合法就整批失败不可接受。
+    if (normalizedUpdates.status === 'completed') {
+      const blocked: string[] = [];
+      for (const tid of ids) {
+        const violation = assertInspectionRecordBeforeComplete(db, String(tid));
+        if (violation) blocked.push(String(tid));
+      }
+      if (blocked.length > 0) {
+        return res.status(409).json({
+          success: false,
+          code: 'INSPECTION_RECORD_REQUIRED',
+          error: `以下 ${blocked.length} 个巡查任务尚未提交巡查记录，不能标记完成：${blocked.join('、')}`,
+          blockedIds: blocked,
+        });
       }
     }
 
@@ -1864,6 +2284,19 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     // P0-10：仅在显式推进状态时校验转移合法性（只改进度不校验）
     if (normalizedStatus && !guardTransition(res, task.status, normalizedStatus)) return;
 
+    // 2026-10-21 P2c：进度到 100% / 状态推进到 completed 时，
+    //   巡查计划任务必须已提交巡查记录（与 taskProgress.ts 的同名校验成对，防路由顺序开口）。
+    const willComplete =
+      normalizedStatus === 'completed' ||
+      (normalizedStatus === 'waiting_acceptance' && false) || // 待验收不算完成
+      (!normalizedStatus && Number(newProgress) >= 100 && task.status !== 'completed');
+    if (willComplete) {
+      const violation = assertInspectionRecordBeforeComplete(db, id);
+      if (violation) {
+        return res.status(409).json({ success: false, error: violation, code: 'INSPECTION_RECORD_REQUIRED' });
+      }
+    }
+
     // P0-1：事务包裹；P0-4：可选 status
     runInTransaction(db, () => {
       if (normalizedStatus) {
@@ -1965,6 +2398,13 @@ router.post('/:id/complete', (req: Request, res: Response) => {
 
     const fromStatus = task.status;
     if (!guardTransition(res, fromStatus, 'completed')) return;
+    // 2026-10-21 P2c：巡查计划任务必须先提交巡查记录才能完成。
+    //   注意：本端点当前被 taskProgress.ts 的同名端点遮蔽（routes/index.ts 先注册者先匹配），
+    //   两处都加了同一校验，防止路由顺序调整后重新开口。
+    const recordViolation = assertInspectionRecordBeforeComplete(db, id);
+    if (recordViolation) {
+      return res.status(409).json({ success: false, error: recordViolation, code: 'INSPECTION_RECORD_REQUIRED' });
+    }
     const now = new Date().toISOString();
 
     // 2026-08-22：AI-06 工时预测 — 收集实际工时（AI 训练 target）

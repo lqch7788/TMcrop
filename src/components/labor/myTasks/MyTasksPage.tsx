@@ -27,6 +27,8 @@ import { TaskDetailModal } from './TaskDetailModal';
 import { TaskFeedbackModal } from './TaskFeedbackModal';
 import { TaskRejectModal } from './TaskRejectModal';
 import { TaskSopModal } from './TaskSopModal';
+// 2026-10-21 P4：巡查记录提交/重提弹窗（表单与巡查记录 tab 共用一份逻辑）
+import { InspectionRecordModal } from '../../farm/hub/modals/InspectionRecordModal';
 
 // 导入类型和常量
 import { TaskFilterType, FeedbackFormData, TaskWithExtras } from './types';
@@ -204,6 +206,11 @@ export function MyTasksPage() {
         //   修正前映射丢失它们 → 13 条巡查被整体过滤、tab 显示为 4 条错位内容
         dispatchMode: (t as any).dispatchMode,
         sourceInspectionId: (t as TaskWithExtras).sourceInspectionId,
+        // 2026-10-21 P4：巡查计划实例标记（徽章 / 记录按钮 / 未来分组都依赖它，漏了三个功能全失效）
+        inspectionPlanId: (t as TaskWithExtras).inspectionPlanId,
+        planOccurrenceDate: (t as TaskWithExtras).planOccurrenceDate,
+        inspectionRecordId: (t as TaskWithExtras).inspectionRecordId,
+        inspectionRecordCode: (t as TaskWithExtras).inspectionRecordCode,
         // 临时任务特有字段
         workLocation: (t as TaskWithExtras).workLocation || '',
         urgency: (t as TaskWithExtras).urgency || 'normal',
@@ -357,6 +364,16 @@ export function MyTasksPage() {
   const endIndex = Math.min(startIndex + pageSize, filteredTasks.length);
   const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
 
+  // 2026-10-21 P4：未来巡查分组（方案 §10.5）
+  //   一个 daily 计划一次生成 14 条实例，若与今日待办平铺，今天要做的事会被未来计划淹没。
+  //   判据：巡查计划任务且 plan_occurrence_date > 今天。
+  const todayLocalStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD（本地时区）
+  const isFutureInspection = (t: any) =>
+    !!t.inspectionPlanId && !!t.planOccurrenceDate && String(t.planOccurrenceDate) > todayLocalStr;
+  const [showFutureInspections, setShowFutureInspections] = useState(false);
+  const currentPageTasks = paginatedTasks.filter((t: any) => !isFutureInspection(t));
+  const futureInspectionTasks = paginatedTasks.filter((t: any) => isFutureInspection(t));
+
   // 统计各类型任务数量
   // 2026-10-10（审核修复）：徽章计数与列表过滤共用同一组谓词（口径统一，
   //   修正前巡查反馈徽章 14 vs 内容 17、农事任务处理 37 vs 22 的两套标准问题）
@@ -371,6 +388,25 @@ export function MyTasksPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showSopModal, setShowSopModal] = useState(false);
   const [selectedSopTask, setSelectedSopTask] = useState<FarmTask | Task | null>(null);
+
+  // 2026-10-21 P4：巡查记录提交/重提弹窗
+  //   hasRecord 决定走「首次提交」还是「驳回重提」（后端两条不同路径）
+  const [recordModal, setRecordModal] = useState<{
+    isOpen: boolean;
+    task: any | null;
+    existingRecord: { id: string; recordCode: string } | null;
+  }>({ isOpen: false, task: null, existingRecord: null });
+
+  const openRecordModal = (task: any) => {
+    const hasRecord = !!(task.inspectionRecordId || task.inspectionRecordCode);
+    setRecordModal({
+      isOpen: true,
+      task,
+      existingRecord: hasRecord
+        ? { id: task.inspectionRecordId, recordCode: task.inspectionRecordCode }
+        : null,
+    });
+  };
 
   // 详情弹窗引用（用于传递正确的数据）
   const openDetailModal = (task: any) => {
@@ -932,34 +968,70 @@ export function MyTasksPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedTasks.map((task) => {
-                  return (
-                    <TableRow key={task.id} className="hover:bg-blue-50 transition-colors">
-                      {taskFilter === 'problem' ? (
-                        <ProblemTaskTableRow
-                          task={task}
-                          unifiedTasks={unifiedTasks}
-                          acceptTask={acceptTask}
-                          onAccept={handleAccept}
-                          onReject={openRejectModal}
-                          onContinueExecution={handleContinueExecution}
-                          onOpenFeedbackModal={openFeedbackModal}
-                          onOpenDetailModal={openDetailModal}
-                        />
-                      ) : (
-                        <ProductionTaskTableRow
-                          task={task}
-                          onAccept={handleAccept}
-                          onReject={openRejectModal}
-                          onContinueExecution={handleContinueExecution}
-                          onOpenFeedbackModal={openFeedbackModal}
-                          onOpenDetailModal={openDetailModal}
-                          onOpenSopModal={openSopModal}
-                        />
-                      )}
-                    </TableRow>
-                  );
-                })
+                <>
+                  {currentPageTasks.map((task) => {
+                    return (
+                      <TableRow key={task.id} className="hover:bg-blue-50 transition-colors">
+                        {taskFilter === 'problem' ? (
+                          <ProblemTaskTableRow
+                            task={task}
+                            unifiedTasks={unifiedTasks}
+                            acceptTask={acceptTask}
+                            onAccept={handleAccept}
+                            onReject={openRejectModal}
+                            onContinueExecution={handleContinueExecution}
+                            onOpenFeedbackModal={openFeedbackModal}
+                            onOpenDetailModal={openDetailModal}
+                          />
+                        ) : (
+                          <ProductionTaskTableRow
+                            task={task}
+                            onAccept={handleAccept}
+                            onReject={openRejectModal}
+                            onContinueExecution={handleContinueExecution}
+                            onOpenFeedbackModal={openFeedbackModal}
+                            onOpenDetailModal={openDetailModal}
+                            onOpenSopModal={openSopModal}
+                            onSubmitInspectionRecord={openRecordModal}
+                          />
+                        )}
+                      </TableRow>
+                    );
+                  })}
+
+                  {/* 2026-10-21 P4：未来巡查折叠分组（方案 §10.5） */}
+                  {futureInspectionTasks.length > 0 && (
+                    <>
+                      <TableRow
+                        className="bg-amber-50 cursor-pointer"
+                        onClick={() => setShowFutureInspections((v) => !v)}
+                      >
+                        <TableCell colSpan={14} className="px-4 py-2">
+                          <span className="text-sm text-amber-800 font-medium">
+                            {showFutureInspections ? '▼' : '▶'} 未来巡查（{futureInspectionTasks.length}）
+                          </span>
+                          <span className="ml-2 text-xs text-amber-600">
+                            计划任务已排到今天之后，暂不占用今日待办
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      {showFutureInspections && futureInspectionTasks.map((task) => (
+                        <TableRow key={task.id} className="hover:bg-blue-50 transition-colors bg-amber-50/30">
+                          <ProductionTaskTableRow
+                            task={task}
+                            onAccept={handleAccept}
+                            onReject={openRejectModal}
+                            onContinueExecution={handleContinueExecution}
+                            onOpenFeedbackModal={openFeedbackModal}
+                            onOpenDetailModal={openDetailModal}
+                            onOpenSopModal={openSopModal}
+                            onSubmitInspectionRecord={openRecordModal}
+                          />
+                        </TableRow>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
             </TableBody>
           </Table>
@@ -1018,6 +1090,25 @@ export function MyTasksPage() {
         isOpen={showSopModal}
         onClose={() => { setShowSopModal(false); setSelectedSopTask(null); }}
         task={selectedSopTask}
+      />
+
+      {/* 2026-10-21 P4：巡查记录提交/重提弹窗 */}
+      <InspectionRecordModal
+        isOpen={recordModal.isOpen}
+        task={recordModal.task ? {
+          id: recordModal.task.id,
+          taskCode: recordModal.task.taskCode,
+          inspectionType: recordModal.task.inspectionType,
+          greenhouseName: recordModal.task.greenhouseName,
+          assigneeId: recordModal.task.assigneeId,
+          assigneeName: recordModal.task.assigneeName,
+          planTime: recordModal.task.planStart,
+          planOccurrenceDate: recordModal.task.planStart?.slice(0, 10),
+          area: recordModal.task.area,
+        } : null}
+        existingRecord={recordModal.existingRecord}
+        onClose={() => setRecordModal({ isOpen: false, task: null, existingRecord: null })}
+        onSubmitted={() => { setRefreshKey(prev => prev + 1); }}
       />
         </>
       )}

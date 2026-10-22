@@ -65,9 +65,15 @@ export async function getWorkers(forceRefresh: boolean = false): Promise<Worker[
 export async function getWorkerList(forceRefresh: boolean = false): Promise<Worker[]> {
   const now = Date.now();
 
+  // 2026-10-22：status 取值有中英两套 —— 后端 employees 表返回英文 'active'
+  //   （labor.repository.findActiveEmployees：WHERE status='active'），
+  //   只认中文 '在职' 会让缓存命中分支返回空列表。
+  //   口径与 useWorkerPersonnel / AddOperationRecordModal 的 legacyActive 保持一致。
+  const legacyActive = 'active' as string;
+
   // 如果缓存有效且不强制刷新，直接返回缓存
   if (!forceRefresh && cachedWorkers.length > 0 && (now - cacheTime) < CACHE_DURATION) {
-    return cachedWorkers.filter(w => w.status === '在职');
+    return cachedWorkers.filter(w => w.status === '在职' || w.status === legacyActive);
   }
 
   try {

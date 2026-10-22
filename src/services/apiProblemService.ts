@@ -13,7 +13,8 @@ import { enhancedApiClient } from '../lib/apiClient';
 
 // 问题类型定义（基于 farm/common.ts 中的定义）
 export interface Problem {
-  id: number;
+  // 2026-10-22：后端 problems.id 是 'PRB'+时间戳 字符串（DB 中全部如此），不是数字
+  id: number | string;
   problemCode: string;
   // 基本信息
   title: string;

@@ -849,7 +849,13 @@ export function initializeDatabase() {
       -- 2026-10-21：临时任务合并前置——人工数量 / 紧急程度
       -- （老库由 fixSchemaColumns 的 ADD COLUMN 补齐；此处仅新库生效）
       worker_count INTEGER DEFAULT 1,
-      urgency TEXT DEFAULT 'normal'
+      urgency TEXT DEFAULT 'normal',
+      -- 2026-10-21（P2a）：巡查计划实例标记
+      --   inspection_plan_id = 来源计划（模板）ID；plan_occurrence_date = 该实例的执行日
+      --   二者同时非空时受 uk_farm_tasks_plan_occurrence 唯一约束（一个计划同一天只能有一条任务）
+      --   （老库由 fixSchemaColumns 的 ADD COLUMN 补齐；此处仅新库生效）
+      inspection_plan_id TEXT,
+      plan_occurrence_date TEXT
     )
   `);
 
@@ -928,9 +934,59 @@ export function initializeDatabase() {
       create_time TEXT,
       update_time TEXT,
       -- 2026-09-21：关联到 problems 表（problem → source_problem_id 反向关联）
-      source_problem_id TEXT
+      source_problem_id TEXT,
+      -- 2026-10-21（P2a）：巡查计划 / 任务关联 + 检查项结果 + 记录版本
+      --   inspection_task_id 受 uk_inspections_task 唯一约束（任务 ↔ 记录 1:1）
+      --   （老库由 fixSchemaColumns 的 ADD COLUMN 补齐；此处仅新库生效）
+      inspection_plan_id TEXT,
+      inspection_task_id TEXT,
+      checklist_results TEXT DEFAULT '[]',
+      record_version INTEGER DEFAULT 1,
+      -- 2026-10-21（P1a）：安全/其他巡查的检查区域场所
+      area TEXT
     )
   `);
+
+  // =====================================
+  // 巡查计划表（P2a）
+  // =====================================
+  // 计划是「模板」：定义谁、多久查一次、查什么、查多久；
+  // 实例化出来的执行单仍是 farm_tasks，不新建第二套任务/排班/状态系统。
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inspection_plans (
+      id TEXT PRIMARY KEY,
+      plan_code TEXT NOT NULL,
+      title TEXT NOT NULL,
+      inspection_type TEXT NOT NULL DEFAULT 'farm',
+      greenhouse_id TEXT, greenhouse_name TEXT,
+      crop_name TEXT,
+      equipment_id TEXT, equipment_name TEXT,
+      infrastructure_id TEXT, infrastructure_name TEXT,
+      area TEXT,
+      checklist TEXT DEFAULT '[]',
+      frequency TEXT NOT NULL DEFAULT 'weekly',
+      interval_value INTEGER DEFAULT 1,
+      weekdays TEXT DEFAULT '[]',
+      day_of_month INTEGER,
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      window_days INTEGER DEFAULT 14,
+      default_time TEXT DEFAULT '09:00',
+      duration_hours REAL DEFAULT 1,
+      assignee_id TEXT, assignee_name TEXT,
+      team_id TEXT, team_name TEXT,
+      auto_schedule INTEGER DEFAULT 1,
+      shift_code TEXT,
+      pause_ranges TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'active',
+      created_by TEXT, created_by_name TEXT,
+      create_time TEXT, update_time TEXT,
+      tenant_id INTEGER DEFAULT 1,
+      version INTEGER DEFAULT 1
+    )
+  `);
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS uk_inspection_plans_code ON inspection_plans(plan_code)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inspection_plans_status ON inspection_plans(status, start_date)`);
 
   // 创建问题记录表
   db.run(`
@@ -947,6 +1003,9 @@ export function initializeDatabase() {
       assignee_name TEXT,
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'pending',
+      -- 2026-10-21：来源巡查类型 / 结构化问题分类（供分派映射任务类型）
+      inspection_type TEXT,
+      issue_categories TEXT DEFAULT '[]',
       create_time TEXT,
       update_time TEXT
     )

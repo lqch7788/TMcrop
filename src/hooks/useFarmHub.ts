@@ -172,6 +172,11 @@ function getTodayString(): string {
  * 判断是否为今日
  */
 function isToday(dateStr: string): boolean {
+  // 2026-10-21：dateStr 可能为 null/undefined —— 巡查记录允许不填巡查日期
+  //   （check_date 可空），此前直接 .startsWith 会抛
+  //   "Cannot read properties of null (reading 'startsWith')"，
+  //   由 ErrorBoundary 兜成整页白屏（实测：一条无 checkDate 的记录就让农事任务中心整个崩掉）。
+  if (!dateStr || typeof dateStr !== 'string') return false;
   return dateStr.startsWith(getTodayString());
 }
 
@@ -206,6 +211,14 @@ function normalizeInspectionRecord(record: InspectionRecord): InspectionRecord {
     soilMoisture: record.soilMoisture || 0,
     soilEc: record.soilEc || 0,
     soilPh: record.soilPh || 0,
+    // 2026-10-21（P2a）：巡查计划 / 任务关联 + 检查项结果 + 记录版本。
+    //   计划实例任务执行后回填的记录会带 inspectionTaskId，
+    //   「巡查记录」列表据此判断这条记录是不是计划执行结果（P3 起展示）。
+    inspectionPlanId: record.inspectionPlanId || '',
+    inspectionTaskId: record.inspectionTaskId || '',
+    checklistResults: Array.isArray(record.checklistResults) ? record.checklistResults : [],
+    recordVersion: record.recordVersion || 1,
+    area: record.area || '',
   };
 }
 
@@ -327,6 +340,14 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         if (dispatchMode !== 'farm') return false;
         // 永久过滤 AI 训练样本（农事任务中心不需要显示）
         if (t.synthetic === 1) return false;
+        // 2026-10-21（P2a）：过滤巡查计划实例任务。
+        //   计划实例化出来的任务由「巡查记录」tab 承载（后端 GET /farm-tasks 的
+        //   exclude_source_type=inspection_plan 是同一口径的 SQL 层实现）。
+        //   在此再加一道，是为了让「农事任务中心 = 人工派发任务」的语义闭合：
+        //   计划任务若混进来，人员管理与事务管理会重复统计同一批任务。
+        //   注意「我的任务」不看这个列表（MyTasksPage 走 useTasks，不经过本 hook），
+        //   所以执行人仍能在那里看到自己的巡查安排。
+        if (t.sourceType === 'inspection_plan' || t.inspectionPlanId) return false;
         return true;
       })
       .sort(sortByCreatedAt);

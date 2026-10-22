@@ -51,13 +51,16 @@ export function useWorkerMatch() {
     try {
       // 从 useWorkerStore 获取员工数据，映射到 WorkerData 格式
       const storeWorkers = useWorkerStore.getState().workers;
+      // 2026-10-22：后端 employees 表返回英文 status='active'，只认中文 '在职'
+      //   会把所有在职工人判成 'off'，推荐结果恒为空。口径同 legacyActive 约定。
+      const legacyActive = 'active' as string;
       const workerData: WorkerData[] = storeWorkers.map(w => ({
         id: w.id,
         name: w.name,
         // Worker.position 映射到 role
         role: w.position,
-        // Worker.status 映射：'在职'→'available', '离职'/'退休'→'off'
-        status: w.status === '在职' ? 'available' : 'off',
+        // Worker.status 映射：'在职'/'active'→'available', '离职'/'退休'→'off'
+        status: w.status === '在职' || w.status === legacyActive ? 'available' : 'off',
         skills: w.skillTags || [],
         // Worker.workArea 映射到 workZone
         workZone: w.workArea,

@@ -182,9 +182,23 @@ export interface Task {
   status: TaskStatus;
 
   // 任务来源
-  sourceType: 'dispatch' | 'tempTask' | 'inspection';
+  // 2026-10-21（P2a）：新增 'inspection_plan' —— 巡查计划实例化出来的任务。
+  //   它由「巡查记录」tab 承载，农事任务中心列表用 exclude_source_type=inspection_plan 排除，
+  //   但「我的任务」保留（执行人要在那里看到自己的巡查安排）。
+  //   'tempTask' 是 2026-10-21 已下线的临时任务遗留值，保留以兼容存量数据。
+  sourceType: 'dispatch' | 'tempTask' | 'inspection' | 'inspection_plan';
   sourceId?: string;
   sourceCode?: string;
+
+  // 2026-10-21（P2a）：巡查计划实例标记（仅 sourceType='inspection_plan' 时有值）
+  /** 来源巡查计划 ID */
+  inspectionPlanId?: string;
+  /** 该实例的计划执行日 YYYY-MM-DD；与 inspectionPlanId 共同构成幂等键 */
+  planOccurrenceDate?: string;
+  /** 该任务已提交的巡查记录 ID（列表端点批量回填，未提交为空串） */
+  inspectionRecordId?: string;
+  /** 该任务已提交的巡查记录编号 */
+  inspectionRecordCode?: string;
 
   // 返工相关
   reworkCount: number;
@@ -352,7 +366,7 @@ export interface SubTask {
 // ============================================
 export interface TaskFilters {
   status?: TaskStatus[];
-  sourceType?: 'dispatch' | 'tempTask' | 'inspection';
+  sourceType?: 'dispatch' | 'tempTask' | 'inspection' | 'inspection_plan';
   assigneeId?: string;
   assignerId?: string;
   greenhouseId?: string;

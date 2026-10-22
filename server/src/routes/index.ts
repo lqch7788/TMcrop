@@ -123,6 +123,8 @@ import taskProgressRouter from './taskProgress';
 import complianceReportRouter from './complianceReport';
 // P1-3：承诺达标合格证
 import complianceCertificateRouter from './complianceCertificate';
+// 2026-10-21 P2b：巡查计划（模板）。实例化出来的执行单仍是 farm_tasks，不新建任务系统
+import inspectionPlanRouter from './inspectionPlan';
 // v0.3 P0-3：移动端离线队列同步
 import offlineSyncRouter from './offlineSync';
 // v0.3 P0-B：纸单兜底（班组长代填）
@@ -229,6 +231,8 @@ router.use('/farm-tasks', requireAuth, farmTaskRouter);
 router.use('/compliance-report', requireAuth, complianceReportRouter);
 // P1-3：承诺达标合格证（按批次开具，留存 ≥6 个月）
 router.use('/compliance-certificates', requireAuth, complianceCertificateRouter);
+// 2026-10-21 P2b：巡查计划 CRUD + 实例生成
+router.use('/inspection-plans', requireAuth, inspectionPlanRouter);
 // v0.3 P0-3：移动端离线队列同步
 router.use('/offline-sync', requireAuth, offlineSyncRouter);
 // v0.3 P0-B：纸单兜底（班组长代填）
