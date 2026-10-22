@@ -750,6 +750,7 @@ export async function resyncFutureOccurrences(
  * @param plan 计划行
  * @param rangeFrom 区间起（含）；默认 = max(today, plan.start_date)
  * @param rangeTo 区间止（含）；默认 = min(today+window_days, plan.end_date || 无限期)
+ * @param todayOverride 参考「今天」；仅用于单测模拟跨天滚动（不传取本地真实日期）
  *
  * 幂等：已存在的日期跳过（不重复生成）。
  * 并发：唯一索引冲突 catch 为跳过，不 500。
@@ -758,7 +759,8 @@ export async function generateOccurrences(
   db: any,
   plan: InspectionPlanRow,
   rangeFrom?: string,
-  rangeTo?: string
+  rangeTo?: string,
+  todayOverride?: string
 ): Promise<GenerateResult> {
   const result: GenerateResult = {
     planId: plan.id,
@@ -773,14 +775,20 @@ export async function generateOccurrences(
     return result;
   }
 
-  const today = formatLocalDateISO();
+  // 2026-10-22（遗留项 6）：today 可注入 —— 跨天滚动补齐（cron 每日 00:10）此前
+  //   只能靠「真实时间推移」或「手动扩大窗口」间接验证，无法回归。抽成参数后
+  //   单测可以用固定日期连续调用两次，断言第二次只补新进入窗口的日期。
+  const today = todayOverride || formatLocalDateISO();
   const windowDays = Math.min(Math.max(Number(plan.window_days ?? 14), 1), MAX_WINDOW_DAYS);
 
   // 默认区间：max(today, start_date) ~ today+window_days（不补历史，方案 §7.6）
   const from = rangeFrom || (String(plan.start_date) > today ? String(plan.start_date) : today);
   let to = rangeTo;
   if (!to) {
-    const end = new Date();
+    // 终点必须从同一个 today 推出（不能用 new Date()）：
+    //   注入 today 时两者基准一致，else 会出现 from > to 的空区间
+    //   （单测实测：第 2 天 from=10-23，终点却仍是真实今天+3，只算出已存在的日期）。
+    const end = parseLocalDate(today) || new Date();
     end.setDate(end.getDate() + windowDays);
     to = formatLocalDate(end);
   }
@@ -918,14 +926,21 @@ export async function generateOccurrences(
   return result;
 }
 
-/** 生成窗口补齐：对全部 active 计划各跑一次窗口生成（启动 / cron 用） */
-export async function backfillAllPlans(db: any): Promise<{ plans: number; created: number; failed: number }> {
+/**
+ * 生成窗口补齐：对全部 active 计划各跑一次窗口生成（启动 / cron 用）
+ *
+ * @param todayOverride 参考「今天」；仅单测模拟跨天滚动时传入
+ */
+export async function backfillAllPlans(
+  db: any,
+  todayOverride?: string
+): Promise<{ plans: number; created: number; failed: number }> {
   const plans = listActivePlans(db);
   let created = 0;
   let failed = 0;
   for (const plan of plans) {
     try {
-      const r = await generateOccurrences(db, plan);
+      const r = await generateOccurrences(db, plan, undefined, undefined, todayOverride);
       created += r.created.length;
     } catch (err: any) {
       failed++;

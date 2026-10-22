@@ -16,6 +16,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, DatePicker, FormField, Input, Modal, NumberInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea } from '@/components/ui';
 import { useInspectionPlanStore, type InspectionPlan, type PlanChecklistItem } from '@/stores/useInspectionPlanStore';
+// 2026-10-22（遗留项 5）：执行人改为员工选择器（数据源 = 员工档案）
+import { useWorkerStore } from '@/stores/useWorkerStore';
 import { INSPECTION_TYPES } from '@/types/farm/common';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -47,6 +49,22 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
   const { createPlan, updatePlan } = useInspectionPlanStore();
   const isEdit = !!plan;
 
+  // 2026-10-22（遗留项 5）：执行人从「自由文本」改为「员工档案选择」。
+  //   原实现把姓名同时写进 assigneeId / assigneeName，语义不干净：
+  //   assigneeId 应当是 employees.id，否则排班侧每次都要靠姓名反查。
+  const workers = useWorkerStore((s) => s.workers);
+  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  useEffect(() => {
+    if (isOpen && workers.length === 0) void loadWorkers();
+  }, [isOpen, workers.length, loadWorkers]);
+
+  // 在职员工（口径与 useWorkerPersonnel / apiWorkerService 的 legacyActive 约定一致：
+  //   后端历史数据是 'active'，前端展示层是 '在职'，两种都要认）
+  const activeWorkers = useMemo(
+    () => workers.filter((w) => w.status === '在职' || (w.status as string) === 'active'),
+    [workers],
+  );
+
   const [form, setForm] = useState({
     title: '',
     inspectionType: 'farm',
@@ -75,6 +93,17 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     checklist: [] as PlanChecklistItem[],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // 已选执行人：优先按 id 匹配，其次按姓名匹配。
+  //   后者用于兼容历史计划 —— 旧的文本输入把姓名写进了 assigneeId，
+  //   这里能匹配到时保存会自动纠正为 employees.id（数据清理，不需要单独迁移脚本）。
+  const matchedWorker = useMemo(
+    () => activeWorkers.find(
+      (w) => (!!form.assigneeId && w.id === form.assigneeId)
+        || (!!form.assigneeName && w.name === form.assigneeName),
+    ),
+    [activeWorkers, form.assigneeId, form.assigneeName],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,8 +194,10 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
       windowDays: form.windowDays,
       defaultTime: form.defaultTime,
       durationHours: form.durationHours,
-      assigneeId: form.assigneeId || form.assigneeName.trim(),
-      assigneeName: form.assigneeName.trim(),
+      // 2026-10-22（遗留项 5）：命中员工档案时写 employees.id + 档案姓名（自动纠正历史脏值）；
+      //   未命中（历史自由文本）时保持原值，后端 resolveEmployeeId 仍会按姓名兜底。
+      assigneeId: matchedWorker?.id || form.assigneeId || form.assigneeName.trim(),
+      assigneeName: matchedWorker?.name || form.assigneeName.trim(),
       autoSchedule: form.autoSchedule,
       greenhouseName: form.greenhouseName || null,
       cropName: form.cropName || null,
@@ -380,12 +411,36 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
           <h4 className="text-sm font-semibold text-gray-700">执行与排班</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField label="执行人" required error={errors.assigneeName}>
-              <Input
-                className={deepInputClass}
-                value={form.assigneeName}
-                onChange={(e) => setForm({ ...form, assigneeName: e.target.value, assigneeId: e.target.value })}
-                placeholder="姓名（须与员工档案一致才能自动排班）"
-              />
+              {/* 2026-10-22（遗留项 5）：员工档案下拉，选中即同时拿到 employees.id 与姓名。
+                  历史数据（姓名写进 assigneeId）匹配不到员工时保留一个只读选项，
+                  避免编辑旧计划时下拉空白、误以为执行人丢了。 */}
+              <Select
+                value={matchedWorker?.id || (form.assigneeName ? '__legacy__' : '')}
+                onValueChange={(v) => {
+                  if (v === '__legacy__') return;
+                  const w = activeWorkers.find((x) => x.id === v);
+                  setForm((f) => ({ ...f, assigneeId: w?.id || '', assigneeName: w?.name || '' }));
+                }}
+              >
+                <SelectTrigger className={deepInputClass}>
+                  <SelectValue placeholder="选择执行人（须在员工档案中）" />
+                </SelectTrigger>
+                <SelectContent>
+                  {form.assigneeName && !matchedWorker && (
+                    <SelectItem value="__legacy__">
+                      {form.assigneeName}（员工档案未匹配，请重新选择）
+                    </SelectItem>
+                  )}
+                  {activeWorkers.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name}{w.team ? `（${w.team}）` : ''}
+                    </SelectItem>
+                  ))}
+                  {activeWorkers.length === 0 && (
+                    <SelectItem value="__empty__" disabled>暂无在职员工档案</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </FormField>
             <div className="flex items-end pb-3">
               <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">

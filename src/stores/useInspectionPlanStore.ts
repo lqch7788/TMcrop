@@ -86,7 +86,8 @@ export interface PlanOccurrence {
   estimatedHours?: number | null;
   description?: string | null;
   inspectionPlanId: string;
-  schedule?: { id: string; workerName?: string; planStart?: string; planEnd?: string; shiftType?: string; status?: string } | null;
+  // shiftName 由后端 JOIN shifts 表带出（2026-10-22 遗留项 4）；shiftType 是编码（SH001）
+  schedule?: { id: string; workerName?: string; planStart?: string; planEnd?: string; shiftType?: string; shiftName?: string; status?: string } | null;
   inspectionRecordId?: string;
   inspectionRecordCode?: string;
 }
@@ -121,7 +122,9 @@ export interface PlanStats {
 
   // ==== 兼容旧字段（旧版后端仍在返回，保留读取以防部署错位）====
   total?: number;
-  byStatus?: Record<string, number>;
+  /** 2026-10-22（遗留项 2）：改成数组 —— 对象键会被 apiCamelcaseMiddleware 驼峰化
+   *  （waiting_acceptance → waitingAcceptance），按状态值取值必然取不到。 */
+  byStatus?: Array<{ status: string; count: number }>;
   submittedRecords?: number;
   missingRecords?: number;
 }

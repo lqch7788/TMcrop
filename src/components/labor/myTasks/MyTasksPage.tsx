@@ -94,6 +94,16 @@ function matchesProblemTabFilter(task: any): boolean {
 }
 
 /**
+ * 未来巡查实例判定：巡查计划生成、且执行日晚于今天。
+ * 2026-10-22（遗留项 1）：抽成模块级纯函数，分页分组与渲染共用同一判据。
+ */
+function isFutureInspectionTask(task: any, today: string): boolean {
+  return !!task.inspectionPlanId
+    && !!task.planOccurrenceDate
+    && String(task.planOccurrenceDate) > today;
+}
+
+/**
  * 「农事任务处理」tab：纯农事任务
  *
  * 2026-10-20 修复（state-auditor MEDIUM-3）：此前用 `taskCode.startsWith('NS')` 判定，
@@ -358,21 +368,40 @@ export function MyTasksPage() {
     }
   }, [myTasks, taskFilter, refreshKey]);
 
-  // 计算分页
-  const totalPages = Math.ceil(filteredTasks.length / pageSize) || 1;
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, filteredTasks.length);
-  const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
-
   // 2026-10-21 P4：未来巡查分组（方案 §10.5）
   //   一个 daily 计划一次生成 14 条实例，若与今日待办平铺，今天要做的事会被未来计划淹没。
   //   判据：巡查计划任务且 plan_occurrence_date > 今天。
-  const todayLocalStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD（本地时区）
-  const isFutureInspection = (t: any) =>
-    !!t.inspectionPlanId && !!t.planOccurrenceDate && String(t.planOccurrenceDate) > todayLocalStr;
   const [showFutureInspections, setShowFutureInspections] = useState(false);
-  const currentPageTasks = paginatedTasks.filter((t: any) => !isFutureInspection(t));
-  const futureInspectionTasks = paginatedTasks.filter((t: any) => isFutureInspection(t));
+  const todayLocalStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD（本地时区）
+
+  // 2026-10-22（遗留项 1）：改为「先分组、再分页」。
+  //   原实现先按 filteredTasks 分页，再只在**当前页切片**里拆出未来任务：
+  //   · 未来任务仍占用本页名额，可能出现「整页都是未来任务」的白跑页；
+  //   · 折叠组的条数只是当前页的未来条数，其它页的未来任务散落在后面各页，
+  //     用户必须逐页翻才能看到「未来一共排了多少」。
+  //   现在分页只作用于今天及以前的待办；未来巡查组展示**全部**未来任务（默认收起）。
+  const { currentPageTasks, futureInspectionTasks, totalPages } = useMemo(() => {
+    const current: any[] = [];
+    const future: any[] = [];
+    for (const t of filteredTasks) {
+      if (!isFutureInspectionTask(t, todayLocalStr)) {
+        current.push(t);
+      } else if (String(t.status) !== 'cancelled') {
+        // 已取消的未来实例不进分组：暂停计划 / 编辑重排会批量产生 cancelled 台账
+        //（实测 90 天测试计划一次留下 60 条），把它们算进「未来巡查（N）」
+        // 会让用户以为有几十条待办要执行。台账仍在农事任务中心可查。
+        future.push(t);
+      }
+    }
+    const pages = Math.ceil(current.length / pageSize) || 1;
+    const safePage = Math.min(currentPage, pages);
+    const start = (safePage - 1) * pageSize;
+    return {
+      currentPageTasks: current.slice(start, start + pageSize),
+      futureInspectionTasks: future,
+      totalPages: pages,
+    };
+  }, [filteredTasks, todayLocalStr, currentPage, pageSize]);
 
   // 统计各类型任务数量
   // 2026-10-10（审核修复）：徽章计数与列表过滤共用同一组谓词（口径统一，
