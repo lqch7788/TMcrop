@@ -11,6 +11,8 @@ import { InspectionSearch, InspectionSearchFilters } from './components/Inspecti
 import { InspectionToolbar } from './components/InspectionToolbar';
 // 2026-10-21 P3：巡查计划面板（与巡查记录并列视图）
 import { InspectionPlanPanel } from './inspection-plans/InspectionPlanPanel';
+// 2026-10-22：视图切换按钮上的「计划总数」直接读同一 store（面板挂载时已拉全量）
+import { useInspectionPlanStore } from '../../../stores/useInspectionPlanStore';
 // 2026-10-22：计划实例的巡查记录提交弹窗（与「我的任务」共用同一份表单逻辑）
 import { InspectionRecordModal } from './modals/InspectionRecordModal';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
@@ -29,7 +31,7 @@ import QRScanner, { QRData } from '../../common/QRScanner';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { Camera, Download, MapPin, Mic, Package, X } from 'lucide-react';
+import { Camera, Download, MapPin, Mic, Package, Plus, X } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 import {
   INSPECTION_TYPES as INSPECTION_TYPE_OPTIONS,
@@ -263,6 +265,11 @@ export function InspectionTab({
   // 2026-10-21 P3：巡查计划 / 巡查记录视图切换（默认记录视图）
   const [viewMode, setViewMode] = useState<'records' | 'plans'>('records');
 
+  // 2026-10-22：计划总数显示在切换按钮上（与「巡查记录（N）」同一模式）；
+  //   「新建计划」按钮上移到切换行右侧，用递增信号请求面板打开新建表单。
+  const planCount = useInspectionPlanStore((s) => s.plans.length);
+  const [planCreateRequest, setPlanCreateRequest] = useState(0);
+
   // 2026-10-22（审核 P0-2）：计划实例表的「填写记录」弹窗
   //   此前只切 tab、丢掉 taskId，用户还得自己去记录视图里找。
   const [planRecordModal, setPlanRecordModal] = useState<{
@@ -283,6 +290,8 @@ export function InspectionTab({
     inspectionType: 'farm' as InspectionType,
     area: '',
     greenhouseId: '',
+    // 2026-10-22：区域名称（选种植/育苗记录后自动填充，提交时优先使用）
+    greenhouseName: '',
     cropName: '',
     inspectorId: '',
     batchId: '',
@@ -353,6 +362,8 @@ export function InspectionTab({
         ...prev,
         inspectionType: 'farm',
         greenhouseId: data.code,
+        // 扫码定位得到的温室名同步写入，避免残留上一次自动填充的区域名
+        greenhouseName: greenhouse?.name || '',
         cropName: '',
         equipmentId: '',
         equipmentName: '',
@@ -484,6 +495,7 @@ export function InspectionTab({
       inspectionType: 'farm',
       area: '',
       greenhouseId: '',
+      greenhouseName: '',
       cropName: '',
       inspectorId: '',
       batchId: '',
@@ -606,8 +618,10 @@ export function InspectionTab({
 
     if (newRecord.inspectionType === 'farm') {
       const selectedGreenhouse = greenhouses.find(g => g.id === newRecord.greenhouseId);
-      greenhouseId = newRecord.greenhouseId;
-      greenhouseName = selectedGreenhouse?.name || '';
+      // 2026-10-22：区域可能来自种植/育苗记录（如「2号大棚」，不在温室档案里），
+      //   优先用表单里的名称；`__picked_area__` 占位 id 不落库（后端只存 greenhouse_name）。
+      greenhouseId = newRecord.greenhouseId.startsWith('__') ? '' : newRecord.greenhouseId;
+      greenhouseName = newRecord.greenhouseName || selectedGreenhouse?.name || '';
       cropName = newRecord.cropName;
     } else if (newRecord.inspectionType === 'equipment') {
       const selectedEquipment = useEquipmentStore.getState().equipment.find(e => e.id === newRecord.equipmentId);
@@ -647,7 +661,8 @@ export function InspectionTab({
       // V2.0: 通过 API Store 创建问题（替换 localStorage addProblem）
       const createdProblem = await createProblem({
         problem_code: `PD${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Date.now()).slice(-3)}`,
-        greenhouseId: newRecord.greenhouseId,
+        // 用上面归一化后的区域 id（占位 id 已置空），避免把 __picked_area__ 写进问题表
+        greenhouseId: greenhouseId,
         greenhouseName: greenhouseName,
         cropName: cropName,
         inspectorId: newRecord.inspectorId,
@@ -944,9 +959,10 @@ export function InspectionTab({
           方案 §10.1：切 tab 卸载 40+ Radix Select 会触发 commit 阶段 setState 级联死循环
           （既有事故：Radix Select 卸载风暴卡死）。 */}
       <div className="flex items-center gap-2">
+        {/* 2026-10-22：巡查计划排在巡查记录之前，计数模式与巡查记录一致（名称后带括号总数） */}
         {([
+          { key: 'plans', label: `巡查计划（${planCount}）` },
           { key: 'records', label: `巡查记录（${stats?.total ?? filteredRecords.length}）` },
-          { key: 'plans', label: '巡查计划' },
         ] as const).map((v) => (
           <button
             key={v.key}
@@ -961,6 +977,18 @@ export function InspectionTab({
             {v.label}
           </button>
         ))}
+        {/* 2026-10-22：新建计划从面板工具栏移到本行右侧；点击同时切到计划视图 */}
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={() => {
+            setViewMode('plans');
+            setPlanCreateRequest((n) => n + 1);
+          }}
+        >
+          <Plus className="w-4 h-4" />
+          新建计划
+        </Button>
       </div>
 
       {/* 视图 1：巡查计划
@@ -969,6 +997,7 @@ export function InspectionTab({
           现在：填写记录 → 打开记录弹窗；任务编号 → 打开任务详情；记录编号 → 打开记录详情。 */}
       <div className={viewMode === 'plans' ? '' : 'hidden'}>
         <InspectionPlanPanel
+          createRequest={planCreateRequest}
           onScheduleTask={(taskId, date) => {
             // 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务
             window.location.href = `/schedule?tab=farm-task&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;

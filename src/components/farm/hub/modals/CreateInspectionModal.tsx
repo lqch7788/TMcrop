@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, FormField } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
-import { Button, Label, DatePicker } from '@/components/ui';
+import { Button, Label, DatePicker, TabsList, TabsTrigger } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Camera, ChevronDown, ChevronUp, Scan, Wand2, X } from 'lucide-react';
+import { Camera, ChevronDown, ChevronUp, Scan, Search, Wand2, X } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS, INSPECTION_TYPES, type InspectionType } from '../../../../types/farm/common';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-10-22：巡查对象改为「种植/育苗记录」可搜索选择（与农事任务新建弹窗同一数据源），
+//   选中后自动带出区域与作物，减少手工逐个下拉挑选。
+import { usePlantingStore, useSeedlingStore } from '../../../../stores';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -24,6 +27,13 @@ interface InspectionRecordFormData {
   /** 2026-10-21：安全检查的检查区域/场所 */
   area: string;
   greenhouseId: string;
+  /**
+   * 2026-10-22：区域名称。
+   *   选种植/育苗记录时区域名可能不在温室档案里（如「2号大棚」「育苗温室A区」），
+   *   仅靠 greenhouseId 反查会得到空名称；后端 inspections 表本来就只存 name，
+   *   所以这里显式带一份名称，提交时优先使用。
+   */
+  greenhouseName: string;
   cropName: string;
   inspectorId: string;
   batchId: string;
@@ -108,6 +118,108 @@ export function CreateInspectionModal({
 }: CreateInspectionModalProps) {
   const issueCategories = ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label }));
   const completionTimeOptions = COMPLETION_TIME_OPTIONS.map(t => ({ value: t.value, label: t.label }));
+
+  // ===== 2026-10-22：巡查对象（种植/育苗）可搜索选择 =====
+  //   数据源与「农事任务 → 新建任务」的关联区域选择完全一致；
+  //   选中一条记录后自动填充区域与作物，避免再手工挑两个下拉。
+  const plantingItems = usePlantingStore((s) => s.items);
+  const seedlingItems = useSeedlingStore((s) => s.items);
+  const loadPlantings = usePlantingStore((s) => s.loadItems);
+  const loadSeedlings = useSeedlingStore((s) => s.loadItems);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (plantingItems.length === 0) void loadPlantings();
+    if (seedlingItems.length === 0) void loadSeedlings();
+  }, [isOpen, plantingItems.length, seedlingItems.length, loadPlantings, loadSeedlings]);
+
+  const [areaTab, setAreaTab] = useState<'planting' | 'seedling'>('planting');
+  const [areaSearch, setAreaSearch] = useState('');
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+
+  // 点击选择器外部关闭下拉（只读 ref，空依赖安全）
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (areaRef.current && !areaRef.current.contains(e.target as Node)) setShowAreaDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // 弹窗每次打开时清空选择器的本地状态（表单字段由父组件重置，这里只管 tab/搜索词）
+  useEffect(() => {
+    if (!isOpen) return;
+    setAreaTab('planting');
+    setAreaSearch('');
+    setShowAreaDropdown(false);
+  }, [isOpen]);
+
+  /** 作物显示名：与农事任务新建弹窗同口径（子品种 > 品种 > 作物） */
+  const formatCropDisplay = (item: any) =>
+    item.subVariety1Name || item.cropVariety || item.cropName || '';
+
+  /** 区域显示名：种植取大棚/根区，育苗取场地 */
+  const formatAreaDisplay = (item: any) => areaTab === 'planting'
+    ? (item.rootName || item.areaName || item.greenhouseName || '未指定区域')
+    : (item.siteName || item.areaName || item.greenhouseName || '育苗区');
+
+  const areaOptions = useMemo(() => {
+    const kw = areaSearch.trim().toLowerCase();
+    if (areaTab === 'planting') {
+      return plantingItems.filter((p) => !p.isHarvest).filter((p) =>
+        !kw
+        || (p.plantCode || '').toLowerCase().includes(kw)
+        || (p.cropName || '').toLowerCase().includes(kw)
+        || (p.cropVariety || '').toLowerCase().includes(kw)
+        || (p.subVariety1Name || '').toLowerCase().includes(kw)
+        || (p.rootName || '').toLowerCase().includes(kw)
+        || (p.areaName || '').toLowerCase().includes(kw));
+    }
+    return seedlingItems.filter((s) =>
+      !kw
+      || (s.seedlingCode || '').toLowerCase().includes(kw)
+      || (s.cropName || '').toLowerCase().includes(kw)
+      || (s.cropVariety || '').toLowerCase().includes(kw)
+      || (s.siteName || '').toLowerCase().includes(kw));
+  }, [areaTab, areaSearch, plantingItems, seedlingItems]);
+
+  /**
+   * 选中种植/育苗记录 → 自动填充「巡查区域 + 作物名称」。
+   *
+   * 区域 id：能在温室档案里按名称匹配到就用真实 id；否则用占位 id。
+   *   inspections 接口只落 greenhouse_name（不写 greenhouse_id），
+   *   占位 id 仅用于表单内下拉回显，提交时由 InspectionTab 归一化。
+   */
+  const applyArea = (item: any) => {
+    const crop = formatCropDisplay(item);
+    const areaName = formatAreaDisplay(item);
+    const matched = greenhouses.find((g) => g.name === areaName);
+    onNewRecordChange((prev) => ({
+      ...prev,
+      greenhouseId: matched?.id || '__picked_area__',
+      greenhouseName: areaName,
+      cropName: crop,
+    }));
+    setAreaSearch('');
+    setShowAreaDropdown(false);
+  };
+
+  // 作物下拉：作物字典 + 当前自动填充值（品种名可能不在字典里，补一项才能正常显示）
+  const cropOptions = useMemo(() => {
+    const names = cropTypes.map((c) => c.name);
+    if (newRecord.cropName && !names.includes(newRecord.cropName)) names.push(newRecord.cropName);
+    return names;
+  }, [cropTypes, newRecord.cropName]);
+
+  // 区域下拉：温室档案 + 当前自动填充区域（档案里没有时补一项，避免下拉空白）
+  const greenhouseOptions = useMemo(() => {
+    const list = greenhouses.map((g) => ({ id: g.id, name: g.name }));
+    if (newRecord.greenhouseId && !list.some((g) => g.id === newRecord.greenhouseId)) {
+      list.push({ id: newRecord.greenhouseId, name: newRecord.greenhouseName || '已选区域' });
+    }
+    return list;
+  }, [greenhouses, newRecord.greenhouseId, newRecord.greenhouseName]);
 
   const updateField = (field: keyof InspectionRecordFormData, value: unknown) => {
     onNewRecordChange({ ...newRecord, [field]: value });
@@ -205,15 +317,92 @@ export function CreateInspectionModal({
         {/* 动态表单区域 - 根据巡查类型显示不同字段 */}
         {newRecord.inspectionType === 'farm' && (
           <div className="grid grid-cols-2 gap-4">
+            {/* 2026-10-22：巡查对象改为可搜索选择（种植/育苗记录），选中后自动填充下方两项。
+                交互与「农事任务 → 新建任务」的关联区域选择一致。 */}
+            <div className="col-span-2">
+              <FormField label="快速选择巡查对象（种植/育苗，选中后自动填充区域和作物）">
+                <div className="relative" ref={areaRef}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TabsList
+                      selectedValue={areaTab}
+                      onValueChange={(v) => {
+                        setAreaTab(v as 'planting' | 'seedling');
+                        setAreaSearch('');
+                        setShowAreaDropdown(true);
+                      }}
+                    >
+                      <TabsTrigger value="planting" className="text-xs">🌱 种植区域</TabsTrigger>
+                      <TabsTrigger value="seedling" className="text-xs">🌿 育苗区域</TabsTrigger>
+                    </TabsList>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        value={areaSearch}
+                        onChange={(e) => { setAreaSearch(e.target.value); setShowAreaDropdown(true); }}
+                        onFocus={() => setShowAreaDropdown(true)}
+                        placeholder={`搜索${areaTab === 'planting' ? '种植' : '育苗'}批号/作物/区域`}
+                        className="w-full h-10 pl-10 pr-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  {showAreaDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                      {areaOptions.length === 0 ? (
+                        <p className="px-4 py-3 text-sm text-gray-400">
+                          没有匹配的{areaTab === 'planting' ? '种植' : '育苗'}记录
+                        </p>
+                      ) : (
+                        areaOptions.slice(0, 50).map((item: any) => {
+                          const crop = formatCropDisplay(item);
+                          const areaName = formatAreaDisplay(item);
+                          const code = areaTab === 'planting' ? item.plantCode : item.seedlingCode;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => applyArea(item)}
+                              className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm"
+                            >
+                              <span className="font-medium">{crop || '未命名作物'}</span>
+                              {item.cropName && crop !== item.cropName && (
+                                <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                              )}
+                              <span className="text-gray-400 mx-1">·</span>
+                              <span className="text-gray-600">{areaName}</span>
+                              <span className="text-gray-400 mx-1">·</span>
+                              <span className="text-xs text-gray-500 font-mono">{code || '-'}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+                {newRecord.greenhouseName && newRecord.cropName && (
+                  <p className="text-xs text-emerald-600 mt-1">
+                    已填充：{newRecord.greenhouseName} · {newRecord.cropName}
+                  </p>
+                )}
+              </FormField>
+            </div>
             <FormField label="巡查区域" required error={errors.greenhouseId}>
               <Select
                 value={newRecord.greenhouseId}
-                onValueChange={(val) => updateField('greenhouseId', val)}
+                onValueChange={(val) => {
+                  const gh = greenhouses.find((g) => g.id === val);
+                  // 手工改区域时同步名称，避免残留上一次自动填充的名称
+                  onNewRecordChange((prev) => ({
+                    ...prev,
+                    greenhouseId: val,
+                    greenhouseName: gh?.name || prev.greenhouseName || '',
+                  }));
+                }}
               >
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择区域" />
                 </SelectTrigger>
-                <SelectContent>                  {greenhouses.map(gh => (
+                <SelectContent>                  {greenhouseOptions.map(gh => (
                     <SelectItem key={gh.id} value={gh.id}>{gh.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -227,8 +416,8 @@ export function CreateInspectionModal({
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择作物" />
                 </SelectTrigger>
-                <SelectContent>                  {cropTypes.map(crop => (
-                    <SelectItem key={crop.id} value={crop.name}>{crop.name}</SelectItem>
+                <SelectContent>                  {cropOptions.map(name => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

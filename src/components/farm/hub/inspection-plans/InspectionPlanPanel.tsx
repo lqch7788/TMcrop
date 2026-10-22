@@ -14,7 +14,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { Plus, RefreshCw, Play, Pause, Archive } from 'lucide-react';
+import { RefreshCw, Play, Pause, Archive } from 'lucide-react';
 import {
   useInspectionPlanStore,
   describePlanFrequency,
@@ -31,6 +31,11 @@ interface Props {
   onSubmitRecord?: (taskId: string) => void;
   /** 2026-10-21 P5：跳到排班调度并预选任务 */
   onScheduleTask?: (taskId: string, date: string) => void;
+  /**
+   * 2026-10-22：「新建计划」按钮已上移到父组件的视图切换行（靠右），
+   * 父组件每次递增该值即请求打开新建表单（本地 state 不能跨组件直接控制）。
+   */
+  createRequest?: number;
 }
 
 /** 计划状态 → 文案与配色（复用系统语义色，与任务状态同一套 token） */
@@ -40,7 +45,7 @@ export const PLAN_STATUS_MAP: Record<string, { label: string; color: string; bg:
   archived: { label: '已归档', color: 'text-gray-500', bg: 'bg-gray-100' },
 };
 
-export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, onScheduleTask }: Props) {
+export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, onScheduleTask, createRequest }: Props) {
   const { plans, isLoading, error, fetchPlans, archivePlan, updatePlan } = useInspectionPlanStore();
   const [keyword, setKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -49,12 +54,23 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
   const [editing, setEditing] = useState<InspectionPlan | null>(null);
   const [detail, setDetail] = useState<InspectionPlan | null>(null);
 
+  // 2026-10-22：一次拉全量，状态筛选改为客户端过滤。
+  //   视图切换行的「巡查计划（N）」需要**总数**；状态筛选若走服务端，
+  //   store 里的列表会被裁掉，标题计数跟着变小，与「巡查记录（N）」的口径不一致。
   useEffect(() => {
-    void fetchPlans({ status: statusFilter === 'all' ? undefined : statusFilter });
-  }, [statusFilter]);
+    void fetchPlans();
+  }, [fetchPlans]);
 
-  // 客户端过滤（列表量级小，避免每次输入都打接口）
+  // 新建计划请求：按钮已上移到视图切换行，父组件递增 createRequest 触发
+  useEffect(() => {
+    if (!createRequest) return;
+    setEditing(null);
+    setShowForm(true);
+  }, [createRequest]);
+
+  // 客户端过滤（列表量级小，避免每次输入/切状态都打接口）
   const visible = useMemo(() => plans.filter((p) => {
+    if (statusFilter !== 'all' && (p.status || 'active') !== statusFilter) return false;
     if (typeFilter !== 'all' && p.inspectionType !== typeFilter) return false;
     if (!keyword.trim()) return true;
     const kw = keyword.trim().toLowerCase();
@@ -63,10 +79,10 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
       (p.planCode || '').toLowerCase().includes(kw) ||
       (p.assigneeName || '').toLowerCase().includes(kw)
     );
-  }), [plans, typeFilter, keyword]);
+  }), [plans, statusFilter, typeFilter, keyword]);
 
   const reload = () => {
-    void fetchPlans({ status: statusFilter === 'all' ? undefined : statusFilter });
+    void fetchPlans();
   };
 
   const handleArchive = async (plan: InspectionPlan) => {
@@ -96,10 +112,6 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
     <div className="space-y-3">
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
-          <Plus className="w-4 h-4" />
-          新建计划
-        </Button>
         <Input
           className="w-56"
           placeholder="搜索计划名称/编号/执行人"
@@ -128,13 +140,6 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
           <RefreshCw className="w-4 h-4" />
           刷新
         </Button>
-        <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
-          共
-          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-            {visible.length}
-          </span>
-          个计划
-        </span>
       </div>
 
       {/* 错误态：store 的 error 此前从未展示，请求失败时只看到「暂无数据」 */}

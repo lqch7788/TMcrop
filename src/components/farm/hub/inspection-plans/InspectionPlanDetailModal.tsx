@@ -41,21 +41,31 @@ interface Props {
 export function InspectionPlanDetailModal({
   isOpen, plan, onClose, onEdit, onViewTask, onViewRecord, onSubmitRecord, onScheduleTask,
 }: Props) {
-  const { fetchOccurrences, fetchStats, occurrences, stats, generateOccurrences, updatePlan, clearDetail } = useInspectionPlanStore();
+  const {
+    fetchOccurrences, fetchStats, fetchPlan, occurrences, stats,
+    generateOccurrences, updatePlan, clearDetail, currentPlan,
+  } = useInspectionPlanStore();
   const [range, setRange] = useState<'month' | 'all'>('month');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !plan) return;
+    // 2026-10-22（遗留项 3）：打开详情时按 id 拉一次服务端最新计划。
+    //   列表对象可能是几分钟前的快照（暂停/生成/编辑后列表还没刷新），
+    //   详情页显示旧状态会让用户对「计划到底暂停没有」产生误判。
+    //   这也是 GET /inspection-plans/:id 的正式 UI 调用方（此前该端点无人调用）。
+    void fetchPlan(plan.id);
     void fetchOccurrences(plan.id);
     void fetchStats(plan.id, range === 'month' ? undefined : { from: plan.startDate, to: '2099-12-31' });
   }, [isOpen, plan?.id, range]);
 
   if (!isOpen || !plan) return null;
 
-  const checklist = parsePlanChecklist(plan.checklist);
-  const isPaused = plan.status === 'paused';
-  const st = PLAN_STATUS_MAP[plan.status || 'active'] || PLAN_STATUS_MAP.active;
+  // 详情优先用刷新后的服务端数据，尚未返回时先用列表传入的对象（避免闪空）
+  const livePlan = currentPlan && currentPlan.id === plan.id ? currentPlan : plan;
+  const checklist = parsePlanChecklist(livePlan.checklist);
+  const isPaused = livePlan.status === 'paused';
+  const st = PLAN_STATUS_MAP[livePlan.status || 'active'] || PLAN_STATUS_MAP.active;
 
   const handleGenerate = async () => {
     setBusy(true);
@@ -118,19 +128,19 @@ export function InspectionPlanDetailModal({
       <div className="space-y-5">
         {/* 基本信息 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <InfoCell label="计划名称" value={plan.title} />
-          <InfoCell label="巡查类型" value={getInspectionTypeLabel(plan.inspectionType)} />
-          <InfoCell label="执行人" value={plan.assigneeName || '-'} />
+          <InfoCell label="计划名称" value={livePlan.title} />
+          <InfoCell label="巡查类型" value={getInspectionTypeLabel(livePlan.inspectionType)} />
+          <InfoCell label="执行人" value={livePlan.assigneeName || '-'} />
           <InfoCell
             label="状态"
             value={
               <span className={`inline-flex px-2 py-1 rounded-full text-xs ${st.bg} ${st.color}`}>{st.label}</span>
             }
           />
-          <InfoCell label="频率" value={describePlanFrequency(plan)} />
-          <InfoCell label="周期" value={`${plan.startDate} ~ ${plan.endDate || '无限期'}`} />
-          <InfoCell label="窗口/时长" value={`${plan.windowDays || 14} 天 / ${plan.durationHours || 1} 小时`} />
-          <InfoCell label="巡查对象" value={plan.equipmentName || plan.infrastructureName || plan.greenhouseName || plan.area || '全基地'} />
+          <InfoCell label="频率" value={describePlanFrequency(livePlan)} />
+          <InfoCell label="周期" value={`${livePlan.startDate} ~ ${livePlan.endDate || '无限期'}`} />
+          <InfoCell label="窗口/时长" value={`${livePlan.windowDays || 14} 天 / ${livePlan.durationHours || 1} 小时`} />
+          <InfoCell label="巡查对象" value={livePlan.equipmentName || livePlan.infrastructureName || livePlan.greenhouseName || livePlan.area || '全基地'} />
         </div>
 
         {/* 检查项模板 */}
@@ -203,18 +213,18 @@ export function InspectionPlanDetailModal({
       </div>
 
       <div className="flex items-center justify-between gap-3 mt-5 pt-3 border-t border-gray-200">
-        <Button size="sm" variant="secondary" onClick={() => onEdit?.(plan)}>编辑</Button>
+        <Button size="sm" variant="secondary" onClick={() => onEdit?.(livePlan)}>编辑</Button>
         <div className="flex flex-wrap items-center gap-3">
           <Button
             size="sm"
             variant="secondary"
             onClick={handleTogglePause}
-            disabled={busy || plan.status === 'archived'}
+            disabled={busy || livePlan.status === 'archived'}
           >
             {isPaused ? '恢复计划' : '暂停计划'}
           </Button>
           {/* 2026-10-22（审核 P2-7）：归档计划不能生成（后端会 blockedReason 返回 0 条） */}
-          <Button size="sm" onClick={handleGenerate} disabled={busy || isPaused || plan.status === 'archived'}>
+          <Button size="sm" onClick={handleGenerate} disabled={busy || isPaused || livePlan.status === 'archived'}>
             {busy ? '处理中…' : '生成排期'}
           </Button>
         </div>

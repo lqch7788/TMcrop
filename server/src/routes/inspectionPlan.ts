@@ -249,8 +249,13 @@ router.get('/:id/occurrences', (req: Request, res: Response, next: NextFunction)
       const ph = taskIds.map(() => '?').join(',');
       for (const s of queryToObjects<any>(
         db,
-        `SELECT id, task_id, worker_name, plan_start, plan_end, shift_type, status
-         FROM farm_task_schedules WHERE task_id IN (${ph}) AND status <> 'cancelled'`,
+        // 2026-10-22（遗留项 4）：shift_type 落的是 shifts.shift_code（如 SH001），
+        //   直接显示编码对执行人无意义 → JOIN shifts 带出班次名称（shiftName）。
+        `SELECT fts.id, fts.task_id, fts.worker_name, fts.plan_start, fts.plan_end,
+                fts.shift_type, fts.status, sh.shift_name
+         FROM farm_task_schedules fts
+         LEFT JOIN shifts sh ON sh.shift_code = fts.shift_type
+         WHERE fts.task_id IN (${ph}) AND fts.status <> 'cancelled'`,
         taskIds
       )) {
         const key = String(s.taskId ?? s.task_id ?? '');
@@ -576,8 +581,13 @@ function computePlanStats(
     [plan.id, from, to]
   );
 
-  const byStatus: Record<string, number> = {};
-  for (const t of tasks) byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+  // 2026-10-22（遗留项 2）：不能返回「状态值当键名」的对象。
+  //   /api 响应统一过 apiCamelcaseMiddleware，它会把对象的所有键驼峰化 ——
+  //   waiting_acceptance 会变成 waitingAcceptance，消费方按状态值取值永远取不到。
+  //   改为固定键（status / count）的数组，键名不再受中间件影响。
+  const statusCountMap = new Map<string, number>();
+  for (const t of tasks) statusCountMap.set(t.status, (statusCountMap.get(t.status) || 0) + 1);
+  const byStatus = Array.from(statusCountMap, ([status, count]) => ({ status, count }));
 
   const cancelled = tasks.filter((t) => t.status === 'cancelled').length;
   const generated = tasks.length - cancelled;

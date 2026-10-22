@@ -78,7 +78,11 @@ export function InspectionPlanOccurrenceTable({
                     {o.schedule ? (
                       <span className="text-xs text-emerald-700">
                         {o.schedule.workerName || '已排班'}
-                        {o.schedule.shiftType ? ` / ${o.schedule.shiftType}` : ''}
+                        {/* 2026-10-22（遗留项 4）：优先显示班次名称（后端 JOIN shifts 带出），
+                            没有再回退编码 —— 直接显示 SH001 对使用者没有意义 */}
+                        {(o.schedule.shiftName || o.schedule.shiftType)
+                          ? ` / ${o.schedule.shiftName || o.schedule.shiftType}`
+                          : ''}
                       </span>
                     ) : onScheduleTask ? (
                       <button
