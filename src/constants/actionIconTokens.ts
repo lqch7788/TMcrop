@@ -30,6 +30,11 @@ export const ACTION_ICON_TOKENS = {
   harvest:  'text-orange-500 hover:text-orange-600 hover:bg-orange-50',
   end:      'text-gray-600 hover:text-gray-700 hover:bg-gray-50',
 
+  // 巡查计划（2026-10-23：巡查计划操作列改图标模式）
+  pause:    'text-amber-600 hover:text-amber-700 hover:bg-amber-50',
+  resume:   'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50',
+  archive:  'text-red-600 hover:text-red-700 hover:bg-red-50',
+
   // 多状态分支专用（用于 isEnded / isCancelled 覆盖）
   cancelled: 'text-gray-400 hover:text-gray-500 hover:bg-gray-50',
   disabled:  'text-gray-400 cursor-not-allowed opacity-40',

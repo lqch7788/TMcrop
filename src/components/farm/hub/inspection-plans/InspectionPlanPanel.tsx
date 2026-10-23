@@ -11,10 +11,14 @@
  *   · 操作按钮分主次（详情=link、编辑=ghost、暂停/恢复=outline、归档=danger 语义色），带图标
  *   · 补加载态与错误态（store.error 此前从未展示，失败时用户只看到「暂无计划」）
  *   · 截断单元格补 title
+ *
+ * 2026-10-23：操作列由文字按钮改为图标模式 ——
+ *   复用种植管理页（种植作物列表）同一套 ActionIconButton + 语义色 token
+ *   （详情=view / 编辑=edit / 暂停=pause / 恢复=resume / 归档=archive），悬停 title 提示。
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { RefreshCw, Play, Pause, Archive } from 'lucide-react';
+import { ActionIconButton, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Archive, Edit2, Eye, Pause, Play, RefreshCw } from 'lucide-react';
 import {
   useInspectionPlanStore,
   describePlanFrequency,
@@ -183,10 +187,11 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
                   <tr key={plan.id} className="hover:bg-blue-100 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-700 whitespace-nowrap">{plan.planCode}</td>
                     <td className="px-4 py-3">
+                      {/* 2026-10-23：名称列改为蓝色高亮（原绿色 link），加粗 + hover 下划线，便于快速定位 */}
                       <Button
                         variant="link"
                         size="sm"
-                        className="text-emerald-600 hover:text-emerald-800 font-medium px-0 text-left"
+                        className="text-blue-600 hover:text-blue-800 font-semibold px-0 text-left"
                         onClick={() => setDetail(plan)}
                       >
                         {plan.title}
@@ -203,31 +208,44 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs ${st.bg} ${st.color}`}>{st.label}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
+                      {/* 2026-10-23：操作列统一改图标模式，样式对齐种植管理页
+                          （ActionIconButton + 语义色 token，悬停显示 title 提示） */}
                       <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => setDetail(plan)}>详情</Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setEditing(plan); setShowForm(true); }}>编辑</Button>
+                        <ActionIconButton
+                          variant="view"
+                          icon={<Eye className="w-4 h-4" />}
+                          onClick={() => setDetail(plan)}
+                          title="查看计划详情"
+                        />
+                        <ActionIconButton
+                          variant="edit"
+                          icon={<Edit2 className="w-4 h-4" />}
+                          onClick={() => { setEditing(plan); setShowForm(true); }}
+                          title="编辑计划"
+                        />
                         {plan.status === 'active' && (
-                          <Button size="sm" variant="ghost" onClick={() => handleTogglePause(plan)} title="暂停计划">
-                            <Pause className="w-3.5 h-3.5" />
-                            暂停
-                          </Button>
+                          <ActionIconButton
+                            variant="pause"
+                            icon={<Pause className="w-4 h-4" />}
+                            onClick={() => handleTogglePause(plan)}
+                            title="暂停计划"
+                          />
                         )}
                         {plan.status === 'paused' && (
-                          <Button size="sm" variant="ghost" onClick={() => handleTogglePause(plan)} title="恢复计划">
-                            <Play className="w-3.5 h-3.5" />
-                            恢复
-                          </Button>
+                          <ActionIconButton
+                            variant="resume"
+                            icon={<Play className="w-4 h-4" />}
+                            onClick={() => handleTogglePause(plan)}
+                            title="恢复计划"
+                          />
                         )}
                         {plan.status !== 'archived' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-600 hover:text-red-700"
+                          <ActionIconButton
+                            variant="archive"
+                            icon={<Archive className="w-4 h-4" />}
                             onClick={() => handleArchive(plan)}
-                          >
-                            <Archive className="w-3.5 h-3.5" />
-                            归档
-                          </Button>
+                            title="归档计划"
+                          />
                         )}
                       </div>
                     </td>
