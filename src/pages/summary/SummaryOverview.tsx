@@ -356,7 +356,11 @@ export default function SummaryOverview() {
     {
       key: 'overdue',
       icon: <AlertTriangle className="w-5 h-5 text-white" />,
-      label: '逾期任务',
+      // 2026-10-23：标注其中巡查计划实例的条数 —— 逾期总数此前不区分来源，
+      // 管理者看不出有多少是「该巡没巡」；下钻明细里也会按来源拆开并把巡查排在最前。
+      label: (moduleHealth?.farm.tasksOverdueInspection ?? 0) > 0
+        ? `逾期任务（巡查 ${moduleHealth?.farm.tasksOverdueInspection}）`
+        : '逾期任务',
       value: moduleHealth?.farm.tasksOverdue ?? 0,
       path: '/farm-hub',
       tone: 'red',

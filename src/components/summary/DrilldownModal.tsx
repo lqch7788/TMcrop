@@ -52,7 +52,15 @@ export function DrilldownModal({ isOpen, onClose, data, loading }: DrilldownModa
                 <div className="text-sm text-gray-800 truncate" title={row.title}>{row.title}</div>
                 <div className="text-xs text-gray-400 truncate mt-0.5" title={row.meta}>{row.meta}</div>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 flex-shrink-0">
+              {/* 2026-10-23：漏巡未执行用红色标出（巡查实例里没提交记录的那批），
+                  其余（已巡待验收 / 普通逾期）保持琥珀色 */}
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                  row.status === '漏巡未执行'
+                    ? 'bg-red-50 text-red-600 font-medium'
+                    : 'bg-amber-50 text-amber-600'
+                }`}
+              >
                 {row.status}
               </span>
               <Button

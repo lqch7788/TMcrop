@@ -16,6 +16,8 @@ import React from 'react';
 import { Button } from '@/components/ui';
 import { STATUS_MAP } from '../constants_taskDispatch';
 import type { PlanOccurrence } from '@/stores/useInspectionPlanStore';
+import { isOverdueInspection, OVERDUE_BADGE_CLASS } from '@/utils/inspectionOverdue';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface Props {
   occurrences: PlanOccurrence[];
@@ -30,6 +32,9 @@ interface Props {
 export function InspectionPlanOccurrenceTable({
   occurrences, onViewTask, onSubmitRecord, onViewRecord, onScheduleTask, compact,
 }: Props) {
+  // 2026-10-23：行级「逾期」标记 —— 执行日已过且没提交巡查记录（口径见 utils/inspectionOverdue）
+  const today = todayLocal();
+
   if (!occurrences || occurrences.length === 0) {
     return (
       <div className="text-center text-sm text-gray-400 py-8">
@@ -62,6 +67,18 @@ export function InspectionPlanOccurrenceTable({
                 <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-800">
                   {o.planOccurrenceDate}
                   {o.planTime ? <span className="ml-1 text-xs text-gray-500">{o.planTime}</span> : null}
+                  {isOverdueInspection(
+                    {
+                      occurrenceDate: o.planOccurrenceDate,
+                      inspectionRecordId: o.inspectionRecordId,
+                      status: o.status,
+                    },
+                    today,
+                  ) && (
+                    <span className={`${OVERDUE_BADGE_CLASS} ml-1`} title="执行日已过且未提交巡查记录">
+                      逾期
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Button
