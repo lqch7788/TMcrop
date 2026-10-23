@@ -733,8 +733,10 @@ export default function DailyProblemSummary({ hideHeader = false, dateRange }: D
                     //   且前者 task_type 恒为 'other'，绕开了「巡查类型 + 问题分类」映射。
                     //   dispatchProblem 内部 createTask → farmTaskStore.addTask → POST /farm-tasks，
                     //   并同步问题状态与流转记录。
-                    const created = dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
-                    if (!created) {
+                    // 2026-10-23：dispatchProblem 返回 { task, done }，需 await done 取真实创建结果
+                    const { task: created, done } = dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
+                    const createdOk = await done;
+                    if (!createdOk || !created) {
                       throw new Error('问题不存在或分派失败');
                     }
                     setDispatchModal({ isOpen: false, problem: null });

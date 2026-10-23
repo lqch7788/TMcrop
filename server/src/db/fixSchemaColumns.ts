@@ -486,6 +486,16 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   )) {
     console.error('[fixSchemaColumns] uk_inspections_task 创建失败：巡查记录与任务 1:1 约束缺失');
   }
+  // 2026-10-23：巡查记录编号全局唯一。
+  //   此前 record_code 只有 NOT NULL 没有 UNIQUE，而发号器两套并存
+  //   （服务端 nextRecordCode + 旧的手工创建端 Date.now().slice(-3)），
+  //   实测已出现同一编号落库两条。唯一索引让重复在写入时就失败，而不是静默存进去。
+  safeCreateIndex(db,
+    'uk_inspections_record_code',
+    `CREATE UNIQUE INDEX IF NOT EXISTS uk_inspections_record_code
+     ON inspections(record_code)
+     WHERE record_code IS NOT NULL AND record_code <> ''`
+  );
   safeCreateIndex(db,
     'idx_inspections_plan',
     `CREATE INDEX IF NOT EXISTS idx_inspections_plan ON inspections(inspection_plan_id)`

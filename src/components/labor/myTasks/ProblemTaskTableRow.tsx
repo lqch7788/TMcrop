@@ -36,6 +36,8 @@ export function ProblemTaskTableRow({
   //   无关联问题的纯巡查报告没有处理对象，只保留"查看"，防止点击落到不存在的 farm/temp 记录。
   const isInspectionTask = !!(task as { sourceInspectionId?: string }).sourceInspectionId;
   const canOperate = !isInspectionTask || !!(taskWithExtras as { sourceProblemId?: string }).sourceProblemId;
+  // 注：巡查计划实例已拆到「巡查计划任务」tab（2026-10-23），
+  //   本组件只渲染巡查记录台账与问题派生任务，不再需要实例专属逻辑。
 
   // 巡查类型映射
   const getInspectionTypeConfig = (type: string) => {
@@ -53,7 +55,11 @@ export function ProblemTaskTableRow({
   };
 
   // 巡查结果配置
+  // 2026-10-23 修复：原实现「不是正常就当异常」，空值/null 也被判成异常 →
+  //   新建的巡查计划实例还没巡查，列表上就显示「异常」（实测 NS20261023-843）。
+  //   现改为：无结果（未巡查）单独返回空配置，由调用方显示「—」。
   const getCheckResultConfig = (result: string) => {
+    if (!result || !String(result).trim()) return null;
     const isNormal = result === '正常' || result === '轻微' || result === 'low';
     return isNormal
       ? { label: '正常', className: 'bg-emerald-100 text-emerald-700' }
@@ -61,14 +67,21 @@ export function ProblemTaskTableRow({
   };
 
   // 严重程度配置
+  // 2026-10-23 同 getCheckResultConfig：空值不再兜底成「轻微」——
+  //   未巡查的实例没有严重程度，兜底会让用户以为已经判过级了。
+  //   同时不再把未知值（如 priority 的 'normal'）当成「轻微」。
   const getSeverityConfig = (severity: string) => {
-    if (severity === '严重' || severity === 'high') {
+    if (!severity || !String(severity).trim()) return null;
+    if (severity === '严重' || severity === 'high' || severity === 'urgent') {
       return { label: '严重', className: 'bg-red-100 text-red-700' };
     }
     if (severity === '中等' || severity === 'medium') {
       return { label: '中等', className: 'bg-amber-100 text-amber-700' };
     }
-    return { label: '轻微', className: 'bg-gray-100 text-gray-700' };
+    if (severity === '轻微' || severity === 'low') {
+      return { label: '轻微', className: 'bg-gray-100 text-gray-700' };
+    }
+    return null;
   };
 
   // 反馈状态配置
@@ -92,7 +105,9 @@ export function ProblemTaskTableRow({
 
   const inspectionTypeConfig = getInspectionTypeConfig(taskWithExtras.inspectionType || 'farm');
   const checkResultConfig = getCheckResultConfig(taskWithExtras.checkResult || taskWithExtras.issueSeverity || '');
-  const severityConfig = getSeverityConfig(taskWithExtras.issueSeverity || taskWithExtras.priority || '');
+  // 2026-10-23：只认 issueSeverity。原来用 priority 兜底，而 priority 的值域是
+  //   normal/low/medium/high，会落进「轻微」分支 → 未巡查的实例凭空显示严重程度。
+  const severityConfig = getSeverityConfig(taskWithExtras.issueSeverity || '');
   const feedbackStatusConfig = getFeedbackStatusConfig(taskWithExtras.feedbackStatus || task.status);
   const progress = parseInt(String(taskWithExtras.processProgress || task.progress || 0));
 
@@ -136,9 +151,14 @@ export function ProblemTaskTableRow({
       </td>
       {/* 巡查结果 */}
       <td className="px-3 py-3 text-center">
-        <span className={`px-2 py-1 ${checkResultConfig.className} text-xs rounded-full`}>
-          {checkResultConfig.label}
-        </span>
+        {/* 未巡查（无结果）显示「—」，不再默认显示「异常」 */}
+        {checkResultConfig ? (
+          <span className={`px-2 py-1 ${checkResultConfig.className} text-xs rounded-full`}>
+            {checkResultConfig.label}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
       </td>
       {/* 问题分类 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
@@ -163,9 +183,13 @@ export function ProblemTaskTableRow({
       </td>
       {/* 严重程度 */}
       <td className="px-3 py-3 text-center">
-        <span className={`px-2 py-1 ${severityConfig.className} text-xs rounded-full`}>
-          {severityConfig.label}
-        </span>
+        {severityConfig ? (
+          <span className={`px-2 py-1 ${severityConfig.className} text-xs rounded-full`}>
+            {severityConfig.label}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
       </td>
       {/* 问题照片 */}
       <td className="px-3 py-3 text-center whitespace-nowrap">
@@ -237,6 +261,8 @@ export function ProblemTaskTableRow({
             </Button>
           </div>
         )}
+        {/* 2026-10-23：巡查计划实例已拆到「巡查计划任务」tab（用 ProductionTaskTableRow），
+            本组件不再渲染实例，故移除对应的「填写巡查记录」入口。 */}
         {(task.status === 'accepted' || task.status === 'in_progress') && canOperate && (
           <Button
             size="sm"

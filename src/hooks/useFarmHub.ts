@@ -202,7 +202,11 @@ function normalizeInspectionRecord(record: InspectionRecord): InspectionRecord {
     issuePresets: Array.isArray(record.issuePresets) ? record.issuePresets : [],
     issuePhotos: Array.isArray(record.issuePhotos) ? record.issuePhotos : [],
     feedbackUsers: Array.isArray(record.feedbackUsers) ? record.feedbackUsers : [],
-    issueStatus: record.issueStatus || (record.status === 'attention' ? 'pending' : 'resolved'),
+    // 2026-10-23：删掉三元兜底。后端 inspection.ts 已明确移除「critical → resolved」的
+    //   推断（审核缺陷 H2：把未处理巡查误标为已解决），前端这里又把兜底加回来，
+    //   导致 critical 且无关联问题的记录在导出里显示「已解决」，与后端结论矛盾。
+    //   透传空值，由消费方按 status 自行判断。
+    issueStatus: record.issueStatus || undefined,
     airTemperature: record.airTemperature || 0,
     airHumidity: record.airHumidity || 0,
     lightIntensity: record.lightIntensity || 0,

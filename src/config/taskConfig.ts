@@ -150,10 +150,14 @@ export const STATUS_TRANSITIONS_DEFAULTS: Record<string, string[]> = {
   //   一旦出现历史 pending_approval 行，前端 validateTransition 查表得空数组 →
   //   所有操作被静默拦下（按钮点了没反应），徽章也会显示英文。
   pending_approval: ['pending', 'draft', 'cancelled'],
-  pending: ['accepted', 'cancelled', 'draft'],
+  // 2026-10-23：补 rejected —— 执行人拒单（行内「拒绝」）走 PUT {status:'rejected'}，
+  //   与服务端 TASK_STATUS_TRANSITIONS 同步，否则前端 validateTransition 先拦下、
+  //   或后端 409 而前端已乐观更新，两边行为不一致。
+  pending: ['accepted', 'cancelled', 'draft', 'rejected'],
   // 2026-10-20：补 waiting_acceptance（执行人可直接在「已接受」提交进度，100% 即申请验收），
   //   与服务端 TASK_STATUS_TRANSITIONS 同步
-  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft'],
+  // 2026-10-23：补 rejected（已接受后仍可「无法继续」拒绝执行）
+  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft', 'rejected'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
   // 2026-10-20：补 failed，与服务端 TASK_STATUS_TRANSITIONS 保持一致。
   //   驳回规则是「返工次数 >= 2 判定失败」，驳回只能从 waiting_acceptance 发起，

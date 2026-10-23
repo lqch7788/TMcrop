@@ -160,11 +160,13 @@ export function getRecordByTaskId(db: any, taskId: string): Record<string, unkno
 /** 生成巡查记录编号 XT{YYYYMMDD}-{3位日序}（服务端取号，方案 §4.5） */
 export function nextRecordCode(db: any, ymd: string): string {
   const prefix = `XT${ymd}-`;
-  const stmt = db.prepare(
-    'SELECT record_code FROM inspections WHERE record_code LIKE ? ORDER BY record_code DESC LIMIT 1'
-  );
+  // 2026-10-23：去掉 ORDER BY ... LIMIT 1。
+  //   原实现先取「字符串最大」的一条，再对它求数值后缀 —— 当日序号过千时
+  //   'XT…-999' 的字符串序大于 'XT…-1000'，取到 999 → 再生成 1000 → 撞已有编号。
+  //   现在取当日全部编号交给 maxNumericSuffix 求真正的数值最大。
+  //   （当日记录数有限，全量取回开销可忽略）
+  const stmt = db.prepare('SELECT record_code FROM inspections WHERE record_code LIKE ?');
   stmt.bind([`${prefix}%`]);
-  // 2026-10-22（审核 L3）：按数值求最大，不能用字符串序（"-999" 会排在 "-1000" 之后 → 回绕撞唯一约束）
   const codes: string[] = [];
   while (stmt.step()) {
     codes.push(String((stmt.getAsObject() as { record_code?: string }).record_code || ''));

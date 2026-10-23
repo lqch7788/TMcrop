@@ -98,6 +98,23 @@ export function InspectionRecordModal({
   if (!isOpen || !task) return null;
 
   const handleSubmit = async () => {
+    // 2026-10-23：校验计划配置的**必填检查项**。
+    //   此前只校验「异常要有描述」，必填项一个不填也能提交，记录里的
+    //   checklistResults 为空数组，等于「巡了个寂寞」。
+    if (!isResubmit) {
+      const missing = checklist
+        .filter((item) => item.required)
+        .filter((item) => {
+          // 检查项结果字段是 status（ok / issue / na），不是 result
+          const hit = form.checklistResults.find((r) => r.key === item.key);
+          return !hit || !hit.status;
+        });
+      if (missing.length > 0) {
+        await showAlert(`请完成必填检查项：${missing.map((m) => m.label).join('、')}`);
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const outcome = await submitInspectionRecord(
@@ -172,7 +189,10 @@ export function InspectionRecordModal({
             <div className="space-y-2">
               {checklist.map((item, idx) => {
                 const current = form.checklistResults.find((r) => r.key === item.key);
-                const status = current?.status || 'ok';
+                // 2026-10-23：不再默认 'ok' —— 未点击时视觉上就是「已选正常」，
+                //   配合上面的必填校验会造成「看着填了、提交时说没填」的矛盾。
+                //   未选择时不高亮任何选项，用户必须显式点一个。
+                const status = current?.status || '';
                 return (
                   <div key={item.key} className="flex items-center gap-2">
                     <span className="text-sm text-slate-700 flex-1">

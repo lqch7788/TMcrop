@@ -54,10 +54,21 @@ const STATUS_EN = {
   COMPLETED: 'completed',
 } as const;
 
-/** 检查问题状态是否为指定中文状态 */
+/**
+ * 检查问题状态是否为指定中文状态
+ *
+ * 2026-10-23 修复：原实现把 `statusLabel` 当并列判据，而乐观更新只改 status、
+ * 不重算 statusLabel（store 的 updateProblem 是 merge）→ 分派后一条问题
+ * 同时满足 pending（旧 statusLabel）与 in_progress（新 status），
+ * 在「全部」列表里出现两行同 id（React key 冲突），统计也跟着重复。
+ * 现在只认权威的 status，statusLabel 仅用于没有 status 的历史数据兜底。
+ */
 const isStatus = (p: ProblemData, cn: string): boolean => {
-  // ?????????statusLabel????? status ?????
-  return (p as any).status === cn || (p as any).statusLabel === cn || (STATUS_EN_TO_CN as any)[(p as any).status] === cn;
+  const raw = String((p as any).status || '');
+  if (raw) {
+    return raw === cn || (STATUS_EN_TO_CN as any)[raw] === cn;
+  }
+  return (p as any).statusLabel === cn;
 };
 
 // 问题类型到任务类型的映射
@@ -243,11 +254,17 @@ export function useProblemDispatch() {
     customPriority?: 'high' | 'medium' | 'low',
     // 2026-10-21：分派弹窗人工指定的任务类型（优先于自动映射）
     taskTypeOverride?: string
-  ): Task | null => {
+  ): { task: Task | null; done: Promise<boolean> } => {
+    // 2026-10-23（阻断修复）：分派改为「可等待 + 失败回滚」。
+    //   原实现先无条件把问题改成 in_progress、再 fire-and-forget 建任务：
+    //   任务创建失败时问题停在「处理中」却没有任何任务，且
+    //   ProblemTable 的重新分派要求「待处理 + 无 sourceTaskId」→ 无 UI 恢复路径。
+    //   现在返回 { task, done }，done 解析为真实创建结果；失败时把问题回滚到 pending。
+    //   调用方（ProblemTab.handleDispatch）应 await done 后再关闭/提示。
     // 2026-10-22：problemId 现在可能是 'PRB'+时间戳 字符串（后端 problems.id 真实形态），
     //   而 store 里的 id 同样是字符串；用 String 比较避免数字/字符串混型时静默匹配不到。
     const problem = storeProblems.find(p => String(p.id) === String(problemId));
-    if (!problem) return null;
+    if (!problem) return { task: null, done: Promise.resolve(false) };
 
     const issueText = getIssueText(problem);
     const severity = getIssueSeverity(problem);
@@ -305,9 +322,14 @@ export function useProblemDispatch() {
 
     // 通过 API Store 更新问题
     const currentFlowRecords = getLatestFlowRecords(problemId);
+    // 2026-10-23：同时写 assignee_id/assignee_name —— 库里有两套处理人列，
+    //   此前只写 handler，导致 assignee_name 恒空（实测 45 条问题里 21 条缺处理人），
+    //   任何按 assignee 的查询/统计/通知全部失效。
     updateProblemInStore(problemId, {
       status: STATUS_EN.IN_PROGRESS,
       handler: assigneeName,
+      assigneeId,
+      assigneeName,
       handleDate: '',
       handleResult: '',
       // 2026-10-10（审核修复）：不再写 sourceTaskId: newTask.id —— createTask 同步返回的是
@@ -328,8 +350,32 @@ export function useProblemDispatch() {
       dispatcherName,
     }]);
 
-    return newTask as any;
-  }, [storeProblems, updateProblemInStore, createTask, setDispatchRecords]);
+    // 2026-10-23：等真实创建结果。失败则把问题回滚到「待处理」，避免
+    //   「处理中但无任何任务」的死状态（重新分派要求待处理 + 无 sourceTaskId）。
+    const done = Promise.resolve(
+      (newTask as unknown as { __createPromise?: Promise<boolean> }).__createPromise,
+    )
+      .then((ok) => ok !== false)
+      .catch(() => false)
+      .then((ok) => {
+        if (!ok) {
+          updateProblemInStore(problemId, {
+            status: STATUS_EN.PENDING,
+            handler: '',
+            assigneeId: '',
+            assigneeName: '',
+            sourceTaskId: '',
+          });
+          // 回滚后要把刚加的流转记录也撤掉，否则 Timeline 会留下一次不存在的分派
+          const latest = getLatestFlowRecords(problemId);
+          const withoutDispatch = latest.filter((r) => r.id !== flowRecord.id);
+          updateProblemInStore(problemId, { flowRecords: withoutDispatch as any });
+        }
+        return ok;
+      });
+
+    return { task: newTask as any, done };
+  }, [storeProblems, updateProblemInStore, createTask, setDispatchRecords, getLatestFlowRecords]);
 
   // 批量分派问题
   const batchDispatchProblems = useCallback((
@@ -347,7 +393,8 @@ export function useProblemDispatch() {
   ): Task[] => {
     const createdTasks: Task[] = [];
     dispatches.forEach(dispatch => {
-      const task = dispatchProblem(
+      // 2026-10-23：dispatchProblem 现返回 { task, done }（done 为真实创建结果的 Promise）
+      const { task } = dispatchProblem(
         dispatch.problemId,
         dispatch.assigneeId,
         dispatch.assigneeName,

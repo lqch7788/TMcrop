@@ -13,7 +13,7 @@ import { z } from 'zod';
 // 2026-10-20 P0-10：后端权威状态转移守卫（此前转移表只在前端，后端 17 个流转端点零守卫）
 import { assertTaskTransition } from '../constants';
 // 2026-10-21 P2c：巡查记录守卫（完成前置校验 / 删除保护）+ 记录写入服务
-import { assertInspectionRecordBeforeComplete, assertTaskDeletable } from '../lib/inspectionRecordGuard';
+import { assertInspectionRecordBeforeAdvance, assertInspectionRecordBeforeComplete, assertTaskDeletable } from '../lib/inspectionRecordGuard';
 import {
   insertRecord,
   updateRecordFields,
@@ -853,8 +853,10 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
       //   POST /complete 的 409 会被吞掉，但这条 PUT 会把状态写成 completed 并落盘，
       //   巡查记录守卫形同虚设（刷新后任务已完成、记录仍为空）。
       //   因此 completed 目标状态必须在这里再校验一次。
-      if (String(updates.status) === 'completed') {
-        const violation = assertInspectionRecordBeforeComplete(db, id);
+      // 2026-10-23：范围扩到 waiting_acceptance —— 无记录进待验收会死锁
+      //   （既不能补交、也不能重提、又过不了完成守卫），实测已产生 2 条脏数据。
+      {
+        const violation = assertInspectionRecordBeforeAdvance(db, id, String(updates.status));
         if (violation) {
           return res.status(409).json({ success: false, error: violation, code: 'INSPECTION_RECORD_REQUIRED' });
         }
@@ -1259,6 +1261,9 @@ router.post('/:id/inspection-record/resubmit', (req: Request, res: Response) => 
       issuePhotos: 'issue_photos', checklistResults: 'checklist_results',
       remarks: 'remarks', area: 'area', cropStatus: 'crop_status',
       weather: 'weather', temperature: 'temperature', humidity: 'humidity',
+      // 2026-10-23：补 checkTime —— 重提弹窗的「巡查时间」可编辑，
+      //   白名单缺这一项时改动被静默丢弃（提示成功但值不变）。
+      checkTime: 'check_time',
       status: 'status',
     };
     const writable: Record<string, unknown> = {};
@@ -1633,17 +1638,18 @@ router.put('/batch', (req: Request, res: Response) => {
 
     // 2026-10-21 P2c：批量改到 completed 时，巡查计划任务必须已提交巡查记录。
     //   逐条检查并**列出违规 id**，而不是整体 500 —— 批量操作里一条不合法就整批失败不可接受。
-    if (normalizedUpdates.status === 'completed') {
+    // 2026-10-23：范围扩到 waiting_acceptance（同 PUT /:id，防无记录死锁）。
+    if (normalizedUpdates.status === 'completed' || normalizedUpdates.status === 'waiting_acceptance') {
       const blocked: string[] = [];
       for (const tid of ids) {
-        const violation = assertInspectionRecordBeforeComplete(db, String(tid));
+        const violation = assertInspectionRecordBeforeAdvance(db, String(tid), normalizedUpdates.status);
         if (violation) blocked.push(String(tid));
       }
       if (blocked.length > 0) {
         return res.status(409).json({
           success: false,
           code: 'INSPECTION_RECORD_REQUIRED',
-          error: `以下 ${blocked.length} 个巡查任务尚未提交巡查记录，不能标记完成：${blocked.join('、')}`,
+          error: `以下 ${blocked.length} 个巡查任务尚未提交巡查记录，不能标记为「${normalizedUpdates.status}」：${blocked.join('、')}`,
           blockedIds: blocked,
         });
       }
@@ -2377,7 +2383,13 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     //   巡查计划任务必须已提交巡查记录（与 taskProgress.ts 的同名校验成对，防路由顺序开口）。
     const willComplete =
       normalizedStatus === 'completed' ||
-      (normalizedStatus === 'waiting_acceptance' && false) || // 待验收不算完成
+      // 2026-10-23：巡查计划实例推进到「待验收」同样必须有记录 ——
+      //   待验收的出口是「验收」，而验收的前提就是巡查记录。
+      //   此前这里把 waiting_acceptance 显式排除了（当"待验收不算完成"），
+      //   于是「提交进度 + status=waiting_acceptance」能把**无记录**的巡查实例推进到待验收，
+      //   之后既不能补交记录（状态只允许 pending/accepted/in_progress）、
+      //   也不能重提（无记录）→ 任务彻底死锁，且没有任何 UI 出口。
+      (normalizedStatus === 'waiting_acceptance' && !!task.inspection_plan_id) ||
       (!normalizedStatus && Number(newProgress) >= 100 && task.status !== 'completed');
     if (willComplete) {
       const violation = assertInspectionRecordBeforeComplete(db, id);
@@ -2440,6 +2452,16 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
 
     const fromStatus = task.status;
     if (!guardTransition(res, fromStatus, 'waiting_acceptance')) return;
+
+    // 2026-10-23：补巡查记录守卫 —— 此前只有状态机校验，无记录的巡查实例
+    //   可以直接提交验收进 waiting_acceptance，之后彻底死锁。
+    {
+      const violation = assertInspectionRecordBeforeAdvance(db, id, 'waiting_acceptance');
+      if (violation) {
+        return res.status(409).json({ success: false, error: violation, code: 'INSPECTION_RECORD_REQUIRED' });
+      }
+    }
+
     const now = new Date().toISOString();
 
     // P0-1：事务包裹

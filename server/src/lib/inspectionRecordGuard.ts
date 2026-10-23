@@ -54,6 +54,36 @@ export function assertInspectionRecordBeforeComplete(db: any, taskId: string): G
 }
 
 /**
+ * 状态推进到「终结或待验收」前的统一校验（2026-10-23）
+ *
+ * 【为什么需要这个包装】
+ * 2026-10-22 那次修复只补了 `/progress` 一条通道，另外三条写 waiting_acceptance 的路径仍然裸奔：
+ *   · PUT /farm-tasks/:id            —— 只在目标状态是 completed 时校验
+ *   · PUT /farm-tasks/batch          —— 同上
+ *   · POST /farm-tasks/:id/submit-acceptance —— 只有状态机守卫，没有记录守卫
+ * 而 waiting_acceptance 是「死锁起点」：进去之后既不能补交记录（create 只允许
+ * pending/accepted/in_progress），也不能重提（无记录），`/complete` 又被本守卫挡住。
+ * 实测库里已因此产生 2 条不可恢复的记录（NS20261022-635、NS20261023-005）。
+ *
+ * 三条通道都调这一个函数，避免以后加通道时再漏。
+ *
+ * @param targetStatus 本次要写入的目标状态
+ */
+export function assertInspectionRecordBeforeAdvance(
+  db: any,
+  taskId: string,
+  targetStatus: string | null | undefined,
+): GuardViolation {
+  if (targetStatus !== 'completed' && targetStatus !== 'waiting_acceptance') return null;
+  // 复用同一判据（非计划任务放行 / 有记录放行），但文案按目标状态区分 ——
+  // 目标若是待验收却提示「不能标记完成」，用户会照提示去做却仍然失败。
+  if (!assertInspectionRecordBeforeComplete(db, taskId)) return null;
+  return targetStatus === 'waiting_acceptance'
+    ? '该巡查任务尚未提交巡查记录，不能申请验收。请先在「我的任务」中填写巡查记录。'
+    : '该巡查任务尚未提交巡查记录，不能标记完成。请先在「我的任务」中提交巡查记录。';
+}
+
+/**
  * 删除前的巡查记录保护。
  * 有记录的任务被删除后，记录会变成孤儿（inspection_task_id 指向不存在的任务），
  * 计划执行率也会凭空变化。

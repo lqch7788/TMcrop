@@ -154,16 +154,20 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
   // 撤回（withdraw）语义 = 收回派发回到草稿，后端 POST /farm-tasks/:id/withdraw 直接写
   // status='draft'；状态机为 pending/accepted 补充 'draft' 出口以对齐后端能力，
   // 避免"前端判非法拦下、后端实际可写"的两端不一致（即 ff6d883f 修复的 bug 类型）。
-  it('pending 可转到 accepted、cancelled 或 draft（撤回）', () => {
-    expect(STATUS_TRANSITIONS.pending).toEqual(['accepted', 'cancelled', 'draft']);
+  // 2026-10-23 更新：补 rejected —— 执行人拒单（行内「拒绝」）走
+  //   useTasks.rejectByExecutor → PUT {status:'rejected'}，缺这条边时实测 409
+  //   「状态转移非法：pending → rejected」，按钮点了必失败。
+  it('pending 可转到 accepted、cancelled、draft（撤回）或 rejected（执行人拒单）', () => {
+    expect(STATUS_TRANSITIONS.pending).toEqual(['accepted', 'cancelled', 'draft', 'rejected']);
   });
 
   // 2026-10-20 更新：允许 accepted → waiting_acceptance。
   //   执行人可以直接在「已接受」状态提交进度，进度到 100% 即申请验收
   //   （useTasks.submitProgress 的 isFinal 分支，UI 对 accepted 行本就显示「提交进度」）。
   //   缺这条边时该操作必被守卫拒绝（实测 accepted → waiting_acceptance 返回 409）。
-  it('accepted 可转到 in_progress、waiting_acceptance、cancelled 或 draft（撤回）', () => {
-    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'waiting_acceptance', 'cancelled', 'draft']);
+  // 2026-10-23：补 rejected（已接受后仍可「无法继续」拒绝执行）。
+  it('accepted 可转到 in_progress、waiting_acceptance、cancelled、draft（撤回）或 rejected', () => {
+    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'waiting_acceptance', 'cancelled', 'draft', 'rejected']);
   });
 
   it('in_progress 只能转到 waiting_acceptance、cancelled 或 abandoned', () => {
