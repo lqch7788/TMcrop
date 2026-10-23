@@ -675,9 +675,11 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
         <div className="space-y-3 border-t border-gray-200 pt-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-700">检查项模板</h4>
+            {/* 2026-10-23：「添加检查项」改绿色主按钮 + 加粗高亮文字（新建/编辑弹窗共用本组件） */}
             <Button
               size="sm"
-              variant="outline"
+              variant="default"
+              className="font-semibold"
               onClick={() => setForm({
                 ...form,
                 checklist: [...form.checklist, { key: `item_${form.checklist.length + 1}`, label: '', required: false }],
