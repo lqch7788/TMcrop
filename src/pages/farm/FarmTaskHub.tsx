@@ -608,6 +608,10 @@ export function FarmTaskHub() {
                 onBatchEdit={(ids) => {
                   // 调用 hub 的巡查批量编辑（打开编辑弹窗）
                 }}
+                /* 2026-10-23：巡查记录行的「验收记录」按钮 → 打开统一验收弹窗。
+                   此前验收只存在于「农事任务」tab（该 tab 刻意排除了计划实例），
+                   导致巡查实例提交记录后永远停在待验收、计划「已验收」恒为 0。 */
+                onAcceptInspectionTask={(taskId) => setVerifyTaskId(taskId)}
               />
               </div>
             )}

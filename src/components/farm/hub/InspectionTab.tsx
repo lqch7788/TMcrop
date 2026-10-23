@@ -31,7 +31,7 @@ import QRScanner, { QRData } from '../../common/QRScanner';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { Camera, Download, MapPin, Mic, Package, Plus, X } from 'lucide-react';
+import { Camera, Download, MapPin, Mic, Package, X } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 import {
   INSPECTION_TYPES as INSPECTION_TYPE_OPTIONS,
@@ -110,6 +110,8 @@ interface InspectionTabProps {
   // 批量操作回调
   onBatchDelete: (ids: string[]) => void;
   onBatchEdit: (ids: string[]) => void;
+  /** 2026-10-23：巡查任务验收（父组件打开统一验收弹窗） */
+  onAcceptInspectionTask?: (taskId: string) => void;
 }
 
 /**
@@ -146,6 +148,7 @@ export function InspectionTab({
   onAcceptProblem,
   onBatchDelete,
   onBatchEdit,
+  onAcceptInspectionTask,
 }: InspectionTabProps) {
   // 使用 Zustand stores 获取用户和温室数据
   const users = useUserStore((state) => state.users);
@@ -265,10 +268,9 @@ export function InspectionTab({
   // 2026-10-21 P3：巡查计划 / 巡查记录视图切换（默认记录视图）
   const [viewMode, setViewMode] = useState<'records' | 'plans'>('records');
 
-  // 2026-10-22：计划总数显示在切换按钮上（与「巡查记录（N）」同一模式）；
-  //   「新建计划」按钮上移到切换行右侧，用递增信号请求面板打开新建表单。
+  // 2026-10-22：计划总数显示在切换按钮上（与「巡查记录（N）」同一模式）。
+  //   2026-10-23：「新建计划」按钮移入巡查计划面板工具栏后，父层不再需要递增信号。
   const planCount = useInspectionPlanStore((s) => s.plans.length);
-  const [planCreateRequest, setPlanCreateRequest] = useState(0);
 
   // 2026-10-22（审核 P0-2）：计划实例表的「填写记录」弹窗
   //   此前只切 tab、丢掉 taskId，用户还得自己去记录视图里找。
@@ -970,25 +972,15 @@ export function InspectionTab({
             onClick={() => setViewMode(v.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               viewMode === v.key
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white text-slate-600 border border-gray-200 hover:border-emerald-300'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-slate-600 border border-gray-200 hover:border-blue-300'
             }`}
           >
             {v.label}
           </button>
         ))}
-        {/* 2026-10-22：新建计划从面板工具栏移到本行右侧；点击同时切到计划视图 */}
-        <Button
-          size="sm"
-          className="ml-auto"
-          onClick={() => {
-            setViewMode('plans');
-            setPlanCreateRequest((n) => n + 1);
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          新建计划
-        </Button>
+        {/* 2026-10-23：「新建计划」已移入巡查计划面板的工具栏（搜索栏之后、靠右）——
+            它只对「巡查计划」视图有意义，放在本行会在切到「巡查记录」时仍然显示 */}
       </div>
 
       {/* 视图 1：巡查计划
@@ -997,7 +989,6 @@ export function InspectionTab({
           现在：填写记录 → 打开记录弹窗；任务编号 → 打开任务详情；记录编号 → 打开记录详情。 */}
       <div className={viewMode === 'plans' ? '' : 'hidden'}>
         <InspectionPlanPanel
-          createRequest={planCreateRequest}
           onScheduleTask={(taskId, date) => {
             // 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务
             window.location.href = `/schedule?tab=farm-task&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;
@@ -1050,7 +1041,7 @@ export function InspectionTab({
       </div>
 
       {/* 视图 2：巡查记录 */}
-      <div className={viewMode === 'plans' ? 'hidden' : 'space-y-4'}>
+      <div className={viewMode === 'records' ? 'space-y-4' : 'hidden'}>
       {/* 搜索栏 */}
       <InspectionSearch
         filters={filters}
@@ -1123,6 +1114,9 @@ export function InspectionTab({
           problems={mergedProblems}
           tasks={tasks as any}
           onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
+          /* 2026-10-23：巡查任务验收 → 交给父组件打开统一验收弹窗
+             （复用 TaskAcceptanceAdapter，含巡查记录展示与驳回返工） */
+          onAcceptTask={(taskId) => onAcceptInspectionTask?.(taskId)}
         />
       </div>
       </div>
