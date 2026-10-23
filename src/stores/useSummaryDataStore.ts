@@ -262,6 +262,8 @@ export interface ModuleHealth {
     tasksCompleted: number;
     tasksWaitingAcceptance: number;
     tasksOverdue: number;
+    /** 逾期任务中巡查计划实例的条数（口径同 tasksOverdue，只加了来源过滤） */
+    tasksOverdueInspection: number;
     problemsTotal: number;
     problemsOpen: number;
   };

@@ -842,6 +842,16 @@ router.get('/module-health', (_req: Request, res: Response) => {
              AND status NOT IN ('completed', 'cancelled', 'abandoned')`,
           'total'
         ),
+        // 2026-10-23：逾期任务里巡查计划实例的条数（source_type='inspection_plan'）。
+        //   此前逾期总数不区分来源，管理者看不出其中有多少是「该巡没巡」；
+        //   口径与 tasksOverdue 保持一致（只是加了来源过滤），两者可相加核对。
+        tasksOverdueInspection: pick(
+          `SELECT COUNT(*) AS total FROM farm_tasks
+           WHERE plan_date <> '' AND plan_date < date('now', 'localtime')
+             AND status NOT IN ('completed', 'cancelled', 'abandoned')
+             AND source_type = 'inspection_plan'`,
+          'total'
+        ),
         problemsTotal: pick('SELECT COUNT(*) AS total FROM problems', 'total'),
         problemsOpen: pick("SELECT COUNT(*) AS total FROM problems WHERE status IN ('pending', 'in_progress', 'waiting_acceptance')", 'total'),
       },
@@ -1421,20 +1431,32 @@ router.get('/indicator-drilldown', (req: Request, res: Response) => {
       }
       case 'overdueTasks': {
         title = '逾期任务';
+        // 2026-10-23：按来源拆分 —— 巡查计划实例排在前面并标「漏巡未执行」，
+        //   让人一眼看出「该巡没巡」的是哪几条（此前一律显示「已逾期」，看不出来源）。
+        //   记录是否存在用 LEFT JOIN inspections（任务↔记录 1:1，inspection_task_id 关联）：
+        //   巡查实例若已提交记录（状态 waiting_acceptance 未终结）算「已执行待验收」，
+        //   不是漏巡；没有记录才是真正漏掉了。
         rows = queryToObjects<Record<string, unknown>>(
           db,
-          `SELECT id, task_title, assignee_name, plan_date, greenhouse_name FROM farm_tasks
-           WHERE plan_date <> '' AND plan_date < date('now', 'localtime')
-             AND status NOT IN ('completed', 'cancelled', 'abandoned')
-           ORDER BY plan_date ASC LIMIT 100`,
+          `SELECT ft.id, ft.task_title, ft.assignee_name, ft.plan_date, ft.greenhouse_name,
+                  ft.source_type, ft.inspection_plan_id, i.id AS record_id
+           FROM farm_tasks ft
+           LEFT JOIN inspections i ON i.inspection_task_id = ft.id
+           WHERE ft.plan_date <> '' AND ft.plan_date < date('now', 'localtime')
+             AND ft.status NOT IN ('completed', 'cancelled', 'abandoned')
+           ORDER BY (ft.source_type = 'inspection_plan') DESC, ft.plan_date ASC LIMIT 100`,
           []
-        ).map((r) => ({
-          id: String(r.id),
-          title: String(r.taskTitle || '(无标题)'),
-          meta: `负责人 ${String(r.assigneeName || '未指派')} · ${String(r.greenhouseName || '')} · 计划 ${String(r.planDate || '')}`,
-          status: '已逾期',
-          path: '/farm-hub',
-        }));
+        ).map((r) => {
+          const isInspection = String(r.sourceType || '') === 'inspection_plan';
+          const hasRecord = !!r.recordId;
+          return {
+            id: String(r.id),
+            title: String(r.taskTitle || '(无标题)'),
+            meta: `${isInspection ? '巡查计划 · ' : '普通任务 · '}负责人 ${String(r.assigneeName || '未指派')} · ${String(r.greenhouseName || '')} · 计划 ${String(r.planDate || '')}`,
+            status: isInspection ? (hasRecord ? '已巡待验收' : '漏巡未执行') : '已逾期',
+            path: isInspection ? '/my-tasks' : '/farm-hub',
+          };
+        });
         break;
       }
       case 'pendingAcceptance': {
