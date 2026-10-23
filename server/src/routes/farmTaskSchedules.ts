@@ -16,13 +16,16 @@ const router = Router();
 
 /**
  * 获取排班列表
- * GET /list?date=xxx&workerId=xxx&teamId=xxx&status=xxx
+ * GET /list?date=xxx&startDate=xxx&endDate=xxx&workerId=xxx&teamId=xxx&status=xxx
+ * 2026-10-23：新增 startDate/endDate 日期区间（含端点），供「已排班任务」表格按时间段检索
  */
 router.get('/list', requireAuth, async (req, res) => {
   try {
-    const { date, workerId, teamId, status } = req.query;
+    const { date, startDate, endDate, workerId, teamId, status } = req.query;
     const schedules = await farmTaskScheduleService.getSchedules({
       date: date as string,
+      startDate: startDate as string,
+      endDate: endDate as string,
       workerId: workerId as string,
       teamId: teamId as string,
       status: status as string,

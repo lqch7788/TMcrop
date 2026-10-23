@@ -12,6 +12,7 @@ import { X, Save } from 'lucide-react';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, UnifiedModal } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import type { Shift } from '../../services/apiBasicDataService';
+import { isCrossDayShift, isValidScheduleTimeRange } from './taskScheduleUtils';
 
 export interface TaskScheduleEditTarget {
   id: string;
@@ -121,8 +122,10 @@ export function TaskScheduleEditModal({
       await showAlert('请选择班次');
       return;
     }
-    if (form.planStart >= form.planEnd) {
-      await showAlert('开始时间必须早于结束时间');
+    // 跨天班次（如晚班 22:00-06:00）合法，结束时间按次日计算；
+    // 只有起止完全相同（零时长）才非法。
+    if (!isValidScheduleTimeRange(form.planStart, form.planEnd)) {
+      await showAlert('开始时间与结束时间不能相同');
       return;
     }
     const worker = workers.find((w) => w.id === form.workerId);
@@ -155,7 +158,10 @@ export function TaskScheduleEditModal({
       isOpen={open}
       onClose={onClose}
       title="编辑排班"
-      size="md"
+      size="xl"
+      // 2026-10-23：弹窗尺寸整体放大一倍（md 默认 500×400 → 1000×800）
+      width={1000}
+      height={800}
       showFooter={true}
       footer={footer}
     >
@@ -290,6 +296,10 @@ export function TaskScheduleEditModal({
               onChange={(e) => setForm((f) => ({ ...f, planEnd: e.target.value }))}
               className="h-9"
             />
+            {/* 跨天班次提示：晚班 22:00 → 次日 06:00（库里仍存 06:00，按次日解释） */}
+            {isCrossDayShift(form.planStart, form.planEnd) && (
+              <p className="text-[11px] text-amber-600 mt-1">跨天班次，结束时间为次日 {form.planEnd}</p>
+            )}
           </div>
         </div>
       </div>
