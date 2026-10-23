@@ -219,11 +219,12 @@ export function InspectionTable({
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {/* 2026-10-23：巡查编号改为蓝色高亮（原绿色 link），与巡查计划的名称列一致 */}
                   <Button
                     onClick={() => onViewDetail(record)}
                     variant="link"
                     size="sm"
-                    className="font-medium h-6"
+                    className="text-blue-600 hover:text-blue-800 font-semibold h-6"
                   >
                     {record.recordCode}
                   </Button>
