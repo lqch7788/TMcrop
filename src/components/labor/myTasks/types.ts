@@ -110,7 +110,9 @@ export interface ModalState<T = null> {
 
 // 任务筛选类型
 // 2026-10-21（阶段 3）：临时任务 tab 已删除
-export type TaskFilterType = 'all' | 'problem' | 'production' | 'worklog';
+// 2026-10-23：新增 inspectionPlan —— 巡查计划实例（「该去巡什么」）从
+//   「巡查反馈处理」（巡查记录台账 + 问题整改）里拆出来，两者语义与动作都不同
+export type TaskFilterType = 'all' | 'problem' | 'production' | 'inspectionPlan' | 'worklog';
 
 // 任务类型配置项
 export interface TaskTypeConfig {

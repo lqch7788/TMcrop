@@ -79,7 +79,15 @@ interface InspectionTableProps {
   // 新增：问题数据和操作
   problems?: ProblemEntry[];
   tasks?: TaskDispatchTask[];  // 任务列表，用于获取实际进度
+  /** 问题验收（整改问题） */
   onAcceptance?: (problem: ProblemEntry) => void;
+  /**
+   * 2026-10-23：巡查任务验收。
+   * 巡查计划实例提交记录后进入 waiting_acceptance，此前**没有任何页面能验收**
+   * （验收按钮只在农事任务中心的任务 tab，而那里刻意排除了计划实例），
+   * 导致计划统计的「已验收」永远为 0、实例永远停在待验收。
+   */
+  onAcceptTask?: (taskId: string) => void;
 }
 
 // 获取状态标签组件
@@ -118,6 +126,7 @@ export function InspectionTable({
   problems = [],
   tasks = [],
   onAcceptance,
+  onAcceptTask,
 }: InspectionTableProps) {
   // 从Zustand store获取用户列表
   const users = useUserStore((state) => state.users);
@@ -139,10 +148,10 @@ export function InspectionTable({
     return problems.find(p => p.id === record.problemId);
   };
 
-  // 根据问题获取关联的任务
+  // 根据问题获取关联的任务（复用上面的 taskById，避免逐行 find）
   const getTaskForProblem = (problem: ProblemEntry): TaskDispatchTask | undefined => {
     if (!problem?.sourceTaskId) return undefined;
-    return tasks.find(t => t.id === problem.sourceTaskId);
+    return taskById.get(String(problem.sourceTaskId));
   };
 
   // 获取问题处理进度（优先使用任务的实际进度）
@@ -170,6 +179,32 @@ export function InspectionTable({
     if (!problem) return false;
     const acceptStatuses = ['待验收', 'waiting_acceptance', 'waitingAcceptance', 'pending_acceptance', 'pendingAcceptance'];
     return acceptStatuses.includes(problem.status);
+  };
+
+  /**
+   * 任务索引（2026-10-23）
+   * 记录通过 inspectionTaskId 与 farm_tasks 1:1 关联，任务状态才代表「是否待验收」。
+   * 建 Map 而非每行 find：表格每页最多 100 行 × tasks 可达 500 条，
+   * 逐行 find 是 O(n×m)，每次渲染（含勾选、翻页）都会重算。
+   */
+  const taskById = React.useMemo(() => {
+    const m = new Map<string, TaskDispatchTask>();
+    for (const t of tasks) m.set(String(t.id), t);
+    return m;
+  }, [tasks]);
+
+  const getTaskForRecord = (record: InspectionRecord): TaskDispatchTask | undefined => {
+    const tid = (record as { inspectionTaskId?: string }).inspectionTaskId;
+    if (!tid) return undefined;
+    return taskById.get(String(tid));
+  };
+
+  /** 该记录的巡查任务是否可验收（待验收） */
+  const canAcceptRecordTask = (record: InspectionRecord): boolean => {
+    if (!onAcceptTask) return false;
+    const task = getTaskForRecord(record);
+    if (!task) return false;
+    return String(task.status) === 'waiting_acceptance';
   };
 
   return (
@@ -435,6 +470,24 @@ export function InspectionTable({
                     };
                     const status = problem?.status;
                     const displayStatus = status ? (statusMap[status] || status) : '';
+
+                    // 2026-10-23：巡查任务验收优先于问题验收 ——
+                    //   待验收的巡查实例才是「这条记录」本身的待办；
+                    //   问题验收是记录里发现的问题的二次闭环。
+                    if (canAcceptRecordTask(record)) {
+                      const task = getTaskForRecord(record);
+                      return (
+                        <Button
+                          onClick={() => onAcceptTask?.(String(task!.id))}
+                          variant="default"
+                          size="sm"
+                          className="h-6"
+                          title="验收该巡查记录（通过后任务完成，计划统计「已验收」+1）"
+                        >
+                          <CheckCircle className="w-4 h-4" /> 验收记录
+                        </Button>
+                      );
+                    }
 
                     if (canAccept(problem)) {
                       return (

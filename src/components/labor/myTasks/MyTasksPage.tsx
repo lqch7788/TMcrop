@@ -9,6 +9,7 @@ import { showAlert } from '@/lib/dialogService';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
+import { useInspectionDataStore } from '../../../stores/useInspectionDataStore';
 
 import { useAuthStore } from '@/stores/useAuthStore';
 import { todayLocal } from '@/lib/dateUtils';
@@ -83,8 +84,27 @@ const getTypeLabel = (type: string): string => {
 //   现两处共用以下谓词，口径永不分叉。
 // ============================================================
 
-/** 「巡查反馈处理」tab：巡查/问题来源的记录 */
+/**
+ * 「巡查计划任务」tab：巡查计划生成的待巡实例（2026-10-23 新增）
+ *
+ * 从「巡查反馈处理」里拆出来的原因：
+ *   · 语义不同 —— 这里是「该去巡什么」（执行任务），那边是「巡出来的记录 + 问题整改」；
+ *   · 动作不同 —— 这里接受/填写巡查记录，那边提交进度/验收整改；
+ *   · 列不同 —— 任务要看"什么时候在哪巡什么"，记录要看"巡查结果/严重程度/问题分类"。
+ * 混在一起时，实例用记录列展示导致字段全空、还与导入台账重复。
+ */
+function matchesInspectionPlanTabFilter(task: any): boolean {
+  if (!task.inspectionPlanId) return false;
+  // 已取消的实例不进本 tab（暂停/归档/改期会批量产生 cancelled 台账，
+  // 实测 131 条里 66 条是 cancelled）。历史台账到「全部任务」或计划详情里查。
+  if (String(task.status) === 'cancelled') return false;
+  return true;
+}
+
+/** 「巡查反馈处理」tab：巡查记录台账 + 问题整改（不含巡查计划实例） */
 function matchesProblemTabFilter(task: any): boolean {
+  // 巡查计划实例归「巡查计划任务」tab，这里排除，避免两个 tab 重复
+  if (task.inspectionPlanId) return false;
   const dm = task.dispatchMode;
   if (dm === 'problem' || dm === 'inspection') return true;
   // 2026-10-20：改用**真值**判断。后端未关联时返回 null/''，
@@ -118,6 +138,8 @@ function matchesProductionTabFilter(task: any): boolean {
   //   迁移后的任务 dispatchMode 已是 'farm'，sourceType 只是历史来源标记；
   //   继续排除会让它们在「农事任务处理」和「临时任务处理」两个 tab 都不显示。
   if (task.sourceProblemId || task.sourceInspectionId) return false;
+  // 2026-10-23：巡查计划实例归到「巡查反馈处理」tab，这里排除，避免两个 tab 重复出现
+  if (task.inspectionPlanId) return false;
   return true;
 }
 
@@ -158,6 +180,56 @@ export function MyTasksPage() {
     // 存量数据两种写法都有：users.id（USER_ID_xxx）与 oid（user-admin），双字段匹配
     const u = users.find((x) => x.id === v || x.oid === v);
     return u ? (u.name || (u as any).realName || u.username || v) : v;
+  };
+
+  /**
+   * 巡查记录索引（2026-10-23）
+   *
+   * 巡查结果 / 严重程度 / 问题分类 / 巡查日期只存在 inspections 表，
+   * farm_tasks 行上没有这些列。原来列表靠「空值当异常」的兜底显示，掩盖了字段缺失。
+   * 这里按「任务 id」和「记录编号」两个键建索引，给任务行补全真实记录信息。
+   */
+  const inspectionRecordList = useInspectionDataStore((s) => s.records);
+  const recordsByTaskId = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const r of inspectionRecordList as any[]) {
+      if (r?.inspectionTaskId) m.set(String(r.inspectionTaskId), r);
+    }
+    return m;
+  }, [inspectionRecordList]);
+  const recordsByCode = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const r of inspectionRecordList as any[]) {
+      if (r?.recordCode) m.set(String(r.recordCode), r);
+    }
+    return m;
+  }, [inspectionRecordList]);
+
+  /** 取任务对应的巡查记录：优先按任务 id，其次按记录编号 */
+  const recordOf = (t: any) =>
+    recordsByTaskId.get(String(t?.id ?? ''))
+    || recordsByCode.get(String(t?.inspectionRecordCode || t?.recordCode || ''));
+
+  /**
+   * 记录 → 巡查结果文案。
+   *
+   * 巡查结果在后端有三个可能的落点，必须按优先级逐个试，否则有记录却显示「—」：
+   *   1. checkResult（若已回填）
+   *   2. result（提交载荷里的字段，不一定落库）
+   *   3. status —— 实际落库位置：正常 = 'normal'，异常 = 'critical'
+   *      （实测 XT20261024-001：checkResult=null、status='critical'）
+   */
+  const resultOf = (rec: any): string => {
+    if (!rec) return '';
+    const check = String(rec.checkResult || '').trim();
+    if (check) return check;
+    const r = String(rec.result || '').toLowerCase();
+    if (r === 'normal') return '正常';
+    if (r === 'abnormal') return '异常';
+    const st = String(rec.status || '').toLowerCase();
+    if (st === 'normal') return '正常';
+    if (st === 'critical' || st === 'abnormal') return '异常';
+    return '';
   };
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
@@ -229,16 +301,25 @@ export function MyTasksPage() {
         totalEstimatedHours: (t as TaskWithExtras).totalEstimatedHours || 0,
         // 巡查反馈处理表格字段（用于 taskFilter === 'problem' 时显示）
         sourceId: (t as TaskWithExtras).sourceId,
+        // 2026-10-23：补 sourceCode —— 巡查实例的 sourceCode 是**计划编号**（XHJH…），
+        //   列表用它做主标识（否则只显示任务编号 NS…，看不出来自哪个计划）
+        sourceCode: (t as TaskWithExtras).sourceCode,
         recordCode: (t as TaskWithExtras).recordCode,
         inspectionType: (t as TaskWithExtras).inspectionType || 'farm',
         submitterId: (t as TaskWithExtras).submitterId,
         submitterName: (t as TaskWithExtras).submitterName || (t as TaskWithExtras).assignerName || '',
         location: (t as TaskWithExtras).location || t.greenhouseName || t.field || '',
-        checkDate: (t as TaskWithExtras).checkDate || t.planStart?.split(' ')[0] || '',
-        checkTime: (t as TaskWithExtras).checkTime || '',
-        checkResult: (t as TaskWithExtras).checkResult || '',
-        issueCategories: (t as TaskWithExtras).issueCategories || [],
-        issueSeverity: (t as TaskWithExtras).issueSeverity || '',
+        // 2026-10-23：巡查计划实例的区域（plan.area）。提交巡查记录时应写它，
+        //   而不是退回 location（= 温室名），否则计划配置的区域会被覆盖。
+        areaName: (t as any).areaName || '',
+        // 2026-10-23：巡查计划实例 / 有记录的任务，其「巡查结果 / 严重程度 / 问题分类 / 巡查日期」
+        //   只存在 inspections 表，farm_tasks 行上没有这些列 → 原实现直接取空。
+        //   这里用记录索引补全（不改变其它字段的来源）。
+        checkDate: (t as TaskWithExtras).checkDate || recordOf(t)?.checkDate || t.planStart?.split(' ')[0] || '',
+        checkTime: (t as TaskWithExtras).checkTime || recordOf(t)?.checkTime || '',
+        checkResult: (t as TaskWithExtras).checkResult || resultOf(recordOf(t)),
+        issueCategories: (t as TaskWithExtras).issueCategories || recordOf(t)?.issueCategories || [],
+        issueSeverity: (t as TaskWithExtras).issueSeverity || recordOf(t)?.issueSeverity || '',
         issueText: (t as TaskWithExtras).issueText || '',
         photos: (t as TaskWithExtras).photos || [],
         feedbackStatus: (t as TaskWithExtras).feedbackStatus || t.status,
@@ -351,8 +432,24 @@ export function MyTasksPage() {
     };
 
     switch (taskFilter) {
+      case 'inspectionPlan':
+        // 巡查计划任务（2026-10-23）：只含计划生成的待巡实例。
+        // 排序：待执行优先 → 执行日升序（今天/逾期的最前）→ 创建时间倒序。
+        return myTasks
+          .filter(matchesInspectionPlanTabFilter)
+          .sort((a, b) => {
+            const actionable = (t: any) =>
+              ['pending', 'accepted', 'in_progress', 'rejected'].includes(String(t.status)) ? 1 : 0;
+            const aPri = actionable(a);
+            const bPri = actionable(b);
+            if (aPri !== bPri) return bPri - aPri;
+            const aDate = String(a.planOccurrenceDate || a.planStart || '');
+            const bDate = String(b.planOccurrenceDate || b.planStart || '');
+            if (aDate !== bDate) return aDate.localeCompare(bDate);
+            return sortByCreatedAt(a, b);
+          });
       case 'problem':
-        // 巡查反馈/问题处理（过滤谓词见 matchesProblemTabFilter，与徽章计数共用）
+        // 巡查记录台账 + 问题整改（过滤谓词见 matchesProblemTabFilter，与徽章计数共用）
         return myTasks
           .filter(matchesProblemTabFilter)
           .sort(sortByCreatedAt);
@@ -410,6 +507,7 @@ export function MyTasksPage() {
     all: myTasks.length,
     problem: myTasks.filter(matchesProblemTabFilter).length,
     production: myTasks.filter(matchesProductionTabFilter).length,
+    inspectionPlan: myTasks.filter(matchesInspectionPlanTabFilter).length,
   }), [myTasks]);
 
   // 详情弹窗状态
@@ -1013,6 +1111,8 @@ export function MyTasksPage() {
                   {currentPageTasks.map((task) => {
                     return (
                       <TableRow key={task.id} className="hover:bg-blue-50 transition-colors">
+                        {/* 2026-10-23：巡查计划任务用「任务类」列（与农事任务同套），
+                            不用「巡查记录类」列 —— 实例是任务，没有巡查结果/严重程度。 */}
                         {taskFilter === 'problem' ? (
                           <ProblemTaskTableRow
                             task={task}
@@ -1153,7 +1253,8 @@ export function MyTasksPage() {
           planTime: String(recordModal.task.planStart || '').split(' ')[1] || '',
           planOccurrenceDate: recordModal.task.planOccurrenceDate
             || String(recordModal.task.planStart || '').slice(0, 10),
-          area: recordModal.task.area || recordModal.task.location || '',
+          // 2026-10-23：优先取计划配置的区域（areaName），不再退回 location（温室名）
+          area: recordModal.task.areaName || recordModal.task.area || '',
         } : null}
         // 2026-10-22（审核 P1-3）：计划配置的检查项模板必须进执行表单，
         //   否则「查什么」在执行侧完全丢失（checklistResults 恒为空数组）
@@ -1164,7 +1265,15 @@ export function MyTasksPage() {
         existingRecord={recordModal.existingRecord}
         readOnly={recordModal.readOnly}
         onClose={() => setRecordModal({ isOpen: false, task: null, existingRecord: null, readOnly: false })}
-        onSubmitted={() => { setRefreshKey(prev => prev + 1); }}
+        onSubmitted={() => {
+          // 2026-10-23（高危修复）：原实现只 setRefreshKey(+1) —— 那只让 filteredTasks
+          //   重算，数据源（store）没重新拉取，界面仍显示提交前的状态；
+          //   用户再点一次「填写巡查记录」必撞 409（记录已存在）。
+          //   现在强制重拉两个数据源（force 跳过 3 秒节流，否则刚加载就提交会刷不到）。
+          setRefreshKey(prev => prev + 1);
+          void useFarmTaskStore.getState().fetchTasks({ force: true });
+          void useInspectionDataStore.getState().fetchRecords();
+        }}
       />
         </>
       )}

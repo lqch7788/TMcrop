@@ -12,6 +12,8 @@ interface TaskFilterTabsProps {
     all: number;
     problem: number;
     production: number;
+    // 2026-10-23：巡查计划任务（计划生成的待巡实例）
+    inspectionPlan: number;
     // 2026-10-21（阶段 3）：临时任务 tab 已删除
   };
   onFilterChange: (filter: TaskFilterType) => void;
@@ -54,6 +56,23 @@ export function TaskFilterTabs({
           农事任务处理
           <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
             {taskCounts.production}
+          </span>
+        </Button>
+        {/* 2026-10-23：巡查计划任务单独成 tab ——
+            这里放「该去巡什么」（计划生成的待巡实例），
+            「巡查反馈处理」只留巡查记录台账与问题整改，两者不再混在一起。 */}
+        <Button
+          variant="ghost"
+          onClick={() => onFilterChange('inspectionPlan')}
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
+            taskFilter === 'inspectionPlan'
+              ? 'border-sky-500 text-sky-600 bg-sky-50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          巡查计划任务
+          <span className="px-2 py-0.5 bg-sky-200 text-sky-700 rounded-full text-xs">
+            {taskCounts.inspectionPlan}
           </span>
         </Button>
         <Button
