@@ -69,10 +69,13 @@ export interface UseFarmTaskScheduleResult {
 
 /**
  * useFarmTaskSchedule Hook
- * @param filters 可选的筛选条件：日期、执行人、班组
+ * @param filters 可选的筛选条件：日期区间（startDate/endDate）、单日精确匹配（date）、执行人、班组
+ *   2026-10-23：起止日期为闭区间，页面「已排班任务」表格按时间段检索时使用
  */
 export function useFarmTaskSchedule(filters?: {
   date?: string;
+  startDate?: string;
+  endDate?: string;
   workerId?: string;
   teamId?: string;
 }): UseFarmTaskScheduleResult {
@@ -96,6 +99,8 @@ export function useFarmTaskSchedule(filters?: {
     try {
       const params = new URLSearchParams();
       if (filters?.date) params.append('date', filters.date);
+      if (filters?.startDate) params.append('startDate', filters.startDate);
+      if (filters?.endDate) params.append('endDate', filters.endDate);
       if (filters?.workerId) params.append('workerId', filters.workerId);
       if (filters?.teamId) params.append('teamId', filters.teamId);
 
@@ -107,7 +112,7 @@ export function useFarmTaskSchedule(filters?: {
     } finally {
       setLoading(false);
     }
-  }, [filters?.date, filters?.workerId, filters?.teamId]);
+  }, [filters?.date, filters?.startDate, filters?.endDate, filters?.workerId, filters?.teamId]);
 
   const fetchUnscheduledTasks = useCallback(async () => {
     try {

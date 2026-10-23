@@ -62,7 +62,12 @@ export interface CreateScheduleInput {
  * 排班查询过滤器
  */
 export interface ScheduleFilters {
+  /** 精确匹配某一天（保留旧语义） */
   date?: string;
+  /** 日期区间起（含）—— 2026-10-23 起支持，供「已排班任务」表格的日期范围筛选 */
+  startDate?: string;
+  /** 日期区间止（含） */
+  endDate?: string;
   workerId?: string;
   teamId?: string;
   status?: string;
@@ -89,6 +94,15 @@ export async function getSchedules(filters: ScheduleFilters = {}): Promise<FarmT
     if (filters.date) {
       sql += ' AND fts.plan_date = ?';
       params.push(filters.date);
+    }
+    // 2026-10-23：日期区间（含端点）。与 date 精确匹配并存，两个都给时取交集。
+    if (filters.startDate) {
+      sql += ' AND fts.plan_date >= ?';
+      params.push(filters.startDate);
+    }
+    if (filters.endDate) {
+      sql += ' AND fts.plan_date <= ?';
+      params.push(filters.endDate);
     }
     if (filters.workerId) {
       sql += ' AND fts.worker_id = ?';
