@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, Calendar, CalendarDays, Clock, Download, List, Plus, Settings, Users, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, Download, List, Plus, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSchedule } from './hooks/useSchedule';
@@ -362,78 +362,11 @@ export function SchedulePage() {
         </div>
       )}
 
-      {/* 页面标题 - 紧凑型标题卡片 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
-            <Calendar className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">排班调度</h1>
-            <p className="text-gray-500">员工排班管理与调班申请</p>
-          </div>
-        </div>
-      </div>
+      {/* 注：2026-10-23 起，「排班调度」标题卡片（图标 + 标题）已提升到页面级（src/pages/Schedule.tsx），
+          这样切到「任务排班」Tab 时标题依然置顶常显，故此处不再重复渲染。 */}
 
-      {/* 统计卡片 - 淡彩底 */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Calendar className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">今日排班</p>
-              <p className="text-lg font-bold text-gray-800">
-                {scheduleList.filter(s => s.date === todayLocal()).length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Clock className="w-4 h-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">本周已执行</p>
-              <p className="text-lg font-bold text-gray-800">
-                {scheduleList.filter(s => s.status === '已执行' && weekDateRange.includes(s.date)).length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Users className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">待调班申请</p>
-              <p className="text-lg font-bold text-gray-800">
-                {swapRequests.filter(r => r.status === '待审批').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <List className="w-4 h-4 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">本月排班总数</p>
-              <p className="text-lg font-bold text-gray-800">
-                {scheduleList.filter(s => {
-                  const date = new Date(s.date);
-                  const now = new Date();
-                  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-                }).length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 注：2026-10-23 起移除 4 个统计卡片（今日排班 / 本周已执行 / 待调班申请 / 本月排班总数），
+          页面信息密度过高时它们挤占了表格空间；待调班数量仍在下方「调班申请」列表标题处可见。 */}
 
       {/* 快捷操作栏 */}
       <div className="bg-white rounded-lg shadow-sm p-4">
