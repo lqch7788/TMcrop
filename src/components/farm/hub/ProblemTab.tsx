@@ -450,7 +450,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     let failed = 0;
     for (const worker of dispatchTargets) {
       try {
-        const created = dispatchProblem(
+        // 2026-10-23（阻断修复）：dispatchProblem 现返回 { task, done }，
+        //   done 是真实创建结果的 Promise。此前只判同步返回值（恒非空），
+        //   后端建任务失败时仍计成功、且问题卡在「处理中无任务」。
+        const { task, done } = dispatchProblem(
           problem.id,
           worker.id,
           worker.name,
@@ -462,7 +465,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           // 2026-10-21：人工指定的任务类型优先（为空则按巡查类型/问题分类自动映射）
           dispatchTaskType || undefined
         );
-        if (!created) failed++;
+        const ok = await done;
+        if (!ok || !task) failed++;
       } catch (error) {
         failed++;
         console.error('[ProblemTab] 分派失败:', worker.name, error);
@@ -499,14 +503,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     setDispatchTaskType('');
     setBatchDispatchMode(false);
 
-    // dispatchProblem 为同步函数（见上方 handleDispatch 的说明），此处同样逐条 try/catch
+    // 2026-10-23：同上，改为 await done 取真实结果（对象恒 truthy，旧判断会漏报失败）
     let failed = 0;
     let total = 0;
     for (const { problemId } of targets) {
       for (const worker of workers) {
         total++;
         try {
-          const created = dispatchProblem(
+          const { task, done } = dispatchProblem(
             problemId as any,
             worker.id,
             worker.name,
@@ -518,7 +522,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             // 2026-10-21：人工指定的任务类型优先（为空则各问题按自身巡查类型/分类自动映射）
             dispatchTaskType || undefined
           );
-          if (!created) failed++;
+          const ok = await done;
+          if (!ok || !task) failed++;
         } catch (error) {
           failed++;
           console.error('[ProblemTab] 批量分派失败:', problemId, worker.name, error);
@@ -1401,9 +1406,13 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         createdAt: t.createdAt || '',
       }));
 
-    // 巡查记录：DB 列 source_problem_id（snake_case）映射
+    // 巡查记录：关联字段有**两套列**，读取时必须都认（2026-10-23 修复）
+    //   · inspections.source_problem_id —— problem.ts 的 link-inspection 端点写
+    //   · inspections.problem_id        —— 巡查提交记录建问题时写（farmTask.ts:1184，
+    //                                     这是计划巡查的主路径）
+    //   原实现只认前者 → 巡查异常生成的问题在详情里永远显示「暂无关联任务」。
     const inspectLinked = (inspectionStoreAll as any[])
-      .filter((i) => i.source_problem_id || i.sourceProblemId)
+      .filter((i) => i.source_problem_id || i.sourceProblemId || i.problem_id || i.problemId)
       .map((i) => ({
         kind: 'inspection' as const,
         type: 'inspection' as const,
@@ -1416,7 +1425,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         dueDate: i.check_date || i.checkDate || '',
         priority: i.issue_severity || i.issueSeverity || '',
         status: i.status || '',
-        sourceProblemId: String(i.source_problem_id ?? i.sourceProblemId),
+        sourceProblemId: String(
+          i.source_problem_id ?? i.sourceProblemId ?? i.problem_id ?? i.problemId ?? '',
+        ),
         createdAt: i.create_time || i.createTime || '',
         recordCode: i.record_code || i.recordCode || '',
       }));

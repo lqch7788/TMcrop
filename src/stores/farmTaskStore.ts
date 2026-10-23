@@ -123,7 +123,8 @@ interface FarmTaskState {
   pendingSyncCount: number;
 
   // Actions - 数据获取
-  fetchTasks: () => Promise<void>;
+  /** @param options.force 跳过 3 秒节流（写操作后立即刷新用） */
+  fetchTasks: (options?: { force?: boolean }) => Promise<void>;
   fetchTasksByDate: (date: string) => Promise<Task[]>;
 
   // Actions - 增删改
@@ -157,11 +158,14 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
       // ========== 数据获取 ==========
 
-      fetchTasks: async () => {
+      fetchTasks: async (options?: { force?: boolean }) => {
         // P2-4：防重复调用 — 3 秒内连续 fetchTasks 跳过（消除 useTasks/useFarmHub/FarmTaskHub 三重触发）
+        // 2026-10-23：加 force —— 写操作成功后必须能立即刷新。
+        //   否则「提交巡查记录 → 立刻刷新列表」会被节流吞掉，界面停在旧状态，
+        //   用户再点按钮就直接撞 409。
         const now = Date.now();
         const lastFetch = ((get() as any)._lastFetchAt as number) || 0;
-        if (now - lastFetch < 3000) {
+        if (!options?.force && now - lastFetch < 3000) {
           return;
         }
         (get() as any)._lastFetchAt = now;

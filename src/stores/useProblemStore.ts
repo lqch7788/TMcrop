@@ -61,6 +61,11 @@ export interface ProblemData {
   reporter_name?: string;
   assignee_id?: string;
   assignee_name?: string;
+  // 2026-10-23：normalize() 会把 assignee_id/assignee_name 转成驼峰存进 store，
+  //   但类型此前只声明了蛇形 → updateProblem({assigneeId}) 报 TS2561。
+  //   两套都声明，避免调用方被迫用错键名（PUT 时后端 FIELD_MAP 两种都认）。
+  assigneeId?: string;
+  assigneeName?: string;
   priority?: string;
   // 巡查问题流转闭环字段
   crop_name?: string;
@@ -275,6 +280,16 @@ export const useProblemStore = create<ProblemState>()(
         //   现失败回滚本地改动 + console 报告（不重抛：调用方均为 fire-and-forget，
         //   抛错只会产生 unhandled rejection，用户仍无感知；回滚让用户能立即看到状态弹回）
         const prev = get().problems.find((p) => p.id === id);
+        // 2026-10-23：status 变更时同步重算 statusLabel。
+        //   否则更新后 status=in_progress 而 statusLabel 仍是「待处理」，
+        //   任何按 statusLabel 判断的地方（历史代码/导出）会得出相反结论。
+        if (updates && (updates as any).status !== undefined) {
+          const raw = String((updates as any).status || '');
+          const cnMap: Record<string, string> = {
+            pending: '待处理', in_progress: '处理中', waiting_acceptance: '待验收', completed: '已处理',
+          };
+          (updates as any).statusLabel = cnMap[raw] || (updates as any).statusLabel || raw;
+        }
         set((state) => ({
           problems: state.problems.map((p) => (p.id === id ? { ...p, ...updates } : p)),
         }));

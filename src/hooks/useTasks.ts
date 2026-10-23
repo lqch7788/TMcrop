@@ -246,6 +246,10 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     startTime: t.startTime || undefined,
     greenhouseId: t.greenhouseId || '',
     greenhouseName: t.greenhouseName || '',
+    // 2026-10-23：透传 areaName —— 巡查记录表单的「区域」应取计划配置的区域，
+    //   此前转换层丢掉该字段，调用方只能退回 greenhouseName/location，
+    //   提交后把计划区域覆盖成温室名（实测 15 条记录中 10 条 area == greenhouse_name）。
+    areaName: (t as any).areaName || '',
     cropName: t.cropName || '',
     types: (() => {
       const raw = (t as any).types;
@@ -364,7 +368,11 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     : issueStatus === 'processing' || issueStatus === '处理中' ? 'in_progress'
     : null;
   const finalStatus: TaskStatus = (taskStatusFromProblem || taskStatusFromIssue || status) as TaskStatus;
-  const issueSeverity = t.issueSeverity || t.issue_severity || '轻微';
+  // 2026-10-23：不再给 issueSeverity 造默认值 '轻微'。
+  //   后端创建记录时默认 issueSeverity='中等'，而本层再造一个 '轻微' 会让
+  //   「还没巡查/没有结果」的记录在界面上显示成「轻微」，并被下面的 checkResult
+  //   反推成「异常」—— 用户看到的结论是凭空生成的。保留空值，由展示层显示「—」。
+  const issueSeverity = t.issueSeverity || t.issue_severity || '';
 
   return {
     id,
@@ -413,7 +421,14 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     location: greenhouseName,
     checkDate,
     checkTime,
-    checkResult: t.checkResult || t.check_result || (issueSeverity === '严重' ? '严重' : issueSeverity === '中等' ? '异常' : '轻微'),
+    // 2026-10-23：不再由 issueSeverity 反推 checkResult。
+    //   反推会在「正常但没填 check_result」的记录上显示「异常」
+    //   （后端建记录默认 issueSeverity='中等' → 反推成 '异常'），属凭空结论。
+    //   记录的巡查结果以 status（normal/critical）或 checkResult 为准，都没有就留空。
+    checkResult: t.checkResult || t.check_result
+      || (String(t.status || '').toLowerCase() === 'normal' ? '正常'
+        : ['critical', 'abnormal'].includes(String(t.status || '').toLowerCase()) ? '异常'
+        : ''),
     issueCategories: issues,
     issueSeverity,
     issueText: t.issueText || t.issue_text || '',

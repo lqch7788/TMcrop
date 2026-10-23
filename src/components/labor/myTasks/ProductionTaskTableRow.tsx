@@ -7,6 +7,8 @@ import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
 import type { Task } from '../../../hooks/useTasks';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
+import { isOverdueInspection, OVERDUE_BADGE_CLASS } from '../../../utils/inspectionOverdue';
+import { todayLocal } from '../../../lib/dateUtils';
 
 /**
  * 2026-08-29：备注英文 enum → 中文映射
@@ -90,6 +92,15 @@ export function ProductionTaskTableRow({
   // 2026-10-10（审核修复 H3）：巡查来源的动作按钮仅在关联了整改问题时显示（同 ProblemTaskTableRow）
   const isInspectionTask = !!(task as { sourceInspectionId?: string }).sourceInspectionId;
   const canOperate = !isInspectionTask || !!(taskWithExtras as { sourceProblemId?: string }).sourceProblemId;
+  // 2026-10-23：巡查计划实例「逾期未执行」标记（执行日已过且没提交巡查记录）
+  const isOverdue = isPlanInspection && isOverdueInspection(
+    {
+      occurrenceDate: taskWithExtras.planOccurrenceDate,
+      inspectionRecordId: taskWithExtras.inspectionRecordId,
+      status: task.status,
+    },
+    todayLocal(),
+  );
 
   return (
     <>
@@ -165,9 +176,14 @@ export function ProductionTaskTableRow({
       </td>
       {/* 状态 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_MAP[task.status]?.bg || 'bg-gray-100'} ${STATUS_MAP[task.status]?.color || 'text-gray-600'}`}>
-          {STATUS_MAP[task.status]?.label || task.status}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_MAP[task.status]?.bg || 'bg-gray-100'} ${STATUS_MAP[task.status]?.color || 'text-gray-600'}`}>
+            {STATUS_MAP[task.status]?.label || task.status}
+          </span>
+          {isOverdue && (
+            <span className={OVERDUE_BADGE_CLASS} title="执行日已过且未提交巡查记录">逾期</span>
+          )}
+        </div>
       </td>
       {/* 备注（2026-08-29：改显示 task.remarks，不再显示 task.typeLabel；英文 enum 翻译为中文） */}
       <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={task.remarks || '-'}>
@@ -214,7 +230,11 @@ export function ProductionTaskTableRow({
             </Button>
           </div>
         )}
-        {(task.status === 'accepted' || task.status === 'in_progress') && canOperate && (
+        {/* 2026-10-23：巡查计划实例**不提供**「提交进度」——
+            通用进度提交不产巡查记录，会把任务推进到「待验收」而无记录，此后
+            既不能补交记录（状态不允许）也不能重提（无记录）→ 死锁。
+            巡查实例只走「填写巡查记录」通道。 */}
+        {(task.status === 'accepted' || task.status === 'in_progress') && canOperate && !isPlanInspection && (
           <Button
             size="sm"
             variant="blue"
@@ -238,17 +258,22 @@ export function ProductionTaskTableRow({
                 <Eye className="w-4 h-4" />
                 {task.status === 'rejected' ? '修改记录并重提' : '查看记录'}
               </Button>
-            ) : ['pending', 'accepted', 'in_progress', 'rejected'].includes(task.status) ? (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => onSubmitInspectionRecord(task)}
-                title="填写巡查记录（提交时自动接受并转待验收）"
-              >
-                <ClipboardCheck className="w-4 h-4" />
-                {task.status === 'rejected' ? '修改记录并重提' : '填写巡查记录'}
-              </Button>
-            ) : null}
+            ) : (
+              /* 2026-10-23：待接受状态不直接给「填写巡查记录」——
+                 未接受就能填记录不合理，且与同行的「接受」语义冲突。
+                 必须先接受，状态到 accepted 后才出现填写入口。 */
+              ['accepted', 'in_progress', 'rejected'].includes(task.status) ? (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => onSubmitInspectionRecord(task)}
+                  title="填写巡查记录（提交后自动转待验收）"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  {task.status === 'rejected' ? '修改记录并重提' : '填写巡查记录'}
+                </Button>
+              ) : null
+            )}
           </div>
         )}
         {task.status === 'rejected' && (

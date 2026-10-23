@@ -96,6 +96,9 @@ export async function submitInspectionRecord(
           issuePresets: form.issuePresets,
           checklistResults: form.checklistResults,
           remarks: form.remarks,
+          // 2026-10-23：补 checkTime —— 重提弹窗里「巡查时间」可编辑，
+          //   但载荷此前不带它、后端白名单也没有 → 用户改了时间仍提示成功、刷新后不变。
+          checkTime: form.checkTime,
           area: form.area,
           cropStatus: form.cropStatus,
           weather: form.weather,

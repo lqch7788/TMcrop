@@ -32,6 +32,35 @@ const PROBLEM_STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 /**
+ * 问题状态转移表（2026-10-23 新增）
+ *
+ * 【为什么需要】此前 PUT /api/problems/:id 对 status 只做中英文归一化就直接落库，
+ *   任何客户端都能把 pending 直接改成 completed、把 completed 改回 pending，
+ *   返工次数也能随意改。任务侧早已有 TASK_STATUS_TRANSITIONS 守卫，问题侧没有。
+ *
+ * 合法流转（与 useProblemDispatch 的实际动作对应）：
+ *   pending            待处理  → in_progress（分派）/ completed（直接关闭，如误报）
+ *   in_progress        处理中  → waiting_acceptance（提交反馈）/ pending（拒绝/退回）
+ *   waiting_acceptance 待验收  → completed（验收通过）/ pending（驳回返工）
+ *   completed          已处理  → （终态；如需重开必须走新建）
+ */
+const PROBLEM_STATUS_TRANSITIONS: Record<string, string[]> = {
+  pending: ['in_progress', 'completed', 'waiting_acceptance'],
+  in_progress: ['waiting_acceptance', 'pending', 'completed'],
+  waiting_acceptance: ['completed', 'pending', 'in_progress'],
+  completed: [],
+};
+
+/** 校验问题状态转移；返回 null 表示放行，否则返回拒绝原因 */
+function guardProblemStatus(current: string, next: string): string | null {
+  if (!next || current === next) return null;      // 未改状态 / 自转移放行
+  const allowed = PROBLEM_STATUS_TRANSITIONS[current];
+  if (!allowed) return null;                        // 未知源状态（历史脏数据）：不拦，仅放行
+  if (allowed.includes(next)) return null;
+  return `问题状态转移非法：${current} → ${next}（允许：${allowed.join('/') || '无，已是终态'}）`;
+}
+
+/**
  * problems 表真实列白名单（2026-09-21 新增）
  *
  * 用途：PUT /api/problems/:id 只允许白名单内的列名参与 SQL 拼接。
@@ -290,6 +319,47 @@ router.put('/:id', (req: Request, res: Response) => {
       updates.status = normalizeProblemStatus(updates.status);
     }
 
+    // 2026-10-23：问题状态机守卫 —— 读当前状态后校验转移合法性。
+    //   status 只允许通过合法流转变化，禁止 pending → completed 直达、
+    //   禁止 completed 被改回其他状态（终态）。
+    if (updates.status) {
+      const curStmt = getDatabase().prepare(
+        'SELECT status, handler, assignee_name FROM problems WHERE id = ?'
+      );
+      curStmt.bind([id]);
+      let curStatus = '';
+      let handlerName = '';
+      if (curStmt.step()) {
+        const row = curStmt.getAsObject() as {
+          status?: string; handler?: string; assignee_name?: string;
+        };
+        curStatus = String(row.status || '');
+        handlerName = String(row.handler || row.assignee_name || '');
+      }
+      curStmt.free();
+      if (curStatus) {
+        const violation = guardProblemStatus(curStatus, String(updates.status));
+        if (violation) {
+          return res.status(409).json({ success: false, error: violation, code: 'PROBLEM_STATUS_INVALID' });
+        }
+      }
+
+      // 2026-10-23：验收人不得是处理人自己。
+      //   演示模式下 req.user 恒为同一账号（无 token 时注入「陆启闯」），
+      //   硬阻断会让所有陆启闯处理的问题都无法验收 → 默认只告警，
+      //   设置 PROBLEM_ACCEPTOR_STRICT=1 才硬阻断（与供应商资质的渐进收紧模式一致）。
+      if (updates.status === 'completed' && handlerName) {
+        const operator = String((req as unknown as { user?: { name?: string } }).user?.name || '');
+        if (operator && operator === handlerName) {
+          const msg = `不能验收自己处理的问题（处理人：${handlerName}）`;
+          if (process.env.PROBLEM_ACCEPTOR_STRICT === '1') {
+            return res.status(403).json({ success: false, error: msg, code: 'SELF_ACCEPTANCE_FORBIDDEN' });
+          }
+          console.warn(`[problems PUT] 自验收告警（未阻断）: ${id} ${msg}`);
+        }
+      }
+    }
+
     // JSON 字段序列化
     if (updates.flow_records !== undefined && typeof updates.flow_records !== 'string') {
       updates.flow_records = JSON.stringify(updates.flow_records);
@@ -324,6 +394,12 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE problems SET ${fields}, update_time = ? WHERE id = ?`, values);
+    // 2026-10-23（Fail Loud）：0 行受影响说明 id 不存在 —— 此前照样返回 success，
+    //   前端以为改成功了、刷新后原样，属「幽灵成功」（任务侧已有同样的 404 修正）。
+    const changed = typeof db.getRowsModified === 'function' ? db.getRowsModified() : null;
+    if (changed === 0) {
+      return res.status(404).json({ success: false, error: '问题记录不存在' });
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
@@ -336,6 +412,11 @@ router.delete('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     db.run('DELETE FROM problems WHERE id = ?', [id]);
+    // 2026-10-23（Fail Loud）：删除 0 行 = id 不存在，此前返回 success（幽灵删除）
+    const changed = typeof db.getRowsModified === 'function' ? db.getRowsModified() : null;
+    if (changed === 0) {
+      return res.status(404).json({ success: false, error: '问题记录不存在' });
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {

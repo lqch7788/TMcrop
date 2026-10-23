@@ -52,12 +52,18 @@ export enum TaskStatus {
 export const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ['pending', 'cancelled'],
   pending_approval: ['pending', 'draft', 'cancelled'],
-  pending: ['accepted', 'cancelled', 'draft'],
+  // 2026-10-23：补 rejected。执行人拒单（「我的任务」行内「拒绝」）走的是
+  //   useTasks.rejectByExecutor → PUT /farm-tasks/:id {status:'rejected'}，
+  //   缺这条边时实测返回 409「状态转移非法：pending → rejected」，
+  //   按钮点了必失败、乐观更新被回滚，「拒绝 2 次必须换人」规则随之失效。
+  pending: ['accepted', 'cancelled', 'draft', 'rejected'],
   // 2026-10-20：补 waiting_acceptance。执行人可以直接在「已接受」状态下提交进度，
   //   进度到 100% 即为「申请验收」（submitProgress 的 isFinal 分支）。
   //   缺这条边时该操作必被守卫拒绝（实测 accepted → waiting_acceptance 返回 409），
   //   而 UI 对 accepted 行本来就显示「提交进度」按钮 —— 用户拖到 100% 就撞墙。
-  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft'],
+  // 2026-10-23：补 rejected —— 已接受后执行人仍可能「无法继续」（拒绝执行），
+  //   与 pending 同理，缺边会让该操作静默失败。
+  accepted: ['in_progress', 'waiting_acceptance', 'cancelled', 'draft', 'rejected'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
   // 2026-10-20：补 failed。POST /:id/reject 的规则是「返工次数 >= 2 判定失败」，
   //   而驳回只能从 waiting_acceptance 发起 —— 若这里不允许 failed，
