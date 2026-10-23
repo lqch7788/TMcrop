@@ -17,8 +17,8 @@
  *   （详情=view / 编辑=edit / 暂停=pause / 恢复=resume / 归档=archive），悬停 title 提示。
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActionIconButton, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { Archive, Edit2, Eye, Pause, Play, RefreshCw } from 'lucide-react';
+import { ActionIconButton, Button, Input, Pagination, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Archive, Edit2, Pause, Play, Plus, RotateCcw } from 'lucide-react';
 import {
   useInspectionPlanStore,
   describePlanFrequency,
@@ -35,11 +35,6 @@ interface Props {
   onSubmitRecord?: (taskId: string) => void;
   /** 2026-10-21 P5：跳到排班调度并预选任务 */
   onScheduleTask?: (taskId: string, date: string) => void;
-  /**
-   * 2026-10-22：「新建计划」按钮已上移到父组件的视图切换行（靠右），
-   * 父组件每次递增该值即请求打开新建表单（本地 state 不能跨组件直接控制）。
-   */
-  createRequest?: number;
 }
 
 /** 计划状态 → 文案与配色（复用系统语义色，与任务状态同一套 token） */
@@ -49,7 +44,7 @@ export const PLAN_STATUS_MAP: Record<string, { label: string; color: string; bg:
   archived: { label: '已归档', color: 'text-gray-500', bg: 'bg-gray-100' },
 };
 
-export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, onScheduleTask, createRequest }: Props) {
+export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, onScheduleTask }: Props) {
   const { plans, isLoading, error, fetchPlans, archivePlan, updatePlan } = useInspectionPlanStore();
   const [keyword, setKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -65,13 +60,6 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
     void fetchPlans();
   }, [fetchPlans]);
 
-  // 新建计划请求：按钮已上移到视图切换行，父组件递增 createRequest 触发
-  useEffect(() => {
-    if (!createRequest) return;
-    setEditing(null);
-    setShowForm(true);
-  }, [createRequest]);
-
   // 客户端过滤（列表量级小，避免每次输入/切状态都打接口）
   const visible = useMemo(() => plans.filter((p) => {
     if (statusFilter !== 'all' && (p.status || 'active') !== statusFilter) return false;
@@ -85,8 +73,39 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
     );
   }), [plans, statusFilter, typeFilter, keyword]);
 
+  // 2026-10-23：分页（与「巡查记录」表格底部同一套 Pagination 组件：页码 + 每页条数）
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const totalPages = Math.ceil(visible.length / pageSize) || 1;
+  const pagedVisible = useMemo(
+    () => visible.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [visible, currentPage, pageSize],
+  );
+
+  // 筛选条件变化时回到第 1 页（否则可能停在已被过滤掉的空页上）
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword, typeFilter, statusFilter]);
+
+  // 列表变短导致当前页越界时（如刚归档了几条），回落到最后一页
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const reload = () => {
     void fetchPlans();
+  };
+
+  /**
+   * 2026-10-23：重置筛选条件（关键词 / 巡查类型 / 状态）并重新拉取列表
+   * 工具栏原「刷新」改为「重置」，与巡查记录视图的橙色重置按钮同一套 variant="warning"
+   */
+  const handleResetFilters = () => {
+    setKeyword('');
+    setTypeFilter('all');
+    setStatusFilter('all');
+    reload();
   };
 
   const handleArchive = async (plan: InspectionPlan) => {
@@ -140,9 +159,17 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
             <SelectItem value="archived">已归档</SelectItem>
           </SelectContent>
         </Select>
-        <Button size="sm" variant="ghost" onClick={reload} title="刷新">
-          <RefreshCw className="w-4 h-4" />
-          刷新
+        {/* 2026-10-23：原「刷新」改为「重置」——清空关键词/类型/状态筛选并重拉列表，
+            配色沿用其他页面重置按钮的 variant="warning"（橙色） */}
+        <Button size="sm" variant="warning" onClick={handleResetFilters}>
+          <RotateCcw className="w-4 h-4" />
+          重置
+        </Button>
+        {/* 2026-10-23：「新建计划」从父层视图切换行移入本面板工具栏（搜索栏之后、靠右）——
+            本面板只在「巡查计划」视图显示，切到「巡查记录」时按钮随面板一起隐藏 */}
+        <Button size="sm" className="ml-auto" onClick={() => { setEditing(null); setShowForm(true); }}>
+          <Plus className="w-4 h-4" />
+          新建计划
         </Button>
       </div>
 
@@ -180,7 +207,7 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
-              {visible.map((plan) => {
+              {pagedVisible.map((plan) => {
                 const st = PLAN_STATUS_MAP[plan.status || 'active'] || PLAN_STATUS_MAP.active;
                 const target = plan.equipmentName || plan.infrastructureName || plan.greenhouseName || plan.area || '全基地';
                 return (
@@ -211,12 +238,7 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
                       {/* 2026-10-23：操作列统一改图标模式，样式对齐种植管理页
                           （ActionIconButton + 语义色 token，悬停显示 title 提示） */}
                       <div className="flex items-center gap-1">
-                        <ActionIconButton
-                          variant="view"
-                          icon={<Eye className="w-4 h-4" />}
-                          onClick={() => setDetail(plan)}
-                          title="查看计划详情"
-                        />
+                        {/* 2026-10-23：移除「查看详情」图标 —— 名称列点击即打开同一详情弹窗，功能重复 */}
                         <ActionIconButton
                           variant="edit"
                           icon={<Edit2 className="w-4 h-4" />}
@@ -255,6 +277,21 @@ export function InspectionPlanPanel({ onViewTask, onViewRecord, onSubmitRecord, 
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* 分页器 —— 与「巡查记录」表格底部同一套组件与位置（页码 + 每页条数选择） */}
+      {visible.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+          showPageSize={true}
+        />
       )}
 
       {/* 弹窗 */}
