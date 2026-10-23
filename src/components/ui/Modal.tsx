@@ -446,16 +446,24 @@ interface FormFieldProps {
   label: string;
   required?: boolean;
   error?: string;
+  /**
+   * 2026-10-23：label 右侧的补充说明（通常传一个带 Tooltip 的问号图标）。
+   * 用于解释「生成窗口」这类非直觉字段；不传时布局与原来完全一致。
+   */
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function FormField({ label, required, error, children }: FormFieldProps) {
+export function FormField({ label, required, error, hint, children }: FormFieldProps) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
+      <div className="flex items-center gap-1">
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        {hint}
+      </div>
       {children}
       {error && <p className="text-sm text-red-500">{error}</p>}
     </div>

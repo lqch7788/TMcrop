@@ -13,11 +13,15 @@
  *   · 星期/严重程度选择器对齐 CreateInspectionModal 的 border-2 rounded-lg 范式
  *   · 取消用 Modal 内置 footer（对齐 px-6 py-4 / size="sm" / variant="secondary"），去掉内层双滚动
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button, DatePicker, FormField, Input, Modal, NumberInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea } from '@/components/ui';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, DatePicker, FormField, Input, Modal, NumberInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TabsList, TabsTrigger, TextArea, Tooltip } from '@/components/ui';
+import { Search } from 'lucide-react';
 import { useInspectionPlanStore, type InspectionPlan, type PlanChecklistItem } from '@/stores/useInspectionPlanStore';
 // 2026-10-22（遗留项 5）：执行人改为员工选择器（数据源 = 员工档案）
 import { useWorkerStore } from '@/stores/useWorkerStore';
+// 2026-10-23：种植区域巡查的巡查对象改为「种植/育苗单号」可搜索选择，
+//   数据源与「农事任务 → 新建任务」「新增巡查记录」保持一致。
+import { usePlantingStore, useSeedlingStore } from '@/stores';
 import { INSPECTION_TYPES } from '@/types/farm/common';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -65,6 +69,17 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     [workers],
   );
 
+  // 2026-10-23：种植区域巡查的巡查对象数据源（种植 / 育苗台账）
+  const plantingItems = usePlantingStore((s) => s.items);
+  const seedlingItems = useSeedlingStore((s) => s.items);
+  const loadPlantings = usePlantingStore((s) => s.loadItems);
+  const loadSeedlings = useSeedlingStore((s) => s.loadItems);
+  useEffect(() => {
+    if (!isOpen) return;
+    if (plantingItems.length === 0) void loadPlantings();
+    if (seedlingItems.length === 0) void loadSeedlings();
+  }, [isOpen, plantingItems.length, seedlingItems.length, loadPlantings, loadSeedlings]);
+
   const [form, setForm] = useState({
     title: '',
     inspectionType: 'farm',
@@ -82,7 +97,9 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     // 本地日期（禁止 UTC 截取）
     startDate: todayLocal(),
     endDate: '',
-    windowDays: 14,
+    // 2026-10-23：新建时不再预填 14，避免用户误以为系统默认只提前两周；
+    //   留空 + 输入框 placeholder 提示 1~90，保存时必填校验。
+    windowDays: '' as number | '',
     defaultTime: '09:00',
     durationHours: 1,
     // 执行与排班
@@ -93,6 +110,69 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     checklist: [] as PlanChecklistItem[],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ===== 2026-10-23：种植/育苗单号选择器 =====
+  const [areaTab, setAreaTab] = useState<'planting' | 'seedling'>('planting');
+  const [areaSearch, setAreaSearch] = useState('');
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+
+  // 点击选择器外部关闭下拉（只读 ref，空依赖安全）
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (areaRef.current && !areaRef.current.contains(e.target as Node)) setShowAreaDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // 每次打开弹窗重置选择器本地状态（表单字段由下方 effect 负责重置）
+  useEffect(() => {
+    if (!isOpen) return;
+    setAreaTab('planting');
+    setAreaSearch('');
+    setShowAreaDropdown(false);
+  }, [isOpen]);
+
+  /** 作物显示名：与农事任务新建弹窗同口径（子品种 > 品种 > 作物） */
+  const formatCropDisplay = (item: any) =>
+    item.subVariety1Name || item.cropVariety || item.cropName || '';
+
+  /** 区域显示名：种植取大棚/根区，育苗取场地 */
+  const formatAreaDisplay = (item: any) => areaTab === 'planting'
+    ? (item.rootName || item.areaName || item.greenhouseName || '未指定区域')
+    : (item.siteName || item.areaName || item.greenhouseName || '育苗区');
+
+  const areaOptions = useMemo(() => {
+    const kw = areaSearch.trim().toLowerCase();
+    if (areaTab === 'planting') {
+      return plantingItems.filter((p) => !p.isHarvest).filter((p) =>
+        !kw
+        || (p.plantCode || '').toLowerCase().includes(kw)
+        || (p.cropName || '').toLowerCase().includes(kw)
+        || (p.cropVariety || '').toLowerCase().includes(kw)
+        || (p.subVariety1Name || '').toLowerCase().includes(kw)
+        || (p.rootName || '').toLowerCase().includes(kw)
+        || (p.areaName || '').toLowerCase().includes(kw));
+    }
+    return seedlingItems.filter((s) =>
+      !kw
+      || (s.seedlingCode || '').toLowerCase().includes(kw)
+      || (s.cropName || '').toLowerCase().includes(kw)
+      || (s.cropVariety || '').toLowerCase().includes(kw)
+      || (s.siteName || '').toLowerCase().includes(kw));
+  }, [areaTab, areaSearch, plantingItems, seedlingItems]);
+
+  /** 选中种植/育苗单号 → 自动填充巡查对象的区域与作物 */
+  const applyArea = (item: any) => {
+    setForm((f) => ({
+      ...f,
+      greenhouseName: formatAreaDisplay(item),
+      cropName: formatCropDisplay(item),
+    }));
+    setAreaSearch('');
+    setShowAreaDropdown(false);
+  };
 
   // 已选执行人：优先按 id 匹配，其次按姓名匹配。
   //   后者用于兼容历史计划 —— 旧的文本输入把姓名写进了 assigneeId，
@@ -144,7 +224,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
         equipmentName: '', infrastructureName: '', area: '',
         frequency: 'weekly', intervalValue: 1, weekdays: [1], dayOfMonth: 1,
         startDate: todayLocal(), endDate: '',
-        windowDays: 14, defaultTime: '09:00', durationHours: 1,
+        windowDays: '' as number | '', defaultTime: '09:00', durationHours: 1,
         assigneeId: '', assigneeName: '', autoSchedule: true, checklist: [],
       });
     }
@@ -159,7 +239,12 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
     if (form.endDate && form.startDate && form.endDate < form.startDate) {
       next.endDate = '结束日期不能早于开始日期';
     }
-    if (form.windowDays < 1 || form.windowDays > 90) next.windowDays = '生成窗口须为 1..90 天';
+    const windowDaysNum = form.windowDays === '' ? NaN : Number(form.windowDays);
+    if (!Number.isInteger(windowDaysNum) || windowDaysNum < 1 || windowDaysNum > 90) {
+      next.windowDays = form.windowDays === ''
+        ? '请填写提前生成天数（1~90 天）'
+        : '提前生成天数须为 1~90 天';
+    }
     if (form.intervalValue < 1) next.intervalValue = '间隔须 ≥ 1';
     if (form.frequency === 'weekly' && form.weekdays.length === 0) {
       next.weekdays = '请至少选择一个周几';
@@ -191,7 +276,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
       dayOfMonth: form.frequency === 'monthly' ? form.dayOfMonth : null,
       startDate: form.startDate,
       endDate: form.endDate || null,
-      windowDays: form.windowDays,
+      windowDays: Number(form.windowDays),
       defaultTime: form.defaultTime,
       durationHours: form.durationHours,
       // 2026-10-22（遗留项 5）：命中员工档案时写 employees.id + 档案姓名（自动纠正历史脏值）；
@@ -271,27 +356,113 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {form.inspectionType === 'farm' && (
               <>
+                {/* 2026-10-23：按种植/育苗单号选择巡查对象，选中后自动填充区域与作物 */}
+                <div className="md:col-span-2">
+                  <FormField label="快速选择巡查对象（种植/育苗单号，选中后自动填充区域和作物）">
+                    <div className="relative" ref={areaRef}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <TabsList
+                          selectedValue={areaTab}
+                          onValueChange={(v) => {
+                            setAreaTab(v as 'planting' | 'seedling');
+                            setAreaSearch('');
+                            setShowAreaDropdown(true);
+                          }}
+                        >
+                          <TabsTrigger value="planting" className="text-xs">🌱 种植区域</TabsTrigger>
+                          <TabsTrigger value="seedling" className="text-xs">🌿 育苗区域</TabsTrigger>
+                        </TabsList>
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            type="text"
+                            value={areaSearch}
+                            onChange={(e) => { setAreaSearch(e.target.value); setShowAreaDropdown(true); }}
+                            onFocus={() => setShowAreaDropdown(true)}
+                            placeholder={`搜索${areaTab === 'planting' ? '种植' : '育苗'}单号/作物/区域`}
+                            className="w-full h-10 pl-10 pr-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      {showAreaDropdown && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                          {areaOptions.length === 0 ? (
+                            <p className="px-4 py-3 text-sm text-gray-400">
+                              没有匹配的{areaTab === 'planting' ? '种植' : '育苗'}记录
+                            </p>
+                          ) : (
+                            areaOptions.slice(0, 50).map((item: any) => {
+                              const crop = formatCropDisplay(item);
+                              const areaName = formatAreaDisplay(item);
+                              const code = areaTab === 'planting' ? item.plantCode : item.seedlingCode;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => applyArea(item)}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm"
+                                >
+                                  <span className="font-medium">{crop || '未命名作物'}</span>
+                                  {item.cropName && crop !== item.cropName && (
+                                    <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                                  )}
+                                  <span className="text-gray-400 mx-1">·</span>
+                                  <span className="text-gray-600">{areaName}</span>
+                                  <span className="text-gray-400 mx-1">·</span>
+                                  <span className="text-xs text-gray-500 font-mono">{code || '-'}</span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {form.greenhouseName && form.cropName && (
+                      <p className="text-xs text-emerald-600 mt-1">
+                        已填充：{form.greenhouseName} · {form.cropName}
+                      </p>
+                    )}
+                  </FormField>
+                </div>
                 <FormField label="温室/区域">
-                  <Input className={deepInputClass} value={form.greenhouseName} onChange={(e) => setForm({ ...form, greenhouseName: e.target.value })} />
+                  <Input
+                    className={deepInputClass}
+                    value={form.greenhouseName}
+                    onChange={(e) => setForm({ ...form, greenhouseName: e.target.value })}
+                    placeholder="选择上方单号自动填充，也可手动输入"
+                  />
                 </FormField>
                 <FormField label="作物">
-                  <Input className={deepInputClass} value={form.cropName} onChange={(e) => setForm({ ...form, cropName: e.target.value })} />
+                  <Input
+                    className={deepInputClass}
+                    value={form.cropName}
+                    onChange={(e) => setForm({ ...form, cropName: e.target.value })}
+                    placeholder="选择上方单号自动填充，也可手动输入"
+                  />
                 </FormField>
               </>
             )}
+            {/* 2026-10-23：设备/基础设施巡查增加「巡查地点」，与名称同排各占一半宽度。
+                地点复用 area 字段（计划生成时落为任务的 area_name，执行人可见）。 */}
             {form.inspectionType === 'equipment' && (
-              <div className="md:col-span-2">
+              <>
                 <FormField label="设备名称" required error={errors.equipmentName}>
                   <Input className={deepInputClass} value={form.equipmentName} onChange={(e) => setForm({ ...form, equipmentName: e.target.value })} placeholder="如：1号卷帘机" />
                 </FormField>
-              </div>
+                <FormField label="巡查地点">
+                  <Input className={deepInputClass} value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="如：1号温室东侧" />
+                </FormField>
+              </>
             )}
             {form.inspectionType === 'infrastructure' && (
-              <div className="md:col-span-2">
+              <>
                 <FormField label="设施名称" required error={errors.infrastructureName}>
-                  <Input className={deepInputClass} value={form.infrastructureName} onChange={(e) => setForm({ ...form, infrastructureName: e.target.value })} />
+                  <Input className={deepInputClass} value={form.infrastructureName} onChange={(e) => setForm({ ...form, infrastructureName: e.target.value })} placeholder="如：园区北门泵房" />
                 </FormField>
-              </div>
+                <FormField label="巡查地点">
+                  <Input className={deepInputClass} value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="如：园区北门" />
+                </FormField>
+              </>
             )}
             {(form.inspectionType === 'safety' || form.inspectionType === 'other') && (
               <div className="md:col-span-2">
@@ -321,7 +492,7 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                 </SelectContent>
               </Select>
             </FormField>
-            <FormField label="间隔（倍数）" error={errors.intervalValue}>
+            <FormField label="间隔（倍数，必须 ≥1）" error={errors.intervalValue}>
               <NumberInput
                 className={deepInputClass}
                 value={form.intervalValue}
@@ -387,12 +558,56 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
                 className={deepInputClass}
               />
             </FormField>
-            <FormField label="生成窗口（天）" error={errors.windowDays}>
+            {/* 2026-10-23：原「生成窗口」术语不直观，改为「提前生成天数」，并加问号说明 */}
+            <FormField
+              label="提前生成天数（1~90 天）"
+              hint={
+                <Tooltip
+                  content={
+                    <>
+                      每次生成时，提前为未来 N 天创建巡查任务（含今天）。例如填 14：今天起未来 14 天的任务会立即生成，之后每天凌晨自动往后补 1 天。
+                      <br />
+                      若计划填了结束日期且更早，则以结束日期为准（两者取更早的那个）；结束日期留空时，才完全由这个天数决定提前量。
+                      <br />
+                      它只决定提前多久建任务，不改变巡查频率。
+                    </>
+                  }
+                  position="top"
+                  multiline
+                  maxWidth={320}
+                >
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 text-[10px] leading-none text-gray-500 cursor-help select-none">
+                    ?
+                  </span>
+                </Tooltip>
+              }
+              error={errors.windowDays}
+            >
               <NumberInput
                 className={deepInputClass}
                 value={form.windowDays}
                 decimals={0}
-                onChange={(v) => setForm({ ...form, windowDays: Number(v) || 14 })}
+                placeholder="请输入 1~90"
+                onChange={(v) => {
+                  const next: number | '' = v === '' ? '' : Number(v);
+                  setForm((f) => ({ ...f, windowDays: next }));
+                  // 2026-10-23：超出 1~90 立即在字段下方提示，不必等到点保存
+                  setErrors((prev) => {
+                    if (next === '') {
+                      if (!prev.windowDays) return prev;
+                      const rest = { ...prev };
+                      delete rest.windowDays;
+                      return rest;
+                    }
+                    if (Number.isInteger(next) && next >= 1 && next <= 90) {
+                      if (!prev.windowDays) return prev;
+                      const rest = { ...prev };
+                      delete rest.windowDays;
+                      return rest;
+                    }
+                    return { ...prev, windowDays: '提前生成天数须为 1~90 天' };
+                  });
+                }}
               />
             </FormField>
             <FormField label="预计时长（小时）">

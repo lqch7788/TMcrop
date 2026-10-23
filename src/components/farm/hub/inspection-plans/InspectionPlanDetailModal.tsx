@@ -139,7 +139,7 @@ export function InspectionPlanDetailModal({
           />
           <InfoCell label="频率" value={describePlanFrequency(livePlan)} />
           <InfoCell label="周期" value={`${livePlan.startDate} ~ ${livePlan.endDate || '无限期'}`} />
-          <InfoCell label="窗口/时长" value={`${livePlan.windowDays || 14} 天 / ${livePlan.durationHours || 1} 小时`} />
+          <InfoCell label="提前生成/时长" value={`${livePlan.windowDays || 14} 天 / ${livePlan.durationHours || 1} 小时`} />
           <InfoCell label="巡查对象" value={livePlan.equipmentName || livePlan.infrastructureName || livePlan.greenhouseName || livePlan.area || '全基地'} />
         </div>
 

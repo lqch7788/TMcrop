@@ -50,16 +50,21 @@ export function DatePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "relative flex h-9 w-full items-center rounded-lg border border-gray-400 bg-white pl-10 pr-3 text-sm text-left shadow-inner",
+            // 2026-10-23：图标从 absolute 定位改为 flex 子项。
+            //   原先用 pl-10 给图标留位，但调用方传 className="px-4 …" 时
+            //   tailwind-merge 会用 px-4 覆盖 pl-10 → 文字从 16px 开始，
+            //   与 left:12px、宽 16px 的图标重叠（巡查计划日期框实测）。
+            //   改为 flex 布局后，图标与文字各自占位，任何 padding 覆盖都不会再重叠。
+            "relative flex h-9 w-full items-center gap-2 rounded-lg border border-gray-400 bg-white px-3 text-sm text-left shadow-inner",
             "focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500",
             "disabled:cursor-not-allowed disabled:opacity-50",
             !selected && "text-gray-400",
             className,
           )}
-          style={{ height: "36px", lineHeight: "36px", boxSizing: "border-box" }}
+          style={{ height: "36px", boxSizing: "border-box" }}
         >
-          <CalendarIcon className="absolute left-3 w-4 h-4 text-gray-500 pointer-events-none" />
-          <span>{selected ? formatDate(selected) : placeholder}</span>
+          <CalendarIcon className="w-4 h-4 shrink-0 text-gray-500 pointer-events-none" />
+          <span className="truncate">{selected ? formatDate(selected) : placeholder}</span>
         </button>
       </PopoverTrigger>
 
