@@ -477,7 +477,7 @@ export function InspectionTable({
                           onClick={() => onAcceptTask?.(String(task!.id))}
                           variant="default"
                           size="sm"
-                          className="h-6"
+                          className="text-xs h-6"
                           title="验收该巡查记录（通过后任务完成，计划统计「已验收」+1）"
                         >
                           <CheckCircle className="w-4 h-4" /> 验收记录
@@ -491,7 +491,7 @@ export function InspectionTable({
                           onClick={() => onAcceptance?.(problem!)}
                           variant="default"
                           size="sm"
-                          className="h-6"
+                          className="text-xs h-6"
                         >
                           <CheckCircle className="w-4 h-4" /> 验收
                         </Button>

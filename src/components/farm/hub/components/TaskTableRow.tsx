@@ -379,7 +379,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               className="text-xs h-6"
               title="继续执行：将任务转为进行中"
             >
-              <Play className="w-3 h-3" /> 继续执行
+              <Play className="w-4 h-4" /> 继续执行
             </Button>
           )}
 
@@ -393,7 +393,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               className="text-xs h-6"
               title="批量分配：选工人+日期范围，自动生成排班"
             >
-              <Layers className="w-3 h-3" /> 批量分配
+              <Layers className="w-4 h-4" /> 批量分配
             </Button>
           )}
 
