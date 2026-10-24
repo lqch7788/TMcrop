@@ -101,9 +101,13 @@ function hasUsersEmployeeIdColumn(db: Database): boolean {
   }
   const table = result?.[0];
   if (!table) return false;
-  const nameIdx = table.columns.indexOf('name');
+  // columns 可能缺失（异常返回形态）：同样保守降级，不让探测失败拖垮业务
+  const columns = table.columns;
+  if (!Array.isArray(columns)) return false;
+  const nameIdx = columns.indexOf('name');
   if (nameIdx < 0) return false;
-  return table.values.some((row) => row[nameIdx] === 'employee_id');
+  const values = Array.isArray(table.values) ? table.values : [];
+  return values.some((row) => row[nameIdx] === 'employee_id');
 }
 
 /**

@@ -25,14 +25,41 @@ const app = express();
 app.use(express.json());
 app.use('/api/farm-tasks', farmTaskRouter);
 
-/** 让 SELECT * FROM farm_tasks WHERE id = ? 返回指定任务 */
+/**
+ * 让 SELECT * FROM farm_tasks WHERE id = ? 返回指定任务
+ *
+ * 2026-10-24（E3）：按 SQL 分派 —— 只有查 farm_tasks 才返回任务行。
+ *   起因：E3 给 farm_operation_records 的操作人 id 加了归一
+ *   （resolveEmployeeIdentity 会查 employees / users），原 mock 对任何 SELECT
+ *   都返回任务行，导致 employees 查询"命中"任务对象、把 operator_name 覆盖成 undefined。
+ *   真实库里 'U1' 不是员工，查询应返回空行。
+ */
 function mockTaskRow(task: Record<string, unknown>) {
-  mockPrepare.mockImplementation(() => ({
+  mockPrepare.mockImplementation((sql: string) => ({
     bind: vi.fn(),
-    step: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false),
+    step: vi.fn().mockReturnValueOnce(String(sql).includes('FROM farm_tasks')).mockReturnValue(false),
     getAsObject: vi.fn(() => task),
     free: vi.fn(),
   }));
+}
+
+/**
+ * 2026-10-24（E3）：让 employees 查询返回一个员工，用于验证操作人 id 归一生效
+ * @param employee 命中的员工档案
+ */
+function mockTaskRowWithEmployee(task: Record<string, unknown>, employee: { id: string; name: string }) {
+  mockPrepare.mockImplementation((sql: string) => {
+    const s = String(sql);
+    let hit = false;
+    if (s.includes('FROM employees')) hit = true;
+    else if (s.includes('FROM farm_tasks')) hit = true;
+    return {
+      bind: vi.fn(),
+      step: vi.fn().mockReturnValueOnce(hit).mockReturnValue(false),
+      getAsObject: vi.fn(() => (s.includes('FROM employees') ? employee : task)),
+      free: vi.fn(),
+    };
+  });
 }
 
 const task = {
@@ -99,5 +126,21 @@ describe('P0-2 任务流转同步农事操作记录', () => {
     const updateCall = mockRun.mock.calls.find((c) => String(c[0]).includes('UPDATE farm_operation_records'));
     expect(updateCall).toBeDefined();
     expect(updateCall![1]).toContain('rejected');
+  });
+
+  // 2026-10-24（E3）：操作人 id 归一为 employees.id
+  it('操作人是员工档案 id → 写入时归一后的 id 与姓名', async () => {
+    mockTaskRowWithEmployee(task, { id: 'EMP_007', name: '陆启闯' });
+    mockExec.mockReturnValue([]);
+
+    const res = await request(app)
+      .post('/api/farm-tasks/NS20261020-001/complete')
+      .send({ comments: 'ok', operator_id: 'EMP_007', operator_name: '陆启闯' });
+
+    expect(res.status).toBe(200);
+    const insertCall = mockRun.mock.calls.find((c) => String(c[0]).includes('INSERT INTO farm_operation_records'));
+    expect(insertCall).toBeDefined();
+    expect(insertCall![1]).toContain('EMP_007');
+    expect(insertCall![1]).toContain('陆启闯');
   });
 });

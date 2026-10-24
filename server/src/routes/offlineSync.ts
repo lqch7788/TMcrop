@@ -14,6 +14,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 
 const router = Router();
 
@@ -178,7 +179,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
               p.variety ?? null,
               p.batchId ?? null,
               p.batchCode ?? null,
-              p.operatorId ?? null,
+              (() => {
+                // 2026-10-24 员工身份管理 E3：操作人 id 归一为 employees.id
+                //   移动端传来的 operatorId 可能是登录账号 id，无法归一时置 NULL
+                //   （operator_name 保留原显示名）
+                const op = resolveEmployeeIdentity(p.operatorId, p.operatorName);
+                return op ? op.employeeId : null;
+              })(),
               p.operatorName ?? null,
               p.operationDate ?? item.clientCreatedAt ?? new Date().toISOString().slice(0, 10),
               p.startTime ?? null,

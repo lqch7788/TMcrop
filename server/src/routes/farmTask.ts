@@ -5,6 +5,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 // v0.3 前置 3 + 前置 5：租户上下文 + RBAC 权限守卫
 import { tenantContext } from '../middleware/tenantContext';
 import { permissionGuard } from '../middleware/permissionGuard';
@@ -2067,8 +2068,16 @@ function syncTaskOperationRecord(
   const { status, progress, operatorId = '', operatorName = '', actualHours } = options;
   const now = new Date().toISOString();
 
+  // 2026-10-24 员工身份管理 E3：操作人 id 归一为 employees.id
+  //   任务执行人 id 是 users.id（commit 2b382ba0 统一），而 farm_operation_records.operator_id
+  //   的口径是员工档案（见 employee-identity-contract §3）。落库前统一转换。
+  const operator = resolveEmployeeIdentity(operatorId, operatorName);
+  const finalOperatorId = operator ? operator.employeeId : null;
+  const finalOperatorName = operator ? operator.name : operatorName;
+
   // P0-8：人工成本快照（单价取自执行人配置，缺失回退系统默认）
-  const hourlyRate = resolveHourlyRate(db, task.assignee_id || operatorId);
+  //   resolveHourlyRate 查的是 employees 表，故传归一后的 employees.id 才能命中真实时薪
+  const hourlyRate = resolveHourlyRate(db, task.assignee_id || finalOperatorId || operatorId);
   const laborCost = actualHours && actualHours > 0
     ? Number((actualHours * hourlyRate).toFixed(2))
     : null;
@@ -2105,7 +2114,7 @@ function syncTaskOperationRecord(
            labor_cost_snapshot = COALESCE(?, labor_cost_snapshot),
            updated_at = ?
        WHERE id = ?`,
-      [status, progress ?? null, task.id, operatorId, operatorName, hourlyRate, laborCost, now, existingId]
+      [status, progress ?? null, task.id, finalOperatorId, finalOperatorName, hourlyRate, laborCost, now, existingId]
     );
     return;
   }
@@ -2149,7 +2158,7 @@ function syncTaskOperationRecord(
       status,
       task.greenhouse_id || '', task.greenhouse_name || '', task.crop || '',
       task.batch_id || '', task.batch_code || '',
-      operatorId, operatorName,
+      finalOperatorId, finalOperatorName,
       hourlyRate, laborCost,
       todayLocal, progress ?? null, now, now,
     ]

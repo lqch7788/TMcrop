@@ -10,6 +10,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 
 const router = Router();
 
@@ -119,6 +120,18 @@ router.post('/', (req: Request, res: Response) => {
     const data = denormalize(req.body);
     const id = data.id || `for_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const now = new Date().toISOString();
+
+    // 2026-10-24 员工身份管理 E3：操作人 id 归一为 employees.id
+    //   前端操作人下拉读的是登录账号（users），而本表的 operator_id 口径是员工档案
+    //   （见 employee-identity-contract §3）。落库前统一转换，
+    //   无法归一时置 NULL（operator_name 保留原显示名）。
+    const operator = resolveEmployeeIdentity(
+      data.operator_id == null ? null : String(data.operator_id),
+      data.operator_name == null ? null : String(data.operator_name),
+    );
+    data.operator_id = operator ? operator.employeeId : null;
+    if (operator) data.operator_name = operator.name;
+
     db.run(
       `INSERT INTO farm_operation_records (
         id, record_code, source_type, source_id, source_code,

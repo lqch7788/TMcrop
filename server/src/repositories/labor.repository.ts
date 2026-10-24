@@ -4,6 +4,7 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 
 /**
@@ -221,8 +222,14 @@ export class LaborRepository {
     const newId = data.id || `LB${Date.now()}`;
     const now = new Date().toISOString();
 
+    // 2026-10-24 员工身份管理 E3：人员 id 归一为 employees.id
+    //   无法归一时置 NULL（worker_name 保留原显示名）
+    const worker = resolveEmployeeIdentity(data.worker_id, data.worker_name);
+    const workerId = worker ? worker.employeeId : null;
+    const workerName = worker ? worker.name : data.worker_name;
+
     // 使用 any[] 来避免 sql.js 类型严格检查问题
-    const params: any[] = [newId, data.worker_id, data.worker_name, data.work_type, data.work_date, data.work_hours, data.hourly_rate,
+    const params: any[] = [newId, workerId, workerName, data.work_type, data.work_date, data.work_hours, data.hourly_rate,
         data.total_amount, data.greenhouse_id, data.greenhouse_name, data.task_description, data.status || 'pending', data.remarks, now, now];
 
     db.run(`
