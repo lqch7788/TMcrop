@@ -62,6 +62,8 @@ export interface TaskWithExtras {
   checkTime?: string;
   checkResult?: string;
   issueCategories?: string[];
+  // 2026-10-24：具体问题项（灰霉病/病毒病/白粉病…）
+  issuePresets?: string[];
   issueSeverity?: string;
   issueText?: string;
   photos?: string[];
@@ -111,7 +113,7 @@ export interface ModalState<T = null> {
 // 任务筛选类型
 // 2026-10-21（阶段 3）：临时任务 tab 已删除
 // 2026-10-23：新增 inspectionPlan —— 巡查计划实例（「该去巡什么」）从
-//   「巡查反馈处理」（巡查记录台账 + 问题整改）里拆出来，两者语义与动作都不同
+//   「巡查问题整改」（巡查记录台账 + 问题整改）里拆出来，两者语义与动作都不同
 export type TaskFilterType = 'all' | 'problem' | 'production' | 'inspectionPlan' | 'worklog';
 
 // 任务类型配置项

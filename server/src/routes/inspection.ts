@@ -23,7 +23,7 @@ function mapProblemStatusToIssueStatus(problemStatus: string): string {
  * 无关联问题时按巡查自身性质兜底：attention / critical / pending 均为「未处理」。
  *
  * 背景：原推导「非 attention 一律 resolved」把 critical 等未处理巡查误标为"已解决"，
- *   前端 useTasks 映射为 completed → "我的任务·巡查反馈处理"显示假完成（审核缺陷 H2）。
+ *   前端 useTasks 映射为 completed → "我的任务·巡查问题整改"显示假完成（审核缺陷 H2）。
  */
 function resolveIssueStatus(item: any, problemStatusById: Map<string, string>): string {
   if (item.issueStatus) return item.issueStatus;
@@ -169,7 +169,7 @@ router.get('/', (req: Request, res: Response) => {
         ...it,
         issueStatus: resolveIssueStatus(it, problemStatusById),
         // 2026-10-10：关联问题原始状态（completed/waiting_acceptance/in_progress/...）——
-        //   前端据此精确驱动"巡查反馈处理"的任务态展示与操作按钮（比 issueStatus 三态精细）
+        //   前端据此精确驱动"巡查问题整改"的任务态展示与操作按钮（比 issueStatus 三态精细）
         linkedProblemStatus: linkedStatus,
       };
     });

@@ -4,6 +4,7 @@ import { useUserStore } from '../../../stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { translateInspectionCategory } from './inspectionCategoryLabels';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {
@@ -318,35 +319,26 @@ export function InspectionTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {record.issueCategories && record.issueCategories.length > 0 ? (
+                  {/* 2026-10-24：分类与具体项同时显示。
+                      原实现是「有分类就只显示分类」的互斥逻辑 —— 勾了「灰霉病/病毒病/白粉病」
+                      的记录，列表上只看到「病害」，具体项被完全吞掉。 */}
+                  {(record.issueCategories?.length || record.issuePresets?.length) ? (
                     <div className="flex gap-1 justify-center flex-wrap">
-                      {record.issueCategories.slice(0, 2).map((cat, i) => {
-                        const categoryLabels: Record<string, string> = {
-                          disease: '病害',
-                          pest: '虫害',
-                          environment: '环境',
-                          growth: '长势',
-                          equipment: '设备',
-                          other: '其他'
-                        };
-                        return (
-                          <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
-                            {categoryLabels[cat] || cat}
-                          </span>
-                        );
-                      })}
-                      {record.issueCategories.length > 2 && (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{record.issueCategories.length - 2}</span>
-                      )}
-                    </div>
-                  ) : record.issuePresets && record.issuePresets.length > 0 ? (
-                    <div className="flex gap-1 justify-center flex-wrap">
-                      {record.issuePresets.slice(0, 2).map((preset, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded-full">{preset}</span>
+                      {/* 分类最多 1 个（红），具体项最多 2 个（橙），超出合并计数 */}
+                      {record.issueCategories?.slice(0, 1).map((cat, i) => (
+                        <span key={`cat-${i}`} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
+                          {translateInspectionCategory(cat)}
+                        </span>
                       ))}
-                      {record.issuePresets.length > 2 && (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{record.issuePresets.length - 2}</span>
-                      )}
+                      {record.issuePresets?.slice(0, 2).map((preset, i) => (
+                        <span key={`preset-${i}`} className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded-full">{preset}</span>
+                      ))}
+                      {(() => {
+                        const total = (record.issueCategories?.length || 0) + (record.issuePresets?.length || 0);
+                        return total > 3 ? (
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{total - 3}</span>
+                        ) : null;
+                      })()}
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500">-</span>
@@ -459,6 +451,10 @@ export function InspectionTable({
                       '已处理': '已处理',
                       'pending': '待处理',
                       'processing': '处理中',
+                      // 2026-10-24：补 in_progress —— problems.status 实际取值（15 条），
+                      //   缺失时状态列直接显示英文 'in_progress'
+                      'in_progress': '处理中',
+                      'rejected': '返工中',
                       'waiting_acceptance': '待验收',
                       'waitingAcceptance': '待验收',
                       'pending_acceptance': '待验收',

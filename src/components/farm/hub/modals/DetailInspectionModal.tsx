@@ -8,6 +8,7 @@ import { TaskFlowTimeline } from '../../../common/TaskFlowTimeline';
 import { useUserStore, useProblemStore } from '../../../../stores';
 import { isProblemAwaitingAcceptance } from '../../../../utils/problemStatus';
 import type { InspectionType } from '../../../../types/farm/common';
+import { translateInspectionCategory } from '../../inspection/inspectionCategoryLabels';
 // 2026-10-21：流转记录改用统一的 TaskFlowTimeline 组件
 //   （原 getFlowStatusClass / ACTION_LABELS / formatTime 随 inline 渲染一并移除）
 
@@ -30,6 +31,8 @@ interface InspectionRecord {
   feedbackUsers?: string[];
   // 问题分类（多选，后端 issue_categories 列）与问题照片（后端 issue_photos 列）
   issueCategories?: string[];
+  // 2026-10-24：具体问题项（勾选的灰霉病/病毒病/白粉病…，后端 issue_presets 列）
+  issuePresets?: string[];
   issuePhotos?: string[];
   status: string;
   issueStatus?: 'pending' | 'processing' | 'resolved';
@@ -474,36 +477,41 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
           </div>
         )}
 
-        {/* 发现问题 - 2026-08-30：改用 issueCategories（带翻译），与列表 InspectionTable 问题分类对齐 */}
-        {record.issueCategories && record.issueCategories.length > 0 ? (
-          <div>
-            <h4 className="text-base font-semibold text-gray-900 mb-3">问题分类</h4>
-            <div className="flex gap-2 flex-wrap">
-              {(() => {
-                // 与列表 InspectionTable 一致的翻译字典
-                const categoryLabels: Record<string, string> = {
-                  disease: '病害', pest: '虫害', environment: '环境',
-                  growth: '长势', equipment: '设备', other: '其他',
-                };
-                return record.issueCategories!.map((cat, idx) => (
-                  <span key={idx} className="px-3 py-1.5 bg-red-50 text-red-700 text-sm rounded-full">
-                    {categoryLabels[cat] || cat}
-                  </span>
-                ));
-              })()}
+        {/* 发现问题 —— 2026-10-24：分类与具体项同时展示。
+            此前只渲染 issueCategories，勾选的「灰霉病/病毒病/白粉病」（issuePresets）
+            在详情里完全看不到，只剩一个「病害」。 */}
+        {(() => {
+          const cats = record.issueCategories || [];
+          const presets = record.issuePresets || [];
+          const desc = (record as any).issueText || (record.issues || []).join('、');
+          if (cats.length === 0 && presets.length === 0 && !desc) return null;
+          return (
+            <div>
+              <h4 className="text-base font-semibold text-gray-900 mb-3">发现问题</h4>
+              <div className="space-y-2">
+                {(cats.length > 0 || presets.length > 0) && (
+                  <div className="flex gap-2 flex-wrap">
+                    {cats.map((cat: string, idx: number) => (
+                      <span key={`cat-${idx}`} className="px-3 py-1.5 bg-red-50 text-red-700 text-sm rounded-full">
+                        {translateInspectionCategory(cat)}
+                      </span>
+                    ))}
+                    {presets.map((preset: string, idx: number) => (
+                      <span key={`preset-${idx}`} className="px-3 py-1.5 bg-orange-100 border border-orange-300 text-orange-800 text-sm font-medium rounded-full">
+                        {preset}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {desc && (
+                  <p className="text-sm text-gray-700">
+                    <span className="text-gray-500">问题描述：</span>{desc}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        ) : record.issues && record.issues.length > 0 ? (
-          /* 兜底：兼容旧数据（只有 issues 没有 issueCategories） */
-          <div>
-            <h4 className="text-base font-semibold text-gray-900 mb-3">发现问题</h4>
-            <div className="flex gap-2 flex-wrap">
-              {record.issues.map((issue: string, idx: number) => (
-                <span key={idx} className="px-3 py-1.5 bg-red-50 text-red-700 text-sm rounded-full">{issue}</span>
-              ))}
-            </div>
-          </div>
-        ) : null}
+          );
+        })()}
 
         {/* 问题描述 */}
         {record.issueText && (

@@ -60,7 +60,7 @@ export function TaskFilterTabs({
         </Button>
         {/* 2026-10-23：巡查计划任务单独成 tab ——
             这里放「该去巡什么」（计划生成的待巡实例），
-            「巡查反馈处理」只留巡查记录台账与问题整改，两者不再混在一起。 */}
+            「巡查问题整改」只留巡查记录台账与问题整改，两者不再混在一起。 */}
         <Button
           variant="ghost"
           onClick={() => onFilterChange('inspectionPlan')}
@@ -84,7 +84,7 @@ export function TaskFilterTabs({
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
           }`}
         >
-          巡查反馈处理
+          巡查问题整改
           <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
             {taskCounts.problem}
           </span>
@@ -99,7 +99,7 @@ export function TaskFilterTabs({
           }`}
         >
           <BookMarked className="w-4 h-4" />
-          工作日志
+          我的工作日志
         </Button>
       </div>
     </div>
