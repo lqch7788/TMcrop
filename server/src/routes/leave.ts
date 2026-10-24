@@ -99,7 +99,8 @@ router.get('/', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 构建基础SQL和参数
-    let sql = 'SELECT * FROM leave_records WHERE 1=1';
+    // 2026-10-24 员工身份管理 E2：默认排除归档行（历史 mock / 无法归一到员工的记录）
+    let sql = 'SELECT * FROM leave_records WHERE COALESCE(is_archived, 0) = 0';
     const params: any[] = [];
 
     if (worker_name) {
