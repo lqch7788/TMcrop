@@ -752,6 +752,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                       {fb === 'photo_before' && '作业前照片'}
                       {fb === 'photo_after' && '作业后照片'}
                       {fb === 'voice' && '语音备注'}
+                      {fb === 'workload_confirm' && '工作量确认'}
                     </span>
                   ))}
                 </div>

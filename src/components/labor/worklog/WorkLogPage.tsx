@@ -200,6 +200,8 @@ export function WorkLogPage() {
     } else {
       void addWorkLogToStore({ ...data, worker: data.worker || myName });
     }
+    // 2026-10-24：对齐 V2.0 —— 保存成功后关闭表单弹窗（原先不关，需手动×）
+    setIsFormOpen(false);
   }, [addWorkLogToStore, updateWorkLogInStore, myName]);
 
   // 批量操作状态
@@ -346,8 +348,11 @@ export function WorkLogPage() {
   };
 
   const handleBatchEditConfirm = (edited: Record<string, Partial<WorkLog>>) => {
-    // 应用编辑到数据
-    // logger.info('批量编辑的数据:', edited);
+    // 2026-10-24：对齐 V2.0 WorkLogPage.vue handleBatchEditConfirm —— 按 id 逐条调
+    //   updateWorkLog 落库；原先只关弹窗，点「发布」后编辑全部丢失
+    Object.entries(edited).forEach(([id, updates]) => {
+      void updateWorkLogInStore(String(id), updates);
+    });
     setShowBatchEditModal(false);
     setEditedLogs({});
     setBatchEditMode(false);

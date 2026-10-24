@@ -22,30 +22,31 @@ export function WorkLogBatchEditModal({
   onClose,
   onConfirm,
 }: WorkLogBatchEditModalProps) {
-  const [selectedLogCode, setSelectedLogCode] = useState<string>('');
+  // 编辑结果以日志 id 为键（2026-10-24：对齐 V2.0 —— 原用 log.code 作键，code 重复时会错配）
+  const [selectedLogId, setSelectedLogId] = useState<string>('');
   const [editedLogs, setEditedLogs] = useState<Record<string, Partial<WorkLog>>>({});
 
   if (!isOpen) return null;
 
   const selectedLogList = selectedRows.map(id => logs.find(log => log.id === id)).filter(Boolean) as WorkLog[];
-  const currentLog = selectedLogCode ? logs.find(log => log.code === selectedLogCode) : null;
-  const editedData = selectedLogCode ? editedLogs[selectedLogCode] || {} : {};
+  const currentLog = selectedLogId ? logs.find(log => log.id === selectedLogId) : null;
+  const editedData = selectedLogId ? editedLogs[selectedLogId] || {} : {};
 
   const handleFieldChange = (field: keyof WorkLog, value: unknown) => {
     const updated = {
       ...editedLogs,
-      [selectedLogCode]: { ...editedLogs[selectedLogCode], [field]: value },
+      [selectedLogId]: { ...editedLogs[selectedLogId], [field]: value },
     };
     setEditedLogs(updated);
   };
 
   // 确认（下一个）- 仅切换到下一个任务
   const handleConfirmNext = () => {
-    const currentIndex = selectedLogList.findIndex(log => log.code === selectedLogCode);
+    const currentIndex = selectedLogList.findIndex(log => log.id === selectedLogId);
     if (currentIndex < selectedLogList.length - 1) {
-      setSelectedLogCode(selectedLogList[currentIndex + 1].code);
+      setSelectedLogId(selectedLogList[currentIndex + 1].id);
     } else {
-      setSelectedLogCode(selectedLogList[0].code);
+      setSelectedLogId(selectedLogList[0].id);
     }
   };
 
@@ -76,19 +77,19 @@ export function WorkLogBatchEditModal({
       <div className="mb-3">
         <Label className="block text-xs font-medium text-gray-600 mb-1">选择日志编号</Label>
         <SearchableSelect
-          value={selectedLogCode}
+          value={selectedLogId}
           options={selectedLogList.map(log => ({
-            value: log.code,
-            label: `${log.code} - ${log.worker}${editedLogs[log.code] ? ' ✅ 已编辑' : ''}`
+            value: log.id,
+            label: `${log.code} - ${log.worker}${editedLogs[log.id] ? ' ✅ 已编辑' : ''}`
           }))}
-          onChange={setSelectedLogCode}
+          onChange={setSelectedLogId}
           placeholder="请选择日志编号"
           className="w-full"
         />
       </div>
 
       {/* Content */}
-      {selectedLogCode && currentLog && (
+      {selectedLogId && currentLog && (
         <div className="grid grid-cols-4 gap-3">
           {/* 日志编号 - 不可编辑 */}
           <div className="bg-gray-100 rounded-lg p-2">

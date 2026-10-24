@@ -7,7 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { BatchEditModal } from '../../taskDispatch/modals/BatchEditModal'; // 使用任务专用的批量编辑弹窗
 import { Task, useTasks } from '../../../../hooks/useTasks';
 import { ALL_TASK_TYPE_OPTIONS } from '../../../../types/farm/common';
-import { useWorkerStore, useGreenhouseStore } from '../../../../stores';
+import { useUserStore, useGreenhouseStore } from '../../../../stores';
 
 // 任务类型选项（含历史类型，保证编辑存量任务时下拉能回显）
 const taskTypes = ALL_TASK_TYPE_OPTIONS;
@@ -15,14 +15,15 @@ const taskTypes = ALL_TASK_TYPE_OPTIONS;
 // 2026-10-11：删除 getBatchCodes() 及 batchCodes prop —— BatchEditModal 既无此 prop 也无对应表单控件，
 //   传过去会被整段忽略（类型报错 TS2322）。若后续要做「批量改关联批次」，需先在弹窗内实现该字段。
 
-// 获取员工选项（从Store读取）
+// 获取员工选项（2026-10-24 对齐 FarmTaskHub.tsx:63-72：执行人候选统一用登录账号，
+//   不再读 useWorkerStore 人事档案）
 function getStaff() {
-  const w = useWorkerStore.getState().workers;
-  return (Array.isArray(w) ? w : []).map(s => ({
-    id: s.id,
-    name: s.name,
-    status: s.status,
-  }));
+  const users = useUserStore.getState().users;
+  return (Array.isArray(users) ? users : []).map(u => ({
+    id: u.id || u.oid || '',
+    name: u.name || u.real_name || u.username || '',
+    status: 'active',
+  })).filter(s => s.id && s.name);
 }
 
 interface BatchEditAdapterProps {

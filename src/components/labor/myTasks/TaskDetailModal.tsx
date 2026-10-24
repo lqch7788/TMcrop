@@ -402,7 +402,7 @@ export function TaskDetailModal({
               id: (r.id as string) || ("pf_" + Date.now() + "_" + idx),
               action: (r.action as string) || "comment",
               actionTime: (r.actionTime as string) || (r.createdAt as string) || "",
-              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+              operatorName: (r.operatorName as string) || (r.operator as string) || "系统", // 2026-10-24：原 mojibake "??" 统一为「系统」
               fromStatus: r.fromStatus as string | undefined,
               toStatus: r.toStatus as string | undefined,
               comment: (r.comment as string) || (r.reason as string) || "",
@@ -435,7 +435,7 @@ export function TaskDetailModal({
                 id: "opr_" + idx + "_" + Date.now(),
                 action,
                 actionTime: (r.operationDate as string) || (r.createdAt as string) || "",
-                operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+                operatorName: (r.operatorName as string) || (r.operator as string) || "系统",
                 toStatus: parentStatus,
                 comment: parentComment,
               });
@@ -481,7 +481,7 @@ export function TaskDetailModal({
               id: (r.id as string) || ("tr_" + idx + "_" + Date.now()),
               action,
               actionTime: (r.actionTime as string) || (r.createdAt as string) || "",
-              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+              operatorName: (r.operatorName as string) || (r.operator as string) || "系统",
               fromStatus: r.fromStatus as string | undefined,
               toStatus: r.toStatus as string | undefined,
               comment: (r.comment as string) || (r.reason as string) || (r.remarks as string) || "",

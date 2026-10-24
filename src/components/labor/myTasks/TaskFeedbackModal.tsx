@@ -198,7 +198,8 @@ export function TaskFeedbackModal({
             </div>
             <div>
               <Label className="text-xs text-gray-500">负责人</Label>
-              <p className="font-semibold text-gray-900">陆启闯</p>
+              {/* 2026-10-24 修复：与 TaskDetailModal 一致，改为动态取负责人（原硬编码「陆启闯」） */}
+              <p className="font-semibold text-gray-900">{(task as any).assigneeName || (task as any).assignee || '-'}</p>
             </div>
             <div>
               <Label className="text-xs text-gray-500">优先级</Label>
