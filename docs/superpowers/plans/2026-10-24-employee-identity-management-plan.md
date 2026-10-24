@@ -113,11 +113,33 @@
 代码先落盘提交、迁移未跑，后端中途重启导致 `/api/attendance` 一度 500。正确顺序是
 「停全部后端 → 迁移生产库 → 迁移基线库 → 重启 → 验证」，已在同一窗口修复。
 
-### E3 —— 作业 / 工时记录归一
+### E3 —— 作业 / 工时记录归一 ✅ **已完成（2026-10-24）**
 
-- `farm_operation_records.operator_id`：21 种自由文本 → 逐条判定（`EMP_00x` 可直接归一；`USER_ADMIN_001`/`user-admin`/`u` 等映射到对应 `users.employee_id`；`null`/空串/演示账号归档）
-- `labor_records.worker_id`：空串 / `USR001` / `USR002` → 归一或归档
-- 加 `operator_id` FK + 允许 NULL（历史无归属记录）
+| 表 | 实测 | 执行结果 |
+|---|---|---|
+| `farm_operation_records` | 80 行，19 种 operator_id 取值 | **保留 17 / 归一 51 / 置空 12**（生效 68 行 100% 命中 employees.id） |
+| `labor_records` | 4 行 | **归一 3 / 置空 1**（生效 3 行 100% 命中） |
+
+**口径修正（原计划写 users.id，实测应�� employees.id）**：这两张表记录的是「员工干了多少活」，
+6 名现场员工（张三/李四/王五/赵六/钱七/孙八）**只有员工档案、没有登录账号**，
+归到 `users.id` 会让他们无法表示。而前端操作人下拉读的是登录账号（`users`），
+故**写入路径在后端做归一转换**，前端零改动。
+
+**「无法归一」用置 NULL 而非归档**（与 E2 不同）：
+- 两列均可置 NULL（实测 notnull=0），NULL 语义 =「无归属员工的操作」
+- `operator_name` 保留原显示名（「系统」/「验收员」/「访客01」…），界面照常可读
+- 归档需给表加 `is_archived` 并改 20+ 个读取点（批次成本视图 / 合规报告 / 审批联动 /
+  成本统计…），且《农产品质量安全法》要求生产记录保存 ≥2 年，归档会削弱法定存档
+- 实测 `complianceReport` 按 `batch_code` 取数、`createBatchCostView` 只做 COUNT，
+  **都不按 `operator_id` 过滤** ⇒ 置 NULL 无影响 ⇒ 零回归
+
+**写入路径归一**（防止新数据再写脏 ID）：`farmOperationRecords.ts` POST、`labor.repository.ts` create、
+`farmTask.ts` syncTaskOperationRecord（附带修正 `resolveHourlyRate` 取值 —— 它查 employees 表，
+传 users.id 查不到，导致人工成本快照一直走 DEFAULT_HOURLY_RATE 回退）、`offlineSync.ts` 移动端同步。
+`paperReport.ts` 两条 INSERT 只写 operator_name 不写 operator_id，本已合规。
+
+**未加 FK**：与 E2 同理 —— `ALTER TABLE ADD COLUMN` 不支持 `REFERENCES`，
+且这两张表是核心业务数据，不做整表重建。
 
 ### E4 —— 两张排班表合并（**长期债，本项目最重的一块**）
 
