@@ -525,7 +525,7 @@ export interface InspectionFeedbackTaskData {
   tools: { name: string; qty: number; unit: string }[];
   requiredFeedback: string[];
   remarks: string;
-  // 巡查反馈处理表格额外字段
+  // 巡查问题整改表格额外字段
   inspectionType: string;
   submitterId: string;
   submitterName: string;

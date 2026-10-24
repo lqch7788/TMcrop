@@ -4,6 +4,7 @@
 
 import { MapPin, CheckCircle, XCircle, Play, Eye, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { translateInspectionCategory } from '@/components/farm/inspection/inspectionCategoryLabels';
 import { TaskWithExtras, TaskDispatchTask } from './types';
 import type { Task } from '../../../hooks/useTasks';
 
@@ -163,22 +164,31 @@ export function ProblemTaskTableRow({
       {/* 问题分类 */}
       <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
         {(() => {
-          const cats = taskWithExtras.issueCategories || [];
-          if (Array.isArray(cats) && cats.length > 0) {
-            return (
-              <div className="flex gap-1 justify-center flex-wrap">
-                {cats.slice(0, 2).map((cat: string, i: number) => (
-                  <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
-                    {cat}
-                  </span>
-                ))}
-                {cats.length > 2 && (
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{cats.length - 2}</span>
-                )}
-              </div>
-            );
+          // 2026-10-24：分类 + 具体问题项同时显示。
+          //   此前只显示 issueCategories（「病害」），勾选的「灰霉病/病毒病/白粉病」看不到。
+          const cats = Array.isArray(taskWithExtras.issueCategories) ? taskWithExtras.issueCategories : [];
+          const presets = Array.isArray(taskWithExtras.issuePresets) ? taskWithExtras.issuePresets : [];
+          if (cats.length === 0 && presets.length === 0) {
+            return <span className="text-sm text-gray-500">-</span>;
           }
-          return <span className="text-sm text-gray-500">-</span>;
+          const total = cats.length + presets.length;
+          return (
+            <div className="flex gap-1 justify-center flex-wrap">
+              {cats.slice(0, 1).map((cat: string, i: number) => (
+                <span key={`cat-${i}`} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded-full">
+                  {translateInspectionCategory(cat)}
+                </span>
+              ))}
+              {presets.slice(0, 2).map((preset: string, i: number) => (
+                <span key={`preset-${i}`} className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded-full">
+                  {preset}
+                </span>
+              ))}
+              {total > 3 && (
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">+{total - 3}</span>
+              )}
+            </div>
+          );
         })()}
       </td>
       {/* 严重程度 */}
