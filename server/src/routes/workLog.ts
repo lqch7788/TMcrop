@@ -57,9 +57,15 @@ function normalize(row: Record<string, unknown>): Record<string, unknown> {
 }
 
 // 反规范化前端数据 -> 数据库格式
+// 2026-10-24 修复：原实现把 FIELD_MAP 的键值用反了 —— FIELD_MAP 是
+//   { dbKey: jsKey }（task_id -> taskId），原代码却按 { jsKey, dbKey } 解构，
+//   于是读的是 data['task_id']（前端传的是 camelCase，永远 undefined），
+//   写出的键还是 camelCase。结果所有 snake≠camel 的字段全部被静默丢弃：
+//   taskId / taskCode / batchId / taskType / workloadHours / workloadDays /
+//   submitTime / feedbackText / growthStatus …（实测新建日志的 taskId 恒为 null）。
 function denormalize(data: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const [jsKey, dbKey] of Object.entries(FIELD_MAP)) {
+  for (const [dbKey, jsKey] of Object.entries(FIELD_MAP)) {
     if (data[jsKey] !== undefined) {
       result[dbKey] = data[jsKey];
     }

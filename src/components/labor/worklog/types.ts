@@ -4,8 +4,10 @@
 
 // 工作日志数据
 export interface WorkLog {
-  // 注：本模块页面仍以 usePersistentWorkLogs 的 number id 为准，与 store(string id) 的转换在 Hook 内处理
-  id: number;
+  // 2026-10-24：id 改为 string —— 后端 work_logs.id 是 'wl_seed_001' 这类字符串，
+  //   原注释说「页面以 usePersistentWorkLogs 的 number id 为准」，但页面已改读
+  //   useWorkLogStore（后端真实数据），number 会把 'wl_seed_001' 转成 NaN。
+  id: string;
   code: string;
   date: string;
   worker: string;
