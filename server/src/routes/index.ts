@@ -114,7 +114,9 @@ import plantSettingsRouter from './plantSettings';
 import projectDebugRouter from './projectDebug';
 import deviceDistributionRouter from './deviceDistribution';
 import farmTaskSchedulesRouter from './farmTaskSchedules';
-import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
+// 2026-10-24（E5）：farmTaskSwapRequestsRouter 已下线（统一到 swap_requests），
+//   见下方 router.use('/farm-task-swap-requests', ...) 处的说明。
+// import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
 // v0.3 P0-1：批次统一时间线路由
 import batchTimelineRouter from './batchTimeline';
 // v0.3 P0-2：任务进度跟踪路由
@@ -380,7 +382,20 @@ router.use('/dispatch', requireAuth, dispatchRouter);
 router.use('/farm-task-schedules', requireAuth, farmTaskSchedulesRouter);
 
 // 换班申请路由 - 需要认证
-router.use('/farm-task-swap-requests', requireAuth, farmTaskSwapRequestsRouter);
+//
+// 2026-10-24（E5 员工身份管理）：**已下线**
+//   `farm_task_swap_requests`（任务换班）与 `swap_requests`（考勤换班）是两套并行的换班实现：
+//     · swap_requests          —— 中文状态（待审批/已同意/已拒绝），4 行，前端在用
+//     · farm_task_swap_requests —— 英文状态（pending/approved/rejected），**0 行**，**前端零引用**
+//   两套并存导致「换班」有两个数据来源、两套状态值、两条路由路径
+//   （后者还是双层嵌套 /api/farm-task-swap-requests/swap-requests）。
+//   现已统一以 `swap_requests` 为唯一实现，本路由不再注册。
+//
+//   保守起见**不 DROP 表**（0 行，删除无数据损失，但删表属破坏性操作，需用户明确授权）；
+//   表结构与 `farm_task_swap_requests` 的 FK 保留，若将来确认无用可单独清理。
+//   `server/src/services/swapRequestService.ts` 与新路由 `server/src/routes/farmTaskSwapRequests.ts`
+//   两个文件同样保留未删（可能被 V2.0 前端引用，需先确认）。
+// router.use('/farm-task-swap-requests', requireAuth, farmTaskSwapRequestsRouter);
 
 // 考勤管理路由 - 需要认证
 router.use('/attendance', requireAuth, attendanceRouter);
