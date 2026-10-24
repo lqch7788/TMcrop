@@ -89,16 +89,29 @@
 
 **产出**：`employees` 与 `users` 的关联表结构 + 公共归一工具 + ID 契约文档
 
-### E2 —— 考勤 / 假勤归一
+### E2 —— 考勤 / 假勤归一 ✅ **已完成（2026-10-24）**
 
-| 表 | 行数 | 动作 |
-|---|---|---|
-| `attendance_records` | 23 | 6 行 `WORKER_00x` → `EMP_001/002/003`；17 行 mock → 归档标记（不物理删，见下） |
-| `overtime_records` | 9 | `WORKER_00x` → `EMP_00x`；`W00x` → 归档 |
-| `leave_records` | 16 | 同上 |
-| 全部三张表 | — | 加 FK `worker_id → employees.id` + 应用层校验 |
+原计划与实际执行的差异（立项时按估算写，实测有出入）：
 
-**归档策略**：不物理删除（memory: 审计行删除必须显式授权）。加 `is_archived` 标记列 + `archived_reason`，UI 默认过滤，`data-migration-principle` 要求的"不删原数据"得到满足。
+| 表 | 立项估算 | 实测 | 执行结果 |
+|---|---|---|---|
+| `attendance_records` | 23 行：归一 6 / 归档 17 | 23 行 | **生效 10**（张三2/李四2/王五2/陆启闯4）+ **归档 13** |
+| `overtime_records` | 9 行：归一部分 / `W00x` 归档 | 9 行 | **生效 3** + **归档 6** |
+| `leave_records` | 16 行 | **19 行**（多 3 行） | **生效 3** + **归档 16** |
+
+关键发现：
+- `user-admin` / `EMP_98404` / `U001` 三者的姓名都是「陆启闯」，E1 的 `users.employee_id` 桥让它们能归一到 `EMP_007`（4 行），比原估算的 6 行归一多出 4 行
+- `leave_records` 有 **8 行姓名为 U+FFFD 乱码**
+- **`W00x` 系列 ID 跨表不一致**：`W002` 在考勤表是「杨过」、在加班表是「黄蓉」→ 只能按姓名归，不能按 ID 归
+- 综合结果：生效行 100% 命中 `employees.id`；`schedules.staff_id ∩ attendance_records.worker_id` 由 **0 人 → 3 人**（排班对比卡片从恒失效变为可用）
+
+归档策略（按计划执行）：不物理删除，加 `is_archived` + `archived_reason`，查询默认过滤。可随时改回 0 恢复。
+
+未做（原计划的最后一项）：**未加 FK**。原因：`attendance_records.worker_id` 是 NOT NULL，归档行仍保留原历史 ID，无法满足 FK；而 SQLite 给已有表加 FK 需整表重建，风险大于收益。改走「应用层校验 + `is_archived` 隔离 + 契约文档」，与 `users.employee_id` 的处理一致。
+
+⚠️ 实施事故（已修复，教训见 memory `schema-filter-must-ship-with-migration`）：
+代码先落盘提交、迁移未跑，后端中途重启导致 `/api/attendance` 一度 500。正确顺序是
+「停全部后端 → 迁移生产库 → 迁移基线库 → 重启 → 验证」，已在同一窗口修复。
 
 ### E3 —— 作业 / 工时记录归一
 
