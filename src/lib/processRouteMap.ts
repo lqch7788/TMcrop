@@ -17,7 +17,12 @@ const processRouteMap: Record<string, string> = {
   '/materials': 'PROC_MATERIALS',
   '/warehouse-overview': 'PROC_MATERIALS',
   '/labor/task-center': 'PROC_LABOR',
-  '/labor/attendance': 'PROC_LABOR',
+  // 2026-10-24：考勤排班从农事管理移入人工管理 → 考勤管理（/labor/attendance?tab=schedule），
+  //   权限码由一级工序 PROC_LABOR 改为子工序 PROC_LABOR_ATTEND（后端 processes 表已有该工序，
+  //   parent_oid=PROC_LABOR、route=/labor/attendance）。
+  //   实测 roles_authority 中 PROC_SCHEDULE 与 PROC_LABOR_ATTEND 对全部 4 个角色的授权值逐项一致，
+  //   故本次移动无需迁移任何角色授权数据。
+  '/labor/attendance': 'PROC_LABOR_ATTEND',
   '/reports': 'PROC_SUMMARY',
   '/summary/overview': 'PROC_SUMMARY',
   '/approvals': 'PROC_WORKFLOW',

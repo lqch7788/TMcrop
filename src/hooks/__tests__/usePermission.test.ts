@@ -37,7 +37,8 @@ const PROCESS_MENU_MAP: Record<string, string[]> = {
   'PROC_CROP': ['/crop/seed-source', '/crop/seedling', '/crop/planting', '/crop-inventory', '/crop/order'],
   'PROC_FARM': ['/agriculture-record', '/farm-hub', '/task-center', '/daily-work-summary', '/daily-problem-summary', '/plan-summary'],
   'PROC_MATERIALS': ['/materials', '/warehouse-overview', '/warehouse-inbound', '/produce-inventory', '/supplier-management', '/material-receiving', '/material-return'],
-  'PROC_LABOR': ['/labor/attendance', '/labor/personnel', '/labor/compensation', '/labor/analytics', '/labor/resignation', '/labor/recruitment', '/labor/salary-budget'],
+  'PROC_LABOR': ['/labor/personnel', '/labor/compensation', '/labor/analytics', '/labor/resignation', '/labor/recruitment', '/labor/salary-budget'],
+  'PROC_LABOR_ATTEND': ['/labor/attendance'],
   'PROC_REPORTS': ['/reports', '/daily-problem-summary', '/plan-summary'],
   'PROC_APPROVAL': ['/approvals', '/approval-demo', '/material-approval', '/production-approval', '/pending-approval', '/approved', '/my-approval', '/hr-approval'],
   'PROC_SYSTEM': ['/settings'],
@@ -261,7 +262,12 @@ describe('usePermission Hook - 核心权限逻辑', () => {
 
     it('应该包含人工管理工序', () => {
       expect(PROCESS_MENU_MAP['PROC_LABOR']).toBeDefined();
-      expect(PROCESS_MENU_MAP['PROC_LABOR']).toContain('/labor/attendance');
+      expect(PROCESS_MENU_MAP['PROC_LABOR']).toContain('/labor/personnel');
+    });
+
+    it('应该包含考勤管理子工序（2026-10-24：考勤排班移入后 /labor/attendance 挂子工序）', () => {
+      expect(PROCESS_MENU_MAP['PROC_LABOR_ATTEND']).toBeDefined();
+      expect(PROCESS_MENU_MAP['PROC_LABOR_ATTEND']).toContain('/labor/attendance');
     });
 
     it('应该包含审批中心工序', () => {

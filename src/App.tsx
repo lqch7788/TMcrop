@@ -124,7 +124,6 @@ import SalesStatistics from './pages/market/SalesStatistics';
 import CodeRule from './pages/CodeRule';
 import TechSolution from './pages/TechSolution';
 import PurchasePlan from './pages/PurchasePlan';
-import WorkerAttendance from './pages/WorkerAttendance';
 import WorkLog from './pages/WorkLog';
 import MonthlyReport from './pages/MonthlyReport';
 // DailyProblemSummary 已迁移至 /summary/problems（生产汇总表 V1.0）
@@ -540,7 +539,8 @@ function AppContent() {
           <Route path="/labor/compensation" element={<CompensationPage />} />
           <Route path="/labor/analytics" element={<AnalyticsPage />} />
           <Route path="/my-tasks" element={<MyTasksPage />} />
-          {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
+          {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(仅任务排班；考勤排班已于 2026-10-24 移回人工管理→考勤管理→排班 Tab)、
+              班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
           <Route path="/task-center" element={<TaskCenterPage />} />
           <Route path="/farm-hub" element={<FarmTaskHub />} />
           {/* v0.3 P0-1：批次统一时间线 */}
@@ -571,15 +571,18 @@ function AppContent() {
           <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
-          {/* 2026-10-20：任务派工排班已并入排班调度的「任务排班」Tab，旧路由重定向（保旧书签/外链） */}
-          <Route path="/farm-task-schedule" element={<Navigate to="/schedule?tab=farm-task" replace />} />
+          {/* 2026-10-20：任务派工排班已并入排班调度的「任务排班」Tab，旧路由重定向（保旧书签/外链）
+              2026-10-24：排班调度单页化后不再需要 tab 参数 */}
+          <Route path="/farm-task-schedule" element={<Navigate to="/schedule" replace />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/team" element={<Team />} />
           {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}
           <Route path="/daily-problem-summary" element={<Navigate to="/summary/problems" replace />} />
           <Route path="/plan-summary" element={<Navigate to="/summary/batch" replace />} />
           <Route path="/reports" element={<Navigate to="/summary/overview" replace />} />
-          <Route path="/worker-attendance" element={<WorkerAttendance />} />
+          {/* 2026-10-24：工人考勤已并入 /labor/attendance 的「工人考勤」Tab（排班 Tab 同页），
+              旧路由重定向（保旧书签/外链）。src/pages/WorkerAttendance.tsx 文件保留未删。 */}
+          <Route path="/worker-attendance" element={<Navigate to="/labor/attendance" replace />} />
           <Route path="/work-log" element={<WorkLog />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />
           <Route path="/supplier-management" element={<SupplierManagement />} />

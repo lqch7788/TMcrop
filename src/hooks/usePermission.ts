@@ -20,7 +20,10 @@ const PROCESS_MENU_MAP: Record<string, string[]> = {
   // 库存管理
   'PROC_MATERIALS': ['/materials', '/warehouse-overview', '/warehouse-inbound', '/produce-inventory', '/supplier-management', '/material-receiving', '/material-return'],
   // 人工管理
-  'PROC_LABOR': ['/labor/attendance', '/labor/personnel', '/labor/compensation', '/labor/analytics', '/labor/resignation', '/labor/recruitment', '/labor/salary-budget'],
+  // 2026-10-24：/labor/attendance 改挂子工序 PROC_LABOR_ATTEND（与 processRouteMap 保持一致），
+  //   该路径现在是考勤管理的聚合页（工人考勤 / 排班 / 请假 / 加班 四个 Tab）。
+  'PROC_LABOR': ['/labor/personnel', '/labor/compensation', '/labor/analytics', '/labor/resignation', '/labor/recruitment', '/labor/salary-budget'],
+  'PROC_LABOR_ATTEND': ['/labor/attendance'],
   // 生产汇总表
   'PROC_REPORTS': ['/reports', '/daily-problem-summary', '/plan-summary'],
   // 审批中心

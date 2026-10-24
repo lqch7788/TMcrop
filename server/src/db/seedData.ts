@@ -3243,6 +3243,9 @@ function seedAuthorityData() {
     // 农事管理子菜单
     { id: 'proc-farm-hub', oid: 'PROC_FARM_HUB', parent_oid: 'PROC_FARM', code: 'farm-hub', name: '农事任务中心', route: '/farm-hub', app_type: 0, is_hidden: 0, sort_number: 1 },
     { id: 'proc-task-center', oid: 'PROC_TASK_CENTER', parent_oid: 'PROC_FARM', code: 'task-center', name: '任务中心', route: '/task-center', app_type: 0, is_hidden: 0, sort_number: 2 },
+    // 2026-10-24：考勤排班（原 /schedule 的「考勤排班」Tab）已移入人工管理 → 考勤管理，
+    //   权限改走 proc-labor-attendance(PROC_LABOR_ATTEND)；本页仅承载「任务排班」。
+    //   工序名「排班调度」按用户要求保持不变。
     { id: 'proc-schedule', oid: 'PROC_SCHEDULE', parent_oid: 'PROC_FARM', code: 'schedule', name: '排班调度', route: '/schedule', app_type: 0, is_hidden: 0, sort_number: 3 },
     { id: 'proc-team', oid: 'PROC_TEAM', parent_oid: 'PROC_FARM', code: 'team', name: '班组分配', route: '/team', app_type: 0, is_hidden: 0, sort_number: 4 },
     { id: 'proc-daily-summary', oid: 'PROC_DAILY_SUMMARY', parent_oid: 'PROC_FARM', code: 'daily-summary', name: '每日工单汇总', route: '/daily-work-summary', app_type: 0, is_hidden: 0, sort_number: 5 },
@@ -3255,6 +3258,7 @@ function seedAuthorityData() {
     { id: 'proc-material-return', oid: 'PROC_MAT_RETURN', parent_oid: 'PROC_MATERIALS', code: 'material-return', name: '生产退料', route: '/material-return', app_type: 0, is_hidden: 0, sort_number: 5 },
 
     // 人工管理子菜单
+    // 2026-10-24：考勤排班移入后，本工序覆盖「工人考勤 / 排班 / 请假 / 加班」四个 Tab
     { id: 'proc-labor-attendance', oid: 'PROC_LABOR_ATTEND', parent_oid: 'PROC_LABOR', code: 'labor-attendance', name: '考勤管理', route: '/labor/attendance', app_type: 0, is_hidden: 0, sort_number: 1 },
     { id: 'proc-labor-personnel', oid: 'PROC_LABOR_PERSONNEL', parent_oid: 'PROC_LABOR', code: 'labor-personnel', name: '人事管理', route: '/labor/personnel', app_type: 0, is_hidden: 0, sort_number: 2 },
     { id: 'proc-labor-compensation', oid: 'PROC_LABOR_COMP', parent_oid: 'PROC_LABOR', code: 'labor-compensation', name: '薪酬管理', route: '/labor/compensation', app_type: 0, is_hidden: 0, sort_number: 3 },
