@@ -10,6 +10,8 @@ import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
 import { useInspectionDataStore } from '../../../stores/useInspectionDataStore';
+// 2026-10-24：任务处理弹窗要显示关联问题的具体内容（灰霉病/病毒病…）
+import { useProblemStore } from '../../../stores/useProblemStore';
 
 import { useAuthStore } from '@/stores/useAuthStore';
 import { todayLocal } from '@/lib/dateUtils';
@@ -87,7 +89,7 @@ const getTypeLabel = (type: string): string => {
 /**
  * 「巡查计划任务」tab：巡查计划生成的待巡实例（2026-10-23 新增）
  *
- * 从「巡查反馈处理」里拆出来的原因：
+ * 从「巡查问题整改」里拆出来的原因：
  *   · 语义不同 —— 这里是「该去巡什么」（执行任务），那边是「巡出来的记录 + 问题整改」；
  *   · 动作不同 —— 这里接受/填写巡查记录，那边提交进度/验收整改；
  *   · 列不同 —— 任务要看"什么时候在哪巡什么"，记录要看"巡查结果/严重程度/问题分类"。
@@ -101,10 +103,31 @@ function matchesInspectionPlanTabFilter(task: any): boolean {
   return true;
 }
 
-/** 「巡查反馈处理」tab：巡查记录台账 + 问题整改（不含巡查计划实例） */
-function matchesProblemTabFilter(task: any): boolean {
+/**
+ * 「巡查问题整改」tab：巡查记录台账 + 问题整改（不含巡查计划实例）
+ *
+ * 2026-10-24（合并重复行）：同一问题既有巡查记录行、又有派生的农事任务行时，
+ *   只保留巡查记录行。依据：
+ *   · 巡查记录行自带全部巡查字段（编号/类型/结果/严重程度），任务行这些字段要靠回填；
+ *   · 两类行的操作都走 PUT /problems/:id（acceptProblem / submitProblemFeedback），功能等价；
+ *   · 实测 28 组「巡查记录↔问题」中 18 组派生了任务，合并后不再同一件事显示两行。
+ *   非巡查来源的问题（库里 5 条）没有巡查记录行，照常由任务行展示。
+ *
+ * @param problemIdsWithInspection 已有巡查记录行展示的问题 id 集合
+ */
+function matchesProblemTabFilter(task: any, problemIdsWithInspection: Set<string>): boolean {
   // 巡查计划实例归「巡查计划任务」tab，这里排除，避免两个 tab 重复
   if (task.inspectionPlanId) return false;
+
+  const sourceProblemId = String(task.sourceProblemId || '');
+  // 巡查记录行：dispatchMode 由 useTasks 对 inspections 映射时硬编码为 'inspection'
+  const isInspectionRow = String(task.dispatchMode) === 'inspection' || !!task.sourceInspectionId;
+
+  // 问题派生任务行：该问题已有巡查记录行 → 隐藏本行（保留巡查行）
+  if (!isInspectionRow && sourceProblemId && problemIdsWithInspection.has(sourceProblemId)) {
+    return false;
+  }
+
   const dm = task.dispatchMode;
   if (dm === 'problem' || dm === 'inspection') return true;
   // 2026-10-20：改用**真值**判断。后端未关联时返回 null/''，
@@ -138,7 +161,7 @@ function matchesProductionTabFilter(task: any): boolean {
   //   迁移后的任务 dispatchMode 已是 'farm'，sourceType 只是历史来源标记；
   //   继续排除会让它们在「农事任务处理」和「临时任务处理」两个 tab 都不显示。
   if (task.sourceProblemId || task.sourceInspectionId) return false;
-  // 2026-10-23：巡查计划实例归到「巡查反馈处理」tab，这里排除，避免两个 tab 重复出现
+  // 2026-10-23：巡查计划实例归到「巡查问题整改」tab，这里排除，避免两个 tab 重复出现
   if (task.inspectionPlanId) return false;
   return true;
 }
@@ -169,6 +192,9 @@ export function MyTasksPage() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const currentUserName = currentUser?.realName || currentUser?.username || '未知用户';
   const operatorId = currentUser?.oid || '';
+
+  // 2026-10-24：问题源数据 —— 任务处理弹窗要显示关联问题的具体内容
+  const storeProblems = useProblemStore((s) => s.problems);
 
   // 用户列表：用于把巡查"反馈人员"列存用户 OID 的值解析为姓名显示（2026-10-11）
   const users = useUserStore((s) => s.users);
@@ -205,10 +231,41 @@ export function MyTasksPage() {
     return m;
   }, [inspectionRecordList]);
 
-  /** 取任务对应的巡查记录：优先按任务 id，其次按记录编号 */
+  /**
+   * 取任务对应的巡查记录：优先按任务 id，其次按记录编号，最后按来源编号。
+   *
+   * 2026-10-24 补第三条路径：问题派生的整改任务（farm_tasks）把巡查编号存在
+   * `source_id`（如 XT20261023-010），而 `inspection_task_id` 指向的往往是另一个任务
+   * —— 仅前两条路径会让这些行的「巡查结果 / 问题分类 / 严重程度」整列为「—」，
+   * 库里 18 条这类任务全部命中该缺陷。
+   */
   const recordOf = (t: any) =>
     recordsByTaskId.get(String(t?.id ?? ''))
-    || recordsByCode.get(String(t?.inspectionRecordCode || t?.recordCode || ''));
+    || recordsByCode.get(String(t?.inspectionRecordCode || t?.recordCode || ''))
+    || recordsByCode.get(String(t?.sourceId || ''));
+
+  /**
+   * 已有巡查记录行展示的问题 id 集合（2026-10-24 合并重复行用）
+   *
+   * 数据链路：inspections.problem_id → problems.id → farm_tasks.source_problem_id
+   * 一个问题若已有巡查记录行，就不再重复展示它派生的农事任务行。
+   *
+   * ⚠️ 必须跳过 inspectionTaskId 非空的记录 —— useTasks.ts 合并任务时对这类记录做了
+   *   `filter(r => !r.inspectionTaskId)`：它们已作为 farm_tasks 的一行走列表，不再生成
+   *   巡查伪任务行。若把它们算进本集合，对应问题的派生任务行会被隐藏、却没有巡查行顶替，
+   *   整件事会从 tab 里消失（实测库里有 12 条这种记录）。
+   *
+   * 字段双写兜底：API 中间件转 camelCase，但历史映射里两种写法都出现过。
+   */
+  const problemIdsWithInspection = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of inspectionRecordList as any[]) {
+      if (r?.inspectionTaskId) continue;
+      const pid = r?.problemId || r?.problem_id;
+      if (pid) s.add(String(pid));
+    }
+    return s;
+  }, [inspectionRecordList]);
 
   /**
    * 记录 → 巡查结果文案。
@@ -274,6 +331,15 @@ export function MyTasksPage() {
         })(),
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
+        // 2026-10-24：任务说明 / 异常原因 —— 详情弹窗此前取不到这些字段
+        //   （「我的任务」用的是自己的映射，不是完整的 Task 对象）
+        description: (t as any).description || (t as any).taskContent || '',
+        taskContent: (t as any).taskContent || '',
+        cancelledReason: (t as any).cancelledReason || '',
+        rejectedReason: (t as any).rejectedReason || '',
+        abandonedReason: (t as any).abandonedReason || '',
+        completionNote: (t as any).completionNote || '',
+        reworkCount: (t as any).reworkCount || 0,
         // 任务配置
         typeConfig: (t as TaskWithExtras).typeConfig || {},
         sopContent: (t as TaskWithExtras).sopContent || '',
@@ -284,7 +350,7 @@ export function MyTasksPage() {
         // 来源类型（用于区分临时任务和生产任务）
         sourceType: (t as TaskWithExtras).sourceType,
         // 2026-10-10（审核修复 H1）：补 dispatchMode / sourceInspectionId ——
-        //   "巡查反馈处理"tab 过滤（filteredTasks case 'problem'）依赖这两个字段，
+        //   "巡查问题整改"tab 过滤（filteredTasks case 'problem'）依赖这两个字段，
         //   修正前映射丢失它们 → 13 条巡查被整体过滤、tab 显示为 4 条错位内容
         dispatchMode: (t as any).dispatchMode,
         sourceInspectionId: (t as TaskWithExtras).sourceInspectionId,
@@ -299,7 +365,7 @@ export function MyTasksPage() {
         tempTaskType: (t as TaskWithExtras).tempTaskType || '',
         workerCount: (t as TaskWithExtras).workerCount || 1,
         totalEstimatedHours: (t as TaskWithExtras).totalEstimatedHours || 0,
-        // 巡查反馈处理表格字段（用于 taskFilter === 'problem' 时显示）
+        // 巡查问题整改表格字段（用于 taskFilter === 'problem' 时显示）
         sourceId: (t as TaskWithExtras).sourceId,
         // 2026-10-23：补 sourceCode —— 巡查实例的 sourceCode 是**计划编号**（XHJH…），
         //   列表用它做主标识（否则只显示任务编号 NS…，看不出来自哪个计划）
@@ -319,6 +385,8 @@ export function MyTasksPage() {
         checkTime: (t as TaskWithExtras).checkTime || recordOf(t)?.checkTime || '',
         checkResult: (t as TaskWithExtras).checkResult || resultOf(recordOf(t)),
         issueCategories: (t as TaskWithExtras).issueCategories || recordOf(t)?.issueCategories || [],
+        // 2026-10-24：具体问题项（灰霉病/病毒病…），列表与详情都要展示
+        issuePresets: (t as TaskWithExtras).issuePresets || recordOf(t)?.issuePresets || [],
         issueSeverity: (t as TaskWithExtras).issueSeverity || recordOf(t)?.issueSeverity || '',
         issueText: (t as TaskWithExtras).issueText || '',
         photos: (t as TaskWithExtras).photos || [],
@@ -370,6 +438,15 @@ export function MyTasksPage() {
         })(),
         feedbackRequirements: t.feedbackRequirements || [],
         remarks: t.remarks || '',
+        // 2026-10-24：任务说明 / 异常原因 —— 详情弹窗此前取不到这些字段
+        //   （「我的任务」用的是自己的映射，不是完整的 Task 对象）
+        description: (t as any).description || (t as any).taskContent || '',
+        taskContent: (t as any).taskContent || '',
+        cancelledReason: (t as any).cancelledReason || '',
+        rejectedReason: (t as any).rejectedReason || '',
+        abandonedReason: (t as any).abandonedReason || '',
+        completionNote: (t as any).completionNote || '',
+        reworkCount: (t as any).reworkCount || 0,
         typeConfig: t.typeConfig || {},
         sopContent: t.sopContent || '',
         materials: t.materials || [],
@@ -450,8 +527,9 @@ export function MyTasksPage() {
           });
       case 'problem':
         // 巡查记录台账 + 问题整改（过滤谓词见 matchesProblemTabFilter，与徽章计数共用）
+        // 2026-10-24：用箭头函数显式传参 —— 直接传函数引用时 filter 会把 index 当第二个参数
         return myTasks
-          .filter(matchesProblemTabFilter)
+          .filter((t) => matchesProblemTabFilter(t, problemIdsWithInspection))
           .sort(sortByCreatedAt);
       case 'production':
         // 农事任务（过滤谓词见 matchesProductionTabFilter，与徽章计数共用）
@@ -463,7 +541,7 @@ export function MyTasksPage() {
         // 全部任务也按创建时间倒序
         return [...myTasks].sort(sortByCreatedAt);
     }
-  }, [myTasks, taskFilter, refreshKey]);
+  }, [myTasks, taskFilter, refreshKey, problemIdsWithInspection]);
 
   // 2026-10-21 P4：未来巡查分组（方案 §10.5）
   //   一个 daily 计划一次生成 14 条实例，若与今日待办平铺，今天要做的事会被未来计划淹没。
@@ -505,10 +583,10 @@ export function MyTasksPage() {
   //   修正前巡查反馈徽章 14 vs 内容 17、农事任务处理 37 vs 22 的两套标准问题）
   const taskCounts = useMemo(() => ({
     all: myTasks.length,
-    problem: myTasks.filter(matchesProblemTabFilter).length,
+    problem: myTasks.filter((t) => matchesProblemTabFilter(t, problemIdsWithInspection)).length,
     production: myTasks.filter(matchesProductionTabFilter).length,
     inspectionPlan: myTasks.filter(matchesInspectionPlanTabFilter).length,
-  }), [myTasks]);
+  }), [myTasks, problemIdsWithInspection]);
 
   // 详情弹窗状态
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -838,7 +916,10 @@ export function MyTasksPage() {
         const isFinal = feedbackForm.progress === 100;
         // 2026-10-10（审核修复 H3/M1）：巡查来源跳过 useTasks 同步链路（其进度走上方问题通道
         //   addProgressRecord/submitProblemFeedback），避免 submitProgress 发往 farm-tasks 幽灵端点
-        if (!(task as any).sourceInspectionId) {
+        // 2026-10-24：问题派生任务（sourceProblemId）同样跳过 —— 它的进度/状态由问题通道驱动，
+        //   再走一遍 submitProgress 会让 syncWorkLogFromTask 写第二条工作日志
+        //   （实测同一操作产生「【问题处理】测试数据」和「测试数据」两条记录）。
+        if (!(task as any).sourceInspectionId && !(task as any).sourceProblemId) {
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
         apiOk = await submitProgress(unifiedTask.id, feedbackForm.progress, {
           remarks: feedbackForm.resultText || feedbackForm.progressText,
@@ -1212,6 +1293,13 @@ export function MyTasksPage() {
         feedbackForm={feedbackForm}
         setFeedbackForm={setFeedbackForm}
         problemFlowRecords={(feedbackModal.task?.sourceProblemId ? getProblemFlowRecords(feedbackModal.task.sourceProblemId) : []) as any}
+        problemDetail={(() => {
+          // 2026-10-24：带出关联问题，让执行人在处理弹窗里能看到具体病害内容
+          //   （后端 descriptions 已拼接勾选项；issue_presets 为 JSON 字符串）
+          const pid = (feedbackModal.task as any)?.sourceProblemId;
+          if (!pid) return null;
+          return storeProblems.find((p) => String(p.id) === String(pid)) || null;
+        })()}
         validateRequiredFeedback={validateRequiredFeedback}
         onSubmit={handleSubmitFeedback}
       />

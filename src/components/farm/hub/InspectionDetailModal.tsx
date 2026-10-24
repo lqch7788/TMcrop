@@ -8,6 +8,10 @@ import { InspectionRecord } from '../../../types';
 import { useInspectionDataStore } from '../../../stores';
 import { X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui';
+// 2026-10-24：巡查类型改用真相源 INSPECTION_TYPES（原文件内第二份映射缺 safety，
+//   会把「安全检查」显示成「种植巡查」）
+import { getInspectionTypeLabel } from '../../../types/farm/common';
+import { translateInspectionCategory } from '../inspection/inspectionCategoryLabels';
 
 interface InspectionDetailModalProps {
   recordId: string;
@@ -15,17 +19,13 @@ interface InspectionDetailModalProps {
   onReportProblem?: (inspectionId: string) => void;
 }
 
-const INSPECTION_TYPE_CONFIG: Record<string, string> = {
-  farm: '种植巡查',
-  equipment: '设备巡查',
-  infrastructure: '设施巡查',
-  other: '其他巡查',
-};
-
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   normal: { bg: 'bg-green-100', text: 'text-green-700', label: '正常' },
   attention: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '需关注' },
   critical: { bg: 'bg-red-100', text: 'text-red-700', label: '异常' },
+  // 2026-10-24：补 pending —— DB 有 2 条巡查记录 status='pending'，
+  //   缺失时兜底成 "正常"，把「还没巡」显示成「正常」
+  pending: { bg: 'bg-gray-100', text: 'text-gray-700', label: '待巡查' },
 };
 
 export function InspectionDetailModal({ recordId, onClose, onReportProblem }: InspectionDetailModalProps) {
@@ -57,7 +57,9 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
   const statusConfig = STATUS_CONFIG[inspection.status] || STATUS_CONFIG.normal;
   /** 发现的问题列表（string[]，缺省空数组） */
   const inspectionIssues = inspection.issues || [];
-  const typeLabel = INSPECTION_TYPE_CONFIG[inspection.inspectionType ?? ''] || '种植巡查';
+  const typeLabel = inspection.inspectionType
+    ? getInspectionTypeLabel(inspection.inspectionType)
+    : '种植区域巡查';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -170,19 +172,40 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
                 </Button>
               )}
             </div>
-            {inspectionIssues.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">未发现问题</p>
-            ) : (
-              /* 2026-10-11：issues 权威类型为 string[]（types/index.ts + 后端 inspection.ts 均已确认），
-                 按字符串渲染；旧代码按对象读 issue.id/description/severity/status 只出空壳卡片 */
-              <div className="flex gap-2 flex-wrap">
-                {inspectionIssues.map((issue: string, idx: number) => (
-                  <span key={idx} className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-sm rounded-full">
-                    {issue}
-                  </span>
-                ))}
-              </div>
-            )}
+            {(() => {
+              // 2026-10-24：原先只渲染 issues（= issueText），勾选的「灰霉病/病毒病/白粉病」
+              //   存在 issuePresets 里且从未展示 —— 详情页只剩「严重病害」这类描述。
+              //   现在分类 / 具体项 / 描述分开渲染。
+              const cats = inspection.issueCategories || [];
+              const presets = inspection.issuePresets || [];
+              const desc = inspection.issueText || inspectionIssues.join('、');
+              if (cats.length === 0 && presets.length === 0 && !desc) {
+                return <p className="text-sm text-gray-400 text-center py-4">未发现问题</p>;
+              }
+              return (
+                <div className="space-y-2">
+                  {(cats.length > 0 || presets.length > 0) && (
+                    <div className="flex gap-2 flex-wrap">
+                      {cats.map((cat: string, i: number) => (
+                        <span key={`cat-${i}`} className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-sm rounded-full">
+                          {translateInspectionCategory(cat)}
+                        </span>
+                      ))}
+                      {presets.map((preset: string, i: number) => (
+                        <span key={`preset-${i}`} className="px-3 py-1.5 bg-orange-100 border border-orange-300 text-orange-800 text-sm font-medium rounded-full">
+                          {preset}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {desc && (
+                    <p className="text-sm text-gray-700">
+                      <span className="text-gray-500">问题描述：</span>{desc}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 现场照片 - 青色背景 */}
