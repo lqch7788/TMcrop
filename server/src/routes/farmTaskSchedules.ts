@@ -86,12 +86,13 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: '缺少必填字段' });
     }
 
-    // 检查冲突：同一执行人在同一天不能有多个排班
-    const conflicts = await farmTaskScheduleService.checkConflicts(workerId, planDate);
+    // 检查冲突：同一执行人在同一天**同一班次**不能有多个排班
+    //   （2026-10-24 E4：原只按 worker+date 判，同一天不同班次被误判冲突）
+    const conflicts = await farmTaskScheduleService.checkConflicts(workerId, planDate, undefined, shiftType);
     if (conflicts.length > 0) {
       return res.status(409).json({
         success: false,
-        error: '该执行人在同日已有排班',
+        error: '该执行人在同日同班次已有排班',
         data: conflicts,
       });
     }
@@ -131,12 +132,13 @@ router.put('/:id', requireAuth, async (req, res) => {
         const conflicts = await farmTaskScheduleService.checkConflicts(
           workerId || existing.worker_id,
           planDate || existing.plan_date,
-          req.params.id
+          req.params.id,
+          shiftType || existing.shift_type
         );
         if (conflicts.length > 0) {
           return res.status(409).json({
             success: false,
-            error: '该执行人在同日已有排班',
+            error: '该执行人在同日同班次已有排班',
             data: conflicts,
           });
         }
@@ -237,10 +239,15 @@ router.post('/batch-assign', requireAuth, async (req, res) => {
       if (!w.workerId) continue;
       for (const date of dates) {
         try {
-          // 冲突检测
-          const conflicts = await farmTaskScheduleService.checkConflicts(w.workerId, date);
+          // 冲突检测（2026-10-24 E4：补上班次维度，同一天不同班次不算冲突）
+          const conflicts = await farmTaskScheduleService.checkConflicts(
+            w.workerId,
+            date,
+            undefined,
+            defaultShift?.shift_code
+          );
           if (conflicts.length > 0) {
-            skipped.push({ workerId: w.workerId, date, reason: '该执行人在同日已有排班' });
+            skipped.push({ workerId: w.workerId, date, reason: '该执行人在同日同班次已有排班' });
             continue;
           }
           await farmTaskScheduleService.createSchedule({

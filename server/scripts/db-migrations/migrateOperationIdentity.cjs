@@ -48,13 +48,19 @@ const IS_PRODUCTION_DB = !DB_PATH_OVERRIDE;
 const BACKUP_DIR = path.join(path.dirname(DB_PATH), 'backups');
 
 /**
- * 待归一的表：表名 + 人员 id 列 + 姓名列 + 更新时间列
- * 注意：两表的时间列命名不同 —— farm_operation_records 用 created_at/updated_at，
- *   labor_records 用 create_time/update_time。（E1 迁移脚本已栽过一次同类坑）
+ * 待归一的表：表名 + 人员 id 列 + 姓名列 + 更新时间列 + 人员 id 列是否可空
+ *
+ * 注意 1：时间列命名不统一 —— farm_operation_records 用 created_at/updated_at，
+ *   labor_records 与 farm_task_schedules 用 create_time/update_time。
+ *   （E1 迁移脚本已栽过一次同类坑）
+ * 注意 2：farm_task_schedules.worker_id 是 NOT NULL，无法归一的行不能置 NULL ——
+ *   实测其 41 行 worker_id 全部可归一（user-admin → users.employee_id → EMP_007），
+ *   故该表不需要 nullify 分支；若将来出现不可归一行，脚本会报错退出而不是静默置空。
  */
 const TARGETS = [
-  { table: 'farm_operation_records', idCol: 'operator_id', nameCol: 'operator_name', timeCol: 'updated_at' },
-  { table: 'labor_records', idCol: 'worker_id', nameCol: 'worker_name', timeCol: 'update_time' },
+  { table: 'farm_operation_records', idCol: 'operator_id', nameCol: 'operator_name', timeCol: 'updated_at', nullable: true },
+  { table: 'labor_records', idCol: 'worker_id', nameCol: 'worker_name', timeCol: 'update_time', nullable: true },
+  { table: 'farm_task_schedules', idCol: 'worker_id', nameCol: 'worker_name', timeCol: 'updated_at', nullable: false },
 ];
 
 /** 端口是否被监听 */
@@ -192,11 +198,25 @@ function classify(row, index) {
       [],
     );
     const items = rows.map((r) => ({ row: r, ...classify(r, index) }));
+    // 人员 id 列不可空的表（如 farm_task_schedules.worker_id NOT NULL）：
+    //   若存在无法归一的行，置 NULL 会违反约束 → 直接报错退出，不静默处理
+    if (!t.nullable) {
+      const bad = items.filter((i) => i.action === 'nullify');
+      if (bad.length > 0) {
+        console.error(`✗ ${t.table}.${t.idCol} 为 NOT NULL，但有 ${bad.length} 行无法归一，终止：`);
+        for (const i of bad.slice(0, 10)) {
+          console.error(`   ${i.row.id} → ${i.reason}`);
+        }
+        db.close();
+        process.exit(1);
+      }
+    }
     plans.push({
       table: t.table,
       idCol: t.idCol,
       nameCol: t.nameCol,
       timeCol: t.timeCol,
+      nullable: t.nullable,
       total: rows.length,
       keep: items.filter((i) => i.action === 'keep'),
       normalize: items.filter((i) => i.action === 'normalize'),

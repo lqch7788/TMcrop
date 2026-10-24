@@ -330,7 +330,8 @@ export async function deleteSchedule(id: string): Promise<void> {
 export async function checkConflicts(
   workerId: string,
   planDate: string,
-  excludeScheduleId?: string
+  excludeScheduleId?: string,
+  shiftType?: string | null
 ): Promise<FarmTaskSchedule[]> {
   try {
     const db = getDatabase();
@@ -344,6 +345,15 @@ export async function checkConflicts(
     if (excludeScheduleId) {
       sql += ' AND id != ?';
       params.push(excludeScheduleId);
+    }
+
+    // 2026-10-24（E4）：冲突判定补上班次维度
+    //   原实现只按「同一人 + 同一天」判冲突，导致同一人同一天安排**不同班次**
+    //   （早班/中班/晚班）也被误判为冲突 —— 这是明显误判：一个人一天可以上多个班次。
+    //   真正的冲突是「同一人 + 同一天 + 同班次」被排了多个任务。
+    if (shiftType) {
+      sql += ' AND shift_type = ?';
+      params.push(shiftType);
     }
 
     sql += " AND status NOT IN ('cancelled')";
@@ -558,10 +568,10 @@ export async function autoAssignSchedule(input: AutoAssignInput): Promise<AutoAs
 
     if (existing) {
       // 已有排班：只更新执行人 / 班组，保留人工排好的日期与班次
-      // 冲突检查：该执行人在**排班当天**已有别的任务排班 → 跳过
-      const conflicts = await checkConflicts(workerId, existing.plan_date, existing.id);
+      // 冲突检查：该执行人在**排班当天的同一班次**已有别的任务排班 → 跳过
+      const conflicts = await checkConflicts(workerId, existing.plan_date, existing.id, existing.shift_type);
       if (conflicts.length > 0) {
-        return { created: false, updated: false, schedule: null, reason: '该执行人在同日已有其它排班' };
+        return { created: false, updated: false, schedule: null, reason: '该执行人在同日同班次已有其它排班' };
       }
       const now = new Date().toISOString();
       db.run(
@@ -578,9 +588,11 @@ export async function autoAssignSchedule(input: AutoAssignInput): Promise<AutoAs
     const planDate = (input.planDate || task.plan_date || formatLocalDateISO()).slice(0, 10);
 
     // 冲突检查：同一执行人同一天不能有两班
-    const conflicts = await checkConflicts(workerId, planDate);
+    // 冲突检查：同一执行人**同一班次**不能被排两个任务
+    //   （2026-10-24 E4：原只按 worker+date 判，同一天不同班次被误判冲突）
+    const conflicts = await checkConflicts(workerId, planDate, undefined, shiftCode);
     if (conflicts.length > 0) {
-      return { created: false, updated: false, schedule: null, reason: '该执行人在同日已有排班' };
+      return { created: false, updated: false, schedule: null, reason: '该执行人在同日同班次已有排班' };
     }
 
     const id = generateId();
