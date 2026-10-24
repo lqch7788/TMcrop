@@ -234,6 +234,8 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   //   补两列保存来源巡查的类型与结构化问题分类，供分派时按映射选类型。
   addedColumns += safeAddColumn(db, 'problems', 'inspection_type', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'problems', 'issue_categories', 'TEXT', "'[]'") ? 1 : 0;
+  // 2026-10-24：具体问题项 —— 巡查记录建问题时不带过来，问题详情只剩「病害」分类
+  addedColumns += safeAddColumn(db, 'problems', 'issue_presets', 'TEXT', "'[]'") ? 1 : 0;
 
   // ============ P2a：巡查计划 ↔ 农事任务 ↔ 巡查记录 三向关联 ============
   // 背景：巡查计划（模板）实例化成农事任务后，执行人提交巡查记录，

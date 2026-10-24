@@ -1006,6 +1006,10 @@ export function initializeDatabase() {
       -- 2026-10-21：来源巡查类型 / 结构化问题分类（供分派映射任务类型）
       inspection_type TEXT,
       issue_categories TEXT DEFAULT '[]',
+      -- 2026-10-24：具体问题项（如勾选的「灰霉病、病毒病、白粉病」）。
+      --   巡查记录表早有 issue_presets，建问题时没带过来，导致问题详情/任务弹窗
+      --   只剩「病害」这类分类，执行人不知道具体是什么病。
+      issue_presets TEXT DEFAULT '[]',
       create_time TEXT,
       update_time TEXT
     )

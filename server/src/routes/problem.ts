@@ -81,7 +81,8 @@ const PROBLEM_DB_COLUMNS = new Set<string>([
   'source_detail', 'rectification_progress', 'recheck_required', 'recheck_result', 'recheck_at',
   'rechecker_id', 'recurrence_count', 'tenant_id',
   // 2026-10-21：来源巡查类型 / 结构化问题分类（分派映射任务类型用）
-  'inspection_type', 'issue_categories',
+  // 2026-10-24：具体问题项（灰霉病/病毒病/白粉病…）
+  'inspection_type', 'issue_categories', 'issue_presets',
 ]);
 
 /**
@@ -182,7 +183,9 @@ router.post('/', (req: Request, res: Response) => {
       sourceModule: 'source_module', sourceDetail: 'source_detail',
       cropName: 'crop_name',
       // 2026-10-21：巡查类型 / 问题分类（分派映射任务类型）
+      // 2026-10-24：具体问题项
       inspectionType: 'inspection_type', issueCategories: 'issue_categories',
+      issuePresets: 'issue_presets',
     };
     for (const [camel, snake] of Object.entries(POST_FIELD_MAP)) {
       if (body[camel] !== undefined && body[snake] === undefined) {
@@ -209,7 +212,8 @@ router.post('/', (req: Request, res: Response) => {
       completion_time, expected_completion, remarks, images,
       source_module, source_id, source_detail,
       // 2026-10-21：巡查类型 / 问题分类
-      inspection_type, issue_categories,
+      // 2026-10-24：具体问题项
+      inspection_type, issue_categories, issue_presets,
     } = body;
 
     const newId = id || `PRB${Date.now()}`;
@@ -245,9 +249,9 @@ router.post('/', (req: Request, res: Response) => {
         rejected_by, rejected_reason, rejected_time,
         completion_time, expected_completion, remarks, images,
         source_module, source_id, source_detail,
-        inspection_type, issue_categories,
+        inspection_type, issue_categories, issue_presets,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId, finalProblemCode, problem_type, title, description, greenhouse_name, greenhouse_id || '',
       reporter_id, reporter_name, assignee_id, assignee_name, priority || 'medium', normalizeProblemStatus(status),
@@ -263,6 +267,8 @@ router.post('/', (req: Request, res: Response) => {
       // 2026-10-21：巡查类型 / 问题分类（JSON 数组统一序列化）
       inspection_type || '',
       typeof issue_categories === 'string' ? issue_categories : JSON.stringify(issue_categories || []),
+      // 2026-10-24：具体问题项（JSON 数组统一序列化）
+      typeof issue_presets === 'string' ? issue_presets : JSON.stringify(issue_presets || []),
       now, now,
     ]);
 
@@ -373,6 +379,10 @@ router.put('/:id', (req: Request, res: Response) => {
     // 2026-10-21：问题分类为 JSON 数组
     if (updates.issue_categories !== undefined && typeof updates.issue_categories !== 'string') {
       updates.issue_categories = JSON.stringify(updates.issue_categories);
+    }
+    // 2026-10-24：具体问题项同为 JSON 数组
+    if (updates.issue_presets !== undefined && typeof updates.issue_presets !== 'string') {
+      updates.issue_presets = JSON.stringify(updates.issue_presets);
     }
 
     const db = getDatabase();

@@ -935,7 +935,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                       />
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-gray-900">{worker.name}</span>
-                        <span className="text-sm text-gray-500">（{worker.position}）</span>
+                        {/* 2026-10-24：岗位为空时不渲染空括号（登录账号里访客01/02 没有岗位） */}
+                        {worker.position ? (
+                          <span className="text-sm text-gray-500">（{worker.position}）</span>
+                        ) : null}
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         {(worker.skillTags || []).slice(0, 2).map((tag: any) => (
@@ -1167,7 +1170,31 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                       {problem.issueSeverity}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-800 leading-relaxed">{problem.issueText}</p>
+                  {/* 2026-10-24：优先显示 description —— 建问题时已把勾选的具体问题项
+                      拼进去（「严重病害：灰霉病、病毒病、白粉病」）。
+                      原先只读 issueText，详情里永远只有「严重病害」。 */}
+                  <p className="text-sm text-gray-800 leading-relaxed">
+                    {(problem as any).description || problem.issueText}
+                  </p>
+                  {/* 结构化展示具体项（后端 problems.issue_presets 为 JSON 字符串） */}
+                  {(() => {
+                    const raw = (problem as any).issuePresets ?? (problem as any).issue_presets;
+                    let presets: string[] = [];
+                    if (Array.isArray(raw)) presets = raw;
+                    else if (typeof raw === 'string' && raw.trim()) {
+                      try { const p = JSON.parse(raw); if (Array.isArray(p)) presets = p; } catch { /* 忽略脏值 */ }
+                    }
+                    if (presets.length === 0) return null;
+                    return (
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {presets.map((p, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-orange-100 border border-orange-300 text-orange-800 text-xs font-medium rounded-full">
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

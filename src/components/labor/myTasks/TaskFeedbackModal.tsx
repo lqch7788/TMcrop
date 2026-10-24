@@ -111,6 +111,8 @@ interface TaskFeedbackModalProps {
   setFeedbackForm: React.Dispatch<React.SetStateAction<FeedbackFormData>>;
   // 与 TaskFlowTimeline 的 records 类型一致
   problemFlowRecords: ProblemFlowRecord[];
+  /** 2026-10-24：关联问题（巡查异常派生任务用），用于展示具体病害内容 */
+  problemDetail?: { description?: string; issueText?: string; issuePresets?: unknown; issue_presets?: unknown } | null;
   validateRequiredFeedback: () => { valid: boolean; message: string };
   onSubmit: () => void;
 }
@@ -125,6 +127,7 @@ export function TaskFeedbackModal({
   feedbackForm,
   setFeedbackForm,
   problemFlowRecords,
+  problemDetail,
   validateRequiredFeedback,
   onSubmit,
 }: TaskFeedbackModalProps) {
@@ -232,6 +235,36 @@ export function TaskFeedbackModal({
             </div>
           </div>
         </div>
+
+        {/* 关联问题内容 —— 2026-10-24
+            巡查异常派生的整改任务，执行人此前在弹窗里只能看到任务标题，
+            看不到具体病害（灰霉病/病毒病/白粉病），不知道要治什么。 */}
+        {problemDetail && (problemDetail.description || problemDetail.issueText) && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="text-sm font-semibold text-red-700 mb-1">关联问题</div>
+            <p className="text-sm text-gray-800 leading-relaxed">
+              {problemDetail.description || problemDetail.issueText}
+            </p>
+            {(() => {
+              const raw = (problemDetail as any).issuePresets ?? (problemDetail as any).issue_presets;
+              let presets: string[] = [];
+              if (Array.isArray(raw)) presets = raw;
+              else if (typeof raw === 'string' && raw.trim()) {
+                try { const p = JSON.parse(raw); if (Array.isArray(p)) presets = p; } catch { /* 忽略脏值 */ }
+              }
+              if (presets.length === 0) return null;
+              return (
+                <div className="flex gap-1 flex-wrap mt-2">
+                  {presets.map((p, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-orange-100 border border-orange-300 text-orange-800 text-xs font-medium rounded-full">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* 流转记录 —— 2026-10-21：去掉外层重复标题（TaskFlowTimeline 自带「流转记录（N条）」） */}
         {task.sourceProblemId && problemFlowRecords.length > 0 && (

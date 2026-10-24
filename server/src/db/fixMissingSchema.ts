@@ -1344,6 +1344,8 @@ export async function fixMissingSchema(): Promise<void> {
   const problemColumnsToAdd = [
     { name: 'inspection_type', sql: 'ALTER TABLE problems ADD COLUMN inspection_type TEXT' },
     { name: 'issue_categories', sql: "ALTER TABLE problems ADD COLUMN issue_categories TEXT DEFAULT '[]'" },
+    // 2026-10-24：具体问题项（灰霉病/病毒病/白粉病…）
+    { name: 'issue_presets', sql: "ALTER TABLE problems ADD COLUMN issue_presets TEXT DEFAULT '[]'" },
   ];
   for (const col of problemColumnsToAdd) {
     try {

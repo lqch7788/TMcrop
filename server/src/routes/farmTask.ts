@@ -1155,18 +1155,30 @@ router.post('/:id/inspection-record', (req: Request, res: Response) => {
         const seq = lastCode ? (parseInt(lastCode.slice(-3), 10) || 0) + 1 : 1;
         const problemCode = `PD${ymd}${String(seq).padStart(3, '0')}`;
         createdProblemId = generateId('PRB');
+        // 2026-10-24：具体问题项（如勾选的「灰霉病、病毒病、白粉病」）。
+        //   巡查记录表一直有 issue_presets，但建问题时没带过来 ——
+        //   问题详情、任务处理弹窗只剩「病害」这种分类，执行人不知道具体是什么病。
+        //   这里同时写进独立列（结构化）和 description（详情直接可读）。
+        const problemIssuePresets: string[] = Array.isArray(body.issuePresets) ? body.issuePresets : [];
+        const problemIssueText = String(body.problem.issueText);
+        // 原文已包含全部具体项时不再拼接，避免「病毒病、灰霉病：病毒病、灰霉病」
+        const presetsCovered = problemIssueText.length > 0
+          && problemIssuePresets.every((p) => problemIssueText.includes(p));
+        const problemDescription = problemIssuePresets.length > 0 && !presetsCovered
+          ? `${problemIssueText}：${problemIssuePresets.join('、')}`
+          : problemIssueText;
         db.run(`
           INSERT INTO problems (
             id, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id,
             reporter_id, reporter_name, assignee_id, assignee_name, priority, status,
             crop_name, inspector_id, inspector_name, check_date, check_time,
             issue_text, issue_severity, flow_records, rework_count,
-            source_module, source_id, inspection_type, issue_categories, images,
+            source_module, source_id, inspection_type, issue_categories, issue_presets, images,
             create_time, update_time
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           createdProblemId, problemCode, body.problem.category || 'other',
-          String(body.problem.issueText).slice(0, 60), String(body.problem.issueText),
+          String(body.problem.issueText).slice(0, 60), problemDescription,
           // 2026-10-22（审核 P1-1）：与记录同源，避免空串把温室冲掉、时间写成 "2026-"
           resolvedGreenhouseName, resolvedGreenhouseId,
           body.inspectorId || task.assignee_id || '', body.inspectorName || task.assignee_name || '',
@@ -1180,6 +1192,7 @@ router.post('/:id/inspection-record', (req: Request, res: Response) => {
           'inspection', recordCode,
           inspectionType,
           JSON.stringify(body.problem.issueCategories || body.issueCategories || []),
+          JSON.stringify(problemIssuePresets),
           JSON.stringify(body.problem.images || []),
           now, now,
         ]);
