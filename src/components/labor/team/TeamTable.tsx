@@ -93,19 +93,22 @@ export function TeamTable({
   }, [storeError]);
 
   /**
-   * 跳到「排班调度 → 任务排班」Tab，并预填班组 + 日期。
+   * 跳到「农事管理 → 排班调度」（任务排班），并预填班组 + 日期。
    *
    * 2026-10-20 修复：
    *  1. 原实现跳 /schedule?teamId=..&prefillDate=..&prefillShift=..，但排班调度页
    *     只读 teamId —— prefillDate / prefillShift 无人消费，预填形同虚设。
-   *     现改为跳 /schedule?tab=farm-task&teamId=..&date=..，由任务排班 Tab 真正消费。
+   *     现改为跳 /schedule?teamId=..&date=..，由任务排班真正消费。
    *  2. 原用 new Date().toISOString().slice(0,10) 取当天 —— UTC，中国 0-8 点会算出昨天。
    *     改用 todayLocal()（memory: utc-timezone-id-bug）。
+   *
+   * 2026-10-24：考勤排班已移入人工管理 → 考勤管理 → 排班 Tab，本页只剩任务排班，
+   *   故去掉 tab=farm-task 参数。
    */
   const handleBatchSchedule = (team: Team) => {
     const today = todayLocal();
     navigate(
-      `/schedule?tab=farm-task&teamId=${encodeURIComponent(team.id)}&date=${today}`,
+      `/schedule?teamId=${encodeURIComponent(team.id)}&date=${today}`,
     );
   };
 
@@ -466,7 +469,7 @@ export function TeamTable({
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
-                        {/* ★ Task 15：为该班组批量排班（2026-10-20 起跳到「排班调度 → 任务排班」Tab 并预填班组/日期） */}
+                        {/* ★ Task 15：为该班组批量排班（2026-10-20 起跳到「农事管理 → 排班调度」并预填班组/日期） */}
                         <Button
                           variant="ghost"
                           size="icon"

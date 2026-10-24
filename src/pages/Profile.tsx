@@ -109,7 +109,8 @@ const rolePermissions = {
     ],
     quickActions: [
       { label: '我的任务', icon: ClipboardList, path: '/my-tasks', desc: '查看我的任务' },
-      { label: '考勤打卡', icon: Clock, path: '/worker-attendance', desc: '上下班打卡' },
+      // 2026-10-24：/worker-attendance 已重定向到 /labor/attendance（考勤管理聚合页），直接指向新路径
+      { label: '考勤打卡', icon: Clock, path: '/labor/attendance', desc: '上下班打卡' },
       { label: '物料领用', icon: Package, path: '/material-receiving', desc: '申请领用物资' },
       { label: '任务反馈', icon: CheckSquare, path: '/my-tasks', desc: '反馈任务状态' },
     ]

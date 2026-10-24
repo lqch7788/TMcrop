@@ -237,13 +237,19 @@ export function WorkerAttendancePage() {
 
   return (
     <div className="space-y-6">
-      {/* 今日排班对比卡片（数据来自农事管理-排班调度） */}
+      {/* 今日排班对比卡片（数据来自考勤管理 → 排班 Tab 的 schedules 表） */}
       <div className="bg-white rounded-lg p-3 border border-gray-100">
         <div className="flex items-center gap-2 mb-2">
           <CalendarDays className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-medium text-gray-700">今日排班对比（{todayStr}）</span>
-          <span className="text-xs text-gray-400">数据来源：农事管理 → 排班调度</span>
+          <span className="text-xs text-gray-400">数据来源：考勤管理 → 排班</span>
         </div>
+        {/* 口径说明：排班表与考勤表的工人 ID 体系尚未对齐（schedules.staff_id 用 employees.id，
+            attendance_records.worker_id 仍用旧 ID 空间），两者按 ID 求差集的结果在归一前不可靠。
+            对齐工作见「员工身份管理」项目。 */}
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
+          ⚠ 排班与考勤的工人 ID 体系尚未对齐，以下「排班缺勤 / 临时到岗」为临时统计口径，数值仅供参考。
+        </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="bg-blue-50 rounded-lg p-2">
             <div className="flex items-center gap-2">

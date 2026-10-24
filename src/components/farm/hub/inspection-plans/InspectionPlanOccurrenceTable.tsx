@@ -24,7 +24,7 @@ interface Props {
   onViewTask?: (taskId: string) => void;
   onSubmitRecord?: (taskId: string) => void;
   onViewRecord?: (recordId: string) => void;
-  /** 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务 */
+  /** 2026-10-21 P5：跳到「农事管理 → 排班调度」（任务排班）并预选该任务 */
   onScheduleTask?: (taskId: string, date: string) => void;
   compact?: boolean;
 }

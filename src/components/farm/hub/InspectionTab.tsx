@@ -994,8 +994,10 @@ export function InspectionTab({
       <div className={viewMode === 'plans' ? '' : 'hidden'}>
         <InspectionPlanPanel
           onScheduleTask={(taskId, date) => {
-            // 2026-10-21 P5：跳到「排班调度 → 任务排班」并预选该任务
-            window.location.href = `/schedule?tab=farm-task&date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;
+            // 2026-10-21 P5：跳到「农事管理 → 排班调度」（任务排班）并预选该任务
+            //   2026-10-24：考勤排班已移入人工管理 → 考勤管理 → 排班 Tab，
+            //   排班调度页只剩任务排班，去掉 tab=farm-task 参数。
+            window.location.href = `/schedule?date=${encodeURIComponent(date)}&taskId=${encodeURIComponent(taskId)}`;
           }}
           onViewTask={(taskId) => {
             // 复用本 tab 已有的记录详情机制：按任务找记录 → 打开 DetailInspectionModal；

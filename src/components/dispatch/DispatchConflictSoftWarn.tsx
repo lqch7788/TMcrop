@@ -66,6 +66,22 @@ export function DispatchConflictSoftWarn({
             <p className="text-sm text-gray-600 mt-1">
               是否仍要派工？若是，请填写覆写原因（必填）。
             </p>
+            {/* 2026-10-24：考勤排班已移入人工管理 → 考勤管理 → 排班 Tab，给「去排班」就近入口。
+                本组件由 dispatchSoftWarnModal.ts 用 createRoot 挂到独立容器渲染，
+                不在 React Router 上下文里 —— 不能用 useNavigate，只能整页跳转。 */}
+            <p className="text-xs text-gray-500 mt-1">
+              该工人当日无可用排班，可先到
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/labor/attendance?tab=schedule&date=${encodeURIComponent(date)}`;
+                }}
+                className="mx-1 text-emerald-700 underline hover:text-emerald-800"
+              >
+                人工管理 → 考勤管理 → 排班
+              </button>
+              安排班次后再派工。
+            </p>
           </div>
         </div>
 

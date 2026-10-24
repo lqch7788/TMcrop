@@ -549,7 +549,8 @@ export async function autoAssignSchedule(input: AutoAssignInput): Promise<AutoAs
         created: false,
         updated: false,
         schedule: null,
-        reason: '执行人不在员工档案中，无法自动排班，请到「排班调度 → 任务排班」手动安排',
+        // 2026-10-24：考勤排班已移入人工管理 → 考勤管理 → 排班 Tab，路径指引同步更新
+        reason: '执行人不在员工档案中，无法自动排班，请到「农事管理 → 排班调度」手动安排',
       };
     }
     const workerId = employee.id;

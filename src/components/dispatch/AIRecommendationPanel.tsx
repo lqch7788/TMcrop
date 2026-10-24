@@ -12,6 +12,7 @@ import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../types/dispatch';
 import { Button } from '@/components/ui';
 import { ScheduleConflictWarning } from './ScheduleConflictWarning';
 import { useDispatchOccupations } from '../../hooks/useDispatchOccupations';
+import { useNavigate } from 'react-router-dom';
 import { todayLocal } from '@/lib/dateUtils';
 
 /**
@@ -63,6 +64,9 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
 }) => {
   // 本地选中状态
   const [localSelectedWorkerId, setLocalSelectedWorkerId] = useState<string | null>(null);
+
+  // 2026-10-24：排班警告条的「去排班」就近入口需要路由跳转
+  const navigate = useNavigate();
 
   // 展开状态
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
@@ -153,12 +157,34 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
             <span className="text-xs text-red-700">
               该员工今日未排班，确认派发将占用额外劳动力资源
             </span>
+            {/* 2026-10-24：考勤排班已移入人工管理 → 考勤管理 → 排班 Tab，
+                这里给「去排班」就近入口（stopPropagation 避免误触选中该员工） */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/labor/attendance?tab=schedule&date=${today}`);
+              }}
+              className="ml-auto text-xs font-medium text-red-800 underline hover:text-red-900 whitespace-nowrap"
+            >
+              去排班
+            </button>
           </div>
         )}
         {rec.scheduleStatus === 'no_schedule' && (
           <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
             <span className="text-xs text-amber-700">该员工无排班记录</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/labor/attendance?tab=schedule&date=${today}`);
+              }}
+              className="ml-auto text-xs font-medium text-amber-800 underline hover:text-amber-900 whitespace-nowrap"
+            >
+              去排班
+            </button>
           </div>
         )}
 

@@ -124,7 +124,7 @@ export function useDispatchScheduleBridge() {
           } catch (autoErr: unknown) {
             console.warn('[派工联动] 自动排班失败（派工主流程已成功）:', autoErr);
             useToastStore.getState().toast.warning(
-              '派工成功，但自动生成任务排班失败，请到「排班调度 → 任务排班」手动安排',
+              '派工成功，但自动生成任务排班失败，请到「农事管理 → 排班调度」手动安排',
             );
           }
         }
@@ -132,7 +132,7 @@ export function useDispatchScheduleBridge() {
         // ★ 不抛错避免破坏主流程（派发已成功，仅占用同步失败）
         const message =
           err?.status >= 500
-            ? '排班占用同步失败（服务器异常），请刷新日历'
+            ? '排班占用同步失败（服务器异常），请到「人工管理 → 考勤管理 → 排班」刷新排班占用'
             : `排班占用同步失败：${err?.message ?? '未知错误'}`;
         // ★ Batch 3 I-1 修复：用 useToastStore 替代 alert（避免阻塞 UI 线程）
         // 500+ 视为硬错误用 error 样式；其他错误视为可重试用 warning 样式
