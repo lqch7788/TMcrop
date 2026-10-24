@@ -36,7 +36,7 @@
 |---|---|---|---|
 | `schedules.staff_id` | `employees.id` | 考勤排班的人 | ✅ 已合规（17/17 命中） |
 | `team_members.worker_id` | `employees.id` | 班组成员 | ✅ 已合规（9/9 命中） |
-| `farm_task_schedules.worker_id` | `employees.id` | 任务排班的人（表已声明 FK） | ⚠️ 声明已合规，但有 38 行历史孤儿（迁移前遗留），归 E4 两表合并 |
+| `farm_task_schedules.worker_id` | `employees.id` | 任务排班的人（表已声明 FK） | ✅ E4 已归一（41/41 命中，**38 行 FK 孤儿清零**） |
 | `attendance_records.worker_id` | `employees.id` | 考勤记录的人 | ✅ E2 已归一（生效 10/10 命中；13 行 mock 已归档，保留原 ID 不参与业务） |
 | `overtime_records.worker_id` | `employees.id` | 加班的人 | ✅ E2 已归一（生效 3/3；6 行归档） |
 | `leave_records.worker_id` | `employees.id` | 请假的人 | ✅ E2 已归一（生效 3/3；16 行归档） |
