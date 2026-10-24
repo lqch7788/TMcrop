@@ -4,6 +4,7 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 import { generateId } from '../utils/id';
 import { formatLocalDateISO } from '../utils/dateUtil';
 
@@ -474,52 +475,36 @@ interface FarmTaskAutoAssignRow {
 /**
  * 把派工用的执行人标识归一化成 employees.id
  *
- * 背景：farm_tasks.assignee_id 存在多套 ID 体系并存的历史问题
- *   （EMP_001 属 employees.id；EMP_98404 / W38406 是姓名哈希；user-admin 是登录账号 oid），
- *   而 farm_task_schedules.worker_id 外键指向 employees(id)，且服务启动时
- *   `PRAGMA foreign_keys = ON` —— 直接把 assignee_id 当 worker_id 写会外键失败。
+ * 2026-10-24（员工身份管理 E1 / Task 4）：改为委托公共归一工具
+ *   server/src/lib/employeeIdentity.ts → resolveEmployeeIdentity
  *
- * 归一化顺序：worker_id 命中 employees.id → worker_name 命中 employees.name → 失败。
+ * 背景：commit 2b382ba0 把农事任务执行人统一为 users.id，
+ *   而 farm_task_schedules.worker_id 外键指向 employees(id)，
+ *   两者之间此前没有确定性转换通道 —— 只能靠姓名匹配，
+ *   而 employees 里从来没有登录账号的姓名（陆启闯/张俊生/王建国都不在档案里），
+ *   于是自动排班必然失败（"执行人不在员工档案中"）。
+ *   users.employee_id 列（E1 Task 2/3）补上后，users.id → employees.id 有了确定路径。
  *
- * @param workerId - 派工侧的执行人标识
- * @param workerName - 执行人姓名（第二层兜底）
+ * 行为变化（三处均为修正，不是退化）：
+ *   1. 新增「users.id → users.employee_id → employees.id」确定性分支
+ *   2. 姓名兜底改为**唯一命中才返回**（原 LIMIT 1 会随机挑一个人挂数据）
+ *   3. 档案直引也要求 status='active'（离职人员不再被挂到新数据上）
+ *
+ * 保留 async 签名：两处调用点（autoAssignSchedule / inspectionPlanService）
+ *   都 await 它；改成同步会连带改动 inspectionPlanService 里
+ *   "resolveEmployeeId 是异步的，故不能放进事务体"的那段注释与事务边界。
+ *
+ * @param workerId - 派工侧的执行人标识（employees.id 或 users.id 都接受）
+ * @param workerName - 执行人姓名（第三级兜底）
  * @returns 归一化后的 employees.id / 姓名；无法归一化时返回 null
  */
 export async function resolveEmployeeId(
   workerId: string,
   workerName?: string
 ): Promise<{ id: string; name: string } | null> {
-  try {
-    const db = getDatabase();
-
-    if (workerId) {
-      const byId = db.prepare('SELECT id, name FROM employees WHERE id = ? LIMIT 1');
-      byId.bind([workerId]);
-      if (byId.step()) {
-        const row = byId.getAsObject() as { id: string; name: string };
-        byId.free();
-        return row;
-      }
-      byId.free();
-    }
-
-    if (workerName) {
-      const byName = db.prepare(
-        "SELECT id, name FROM employees WHERE name = ? AND status = 'active' LIMIT 1"
-      );
-      byName.bind([workerName]);
-      if (byName.step()) {
-        const row = byName.getAsObject() as { id: string; name: string };
-        byName.free();
-        return row;
-      }
-      byName.free();
-    }
-
-    return null;
-  } catch (error) {
-    return handleServiceError(error, '归一化执行人');
-  }
+  const resolved = resolveEmployeeIdentity(workerId, workerName);
+  if (!resolved) return null;
+  return { id: resolved.employeeId, name: resolved.name };
 }
 
 export async function autoAssignSchedule(input: AutoAssignInput): Promise<AutoAssignResult> {
