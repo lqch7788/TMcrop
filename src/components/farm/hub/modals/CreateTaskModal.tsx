@@ -272,8 +272,12 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       : (newTask.crops?.join(',') || '');
 
     const finalAssigneeName = newTask.assignee || '';
+    // 2026-10-24：执行人 ID 改取登录账号 id（staffOptions.value 来自 users.id）。
+    //   原实现用「姓名哈希」编造 ID（EMP_98404 这类），与 users 表对不上，
+    //   「我的任务/工作日志」按当前用户过滤时永远匹配不到。
+    //   找不到匹配时留空，交给后端默认值 —— 不再编造 ID。
     const finalAssigneeId = finalAssigneeName
-      ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}`
+      ? (responsiblePersons.find((p) => p.name === finalAssigneeName)?.code || '')
       : '';
 
     const defaultDispatcher = users.find(u => u.id === 'U001');
@@ -445,7 +449,10 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   const responsiblePersons = useMemo(
     () =>
       users.map((u) => ({
-        code: u.oid || u.id || '',
+        // 2026-10-24：统一用 users.id 作执行人标识（与 SelectExecutorModal /
+        //   ReassignTaskModal / 巡查计划表单一致）；原用 oid 会让同一个人在
+        //   farm_tasks.assignee_id 里出现两种取值
+        code: u.id || u.oid || '',
         name: u.name || u.real_name || u.username || '',
       })).filter((p) => p.name),
     [users]

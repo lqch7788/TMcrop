@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
 import { AlertCircle, Clock, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
-import { useWorkerStore } from '../../../../stores';
+import { useUserStore } from '../../../../stores';
 // ★ 排班联动：派发后同步 schedule.dispatched_task_ids
 import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 // 2026-10-20：AI 派工链（AIRecommendationPanel / useComprehensiveDispatch /
@@ -69,25 +69,32 @@ function SelectExecutorModalContent({
   onConfirm: (assigneeId: string, assigneeName: string) => void;
   onClose: () => void;
 }) {
-  // 从Store获取员工列表（替换原 taskDispatchStaff mock数据）
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
-  const taskDispatchStaff = useMemo(() => (Array.isArray(workers) ? workers : []).map(w => ({
-    id: w.id,
-    name: w.name,
-    status: w.status,
-    role: w.position || 'worker',
-    skills: w.skillTags || [],
-    workZone: w.department || '',
-    workLoad: 0,
-  })), [workers]);
+  // 执行人改读登录账号（2026-10-24）：
+  //   原先读 useWorkerStore（人事员工档案：张三/李四/王五…），与「新建任务」弹窗用的
+  //   users（5 个登录账号）不是同一套人 —— 同一条任务流里两个下拉框给出两份名单，
+  //   派工后工作日志按登录用户过滤不到。业务执行人统一以登录账号为准，
+  //   人事档案（employees）只服务人事/考勤/薪资模块。
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
+  const taskDispatchStaff = useMemo(() => (Array.isArray(users) ? users : [])
+    // Radix Select 不接受空 value，剔除无 id 的用户
+    .filter((u) => !!u.id)
+    .map(u => ({
+      id: u.id as string,
+      name: u.name || u.real_name || u.username || '',
+      status: (u.status as string) || 'active',
+      role: u.role || u.position || '执行人员工',
+      skills: [] as string[],
+      workZone: '',
+      workLoad: 0,
+    })), [users]);
 
-  // 加载员工数据
+  // 加载登录用户
   useEffect(() => {
-    if (!Array.isArray(workers) || workers.length === 0) {
-      loadWorkers();
+    if (!Array.isArray(users) || users.length === 0) {
+      void loadUsers();
     }
-  }, [workers, loadWorkers]);
+  }, [users, loadUsers]);
 
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   // ★ 排班联动 hook：派发成功后 fire-and-forget 同步占用
@@ -99,9 +106,12 @@ function SelectExecutorModalContent({
   //   （memory: farm-hub-freeze-ai-chain）。智能任务中心尚未完全实现，
   //   农事管理的数据一律走「人工新建 → 人工派发 → 人工执行」，不设自动智能处理。
 
-  // 执行人状态映射
+  // 执行人状态映射（2026-10-24：补登录账号的 active/inactive —— 原映射只覆盖员工档案
+  //   的 available/busy/off，换成 users 后状态会直接显示英文 'active'）
   const getStatusLabel = (status: string) => {
     const statusMap: Record<string, string> = {
+      active: '正常',
+      inactive: '停用',
       available: '空闲',
       busy: '工作中',
       off: '休息中',
@@ -111,6 +121,7 @@ function SelectExecutorModalContent({
 
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
+      active: 'text-green-600 bg-green-50',
       available: 'text-green-600 bg-green-50',
       busy: 'text-orange-600 bg-orange-50',
       off: 'text-gray-600 bg-gray-50',

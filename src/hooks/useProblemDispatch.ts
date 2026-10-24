@@ -9,8 +9,10 @@ import { useProblemStore, type ProblemData } from '../stores/useProblemStore';
 import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
 import { useTasks } from './useTasks';
 import type { Task } from '../types';
-import { useWorkerStore } from '../stores/useWorkerStore';
+import { useUserStore } from '../stores/useUserStore';
 import { useInspectionDataStore } from '../stores/useInspectionDataStore';
+// 2026-10-24：问题/巡查整改提交后同步写工作日志（原先只有任务进度会写）
+import { usePersistentWorkLogs } from './usePersistentWorkLogs';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-10-21：问题 → 任务类型映射（巡查类型 + 问题分类优先，关键词兜底）
 import { resolveProblemTaskType, getTaskTypeName } from '../utils/problemTaskType';
@@ -171,16 +173,18 @@ export function useProblemDispatch() {
 
   // 使用 useTasks 来统一管理任务（确保任务状态同步）
   const { tasks, createTask, updateTask, updateTaskStatus } = useTasks();
+  // 2026-10-24：问题整改写工作日志用（作业人自动取当前登录用户）
+  const { syncWorkLogFromTask } = usePersistentWorkLogs();
   const [dispatchRecords, setDispatchRecords] = useLocalStorage<DispatchRecord[]>(
     STORAGE_KEYS.DISPATCH_RECORDS,
     []
   );
 
-  // 确保员工数据已加载
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  // 确保登录用户数据已加载（2026-10-24：执行人统一为登录账号）
+  const loadUsers = useUserStore((s) => s.loadUsers);
   useEffect(() => {
-    loadWorkers();
-  }, [loadWorkers]);
+    void loadUsers();
+  }, [loadUsers]);
 
   // 辅助：从 ProblemData 获取问题描述文本
   const getIssueText = (p: ProblemData): string => p.issueText || p.description || p.title || '';
@@ -523,7 +527,28 @@ export function useProblemDispatch() {
       handleDate: todayLocal(),
       flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
-  }, [storeProblems, updateProblemInStore]);
+
+    // 2026-10-24：同步一条工作日志。
+    //   原先只有任务进度（useTasks.submitProgress）会触发 syncWorkLogFromTask，
+    //   巡查问题处理完不留任何工作日志，「我的工作日志」看不到整改记录。
+    //   去重键用 `PROBLEM_${id}` 而不是 sourceTaskId —— 后者会让同一任务的
+    //   进度日志与整改日志互相覆盖；重复提交只更新这一条。
+    //   作业人由 syncWorkLogFromTask 取当前登录用户（测试阶段统一为管理员）。
+    syncWorkLogFromTask(
+      {
+        id: `PROBLEM_${problem.id}`,
+        taskCode: problem.problemCode || problem.problem_code || String(problem.id),
+        assigneeName: operatorName,
+        cropName: '',
+        greenhouseName: problem.greenhouseName || problem.greenhouse_name || '',
+        title: problem.title || problem.problem_title || '巡查问题整改',
+      },
+      {
+        progress: 100,
+        notes: feedback.resultText || '问题处理完成，提交验收',
+      },
+    );
+  }, [storeProblems, updateProblemInStore, syncWorkLogFromTask]);
 
   // 记录进度
   const addProgressRecord = useCallback((
@@ -650,32 +675,37 @@ export function useProblemDispatch() {
     return getFlowRecords(problem!) as any;
   }, [storeProblems]);
 
-  // 获取员工列表
-  const storeWorkers = useWorkerStore((s) => s.workers);
+  /**
+   * 分派候选执行人（2026-10-24：改读登录账号）
+   *
+   * 原实现读 useWorkerStore（人事员工档案：张三/李四/王五…），而任务派工、巡查计划
+   * 都已统一到 users。问题分派弹窗因此成了漏网的一处 —— 同一个系统里两个「选执行人」
+   * 给出两份名单，派完活工作日志按登录用户过滤不到。
+   *
+   * 只保留有 id（Radix 列表需要）且状态为 active 的账号；「陆启闯」置顶是测试阶段的
+   * 既有约定，保留。
+   */
+  const storeUsers = useUserStore((s) => s.users);
   const workerList = useMemo(() => {
-    // 2026-10-22：status 取值有中英两套 —— 后端 employees 表与 /labor/workers/active
-    //   返回的是英文 'active'（labor.repository.findActiveEmployees 里 WHERE status='active'），
-    //   而前端多处按中文 '在职' 过滤 → 候选执行人列表恒为空，
-    //   分派弹窗显示「暂无可用执行人」且「确认分派」永远禁用（问题分派整条链路不可用）。
-    //   口径与 useWorkerPersonnel / AddOperationRecordModal 的 legacyActive 保持一致。
-    const legacyActive = 'active' as string;
-    const filtered = storeWorkers
-      .filter(w => w.status === '在职' || w.status === legacyActive)
-      .map(w => ({
-        id: w.id,
-        workerId: w.workerId,
-        name: w.name,
-        position: w.position,
-        skillTags: w.skillTags || [],
-        status: w.status,
-      }));
+    const filtered = (Array.isArray(storeUsers) ? storeUsers : [])
+      .filter(u => !!u.id)
+      .filter(u => !u.status || (u.status as string) === 'active')
+      .map(u => ({
+        id: u.id as string,
+        workerId: u.id as string,
+        name: u.name || u.real_name || u.username || '',
+        position: u.role || u.position || '',
+        skillTags: [] as string[],
+        status: 'active',
+      }))
+      .filter(w => w.name);
     const luzhuchuangIndex = filtered.findIndex(w => w.name === '陆启闯');
     if (luzhuchuangIndex > 0) {
       const luzhuchuang = filtered.splice(luzhuchuangIndex, 1)[0];
       filtered.unshift(luzhuchuang);
     }
     return filtered;
-  }, [storeWorkers]);
+  }, [storeUsers]);
 
   return {
     // 问题统计

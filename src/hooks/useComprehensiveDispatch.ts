@@ -9,7 +9,7 @@ import { useTasks } from './useTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { useEnvironmentData } from './useEnvironmentData';
-import { useWorkerStore } from '../stores/useWorkerStore';
+import { useUserStore } from '../stores/useUserStore';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { todayLocal } from '../lib/dateUtils';
 import type { Task } from './useTasks';
@@ -717,54 +717,55 @@ export function useComprehensiveDispatch() {
   }, [farmTasks, pendingProblems]);
 
   // 3. 构建员工综合状态
+  // 2026-10-24：基础人员改读登录账号（useUserStore）——
+  //   原读人事员工档案（张三/李四…），而问题分派的「手动选择」已改为登录账号，
+  //   两份名单对不上 → AI 推荐出来的 id 在候选列表里找不到，点了选不中人。
+  const storeUsers = useUserStore((s) => s.users);
   const workers = useMemo((): WorkerComprehensiveStatus[] => {
-    // 从 useWorkerStore 获取工人基础信息
-    const storeWorkers = useWorkerStore.getState().workers;
-    return storeWorkers.map(w => {
-      // 计算今日已用工时（从考勤记录）
-      const today = new Date().toISOString().split('T')[0];
-      const todayRecords = attendanceRecords.filter(
-        r => r.date === today && r.name === w.name
-      );
-      const usedHours = todayRecords.reduce((sum, r) => sum + (r.hours || 0), 0);
+    return (Array.isArray(storeUsers) ? storeUsers : [])
+      .filter(u => !!u.id)
+      .map(u => {
+        const name = u.name || u.real_name || u.username || '';
+        // 计算今日已用工时（从考勤记录）
+        const today = new Date().toISOString().split('T')[0];
+        const todayRecords = attendanceRecords.filter(
+          r => r.date === today && r.name === name
+        );
+        const usedHours = todayRecords.reduce((sum, r) => sum + (r.hours || 0), 0);
 
-      // 计算员工当前负荷（基于进行中的任务数估算）
-      const workerTasks = farmTasks.filter(
-        t => t.assigneeName === w.name && t.status === 'in_progress'
-      );
-      // 2026-10-21（阶段 3）：临时任务已并入 farmTasks，不再单独统计
-      const taskLoad = workerTasks.length * 20; // 每任务约20%负荷
+        // 计算员工当前负荷（基于进行中的任务数估算）
+        const workerTasks = farmTasks.filter(
+          t => t.assigneeName === name && t.status === 'in_progress'
+        );
+        const taskLoad = workerTasks.length * 20;
 
-      // 计算对各批次的熟悉度（基于历史任务数量估算）
-      const batchFamiliarity: Record<string, number> = {};
-      farmTasks.forEach(t => {
-        if (t.assigneeName === w.name && t.batchCode) {
-          batchFamiliarity[t.batchCode] = Math.min(
-            100,
-            (batchFamiliarity[t.batchCode] || 0) + 10
-          );
-        }
-      });
+        // 计算对各批次的熟悉度（基于历史任务数量估算）
+        const batchFamiliarity: Record<string, number> = {};
+        farmTasks.forEach(t => {
+          if (t.assigneeName === name && t.batchCode) {
+            batchFamiliarity[t.batchCode] = Math.min(
+              100,
+              (batchFamiliarity[t.batchCode] || 0) + 10
+            );
+          }
+        });
 
-      return {
-        id: w.id,
-        name: w.name,
-        // Worker类型无 workerType 字段，统一默认'正式工'
-        workerType: '正式工',
-        // Worker类型用 workArea 映射到 workZone
-        workZone: w.workArea || 'A区',
-        skills: w.skillTags || [],
-        currentLoad: Math.min(100, taskLoad),
-        availableHoursToday: Math.max(0, 8 - usedHours), // 假设每天工作8小时
-        // Worker类型无 recentPerformance 字段，使用默认值
-        recentPerformance: 85,
-        // Worker类型无 distance 字段，使用默认区域距离
-        distance: { 'A区': 1, 'B区': 2, 'C区': 3 },
-        batchFamiliarity,
-        attendanceStatus: usedHours > 0 ? 'working' : 'off',
-      };
-    });
-  }, [farmTasks, attendanceRecords]);
+        return {
+          id: u.id as string,
+          name,
+          workerType: '正式工',
+          workZone: u.department_name || 'A区',
+          skills: [] as string[],
+          currentLoad: Math.min(100, taskLoad),
+          availableHoursToday: Math.max(0, 8 - usedHours),
+          recentPerformance: 85,
+          distance: { 'A区': 1, 'B区': 2, 'C区': 3 },
+          batchFamiliarity,
+          attendanceStatus: usedHours > 0 ? ('working' as const) : ('off' as const),
+        };
+      })
+      .filter(w => w.name);
+  }, [storeUsers, farmTasks, attendanceRecords]);
 
   // 4. AI推荐算法
   const getRecommendations = useCallback(

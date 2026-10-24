@@ -18,7 +18,7 @@ import { Button, DatePicker, FormField, Input, Modal, NumberInput, Select, Selec
 import { Search } from 'lucide-react';
 import { useInspectionPlanStore, type InspectionPlan, type PlanChecklistItem } from '@/stores/useInspectionPlanStore';
 // 2026-10-22（遗留项 5）：执行人改为员工选择器（数据源 = 员工档案）
-import { useWorkerStore } from '@/stores/useWorkerStore';
+import { useUserStore } from '@/stores/useUserStore';
 // 2026-10-23：种植区域巡查的巡查对象改为「种植/育苗单号」可搜索选择，
 //   数据源与「农事任务 → 新建任务」「新增巡查记录」保持一致。
 import { usePlantingStore, useSeedlingStore } from '@/stores';
@@ -55,18 +55,29 @@ export function InspectionPlanFormModal({ isOpen, plan, onClose, onSaved }: Prop
 
   // 2026-10-22（遗留项 5）：执行人从「自由文本」改为「员工档案选择」。
   //   原实现把姓名同时写进 assigneeId / assigneeName，语义不干净：
-  //   assigneeId 应当是 employees.id，否则排班侧每次都要靠姓名反查。
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  //   assigneeId 应当是 users.id，否则排班侧每次都要靠姓名反查。
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
   useEffect(() => {
-    if (isOpen && workers.length === 0) void loadWorkers();
-  }, [isOpen, workers.length, loadWorkers]);
+    if (isOpen && users.length === 0) void loadUsers();
+  }, [isOpen, users.length, loadUsers]);
 
-  // 在职员工（口径与 useWorkerPersonnel / apiWorkerService 的 legacyActive 约定一致：
-  //   后端历史数据是 'active'，前端展示层是 '在职'，两种都要认）
+  // 执行人候选：统一读登录账号（2026-10-24）
+  //   原先读人事员工档案（张三/李四/王五…），与「新建任务」用的 users 是两套人，
+  //   导致巡查计划生成的实例派给非登录用户，工作日志按登录用户过滤不到。
+  //   人事档案只服务人事/考勤/薪资模块。
+  //   过滤口径：只保留有 id 的（Radix Select 不接受空 value）且状态为 active 的账号。
   const activeWorkers = useMemo(
-    () => workers.filter((w) => w.status === '在职' || (w.status as string) === 'active'),
-    [workers],
+    () => (Array.isArray(users) ? users : [])
+      .filter((u) => !!u.id)
+      .filter((u) => !u.status || (u.status as string) === 'active')
+      .map((u) => ({
+        id: u.id as string,
+        name: u.name || u.real_name || u.username || '',
+        team: u.department_name || '',
+      }))
+      .filter((w) => w.name),
+    [users],
   );
 
   // 2026-10-23：种植区域巡查的巡查对象数据源（种植 / 育苗台账）

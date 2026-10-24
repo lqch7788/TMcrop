@@ -15,7 +15,7 @@ import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { useGreenhouseStore, useWorkerStore, useWarehouseMaterialStore } from '../../../../stores';
+import { useGreenhouseStore, useUserStore, useWarehouseMaterialStore } from '../../../../stores';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -39,13 +39,13 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
   const { addRecord } = useOperationRecords();
   const greenhouses = useGreenhouseStore((s) => s.greenhouses);
   const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
 
   useEffect(() => {
     if (greenhouses.length === 0) loadGreenhouses();
-    if (workers.length === 0) loadWorkers();
-  }, [greenhouses.length, loadGreenhouses, workers.length, loadWorkers]);
+    if (users.length === 0) loadUsers();
+  }, [greenhouses.length, loadGreenhouses, users.length, loadUsers]);
 
   // 仓库物料主数据（用于动态生成物料多选下拉，已废弃硬编码 materialOptions）
   const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
@@ -60,16 +60,14 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     [greenhouses]
   );
 
-  // 操作人员选项（从Store获取）
-  // 2026-10-11：Worker.status 的联合类型与实际值是 '在职'|'离职'|'退休'，
-  //   原与 'active' 比较恒为 false → 操作人员下拉恒为空。按「在职」过滤，
-  //   并保留历史英文枚举兜底（同 useWorkerPersonnel 的 legacyActive 口径）。
-  const operatorOptions = useMemo(() => {
-    const legacyActive = 'active' as string;
-    return workers
-      .filter(w => w.status === '在职' || w.status === legacyActive)
-      .map(w => ({ value: w.id, label: w.name }));
-  }, [workers]);
+  // 操作人员选项：统一读登录账号（2026-10-24，原读人事员工档案会与任务派工两套人）
+  const operatorOptions = useMemo(
+    () => (Array.isArray(users) ? users : [])
+      .filter((u) => !!u.id)
+      .map((u) => ({ value: u.id as string, label: u.name || u.real_name || u.username || '' }))
+      .filter((o) => o.label),
+    [users],
+  );
 
   // 动态物料多选选项：来自仓库物料主数据，保留"其他"作为兜底
   const materialOptions = useMemo(() => {
