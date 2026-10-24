@@ -6,7 +6,9 @@
 >
 > **Parent:** `docs/superpowers/plans/2026-10-24-employee-identity-management-plan.md`（立项规划，含 E1~E8 全期）
 >
-> **状态：** 待实施　**编制日期：** 2026-10-24
+> **状态：** ✅ **已实施并验证完成**（2026-10-24）　**编制日期：** 2026-10-24
+>
+> **运行手册：** `docs/superpowers/plans/2026-10-24-employee-identity-e1-runbook.md`
 
 ---
 
@@ -368,3 +370,82 @@ Task 6（全量验证与回归）
 ```
 
 **建议把 Task 1 + Task 5 作为第一个 commit**（纯代码与文档，零数据风险，可独立评审），Task 2 + 3 作为第二个 commit（停服窗口内的结构 + 数据变更），Task 4 作为第三个 commit。
+
+---
+
+## 8. 实施记录（2026-10-24 已全部完成）
+
+### 8.1 提交清单
+
+| commit | 内容 |
+|---|---|
+| `925e9f97` | Task 1 归一工具 `resolveEmployeeIdentity` + 15 例单测 |
+| `81a9c09d` | Task 2/3 `users.employee_id` 三处同改 + 迁移脚本 |
+| `6920ca7b` | Task 5 员工身份契约 spec + CLAUDE.md 指针 + FK 归因更正 |
+| `2adefc6e` | Task 4 `resolveEmployeeId` 改委托 + 10 例集成测试 |
+| `d53394ff` | 人事管理性别/年龄降级渲染 + E1 迁移 Runbook |
+| `2d6f66b0` | 集成测试元组类型修正 |
+
+### 8.2 生产库迁移执行结果
+
+| 项 | 迁移前 | 迁移后 |
+|---|---|---|
+| `employees` 行数 | 6 | **9** |
+| `users` 已挂靠 `employee_id` | 0 | **3** |
+| 悬挂引用 | — | **0** |
+| `team_members` 行数 / 孤儿 | 9 / 0 | **9 / 0**（未受影响） |
+| `users.employee_id` 列 | 不存在 | **已添加 + 索引** |
+
+备份：`server/data/backups/yuanxingtu.db.bak-employee-identity-<ts>`
+报告：`server/data/employee-identity-report.<ts>.json`（已 gitignore）
+
+### 8.3 停服窗口发现的问题
+
+执行时发现**同时跑着 5 个 `tsx watch src/index.ts` 实例**（只有 1 个占着 3001）。其余 4 个各持一份迁移前的**内存 DB 快照** —— 任何一个写盘都会覆盖迁移结果。已全部停下（node 进程 60 → 49，释放 443 MB），Vite 前端保留未动。
+
+> 这是 memory `zombie-processes-db-conflict` 的同类问题，已写入 Runbook 步骤 1。
+
+### 8.4 端到端证据（Task 4 收口）
+
+迁移 + 重启后端后，**用户在系统里真实派工**产生的排班行：
+
+```
+id=1792819268909_mtt9qmh  task_id=NS20261024-394
+worker_id=EMP_007  worker_name=陆启闯  created_at=2026-10-24T05:21:08Z
+```
+
+链路：派工 → `syncAfterDispatch` → `auto-assign` → `resolveEmployeeId`（委托）→ `resolveEmployeeIdentity` → `users.employee_id` → `employees.id` → `EMP_007`。
+
+历史 38 行仍是 `user-admin`（迁移前遗留，归 E4 处理）。
+
+### 8.5 迁移脚本的实测缺陷（已修）
+
+用**合成库**跑 `--apply` 全路径时拦下一个真 bug：`users` 的时间列是 `updated_at`，而 `employees` 是 `update_time` —— 第一版写成 `update_time` 直接 `no such column`。事务正确回滚（列未残留、行数未变），修正后重跑通过。
+
+> 教训：迁移脚本必须在合成库上跑通 `--apply` 全路径，不能只跑 `--dry-run`。
+
+### 8.6 3 个新员工档案的字段完整度（用户已确认保留）
+
+| 字段 | 状态 | 说明 |
+|---|---|---|
+| `phone` | ✅ 3/3 已回填 | 源 `users.phone`，无损映射 |
+| `remarks` | ✅ 3/3 已标注 | 记录账号关联 + 待补录项 |
+| `gender` / `id_card` / `skills` | ⬜ 保留空值 | **全库无任何来源**（已核实 `users` 无这三列，`onboarding_records`/`contracts` 也无这些人），用户确认不编造 |
+
+已知副作用：回填手机号后出现 2 对重复（张俊生=张三 `13800138001`、王建国=李四 `13800138002`），因 `users` 与 `employees` 两套演示数据序列撞车。用户确认保留（演示数据，手机号无唯一约束、不参与任何流程）。
+
+### 8.7 顺带修掉的既有缺陷
+
+| 缺陷 | 位置 | 处置 |
+|---|---|---|
+| 员工姓名行渲染出孤立的「岁」 | `PersonnelTable.tsx:122` / `PersonnelDetailModal.tsx:29` | 缺 gender/age 时按项过滤，不再渲染空单位 |
+| 人事管理「员工信息」页错误挂载农事 AI 面板 | `StaffManagementPage.tsx:267` `<AIPanel context="员工管理" />` | 已移除（AIPanel 正位是智能任务中心，另有 3 处引用不受影响） |
+
+### 8.8 发现但**未修**的既有问题（不在 E1 范围）
+
+| 问题 | 说明 |
+|---|---|
+| `getSkillTags` 永远返回空 | `employees.skills` 实际存逗号分隔（`"种植,采收,施肥"`），但 `labor.repository.ts:593` 用 `JSON.parse` 解析 → 必然抛错被 `catch` 静默丢弃 |
+| 人事「技能档案」Tab 无后端 | `useSkillStore` 用 mock 种子 + localStorage 持久化，违反项目「禁止 localStorage 兜底」铁律，且无对应后端表 |
+| 部门 ID 三套互不相通 | `employees.department_id` 用 `DEPT_001~005`（主表里不存在）、`users.department_oid` 用 `ORG001/002`、`departments` 主表用 `D001~D005`。现有 6 人的部门筛选同样失效 |
+| 人事列表部门/班组/岗位列显示空 | 影响全部 9 人，非本次引入 |
