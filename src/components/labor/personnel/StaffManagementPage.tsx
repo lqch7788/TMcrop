@@ -13,8 +13,6 @@ import { todayLocal } from '@/lib/dateUtils';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
-// ★ 2026-08-25 PR-D3：接入 AIPanel
-import { AIPanel } from '../../farm/ai/AIPanel';
 
 export function StaffManagementPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -263,8 +261,13 @@ export function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* ★ 2026-08-25 PR-D3：AI 助手（覆盖 AI-15 出勤异常 + AI-12 问答 + AI-02 排班） */}
-      <AIPanel context="员工管理" />
+      {/* 2026-10-24：移除页面顶部的 AIPanel（"AI 智能助手（15 模块）"）。
+          该面板的正位是农事管理 → 智能任务中心 →「AI 智能助手」Tab（TaskCenterPage），
+          在人事管理的「员工信息」页重复出现属于错误挂载：
+            · 该 Tab 本身标注「未完全实现」，进入前还有二次确认
+            · 它会拉起整条 AI 调度链（AI-15 出勤异常 / AI-12 问答 / AI-02 排班），
+              与人工管理的人工优先口径冲突
+            · 本页主诉是员工档案 CRUD，顶部插一整块 AI 面板喧宾夺主 */}
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
