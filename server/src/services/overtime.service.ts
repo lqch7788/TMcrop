@@ -37,7 +37,8 @@ export class OvertimeService {
     const { workerId, department, status, startDate, endDate, page = 1, limit = 20 } = params;
 
     const sql = 'SELECT * FROM overtime_records WHERE 1=1';
-    const conditions: string[] = [];
+    // 2026-10-24 员工身份管理 E2：默认排除归档行（列表与下方计数共用 conditions，口径一致）
+    const conditions: string[] = ['COALESCE(is_archived, 0) = 0'];
     const queryParams: any[] = [];
 
     if (workerId) {

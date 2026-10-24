@@ -20,7 +20,8 @@ router.get('/', (req: Request, res: Response) => {
     const { start_date, end_date, dept, keyword, page = '1', limit = '100' } = req.query;
     const db = getDatabase();
 
-    let sql = 'SELECT * FROM attendance_records WHERE 1=1';
+    // 2026-10-24 员工身份管理 E2：默认排除归档行（历史 mock / 无法归一到员工的记录）
+    let sql = 'SELECT * FROM attendance_records WHERE COALESCE(is_archived, 0) = 0';
     const params: any[] = [];
 
     if (start_date) {
@@ -58,8 +59,8 @@ router.get('/', (req: Request, res: Response) => {
       }, {});
     }) : [];
 
-    // 获取总数
-    let countSql = 'SELECT COUNT(*) as total FROM attendance_records WHERE 1=1';
+    // 获取总数（2026-10-24 E2：与列表口径一致，排除归档行）
+    let countSql = 'SELECT COUNT(*) as total FROM attendance_records WHERE COALESCE(is_archived, 0) = 0';
     const countParams: any[] = [];
     if (start_date) { countSql += ' AND date >= ?'; countParams.push(start_date); }
     if (end_date) { countSql += ' AND date <= ?'; countParams.push(end_date); }

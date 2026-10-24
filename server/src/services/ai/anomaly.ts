@@ -308,6 +308,7 @@ export async function detectAnomalies(input: AnomalyInput): Promise<AnomalyResul
              COUNT(*) AS total_days
       FROM attendance_records
       WHERE date > datetime('now', '-${lookbackDays} day')
+        AND COALESCE(is_archived, 0) = 0
       GROUP BY worker_id
       HAVING total_days >= 10
     `);

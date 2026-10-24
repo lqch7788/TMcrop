@@ -83,6 +83,7 @@ function batchQueryAttendance(lookback: number, teamId?: string): Map<string, {
        COALESCE(SUM(ar.hours), 0) AS total_hours
      FROM attendance_records ar
      WHERE ar.date &gt; datetime('now', '-' || ? || ' day')
+       AND COALESCE(ar.is_archived, 0) = 0
        ${teamId ? "AND ar.worker_id IN (SELECT member_id FROM team_members WHERE team_id = ? AND status = 'active')" : ''}
      GROUP BY ar.worker_id`,
     teamId ? [lookback, teamId] : [lookback]
@@ -113,6 +114,7 @@ function batchQueryAttendance(lookback: number, teamId?: string): Map<string, {
     const consecRows = db.exec(
       `SELECT date, status FROM attendance_records
        WHERE worker_id = ? AND date > datetime('now', '-' || ? || ' day')
+         AND COALESCE(is_archived, 0) = 0
        ORDER BY date DESC LIMIT 30`,
       [workerId, lookback] as any[]
     );

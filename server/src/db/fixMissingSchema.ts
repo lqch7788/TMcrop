@@ -1358,6 +1358,31 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 39. 考勤/假勤三表添加归档列（2026-10-24 员工身份管理 E2）
+  //   作用：历史 mock / 无法归一到员工的记录不物理删除（审计留存），改打标归档，
+  //     列表与统计默认过滤 is_archived = 0。
+  //   注意：启动白名单已禁用本函数（server/src/index.ts:182），
+  //     实际生效的是迁移脚本 server/scripts/db-migrations/migrateAttendanceIdentity.cjs；
+  //     这里保留是为了脚本调用 fixMissingSchema 时也能补列。
+  const attendanceArchiveColumns: Array<{ table: string; name: string; sql: string }> = [
+    { table: 'attendance_records', name: 'is_archived', sql: 'ALTER TABLE attendance_records ADD COLUMN is_archived INTEGER DEFAULT 0' },
+    { table: 'attendance_records', name: 'archived_reason', sql: 'ALTER TABLE attendance_records ADD COLUMN archived_reason TEXT' },
+    { table: 'overtime_records', name: 'is_archived', sql: 'ALTER TABLE overtime_records ADD COLUMN is_archived INTEGER DEFAULT 0' },
+    { table: 'overtime_records', name: 'archived_reason', sql: 'ALTER TABLE overtime_records ADD COLUMN archived_reason TEXT' },
+    { table: 'leave_records', name: 'is_archived', sql: 'ALTER TABLE leave_records ADD COLUMN is_archived INTEGER DEFAULT 0' },
+    { table: 'leave_records', name: 'archived_reason', sql: 'ALTER TABLE leave_records ADD COLUMN archived_reason TEXT' },
+  ];
+  for (const col of attendanceArchiveColumns) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ ${col.table} 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• ${col.table}.${col.name}:`, e.message);
+      }
+    }
+  }
+
   // 38. users 表添加 employee_id（2026-10-24 员工身份管理 E1 / Task 2）
   //   作用：登录账号 → 员工档案的确定性通道（决策 D-B：1:N，列可空）。
   //     业务表人员列一律存 employees.id；users.id → employees.id 走本列转换，

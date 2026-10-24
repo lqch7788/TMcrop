@@ -876,7 +876,8 @@ router.get('/module-health', (_req: Request, res: Response) => {
       // 人工管理
       labor: {
         employees: pick("SELECT COUNT(*) AS total FROM employees WHERE status = 'active'", 'total'),
-        attendanceRecords: pick('SELECT COUNT(*) AS total FROM attendance_records', 'total'),
+        // 2026-10-24 员工身份管理 E2：统计口径排除归档行（与考勤列表一致）
+        attendanceRecords: pick('SELECT COUNT(*) AS total FROM attendance_records WHERE COALESCE(is_archived, 0) = 0', 'total'),
         workHours: pick('SELECT COALESCE(SUM(work_hours), 0) AS total FROM labor_records', 'total'),
         workLogs: pick('SELECT COUNT(*) AS total FROM work_logs', 'total'),
       },

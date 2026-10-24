@@ -1061,7 +1061,11 @@ export function initializeDatabase() {
       remarks TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-10-24 员工身份管理 E2：归档标记
+      --   历史 mock/无法归一的考勤行不物理删除（审计留存），改打标归档，列表/统计默认过滤
+      is_archived INTEGER DEFAULT 0,
+      archived_reason TEXT
     )
   `);
 
@@ -2437,7 +2441,10 @@ export function initializeDatabase() {
       remarks TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-10-24 员工身份管理 E2：归档标记（同 attendance_records）
+      is_archived INTEGER DEFAULT 0,
+      archived_reason TEXT
     )
   `);
 
@@ -2461,7 +2468,10 @@ export function initializeDatabase() {
       remarks TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-10-24 员工身份管理 E2：归档标记（同 attendance_records）
+      is_archived INTEGER DEFAULT 0,
+      archived_reason TEXT
     )
   `);
 
