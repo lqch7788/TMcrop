@@ -257,6 +257,40 @@ export interface Task {
   cropName?: string;
   /** 作物备注（「作物 = 其他」时的说明文字）。2026-10-20 补：此前只存在于 TaskTableRow 的局部类型 */
   cropRemarks?: string;
+
+  // ===== 2026-10-24：后端一直返回、但转换层此前丢弃的字段 =====
+  //   用于任务详情的完整展示与后续追溯核查（缺一个就少一份证据）。
+  /** 任务内容（后端 task_content 列；description 已在下方声明） */
+  taskContent?: string;
+  /** 完成日期 / 完成备注 */
+  completionDate?: string;
+  completionNote?: string;
+  /** 验收驳回：时间 / 操作人 / 原因（后端 rejected_reason 列） */
+  rejectedAt?: string;
+  rejectedBy?: string;
+  rejectedReason?: string;
+  /** 实际工时录入（AI 训练数据） */
+  actualHours?: number;
+  actualHoursRecordedAt?: string;
+  actualHoursRecordedBy?: string;
+  estimatedVsActualRatio?: number;
+  /** 实际开始 / 结束时间 */
+  actualStartAt?: string;
+  actualEndAt?: string;
+  /** 派发审批 */
+  approvalCode?: string;
+  approvedAt?: string;
+  /** 创建人 */
+  createBy?: string;
+  createById?: string;
+  /** 进度百分比（后端 progress_pct 列） */
+  progressPct?: number;
+  /** 状态中文标签（后端 statusLabel 派生） */
+  statusLabel?: string;
+  /** 外包成本 */
+  outsourceCost?: number;
+  /** 实际面积 */
+  actualArea?: number;
   teamId?: string;           // 关联班组ID（来自农事管理-班组分配）
   teamName?: string;         // 关联班组名称
 

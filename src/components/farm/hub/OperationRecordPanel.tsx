@@ -22,10 +22,20 @@ const ACTION_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   accept: { label: '接受', color: 'bg-green-100 text-green-700' },
   reject: { label: '拒绝', color: 'bg-red-100 text-red-700' },
   progress: { label: '进度', color: 'bg-orange-100 text-orange-700' },
+  submit_progress: { label: '提交进度', color: 'bg-orange-100 text-orange-700' },
   submit: { label: '提交', color: 'bg-cyan-100 text-cyan-700' },
   verify: { label: '验收', color: 'bg-teal-100 text-teal-700' },
   report: { label: '上报', color: 'bg-yellow-100 text-yellow-700' },
   inspect: { label: '巡查', color: 'bg-indigo-100 text-indigo-700' },
+  // 2026-10-24：补齐实际出现的 action，否则徽章显示英文原值
+  status_change: { label: '状态变更', color: 'bg-gray-100 text-gray-700' },
+  start: { label: '开始执行', color: 'bg-green-100 text-green-700' },
+  continue: { label: '继续执行', color: 'bg-blue-100 text-blue-700' },
+  reassign: { label: '重新派发', color: 'bg-purple-100 text-purple-700' },
+  withdraw: { label: '撤回', color: 'bg-gray-100 text-gray-700' },
+  cancel: { label: '取消', color: 'bg-gray-100 text-gray-700' },
+  update: { label: '修改', color: 'bg-amber-100 text-amber-700' },
+  complete: { label: '完成', color: 'bg-teal-100 text-teal-700' },
 };
 
 // 操作类型中文映射（用于导出）
@@ -35,6 +45,7 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   accept: '接受',
   reject: '拒绝',
   progress: '进度更新',
+  submit_progress: '提交进度',
   submit: '提交',
   verify: '验收',
   report: '上报',
@@ -46,6 +57,15 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   reassign: '重新分派',
   cancel: '取消',
   abandon: '放弃',
+  // 2026-10-24：补齐实际出现的 action（导出表格此前会写出英文）
+  status_change: '状态变更',
+  start: '开始执行',
+  continue: '继续执行',
+  update: '修改',
+  batch_update: '批量修改',
+  complete: '完成',
+  remind: '催办',
+  publish: '发布',
 };
 
 // 状态中文映射（用于导出）

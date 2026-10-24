@@ -24,9 +24,12 @@ const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string
 
 // ========== 优先级映射（从 farmMockData 迁出，内联定义） ==========
 const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
+  critical: { label: '紧急', color: 'text-red-600' },
   urgent: { label: '紧急', color: 'text-red-500' },
   high: { label: '高', color: 'text-orange-500' },
   // 2026-10-11：补 medium/low（DB 实际存在 medium，缺失会显示成"普通"或英文）
+  // 2026-10-24：再补 critical —— 实测 farm_tasks.priority 有 2 条 critical，
+  //   缺失时详情弹窗直接显示英文 'critical'
   medium: { label: '中', color: 'text-yellow-500' },
   normal: { label: '普通', color: 'text-gray-500' },
   low: { label: '低', color: 'text-green-500' },

@@ -28,9 +28,14 @@ const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string
 
 // ========== 优先级映射（从 farmMockData 迁出，内联定义） ==========
 const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
+  // 2026-10-24：补齐 DB 实际存在的取值 —— 此前只有 urgent/high/normal，
+  //   medium(25条) / low(1条) / critical(2条) 在下拉与详情里会显示英文原值
+  critical: { label: '紧急', color: 'text-red-600' },
   urgent: { label: '紧急', color: 'text-red-500' },
   high: { label: '高', color: 'text-orange-500' },
+  medium: { label: '中', color: 'text-yellow-500' },
   normal: { label: '普通', color: 'text-gray-500' },
+  low: { label: '低', color: 'text-green-500' },
 };
 
 // ========== 任务类型定义 ==========

@@ -13,6 +13,47 @@ import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
 import type { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
 import { TaskRecordTimeline } from '../../common/TaskRecordTimeline';
+// 2026-10-24：任务类型 / 来源类型的中文兜底（避免 detail 里露出 irrigation / inspection_plan 等英文）
+import { resolveTaskTypeLabel } from '../../../types/farm/common';
+
+/**
+ * 任务来源类型 → 中文（2026-10-24）
+ * 原实现是三元链，只覆盖 dispatch / tempTask / inspection：
+ * DB 里 137 条 source_type='inspection_plan'、1 条 'problem' 全部落到 '-'（信息丢失）。
+ */
+const SOURCE_TYPE_LABEL: Record<string, string> = {
+  dispatch: '任务派工',
+  tempTask: '临时任务',
+  inspection: '巡查任务',
+  inspection_plan: '巡查计划',
+  problem: '问题整改',
+};
+
+/** 日期时间格式化（2026-10-24：时间线各节点统一展示口径） */
+function formatDateTime(v?: string): string {
+  if (!v) return '-';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+/**
+ * 领料单状态 → 中文（2026-10-24）
+ * /api/material-requests 返回的 status 是英文枚举（approved/pending/…），
+ * 原实现在「关联领料单」里直接渲染 → 显示英文。
+ * 口径与 material 模块 useApplicationTab 的 statusTextMap 保持一致。
+ */
+const MATERIAL_REQUEST_STATUS_LABEL: Record<string, string> = {
+  approved: '已审批',
+  pending: '待审批',
+  rejected: '已拒绝',
+  voided: '已作废',
+  cancelled: '已取消',
+  draft: '草稿',
+};
 // P0-7：任务绑定的作业标准（SOP）
 import { getSopBindings, type SopTaskBinding } from '../../../services/apiSopLibraryService';
 // 2026-08-22：AI 实际工时录入 UI
@@ -301,7 +342,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                   key={t}
                   className={`px-2 py-1 rounded text-xs text-white ${typeInfo?.color || 'bg-gray-500'}`}
                 >
-                  {typeInfo?.label || t}
+                  {typeInfo?.label || resolveTaskTypeLabel(t) || t}
                 </span>
               );
             })}
@@ -336,7 +377,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-xs text-gray-500">任务类型</Label>
-                  <p className="font-semibold text-gray-900">{task.typeName || task.type || '-'}</p>
+                  <p className="font-semibold text-gray-900">{task.typeName || resolveTaskTypeLabel(task.type) || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">任务区域</Label>
@@ -367,17 +408,33 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
             {/* 工作内容（2026-10-20 修复：此前被嵌在「来源信息」区块内部，
                 而该区块只在 task.sourceId 存在时渲染 —— 手工新建的任务没有来源 ID，
                 工作内容整块消失。现独立成块，与来源无关。） */}
-            {task.remarks && (
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  工作内容
-                </h4>
-                <p className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 rounded p-2">
-                  {task.remarks}
-                </p>
-              </div>
-            )}
+            {/* 2026-10-24：工作内容改读 description / taskContent。
+                原实现读 remarks（库里仅 6% 有值），而真正的任务说明在
+                description（81%）/ task_content（83%），详情里从未显示过。 */}
+            {(() => {
+              const workContent = task.description || task.taskContent || '';
+              const remarkText = task.remarks || '';
+              if (!workContent && !remarkText) return null;
+              return (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    工作内容
+                  </h4>
+                  {workContent && (
+                    <p className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 rounded p-2">
+                      {workContent}
+                    </p>
+                  )}
+                  {remarkText && (
+                    <div className={workContent ? 'mt-2' : ''}>
+                      <span className="text-xs text-gray-500">备注：</span>
+                      <span className="text-sm text-gray-700 whitespace-pre-line">{remarkText}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* 来源信息 - 蓝色背景 */}
             {task.sourceId && (
@@ -390,7 +447,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                   <div>
                     <Label className="text-xs text-blue-600">来源类型</Label>
                     <p className="font-semibold text-gray-900">
-                      {task.type === 'seedling' ? '育苗任务' : task.sourceType === 'dispatch' ? '任务派工' : task.sourceType === 'tempTask' ? '临时任务' : task.sourceType === 'inspection' ? '巡查任务' : '-'}
+                      {task.type === 'seedling' ? '育苗任务' : (SOURCE_TYPE_LABEL[task.sourceType || ''] || '-')}
                     </p>
                   </div>
                   {task.sourceCode && (
@@ -406,6 +463,38 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                 </div>
               </div>
             )}
+
+            {/* 关联信息 —— 2026-10-24：批次 / 班组 / 生产计划 / 创建人 / 审批
+                这些字段后端一直在返回，详情里此前一个都没展示，追溯时对不上来源单据。 */}
+            {(() => {
+              const rows = [
+                { label: '批次编号', value: task.batchCode || task.batchId },
+                { label: '所属班组', value: task.teamName || task.teamId },
+                { label: '生产计划', value: task.productionPlanCode || task.productionPlanId },
+                { label: '种植实例', value: task.plantingId },
+                { label: '创建人', value: task.createBy },
+                { label: '派发审批', value: task.approvalCode },
+                { label: '审批时间', value: task.approvedAt ? formatDateTime(task.approvedAt) : '' },
+                { label: '人工数量', value: task.workerCount ? `${task.workerCount} 人` : '' },
+              ].filter((r) => !!r.value);
+              if (rows.length === 0) return null;
+              return (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    关联信息
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {rows.map((r) => (
+                      <div key={r.label}>
+                        <Label className="text-xs text-slate-500">{r.label}</Label>
+                        <p className="font-semibold text-gray-900 text-sm break-all">{r.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 任务类型配置 - 紫色背景 */}
             <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
@@ -517,8 +606,93 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                     {!task.estimatedDays && !task.estimatedHours ? '-' : ''}
                   </p>
                 </div>
+                {task.dueDate && (
+                  <div>
+                    <Label className="text-xs text-sky-600">截止日期</Label>
+                    <p className="font-semibold text-gray-900">{task.dueDate}</p>
+                  </div>
+                )}
+                {/* 2026-10-24：实际发生的时间节点 —— 追溯核查需要，此前一律不展示 */}
+                {task.createdAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">创建时间</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.createdAt)}</p>
+                  </div>
+                )}
+                {task.assignerName && (
+                  <div>
+                    <Label className="text-xs text-sky-600">派发人</Label>
+                    <p className="font-semibold text-gray-900">{task.assignerName}</p>
+                  </div>
+                )}
+                {task.acceptedAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">接受时间</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.acceptedAt)}</p>
+                  </div>
+                )}
+                {task.actualStartAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">实际开始</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.actualStartAt)}</p>
+                  </div>
+                )}
+                {task.actualEndAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">实际结束</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.actualEndAt)}</p>
+                  </div>
+                )}
+                {task.completedAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">完成时间</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.completedAt)}</p>
+                  </div>
+                )}
+                {task.cancelledAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">取消时间</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.cancelledAt)}</p>
+                  </div>
+                )}
+                {task.rejectedAt && (
+                  <div>
+                    <Label className="text-xs text-sky-600">驳回时间</Label>
+                    <p className="font-semibold text-gray-900">{formatDateTime(task.rejectedAt)}</p>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* 异常与返工 —— 2026-10-24：取消/驳回/放弃原因、返工次数此前详情里完全看不到，
+                追溯时无法回答「为什么没做成」。只在有值时渲染。 */}
+            {(() => {
+              const rows = [
+                { label: '取消原因', value: task.cancelledReason },
+                { label: '驳回原因', value: task.rejectedReason },
+                { label: '放弃原因', value: task.abandonedReason },
+                { label: '完成备注', value: task.completionNote },
+                { label: '返工次数', value: (task.reworkCount || 0) > 0 ? `${task.reworkCount} 次` : '' },
+                { label: '执行人拒单', value: (task.executorRejectCount || 0) > 0 ? `${task.executorRejectCount} 次` : '' },
+              ].filter((r) => !!r.value);
+              if (rows.length === 0) return null;
+              return (
+                <div className="bg-red-50 rounded-lg p-4 border border-red-100">
+                  <h4 className="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    异常与返工
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {rows.map((r) => (
+                      <div key={r.label}>
+                        <Label className="text-xs text-red-600">{r.label}</Label>
+                        <p className="font-semibold text-gray-900 break-all">{r.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 实际完成工作量 - 绿色背景 */}
             {hasActualWorkload && (
@@ -649,7 +823,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, on
                     <div key={req.id} className="border border-gray-200 rounded-lg p-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-mono font-semibold text-gray-900">{req.code}</span>
-                        <span className="text-gray-500">{req.date} · {req.status}</span>
+                        <span className="text-gray-500">{req.date} · {MATERIAL_REQUEST_STATUS_LABEL[req.status] || req.status}</span>
                       </div>
                       {req.materials.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">

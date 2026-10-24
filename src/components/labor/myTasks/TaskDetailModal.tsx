@@ -126,6 +126,47 @@ export function TaskDetailModal({
           )}
         </div>
 
+        {/* 任务说明 —— 2026-10-24：description（库内 81%）/ taskContent（83%）
+            此前从未在「我的任务」详情里出现，执行人看不到任务要求。 */}
+        {(task.description || task.taskContent || task.remarks) && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">任务说明</h4>
+            <p className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 rounded p-3">
+              {task.description || task.taskContent || task.remarks}
+            </p>
+            {task.remarks && (task.description || task.taskContent) && task.remarks !== (task.description || task.taskContent) && (
+              <p className="mt-2 text-sm text-gray-600">
+                <span className="text-gray-500">备注：</span>{task.remarks}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* 异常与返工 —— 2026-10-24：取消/驳回/放弃原因此前详情里看不到 */}
+        {(() => {
+          const rows = [
+            { label: '取消原因', value: task.cancelledReason },
+            { label: '驳回原因', value: task.rejectedReason || task.rejectReason },
+            { label: '放弃原因', value: task.abandonedReason },
+            { label: '完成备注', value: task.completionNote },
+            { label: '返工次数', value: (task.reworkCount || 0) > 0 ? `${task.reworkCount} 次` : '' },
+          ].filter((r) => !!r.value);
+          if (rows.length === 0) return null;
+          return (
+            <div>
+              <h4 className="text-sm font-semibold text-red-700 mb-3">异常与返工</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-red-50 rounded-lg p-3">
+                {rows.map((r) => (
+                  <div key={r.label}>
+                    <Label className="text-xs text-red-600">{r.label}</Label>
+                    <p className="text-sm font-semibold text-gray-900 break-all">{r.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 任务类型 - 单一类型显示详细信息，多类型显示SOP下载 */}
         <div>
           <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>

@@ -914,6 +914,10 @@ function mapTaskActionToType(action: string): UnifiedOperationRecord['actionType
  * 获取动作文本
  */
 function getActionText(action: string): string {
+  // 2026-10-24：补齐 task_operation_records.action 的全部实际取值。
+  //   此前只覆盖 9 个，DB 里 submit_progress(58)/status_change(88)/start(65)/
+  //   reassign(32)/continue(31)/withdraw(28)/update(12)/cancel(12) 等
+  //   都会把英文原值拼进操作记录文案（「陆启闯 submit_progress 任务【…】」）。
   const map: Record<string, string> = {
     create: '创建了',
     publish: '发布了',
@@ -921,9 +925,22 @@ function getActionText(action: string): string {
     accept: '接受了',
     reject: '拒绝了',
     progress: '更新了',
+    submit_progress: '提交了进度',
     submit: '提交了',
     complete: '验收了',
     verify: '验收了',
+    start: '开始执行',
+    status_change: '变更了状态',
+    reassign: '重新派发了',
+    continue: '继续执行',
+    withdraw: '撤回了',
+    cancel: '取消了',
+    update: '修改了',
+    remind: '催办了',
+    extend_deadline: '延期了',
+    overtime_continue: '超时继续',
+    overtime_abandon: '超时放弃',
+    batch_update: '批量修改了',
   };
   return map[action] || action;
 }

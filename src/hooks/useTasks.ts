@@ -71,6 +71,7 @@ type StoreTaskCompat = StoreTask & {
 // 2026-10-21（阶段 3）：临时任务 Store 已下线，数据统一从 farmTaskStore 读取
 // 导入巡查记录 Store
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
+import { useWorkLogStore } from '../stores/useWorkLogStore';
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -225,6 +226,11 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
   });
 
   return {
+    // 2026-10-24：先展开后端返回的全部字段（实测 101 个），再用下面的派生值覆盖。
+    //   此前这里只挑 67 个键，description / taskContent / completionNote /
+    //   actualHours / rejectedBy / approvedAt 等 30+ 字段在转换层被静默丢弃 ——
+    //   任务详情、追溯核查全都看不到。
+    ...(t as unknown as Record<string, unknown>),
     id: t.id || '',
     taskCode: t.taskCode || t.id || '',
     title: t.title || '',
@@ -307,7 +313,9 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     teamName: (t as any).teamName ?? '',
     remarks: (t as any).remarks ?? '',
     executorRejectCount: (t as any).executorRejectCount ?? 0,
-    rejectReason: (t as any).rejectReason ?? '',
+    // 2026-10-24：后端字段是 rejectedReason（API 101 字段清单确认），
+    //   只读 rejectReason 恒为空 → 重新派发弹窗看不到驳回原因。
+    rejectReason: (t as any).rejectedReason ?? (t as any).rejectReason ?? '',
     cancelledReason: (t as any).cancelledReason ?? '',
     abandonedReason: (t as any).abandonedReason ?? '',
     batchId: (t as any).batchId ?? '',
@@ -379,7 +387,8 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     taskCode: recordCode,
     title: `${greenhouseName} 巡查反馈`,
     type: 'other',
-    typeName: '巡查反馈处理',
+    // 2026-10-24：「巡查反馈处理」更名为「巡查问题整改」，与「我的任务」tab 标签保持一致
+    typeName: '巡查问题整改',
     status: finalStatus,
     priority: issueSeverity === '严重' ? 'high' : 'normal',
     progress: PROGRESS_MAP[finalStatus] || 0,
@@ -407,7 +416,7 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     tools: [],
     sopContent: '',
     typeConfig: {},
-    // 2026-10-10（审核修复 H3）：带出关联问题 id —— "我的任务·巡查反馈处理"的
+    // 2026-10-10（审核修复 H3）：带出关联问题 id —— "我的任务·巡查问题整改"的
     //   动作按钮据此走问题通道（acceptProblem / submitProblemFeedback → PUT /problems/:id），
     //   修正前恒 undefined 导致巡查动作全部落到 farm-tasks 幽灵端点
     sourceProblemId: (t as any).problemId || (t as any).problem_id
@@ -746,6 +755,9 @@ export function useTasks(): UseTasksReturn {
     // P0：主动拉巡查记录 —— 否则 InspectionTab 没 mount 时 useInspectionDataStore.records 是空，
     //   useTasks 合并的 tasks 里就没有 inspection，所有用 useTasks 的页面（如每日工单汇总）看不到巡查记录。
     useInspectionDataStore.getState().fetchRecords();
+    // 2026-10-24：主动拉工作日志 —— syncWorkLogFromTask 靠 store 里的 taskId 判断
+    //   「该任务是否已有日志」，store 为空时每条反馈都会新建一条，同一任务重复累积。
+    useWorkLogStore.getState().fetchWorkLogs();
   }, []);
 
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);
@@ -873,7 +885,7 @@ export function useTasks(): UseTasksReturn {
       teamName: (taskData as any).teamName || '',
       toolsRemarks: (taskData as any).toolsRemarks || '',
       requiredFeedback: (taskData as any).requiredFeedback || [],
-      // 问题分派关联字段（确保分派的问题任务能在"巡查反馈处理"Tab正确显示）
+      // 问题分派关联字段（确保分派的问题任务能在"巡查问题整改"Tab正确显示）
       sourceProblemId: (taskData as any).sourceProblemId || '',
       sourceId: (taskData as any).sourceId || '',
       sourceCode: (taskData as any).sourceCode || '',

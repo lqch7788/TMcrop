@@ -22,7 +22,24 @@ import {
   Edit,
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../hooks/useTasks';
+import { PRIORITY_MAP } from '../farm/taskDispatch/constants/taskDispatchConstants';
+import { resolveTaskTypeLabel } from '../../types/farm/common';
 import type { TaskRecord, TaskStatus } from '../../types/task';
+
+/**
+ * 把流转记录 changeDiff 里的原始枚举值翻成中文（2026-10-24）
+ *
+ * 后端写记录时存的是 DB 原值：status 存 'pending'/'accepted'，priority 存
+ * 'normal'/'high'。原实现直接渲染，详情弹窗的「本次变更」会露出英文
+ * （实测：「状态：pending→accepted」「优先级：normal→high」）。
+ */
+function translateDiffValue(column: string, value: string): string {
+  if (!value) return '';
+  if (column === 'status') return TASK_STATUS_CONFIG[value as TaskStatus]?.label || value;
+  if (column === 'priority') return PRIORITY_MAP[value]?.label || value;
+  if (column === 'task_type') return resolveTaskTypeLabel(value);
+  return value;
+}
 
 // 流转动作配置
 const TASK_ACTION_CONFIG: Record<string, { icon: typeof CheckCircle; color: string; bgColor: string; label: string }> = {
@@ -273,9 +290,10 @@ export function TaskRecordTimeline({
                         {Object.entries(record.changeDiff).map(([col, d]) => (
                           <div key={col} className="text-xs text-gray-700 break-all">
                             <span className="text-gray-500">{d.label || col}：</span>
-                            <span className="text-gray-500 line-through">{d.from || '（空）'}</span>
+                            {/* 2026-10-24：from/to 是 DB 原值（pending/normal…），必须翻译成中文 */}
+                            <span className="text-gray-500 line-through">{translateDiffValue(col, d.from) || '（空）'}</span>
                             <span className="text-gray-400 mx-1">→</span>
-                            <span className="font-medium text-gray-900">{d.to || '（空）'}</span>
+                            <span className="font-medium text-gray-900">{translateDiffValue(col, d.to) || '（空）'}</span>
                           </div>
                         ))}
                       </div>
