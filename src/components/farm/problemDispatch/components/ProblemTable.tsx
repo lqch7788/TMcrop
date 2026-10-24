@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, Eye } from 'lucide-react';
+import { CheckCircle, Eye, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui';
 import { SourceCell } from './SourceCell';
@@ -205,32 +205,37 @@ export function ProblemTable({
 
                   {/* 操作 */}
                   <td className="px-4 py-3">
+                    {/* 2026-10-24：操作按钮统一到与农事任务列表一致的规范
+                        （size=sm + text-xs h-6 + 图标 w-4 h-4）：
+                        验收=default(绿) / 分派=blue / 详情=outline。
+                        此前验收是 ghost（几乎看不见）、分派是 warning、三类按钮
+                        还缺 text-xs，三个页面的操作列观感不一致。 */}
                     {getStatusCN(problem.status) === '待处理' && !problem.sourceTaskId && (
                       <Button
-                        variant="warning"
+                        variant="blue"
                         size="sm"
                         onClick={() => onSingleDispatch?.(problem)}
-                        className="h-6"
+                        className="text-xs h-6"
                       >
-                        分派
+                        <Send className="w-4 h-4" /> 分派
                       </Button>
                     )}
                     {getStatusCN(problem.status) === '处理中' && (
                       <Button
-                        variant="blue"
+                        variant="outline"
                         size="sm"
                         onClick={() => onViewDetail(problem)}
-                        className="h-6"
+                        className="text-xs h-6"
                       >
                         <Eye className="w-4 h-4" /> 详情
                       </Button>
                     )}
                     {getStatusCN(problem.status) === '待验收' && (
                       <Button
-                        variant="ghost"
+                        variant="default"
                         size="sm"
                         onClick={() => (onAcceptance || onViewDetail)(problem)}
-                        className="h-6"
+                        className="text-xs h-6"
                       >
                         <CheckCircle className="w-4 h-4" /> 验收
                       </Button>
