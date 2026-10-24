@@ -141,41 +141,97 @@
 **未加 FK**：与 E2 同理 —— `ALTER TABLE ADD COLUMN` 不支持 `REFERENCES`，
 且这两张表是核心业务数据，不做整表重建。
 
-### E4 —— 两张排班表合并（**长期债，本项目最重的一块**）
+### E4 —— 排班表人员归一 + 冲突维度修正 + 打通派工占用 ⚠️ **按修正后范围完成（2026-10-24）**
 
-现状：`schedules`（人×日期×班次）与 `farm_task_schedules`（任务×人×日期）**零 JOIN、零同步**，前端只靠"顺序发两个 HTTP 请求"造成联动的假象（`useDispatchScheduleBridge.ts:101` 与 `:118` 无共享 key、无回滚）。
+**原计划的「表结构降级合并」经实测否决。** 调查发现关键事实：
 
-方向：**以 `schedules` 为主表，`farm_task_schedules` 降级为"任务 ↔ 排班"的关联表**（`schedule_id` FK → `schedules.id`，承载 `task_id`/`plan_start`/`plan_end`/`shift_type`）。
+| 检查 | 实测 |
+|---|---|
+| `farm_task_schedules` 41 行能否按 `(worker, date, shift)` 匹配到 `schedules` | **0 / 41** |
+| 两表日期区间交集 | **空集**（schedules 9/11–10/12；farm_task_schedules 9/22–11/10） |
+| `schedules.staff_id` 覆盖的人 | EMP_001~EMP_005；**没有 EMP_007/008/009** |
+| `farm_task_schedules` 41 行的人 | 40 行陆启闯（EMP_007）+ 1 行张三 |
 
-这样：
-- 唯一约束统一到 `schedules`（已有 `idx_schedules_staff_date_shift`），`farm_task_schedules` 补上缺口
-- 班次编码统一到 `shift_code`（D-F）
-- 派工占用、班组可用性、AI 派工 F7 三条读链路无需改表
-- 调班只保留一套（E5）
+⇒ 两表**不是同一实体的两种表示**，`schedule_id` 关联列加进去会是 100% NULL。
+「降级合并」在数据上不成立，强行做只是把两张不相干的表用 NULL 列缝在一起。
 
-### E5 —— 两套调班合并
+**实际完成（三条，均为真缺陷修复）：**
 
-`farm_task_swap_requests`（英文状态、0 行、前端零引用、双层嵌套路径）并入 `swap_requests`（中文状态、4 行、前端在用）。E4 完成后 `farm_task_swap_requests` 自然无数据。
+1. **`farm_task_schedules.worker_id` 归一到 `employees.id`**
+   38 行 `user-admin` → `EMP_007`，41/41 全部命中。该表声明了
+   `FOREIGN KEY (worker_id) REFERENCES employees(id)`，但自 commit `2b382ba0`
+   「执行人统一为系统登录账号」后实际存的是 `users.id` —— **声明与实际长期不符，
+   38 行全是 FK 孤儿**，且 `PRAGMA foreign_keys=ON` 一直开着却没拦住
+   （孤儿由未开 FK 的离线脚本写入）。归一后 FK 声明恢复成立。
 
-### E6 —— 签到口径归一
+2. **`checkConflicts` 补上班次维度**
+   原实现只按「同一人 + 同一天」判冲突 → 同一人同一天安排**不同班次**
+   （早班/中班/晚班）被误判冲突。一个人一天本就可以上多个班次，
+   真正的冲突是「同一人 + 同一天 + 同班次」。5 处调用点全部传入班次。
+
+3. **打通派工占用与冲突检测的两个 ID 空间**（两个长期静默失效的功能）
+   - `PATCH /schedules/dispatch-tasks`：调用方传 `users.id`、`schedules.staff_id` 是
+     `employees.id` → 查不到行 → 一直返回「无排班记录，未写入」。实测
+     `schedules` **17/17 行 `dispatched_task_ids` 全是 `'[]'`**，派工占用从未写入过一次。
+   - `GET /schedules/occupations`：返回 `employees.id`，前端拿 `users.id` 本地过滤
+     → 永远 false → 派工冲突软警告（off_duty / no_schedule）**从未触发过**。
+   两处均在服务端归一后修复；实测 `dispatch-tasks` 写入成功（`[]` → 有值 → 撤销回 `[]`）。
+
+**留待独立评估**：`schedule_id` 关联列、唯一约束、`schedules.shift` 改 code。
+理由：关联列 0% 可回填；唯一约束与 `checkConflicts` 口径需先统一（前者含班次、
+后者原不含）；且 `schema.ts:2841` 那种 `try/catch + console.warn` 建索引的写法
+**失败会被静默吞掉**，约束根本没建上而应用以为建上了。
+
+### E5 —— 两套调班合并 ✅ **已完成（2026-10-24）**
+
+`farm_task_swap_requests`（英文状态、**0 行**、**前端零引用**、双层嵌套路径
+`/api/farm-task-swap-requests/swap-requests`）与 `swap_requests`（中文状态、4 行、
+前端在用）两套并行实现。已**注销前者路由注册**（返回 404），统一以 `swap_requests`
+为唯一实现。
+
+**保守处理**：不 DROP 表、不删 `swapRequestService.ts` / `farmTaskSwapRequests.ts`
+两个文件 —— 0 行无数据损失，但删表删文件属破坏性操作需明确授权；
+且两文件可能被 V2.0 前端引用，需先确认。
+
+### E6 —— 签到口径归并 ✅ **数据部分完成（2026-10-24）**
 
 按 D-E：`attendance_records` 为准。
-- `schedules.check_in/check_out` 现有 2 行有效值回填到 `attendance_records`
-- 之后 `schedules.check_in/check_out` 废弃（列保留但不再写），或改由 `attendance_records` 反向派生
-- 排班页的「签到/签退」弹窗改为写 `attendance_records`（或在 E4 合并后直接下线该入口，由考勤页承担）
+- `schedules.check_in/check_out` 现存 **2 行**有效值，而 `attendance_records`
+  同日同人**无任何对应行** → 已复制为 `attendance_records` 记录
+  （工时按签到/签退跨度计算，跨日 +24h；remarks 标注源 `schedules.id` 可反查）：
+  - EMP_001 张三 2026-09-14 13:30-22:30（9h）
+  - EMP_004 赵六 2026-10-08 05:00-17:00（12h）
+- **未做**：写入侧（`CheckInModal`）改写 `attendance_records`。
+  理由：这需要同步改造 ScheduleTable 的签到列展示，属 UI 行为变更，
+  风险高于收益。当前已保证「历史签到数据有唯一权威副本」，
+  双写现状保留待单独评估。
 
-### E7 —— 班次编码统一
+### E7 —— 班次名对齐 ✅ **数据部分完成（2026-10-24）；编码重构留待评估**
 
-按 D-F：`schedules.shift` 由名称改存 code。
-- 影响面：`schedule.ts` 全部读写点、`teamAvailabilityService.ts:49/73` 的 JOIN、`ShiftEditor` 下拉、`SwapRequestModal` 的 `original_shift` 匹配（唯一键含 shift，改编码后唯一键语义变化需同步）
-- 顺带修 3 行乱码/已删班次数据（1 行指向已软删的 `SH004 全天班`）
+`Schedules.shift` 必须能在 `shifts.shift_name` 命中，否则
+`teamAvailabilityService.ts:73` 的 `shiftHoursMap.get(shiftName)` 取不到 →
+该员工当天工时按 0 算 → 班组可用工时虚高 → 派工冲突检测误判「还能排」。
 
-### E8 —— 清理坏端点与死代码
+实测 3 行异常：
+- `'全天'` → `'全天班'`（1 行）：**确定修复**。字典里是「全天班」（SH004
+  `status=deleted` 但仍保留 08:00-20:00，且 `teamAvailabilityService` 查 `shifts`
+  时**不过滤 deleted**）⇒ 修后该行工时 12h 可正常计算。
+- **U+FFFD 乱码（2 行，EMP_001/EMP_003 @2026-09-13）：原值不可逆推，不猜，只报告。**
 
-- `attendanceIntegration.ts` 的 `employee_id`/`created_at`/`updated_at` 坏列 → 修列名或整段下线（`POST /api/attendance/check-in` 目前必 500）
-- `farm_task_swap_requests` 路由（E5 后）
-- `src/hooks/useScheduledTasks.ts`（定时任务 cron hook，零调用方）
-- `src/pages/WorkerAttendance.tsx`（2026-10-24 路由已重定向，文件保留未删，待确认后清理）
+**未做** `schedules.shift` 从「名称」改 `shift_code` 的全量重构（原 D-F）：
+跨 7 个后端端点 + 6 个前端组件，且 `swap_requests.original_shift` 存量语义随之改变。
+当前 3 行脏数据已修/已标记，重构收益远低于风险。
+
+### E8 —— 清理坏端点与死代码 ✅ **主要部分完成（2026-10-24）**
+
+- ✅ `attendanceIntegration.ts` 的坏列已修（`employee_id`→`worker_id`、
+  `updated_at`→`update_time`、`created_at`→`create_time`、INSERT 补必填 `name`），
+  三个端点实测 500 → 200
+- ✅ `farm_task_swap_requests` 路由已下线（E5）
+- ⬜ `src/hooks/useScheduledTasks.ts`（定时任务 cron hook）—— **零引用**，已确认是死代码；
+  **未删**（项目规则：删文件需明确授权）
+- ⬜ `src/pages/WorkerAttendance.tsx` —— 路由已重定向，**无任何 import 引用**；
+  **未删**（同上）
 
 ---
 
