@@ -1904,6 +1904,14 @@ export function initializeDatabase() {
       phone TEXT,
       avatar TEXT,
       status TEXT DEFAULT 'active',
+      -- 2026-10-24 员工身份管理 E1：登录账号 → 员工档案的确定性通道
+      --   决策 D-B：users ↔ employees 为 1:N，本列可空（允许"有档案无账号"的纯现场工人）。
+      --   业务表的人员列一律存 employees.id；users.id → employees.id 的转换走本列，
+      --   不再靠姓名猜测（曾出现"把姓名哈希成 EMP_98404 编造 ID"的反模式）。
+      --   注：SQLite 的 ALTER TABLE ADD COLUMN 不支持 REFERENCES 子句，故不声明 FK；
+      --   约束走应用层校验 + 索引 + 契约文档
+      --   （docs/superpowers/specs/2026-10-24-employee-identity-contract.md）。
+      employee_id TEXT,
       last_login TEXT,
       created_at TEXT,
       updated_at TEXT

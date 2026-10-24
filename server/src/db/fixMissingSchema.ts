@@ -1358,6 +1358,34 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 38. users 表添加 employee_id（2026-10-24 员工身份管理 E1 / Task 2）
+  //   作用：登录账号 → 员工档案的确定性通道（决策 D-B：1:N，列可空）。
+  //     业务表人员列一律存 employees.id；users.id → employees.id 走本列转换，
+  //     不再靠姓名猜测（曾出现"把姓名哈希成 EMP_98404 编造 ID"的反模式）。
+  //   注意：启动白名单已禁用本函数（server/src/index.ts:182），
+  //     实际生效的是迁移脚本 server/scripts/db-migrations/migrateEmployeeIdentity.cjs；
+  //     这里保留是为了脚本调用 fixMissingSchema 时也能补列，与同类块的处理一致。
+  const usersColumnsToAdd: Array<{ table: string; name: string; sql: string }> = [
+    { table: 'users', name: 'employee_id', sql: 'ALTER TABLE users ADD COLUMN employee_id TEXT' },
+  ];
+  for (const col of usersColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ ${col.table} 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• ${col.table}.${col.name}:`, e.message);
+      }
+    }
+  }
+  // 索引：按员工档案反查登录账号（一人多账号场景需要）
+  try {
+    db.run('CREATE INDEX IF NOT EXISTS idx_users_employee_id ON users(employee_id)');
+    seedLog.info('✓ users.employee_id 索引创建成功');
+  } catch (e: any) {
+    seedLog.skip('• idx_users_employee_id:', e.message);
+  }
+
   // 36.6 巡查计划 ↔ 农事任务 ↔ 巡查记录 关联列（2026-10-21 P2a）
   // 注意：启动白名单已禁用本函数，实际生效的是 fixSchemaColumns.ts；
   //   这里保留是为了脚本调用时也能补列。
