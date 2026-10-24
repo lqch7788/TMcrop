@@ -59,9 +59,16 @@ PRAGMA foreign_key_list(employees)          → []   （无 FK）
 PRAGMA foreign_key_list(schedules)          → []   （无 FK）
 PRAGMA foreign_key_list(farm_task_schedules)→ worker_id→employees.id, task_id→farm_tasks.id
 ```
-`farm_task_schedules` 声明了 FK 却存着 38 行孤儿 → **SQLite FK 未强制**（`PRAGMA foreign_keys` 未开）。
+`farm_task_schedules` 声明了 FK 却存着 38 行孤儿。
 
-⇒ **结论：E1 的约束一律用「应用层校验 + 索引 + 文档契约」落地**，不依赖 SQLite FK。理由：与 `schedules` / `employees` / `users` 现状一致；且 SQLite `ALTER TABLE ADD COLUMN` 本身也不支持带 `REFERENCES` 子句。
+> **2026-10-24 实测更正（初稿误判）**：初稿据此推断"SQLite FK 未强制"，**该归因错误**。
+> 用合成内存库复刻同款 DDL 实测：
+> - better-sqlite3（迁移脚本运行时）：`PRAGMA foreign_keys` 默认 = **1**，孤儿插入被拒绝（`FOREIGN KEY constraint failed`）
+> - sql.js（服务运行时）+ `db.run('PRAGMA foreign_keys = ON')`（`server/src/db/index.ts:178`）：= **1**，孤儿插入同样被拒绝
+>
+> ⇒ **FK 实际是强制生效的。** 38 行孤儿是**表重建时**带进来的 —— SQLite 标准 ALTER 流程（12 步法）要求重建期间临时 `PRAGMA foreign_keys = OFF`，重建脚本照做，孤儿行随之保留。这些行如今**一旦 `UPDATE` 其 `worker_id` 就会触发 FK 失败**，是潜在地雷，E4 合并时必须处理。
+
+⇒ **结论（不变，但理由更准确）**：`users.employee_id` 的约束仍走「应用层校验 + 索引 + 文档契约」，理由是 **SQLite `ALTER TABLE ADD COLUMN` 不允许带 `REFERENCES` 子句**，而给核心表 `users` 做重建加 FK 的风险远大于收益。**并非因为 FK 不生效。**
 
 ### 1.4 其它已核实事实
 
@@ -323,7 +330,7 @@ SELECT COUNT(*) FROM team_members tm
 | 启动路径的 `team_members` 自愈被误触发 | 低 | 用户手动分配的班组成员丢失 | Task 6 SQL 显式核对 `team_members` 孤儿数 = 0；当前 9 行无孤儿，新增 employees 不改变孤儿判定 |
 | `resolveEmployeeId` 行为变化影响现有自动排班 | 中 | 原本失败的现在成功（正向），但需确认无回归 | Task 4 保留原导出名与调用点；Task 6 场景 4 验证 |
 | employees 增加 3 人后人事页列表变化 | 确定 | 观感变化 | D-C 已拍板接受 |
-| FK 未强制 | 确定 | 约束只靠应用层 | 已在 §1.3 明确，与现状一致；不试图在本期开 `PRAGMA foreign_keys`（会一次性引爆 `farm_task_schedules` 的 38 行孤儿） |
+| FK 未强制 | ~~确定~~ **已更正** | —— | **实测 FK 是生效的**（§1.3）。真正的约束缺口是 `users.employee_id` 无法用 `ALTER TABLE ADD COLUMN` 声明 FK（SQLite 限制），故走应用层校验 + 索引 + 契约文档；`farm_task_schedules` 的 38 行历史孤儿是表重建时带进来的，E4 处理 |
 
 **回滚**：`yuanxingtu.db.bak.<timestamp>` 备份 + `git checkout` 源码。源码改动 ≤ 6 个文件，回滚成本低。
 
@@ -340,7 +347,7 @@ SELECT COUNT(*) FROM team_members tm
 | 签到口径归一（`schedules.check_in` 废弃） | **E6** |
 | 班次编码统一（`schedules.shift` 名 → code） | **E7** |
 | `attendanceIntegration.ts` 坏列端点 | **E8** |
-| 开启 SQLite `PRAGMA foreign_keys` | **不在本项目** —— 会一次性引爆 38 行孤儿，需在 E4 之后单独立项 |
+| 开启 SQLite `PRAGMA foreign_keys` | **不需要** —— 实测已生效（§1.3）。真正的待办是清理 `farm_task_schedules` 的 38 行历史孤儿，归 E4 |
 
 ---
 

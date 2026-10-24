@@ -66,7 +66,7 @@
 | # | 议题 | 选项 | 建议 |
 |---|---|---|---|
 | **D-A** | 唯一主数据源 | (a) `employees` 为准，users 挂靠 employees；(b) users 为准，employees 挂靠 users | **(a)**。`employees` 已有 FK 声明与应用层校验（`schedule.ts:1382`）、有部门/岗位/在职状态，是业务语义完整的实体；`users` 只解决"能不能登录" |
-| **D-B** | `users` 与 `employees` 的基数 | (a) 1:1（每人都有档案）；(b) 1:N（一人多账号）；(c) N:1（多档案共用账号） | **(b) 1:N** + `employees` 侧允许"有档案无账号"（纯现场工人不需要登录）。新增 `users.employee_id` 外键（可空） |
+| **D-B** | `users` 与 `employees` 的基数 | (a) 1:1（每人都有档案）；(b) 1:N（一人多账号）；(c) N:1（多档案共用账号） | **(b) 1:N** + `employees` 侧允许"有档案无账号"（纯现场工人不需要登录）。新增 `users.employee_id` 列（可空；SQLite `ALTER TABLE ADD COLUMN` 不支持 `REFERENCES` 子句，故走应用层校验 + 索引 + 契约） |
 | **D-C** | `attendance_records` 23 行的处置 | (a) 全部归一到 employees（需补 10+ 人的档案）；(b) 按"纯 mock / 半真实"分流处置 | **(b)**。17 行是武侠人名 mock 且关联不存在的任务 → 归档；6 行 `WORKER_001/002/003`（张三/李四/王五）可按姓名无损归一到 `EMP_001/002/003` |
 | **D-D** | `farm_task_schedules` 38 行的处置 | (a) 归一到 employees；(b) 标记为测试数据 | **(b)**。38 行全 `user-admin`，是联调期产物；归一后仍无业务价值。任务关联（`task_id` 38/38 命中）是真的，**归档时须保留 task 引用信息** |
 | **D-E** | 签到口径（已在本轮确认） | (a) `attendance_records` 为准，`schedules.check_in` 废弃；(b) 反之 | **(a)**。`attendance_records` 已有 `status_class`（迟到/早退/请假/加班）、`hours`、`task_id`/`batch_id`（16/23 有），信息量更完整且已有 CRUD UI |
