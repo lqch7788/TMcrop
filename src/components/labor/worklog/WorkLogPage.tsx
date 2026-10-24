@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Download, Edit2, Trash2, X } from 'lucide-react';
 
-import { usePersistentWorkLogs, WorkLogEntry } from '../../../hooks/usePersistentWorkLogs';
+import { useWorkLogStore } from '@/stores/useWorkLogStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { WorkLogFilters } from './WorkLogFilters';
 import { WorkLogTable } from './WorkLogTable';
 import { WorkLogDetailModal } from './WorkLogDetailModal';
@@ -109,11 +110,33 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 }
 
 /**
- * 工作日志页面主容器组件
+ * 我的工作日志页面主容器组件
+ *
+ * 2026-10-24：数据源从 usePersistentWorkLogs 改为 useWorkLogStore（后端 work_logs）。
+ *   原实现读的是 INITIAL_WORK_LOGS 里的 7 条硬编码 mock，只在写操作时"双写"后端：
+ *   新建的日志刷新即消失，且与农事任务中心读到的真实数据完全脱节。
+ *   同时按当前登录用户过滤 —— 本 tab 名为「我的工作日志」。
+ *   （测试阶段所有操作人统一是管理员陆启闯，所以过滤后仍能看到全部真实日志。）
  */
 export function WorkLogPage() {
-  // 使用持久化的工作日志数据
-  const { workLogs, addWorkLog, updateWorkLog, deleteWorkLog } = usePersistentWorkLogs();
+  const storeWorkLogs = useWorkLogStore((s) => s.workLogs);
+  const fetchWorkLogs = useWorkLogStore((s) => s.fetchWorkLogs);
+  const addWorkLogToStore = useWorkLogStore((s) => s.addWorkLog);
+  const updateWorkLogInStore = useWorkLogStore((s) => s.updateWorkLog);
+  const deleteWorkLogFromStore = useWorkLogStore((s) => s.deleteWorkLog);
+
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const myName = currentUser?.realName || currentUser?.username || '';
+
+  useEffect(() => {
+    void fetchWorkLogs();
+  }, [fetchWorkLogs]);
+
+  // 只保留当前登录用户名下的日志；取不到用户时不过滤，避免页面空白
+  const workLogs = useMemo(
+    () => (myName ? storeWorkLogs.filter((log) => log.worker === myName) : storeWorkLogs),
+    [storeWorkLogs, myName]
+  );
 
   // 筛选条件状态
   const [filters, setFilters] = useState<WorkLogFiltersType>({
@@ -122,15 +145,15 @@ export function WorkLogPage() {
     greenhouse: '',
   });
 
-  // 分页状态
+  // 分页状态（total 不存 state，由 filteredData.length 派生）
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     pageSize: 10,
-    total: workLogs.length,
+    total: 0,
   });
 
   // 选中日志用于查看详情
-  const [selectedLog, setSelectedLog] = useState<WorkLogEntry | null>(null);
+  const [selectedLog, setSelectedLog] = useState<WorkLog | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // 表单弹窗状态
@@ -146,16 +169,19 @@ export function WorkLogPage() {
     });
   }, [workLogs, filters]);
 
-  // 更新总数
-  useMemo(() => {
-    setPagination(prev => ({ ...prev, total: filteredData.length }));
-  }, [filteredData.length]);
-
   // 分页后的数据
   const paginatedData = useMemo(() => {
     const start = (pagination.currentPage - 1) * pagination.pageSize;
     return filteredData.slice(start, start + pagination.pageSize);
   }, [filteredData, pagination.currentPage, pagination.pageSize]);
+
+  // 传给表格的分页信息
+  // 2026-10-24：total 改为派生值 —— 原实现用 useMemo 在渲染期 setPagination，
+  //   每次过滤结果变化都触发一次额外渲染，且 total 永远是上一轮的值。
+  const tablePagination = useMemo(
+    () => ({ currentPage: pagination.currentPage, pageSize: pagination.pageSize, total: filteredData.length }),
+    [pagination.currentPage, pagination.pageSize, filteredData.length]
+  );
 
   // 切换页码
   const handlePageChange = (page: number) => {
@@ -167,20 +193,20 @@ export function WorkLogPage() {
     setPagination(prev => ({ ...prev, pageSize: size, currentPage: 1 }));
   };
 
-  // 保存工作日志
-  const handleSave = useCallback((data: Partial<WorkLogEntry>) => {
+  // 保存工作日志（2026-10-24：改走 Store → 后端；新建时作业人默认当前用户）
+  const handleSave = useCallback((data: Partial<WorkLog>) => {
     if (data.id) {
-      updateWorkLog(data.id, data);
+      void updateWorkLogInStore(String(data.id), data);
     } else {
-      addWorkLog(data as Omit<WorkLogEntry, 'id'>);
+      void addWorkLogToStore({ ...data, worker: data.worker || myName });
     }
-  }, [addWorkLog, updateWorkLog]);
+  }, [addWorkLogToStore, updateWorkLogInStore, myName]);
 
   // 批量操作状态
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
@@ -214,7 +240,7 @@ export function WorkLogPage() {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -230,7 +256,7 @@ export function WorkLogPage() {
 
   const handleDeleteConfirm = () => {
     // 批量删除选中的日志
-    selectedRows.forEach(id => deleteWorkLog(id));
+    selectedRows.forEach(id => void deleteWorkLogFromStore(String(id)));
     setSelectedRows([]);
     setShowDeleteWarning(false);
   };
@@ -340,7 +366,7 @@ export function WorkLogPage() {
       {/* 数据表格 */}
       <WorkLogTable
         data={paginatedData as WorkLog[]}
-        pagination={pagination}
+        pagination={tablePagination}
         showCheckbox={exportMode || batchEditMode || batchDeleteMode}
         exportMode={exportMode}
         batchEditMode={batchEditMode}

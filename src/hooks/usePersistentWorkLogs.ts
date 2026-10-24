@@ -6,16 +6,35 @@
  *   多标签页（或多实例）场景下互相触发形成渲染风暴 → 页面卡死 30~60 秒。
  *   按 V2.1 铁律改为纯内存 useState：数据源为 API/Store（useWorkLogStore），
  *   本地副本只作瞬时状态，刷新即重置，不再读写 localStorage、不再监听 storage 事件。
+ *
+ * 2026-10-24 重构：彻底去掉本地副本，workLogs 直接从 useWorkLogStore 派生。
+ *   原实现的三个缺陷（均在实测中确认）：
+ *   1. syncWorkLogFromTask 只 setWorkLogs 本地 state，**从不写后端** ——
+ *      任务反馈产生的日志刷新即消失，后端 work_logs 一条都没有；
+ *   2. 「该任务是否已有日志」在本地 7 条 mock 里找 → 永远找不到 →
+ *      同一任务每提交一次反馈就新建一条，重复累积；
+ *   3. generateWorkLogCode 的流水号基于本地 mock 计算 → 刷新后从 001 重来，
+ *      编号与后端已有记录撞车。
+ *   现在所有读写都走 store（→ API），判定与取号也基于后端数据。
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { todayLocal } from '@/lib/dateUtils';
 // Store 同步到后端（API → SQLite），失败不影响主流程
-import { useWorkLogStore } from '../stores/useWorkLogStore';
+import { useWorkLogStore, type WorkLog } from '../stores/useWorkLogStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 // 工单类型
+/**
+ * 本会话已发出的当日最大编号序号（2026-10-24）。
+ * 模块级而非组件 state —— 需要跨 hook 实例共享，且不参与渲染。
+ */
+let sessionCodeDate = '';
+let sessionMaxSeq = 0;
+
 export interface WorkLogEntry {
-  id: number;
+  // 2026-10-24：与后端 work_logs.id 对齐（'wl_seed_001' 这类字符串）
+  id: string;
   code: string;
   date: string;
   worker: string;
@@ -55,7 +74,7 @@ export interface TaskProgressUpdate {
 // 初始 mock 数据
 const INITIAL_WORK_LOGS: WorkLogEntry[] = [
   {
-    id: 1, code: 'WL20260314001', date: '2026-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 'wl_seed_001', code: 'WL20260314001', date: '2026-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄授粉工作', problems: '无', solutions: '-',
     taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
     taskCode: 'RW-20260301-001', taskType: 'spraying', taskTypeName: '施肥', progress: 100,
@@ -63,7 +82,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-14T17:30:00Z', feedbackText: '已完成全部授粉任务'
   },
   {
-    id: 2, code: 'WL20260314002', date: '2026-03-14', worker: '杨过', weather: '晴', temperature: '26°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
+    id: 'wl_seed_002', code: 'WL20260314002', date: '2026-03-14', worker: '杨过', weather: '晴', temperature: '26°C', crop: '黄瓜', greenhouse: '2号棚', growthStatus: '良好',
     tasks: '黄瓜施肥和病虫害防治', problems: '发现少量蚜虫', solutions: '已喷洒吡虫啉',
     taskId: 'T002', batchId: 'B002', batchCode: 'FQ2026-002',
     taskCode: 'RW-20260302-001', taskType: 'fertilizing', taskTypeName: '施肥', progress: 80,
@@ -71,7 +90,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-14T18:00:00Z', feedbackText: '发现蚜虫已处理，整体进度80%'
   },
   {
-    id: 3, code: 'WL20260314003', date: '2026-03-14', worker: '张无忌', weather: '晴', temperature: '24°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '一般',
+    id: 'wl_seed_003', code: 'WL20260314003', date: '2026-03-14', worker: '张无忌', weather: '晴', temperature: '24°C', crop: '草莓', greenhouse: '3号棚', growthStatus: '一般',
     tasks: '草莓疏果和浇水', problems: '部分叶片发黄', solutions: '补充氮肥',
     taskId: 'T003', batchId: 'B003', batchCode: 'FQ2026-003',
     taskCode: 'RW-20260303-001', taskType: 'pruning', taskTypeName: '修剪', progress: 60,
@@ -79,7 +98,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-14T16:45:00Z', feedbackText: '叶片发黄已补充氮肥'
   },
   {
-    id: 4, code: 'WL20260313001', date: '2026-03-13', worker: '令狐冲', weather: '多云', temperature: '22°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
+    id: 'wl_seed_004', code: 'WL20260313001', date: '2026-03-13', worker: '令狐冲', weather: '多云', temperature: '22°C', crop: '番茄', greenhouse: '1号棚', growthStatus: '良好',
     tasks: '番茄整枝和授粉', problems: '无', solutions: '-',
     taskId: 'T001', batchId: 'B001', batchCode: 'FQ2026-001',
     taskCode: 'RW-20260228-001', taskType: 'pruning', taskTypeName: '修剪', progress: 100,
@@ -87,7 +106,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-13T17:00:00Z', feedbackText: '整枝授粉完成'
   },
   {
-    id: 5, code: 'WL20260313002', date: '2026-03-13', worker: '段誉', weather: '多云', temperature: '23°C', crop: '辣椒', greenhouse: '4号棚', growthStatus: '良好',
+    id: 'wl_seed_005', code: 'WL20260313002', date: '2026-03-13', worker: '段誉', weather: '多云', temperature: '23°C', crop: '辣椒', greenhouse: '4号棚', growthStatus: '良好',
     tasks: '辣椒浇水施肥', problems: '无', solutions: '-',
     taskId: 'T005', batchId: 'B005', batchCode: 'FQ2026-005',
     taskCode: 'RW-20260305-001', taskType: 'irrigation', taskTypeName: '灌溉', progress: 100,
@@ -95,7 +114,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-13T15:30:00Z', feedbackText: '浇水施肥已完成'
   },
   {
-    id: 6, code: 'WL20260312001', date: '2026-03-12', worker: '黄蓉', weather: '阴', temperature: '20°C', crop: '生菜', greenhouse: '5号棚', growthStatus: '良好',
+    id: 'wl_seed_006', code: 'WL20260312001', date: '2026-03-12', worker: '黄蓉', weather: '阴', temperature: '20°C', crop: '生菜', greenhouse: '5号棚', growthStatus: '良好',
     tasks: '生菜采收清洗', problems: '无', solutions: '-',
     taskId: 'T004', batchId: 'B004', batchCode: 'FQ2026-004',
     taskCode: 'RW-20260306-001', taskType: 'harvesting', taskTypeName: '采收', progress: 100,
@@ -103,7 +122,7 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
     submitTime: '2026-03-12T18:30:00Z', feedbackText: '生菜采收完毕，共200kg'
   },
   {
-    id: 7, code: 'WL20260312002', date: '2026-03-12', worker: '陈家洛', weather: '阴', temperature: '21°C', crop: '菠菜', greenhouse: '6号棚', growthStatus: '一般',
+    id: 'wl_seed_007', code: 'WL20260312002', date: '2026-03-12', worker: '陈家洛', weather: '阴', temperature: '21°C', crop: '菠菜', greenhouse: '6号棚', growthStatus: '一般',
     tasks: '菠菜除草浇水', problems: '发现蜗牛', solutions: '已撒石灰驱除',
     taskId: undefined, batchId: 'B006', batchCode: 'FQ2026-006',
     taskCode: 'RW-20260307-001', taskType: 'weeding', taskTypeName: '除草', progress: 45,
@@ -112,68 +131,45 @@ const INITIAL_WORK_LOGS: WorkLogEntry[] = [
   },
 ];
 
-// 下一个可用的 ID
-let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为8
-
 /**
  * 工单持久化 Hook
  */
 export function usePersistentWorkLogs() {
-  // 2026-10-10：纯内存状态（V2.1 铁律：禁 localStorage）
-  const [workLogs, setWorkLogs] = useState<WorkLogEntry[]>(INITIAL_WORK_LOGS);
+  // 2026-10-24：直接订阅后端数据（原先持有 INITIAL_WORK_LOGS 本地副本）
+  const workLogs = useWorkLogStore((s) => s.workLogs);
+  const fetchWorkLogs = useWorkLogStore((s) => s.fetchWorkLogs);
+  const addWorkLogInStore = useWorkLogStore((s) => s.addWorkLog);
+  const updateWorkLogInStore = useWorkLogStore((s) => s.updateWorkLog);
+  const deleteWorkLogInStore = useWorkLogStore((s) => s.deleteWorkLog);
 
-  // 添加新工单
+  // 当前登录用户：新建日志的默认作业人
+  // 测试阶段所有操作人统一为管理员，执行人信息由 taskId/taskCode 关联任务反查
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const myName = currentUser?.realName || currentUser?.username || '';
+
+  // 添加新工单（id 由服务端生成，同步返回值只作占位）
   const addWorkLog = useCallback((entry: Omit<WorkLogEntry, 'id'>) => {
-    const newEntry: WorkLogEntry = {
-      ...entry,
-      id: nextWorkLogId++,
-    };
-    setWorkLogs(prev => [newEntry, ...prev]);
-    // 2026-06-04 V2.1 铁律改造：双写 Store（失败不影响主流程）
-    void useWorkLogStore.getState().addWorkLog({
-      ...newEntry,
-      id: String(newEntry.id),
-      weather: newEntry.weather,
-      temperature: newEntry.temperature,
-      growthStatus: newEntry.growthStatus,
-      tasks: newEntry.tasks,
-      problems: newEntry.problems,
-      solutions: newEntry.solutions,
-      taskId: newEntry.taskId,
-      batchId: newEntry.batchId,
-      batchCode: newEntry.batchCode,
-      taskCode: newEntry.taskCode,
-      taskType: newEntry.taskType,
-      taskTypeName: newEntry.taskTypeName,
-      progress: newEntry.progress,
-      workloadHours: newEntry.workloadHours,
-      workloadDays: newEntry.workloadDays,
-      workers: newEntry.workers,
-      submitTime: newEntry.submitTime,
-      feedbackText: newEntry.feedbackText,
-    } as any);
-    return newEntry;
-  }, [setWorkLogs]);
+    void addWorkLogInStore(entry as Partial<WorkLog>);
+    return { ...entry, id: '' } as WorkLogEntry;
+  }, [addWorkLogInStore]);
 
   // 更新工单
-  const updateWorkLog = useCallback((id: number, updates: Partial<WorkLogEntry>) => {
-    setWorkLogs(prev => prev.map(log => log.id === id ? { ...log, ...updates } : log));
-    // 2026-06-04 V2.1 铁律改造：双写 Store
-    void useWorkLogStore.getState().updateWorkLog(String(id), updates as any);
-  }, [setWorkLogs]);
+  const updateWorkLog = useCallback((id: string, updates: Partial<WorkLogEntry>) => {
+    void updateWorkLogInStore(id, updates as Partial<WorkLog>);
+  }, [updateWorkLogInStore]);
 
   // 删除工单
-  const deleteWorkLog = useCallback((id: number) => {
-    setWorkLogs(prev => prev.filter(log => log.id !== id));
-    // 2026-06-04 V2.1 铁律改造：双写 Store
-    void useWorkLogStore.getState().deleteWorkLog(String(id));
-  }, [setWorkLogs]);
+  const deleteWorkLog = useCallback((id: string) => {
+    void deleteWorkLogInStore(id);
+  }, [deleteWorkLogInStore]);
 
-  // 重置为初始数据
+  /**
+   * 重置：数据源已是后端，改为重新拉取。
+   * 不再回填 INITIAL_WORK_LOGS —— 那会让页面重新显示 7 条与后端无关的假数据。
+   */
   const resetToInitial = useCallback(() => {
-    setWorkLogs(INITIAL_WORK_LOGS);
-    nextWorkLogId = INITIAL_WORK_LOGS.length + 1;
-  }, []);
+    void fetchWorkLogs();
+  }, [fetchWorkLogs]);
 
   // 生成新的工单编号 (WL+年月日+3位数流水号)
   const generateWorkLogCode = useCallback(() => {
@@ -182,11 +178,15 @@ export function usePersistentWorkLogs() {
 
     // 找出今天已有的最大流水号
     const todayPrefix = `WL${dateStr}`;
-    const todayLogs = workLogs.filter(log => log.code.startsWith(todayPrefix));
+    const todayLogs = workLogs.filter(log => (log.code || '').startsWith(todayPrefix));
 
-    let maxSeq = 0;
+    // 2026-10-24：先取 store 最大值，再与本会话已发出的序号取大者。
+    //   原因：store 回写是异步的（addWorkLog 要等 API 返回），同一 tick 内连续
+    //   调用两次 generateWorkLogCode 会读到同一份旧 workLogs → 生成同一个编号。
+    //   实测「提交进度」同时触发任务日志 + 问题日志，两条都是 WL20261024001。
+    let maxSeq = sessionCodeDate === dateStr ? sessionMaxSeq : 0;
     todayLogs.forEach(log => {
-      const seqStr = log.code.replace(todayPrefix, '');
+      const seqStr = (log.code || '').replace(todayPrefix, '');
       const seq = parseInt(seqStr, 10);
       if (!isNaN(seq) && seq > maxSeq) {
         maxSeq = seq;
@@ -194,6 +194,8 @@ export function usePersistentWorkLogs() {
     });
 
     const nextSeq = maxSeq + 1;
+    sessionCodeDate = dateStr;
+    sessionMaxSeq = nextSeq;
     return `WL${dateStr}${String(nextSeq).padStart(3, '0')}`;
   }, [workLogs]);
 
@@ -202,12 +204,11 @@ export function usePersistentWorkLogs() {
     return workLogs.find(log => log.taskId === taskId);
   }, [workLogs]);
 
-  // 按任务ID更新工单
+  // 按任务ID更新工单（2026-10-24：改走 store → 后端）
   const updateWorkLogByTaskId = useCallback((taskId: string, updates: Partial<WorkLogEntry>) => {
-    setWorkLogs(prev => prev.map(log =>
-      log.taskId === taskId ? { ...log, ...updates } : log
-    ));
-  }, [setWorkLogs]);
+    const target = workLogs.find(log => log.taskId === taskId);
+    if (target) void updateWorkLogInStore(target.id, updates as Partial<WorkLog>);
+  }, [workLogs, updateWorkLogInStore]);
 
   // 从任务进度创建或更新工单（用于每日工单汇总对接）
   const syncWorkLogFromTask = useCallback((
@@ -234,9 +235,8 @@ export function usePersistentWorkLogs() {
     const existingLog = workLogs.find(log => log.taskId === task.id);
 
     if (existingLog) {
-      // 已存在则更新
-      const updatedLog: WorkLogEntry = {
-        ...existingLog,
+      // 已存在则更新（2026-10-24：写后端；原先只改本地 state，刷新即丢）
+      const updates = {
         tasks: task.title,
         solutions: progressUpdate.notes || existingLog.solutions,
         date: today, // 更新为今天
@@ -247,42 +247,41 @@ export function usePersistentWorkLogs() {
         feedbackText: progressUpdate.notes,
         submitTime: new Date().toISOString(),
       };
-      setWorkLogs(prev => prev.map(log =>
-        log.id === existingLog.id ? updatedLog : log
-      ));
-      return updatedLog;
-    } else {
-      // 不存在则创建新工单
-      const newLog: WorkLogEntry = {
-        id: nextWorkLogId++,
-        code: generateWorkLogCode(),
-        date: today,
-        worker: task.assigneeName,
-        weather: '',
-        temperature: '',
-        crop: task.cropName,
-        greenhouse: task.greenhouseName,
-        growthStatus: '良好',
-        tasks: task.title,
-        problems: '',
-        solutions: progressUpdate.notes || '',
-        taskId: task.id,
-        batchId: task.batchId,
-        batchCode: task.batchCode,
-        taskCode: task.taskCode,
-        taskType: task.type,
-        taskTypeName: task.typeName,
-        progress: progressUpdate.progress,
-        workloadHours: progressUpdate.workloadHours,
-        workloadDays: progressUpdate.workloadDays,
-        workers: progressUpdate.workers,
-        submitTime: new Date().toISOString(),
-        feedbackText: progressUpdate.notes,
-      };
-      setWorkLogs(prev => [newLog, ...prev]);
-      return newLog;
+      void updateWorkLogInStore(existingLog.id, updates);
+      return { ...existingLog, ...updates };
     }
-  }, [workLogs, setWorkLogs, generateWorkLogCode]);
+
+    // 不存在则创建新工单（id 由服务端生成）
+    const newLog: Omit<WorkLogEntry, 'id'> = {
+      code: generateWorkLogCode(),
+      date: today,
+      // 作业人写当前登录用户（测试阶段操作人统一为管理员）；
+      // 未登录时退回任务执行人姓名。执行人始终可由 taskId/taskCode 反查。
+      worker: myName || task.assigneeName,
+      weather: '',
+      temperature: '',
+      crop: task.cropName,
+      greenhouse: task.greenhouseName,
+      growthStatus: '良好',
+      tasks: task.title,
+      problems: '',
+      solutions: progressUpdate.notes || '',
+      taskId: task.id,
+      batchId: task.batchId,
+      batchCode: task.batchCode,
+      taskCode: task.taskCode,
+      taskType: task.type,
+      taskTypeName: task.typeName,
+      progress: progressUpdate.progress,
+      workloadHours: progressUpdate.workloadHours,
+      workloadDays: progressUpdate.workloadDays,
+      workers: progressUpdate.workers,
+      submitTime: new Date().toISOString(),
+      feedbackText: progressUpdate.notes,
+    };
+    void addWorkLogInStore(newLog as Partial<WorkLog>);
+    return { ...newLog, id: '' };
+  }, [workLogs, myName, generateWorkLogCode, addWorkLogInStore, updateWorkLogInStore]);
 
   return {
     workLogs,

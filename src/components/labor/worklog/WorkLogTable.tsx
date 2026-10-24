@@ -30,9 +30,9 @@ export function WorkLogTable({
   exportMode?: boolean;
   batchEditMode?: boolean;
   batchDeleteMode?: boolean;
-  selectedRows?: number[];
+  selectedRows?: string[];
   onSelectAll?: () => void;
-  onSelectRow?: (id: number) => void;
+  onSelectRow?: (id: string) => void;
   onAddClick?: () => void;
   onBatchEditClick?: () => void;
   onBatchDeleteClick?: () => void;
@@ -46,7 +46,7 @@ export function WorkLogTable({
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">工作日志列表</h3>
+        <h3 className="text-lg font-semibold text-gray-900">我的工作日志列表</h3>
         <div className="flex gap-2">
           {onAddClick && (
             <Button
@@ -117,7 +117,9 @@ export function WorkLogTable({
           </TableRow>
         </TableHeader>
         <TableBody className="bg-white divide-y divide-gray-300">
-          {data.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((log) => (
+          {/* 2026-10-24：移除内部再切片 —— 调用方传入的已是当前页数据（paginatedData），
+              这里再按 currentPage 切一次会让第 2 页起全部空白。 */}
+          {data.map((log) => (
             <TableRow key={log.id} className="hover:bg-blue-100 transition-colors">
               {(exportMode || batchEditMode || batchDeleteMode) && (
                 <TableCell className="px-4 py-3" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
@@ -136,7 +138,8 @@ export function WorkLogTable({
                 ) : '-'}
               </TableCell>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                {log.progress !== undefined ? `${log.progress}%` : '-'}
+                {/* 2026-10-24：原先判 `!== undefined`，后端返回 null 时会渲染成「null%」 */}
+                {typeof log.progress === 'number' ? `${log.progress}%` : '-'}
               </TableCell>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</TableCell>
               <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.greenhouse}</TableCell>
@@ -164,6 +167,15 @@ export function WorkLogTable({
               </TableCell>
             </TableRow>
           ))}
+          {/* 2026-10-24：补空态提示 —— 本页按当前登录用户过滤后，没有本人日志时
+              原先只渲染空表头，看起来像页面坏了 */}
+          {data.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={20} className="py-12 text-center text-sm text-gray-400">
+                暂无工作日志
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       </div>

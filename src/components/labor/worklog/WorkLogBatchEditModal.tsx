@@ -9,7 +9,7 @@ import { Label } from '@/components/ui';
 
 interface WorkLogBatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
+  selectedRows: string[];
   logs: WorkLog[];
   onClose: () => void;
   onConfirm: (editedLogs: Record<string, Partial<WorkLog>>) => void;
