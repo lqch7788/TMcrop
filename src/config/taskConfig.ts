@@ -221,6 +221,12 @@ export const TASK_ACTION_DEFAULTS = {
   accept: { label: '接受任务', color: 'text-green-600', bg: 'bg-green-50' },
   start: { label: '开始执行', color: 'text-green-600', bg: 'bg-green-50' },
   progress: { label: '提交进度', color: 'text-blue-600', bg: 'bg-blue-50' },
+  // 2026-10-24：补齐 DB 实际出现的 action —— 缺失时流转记录直接显示英文原值
+  //   （submit_progress 58 条 / status_change 88 条 / update 12 条）
+  submit_progress: { label: '提交进度', color: 'text-blue-600', bg: 'bg-blue-50' },
+  status_change: { label: '状态变更', color: 'text-gray-600', bg: 'bg-gray-50' },
+  update: { label: '修改任务', color: 'text-amber-600', bg: 'bg-amber-50' },
+  batch_update: { label: '批量修改', color: 'text-amber-600', bg: 'bg-amber-50' },
   submit: { label: '申请验收', color: 'text-orange-600', bg: 'bg-orange-50' },
   overtime_continue: { label: '超时继续', color: 'text-amber-600', bg: 'bg-amber-50' },
   overtime_abandon: { label: '超时放弃', color: 'text-red-600', bg: 'bg-red-50' },

@@ -52,6 +52,10 @@ export const STATUS_CONFIG: Record<string, { bg: string; text: string; label: st
   normal: { bg: 'bg-green-100', text: 'text-green-700', label: '正常' },
   attention: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '需关注' },
   critical: { bg: 'bg-red-100', text: 'text-red-700', label: '异常' },
+  // 2026-10-24：补 pending —— DB 有 2 条 status='pending'。
+  //   缺失时问题详情的「关联任务」直接显示英文 'pending'
+  //   （ProblemTab 用 `inspMeta?.label || task.status` 兜底）。
+  pending: { bg: 'bg-gray-100', text: 'text-gray-700', label: '待巡查' },
 };
 
 // 初始筛选条件
