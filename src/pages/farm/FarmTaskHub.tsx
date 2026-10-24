@@ -28,7 +28,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button, Label, Select } from '@/components/ui';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
-import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
+import { useUserStore, useGreenhouseStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '../../lib/apiClient';
 import { useFarmTaskStore } from '../../stores/farmTaskStore';
@@ -60,18 +60,16 @@ export function FarmTaskHub() {
   // 温室数据（替换硬编码 taskDispatchFields）
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
-  // 员工列表（用于批量派发/重派选择执行人，从 TaskDispatchPage 合并）
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
-  const staffOptions = useMemo(() => Array.isArray(workers) ? workers.map(w => ({
-    value: w.id || w.name,
-    label: w.name,
-  })) : [], [workers]);
-
-  // 组件挂载时加载员工数据
-  useEffect(() => {
-    if (workers.length === 0) loadWorkers();
-  }, [workers.length, loadWorkers]);
+  // 执行人候选：统一用登录账号（2026-10-24）
+  //   原先批量派发读 useWorkerStore（人事档案：张三/李四…），与「新建任务」的 users
+  //   不是同一套人 —— 同一条任务流里两个下拉框给出两份名单，且派工后工作日志
+  //   按登录用户过滤不到。人事档案只服务人事/考勤/薪资模块。
+  const staffOptions = useMemo(() => (Array.isArray(users) ? users : [])
+    .map(u => ({
+      value: u.id || u.oid || '',
+      label: u.name || u.real_name || u.username || '',
+    }))
+    .filter(o => o.value && o.label), [users]);
 
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
@@ -741,7 +739,7 @@ export function FarmTaskHub() {
           setBatchAssignTaskInfo(null);
         }}
         task={batchAssignTaskInfo}
-        workers={workers.map((w) => ({ id: w.id, name: w.name, departmentName: w.position }))}
+        workers={staffOptions.map((o) => ({ id: o.value, name: o.label, departmentName: '' }))}
       />
 
       {/* 撤回任务弹窗 */}
