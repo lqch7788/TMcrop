@@ -95,8 +95,8 @@ beforeAll(async () => {
       e,
     );
   }
-  // 5 个登录账号；3 个已挂靠档案，2 个访客无档案
-  const users: [string, string, string, string | null][] = [
+  // 5 个登录账号；3 个已挂靠档案，2 个访客无档案（无部门、无档案）
+  const users: [string, string, string | null, string | null][] = [
     ['user-admin', '陆启闯', '管理层', 'EMP_007'],
     ['user-manager', '张俊生', '生产部', 'EMP_008'],
     ['user-regular', '王建国', '生产部', 'EMP_009'],
