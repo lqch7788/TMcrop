@@ -47,7 +47,13 @@ const MIGRATIONS = [
   { table: 'farm_tasks', idCol: 'assignee_id', nameCol: 'assignee_name' },
   { table: 'inspection_plans', idCol: 'assignee_id', nameCol: 'assignee_name' },
   { table: 'problems', idCol: 'assignee_id', nameCol: 'assignee_name' },
-  { table: 'farm_task_schedules', idCol: 'worker_id', nameCol: 'worker_name' },
+  // 2026-10-24（E4）：**移除 farm_task_schedules**
+  //   该表的人员列口径是 employees.id（排班表声明的 FK 也是 employees.id），
+  //   与上面三张表的 users.id 口径**不同** —— 不能统一到登录账号。
+  //   且本脚本的 apply WHERE 是 `(nameCol<>?) OR (idCol<>TARGET_ID)`，
+  //   归一后的 'EMP_007' 会命中第二个分支被**改回 'user-admin'**，
+  //   与 migrateOperationIdentity.cjs 的归一结果直接打架（两脚本互相覆盖）。
+  //   归一由 server/scripts/db-migrations/migrateOperationIdentity.cjs 负责。
 ];
 
 /** 只改姓名列（无配套 id 列） */

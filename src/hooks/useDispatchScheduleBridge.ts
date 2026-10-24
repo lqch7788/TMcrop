@@ -178,13 +178,20 @@ export function useDispatchScheduleBridge() {
 
       try {
         // 1. 查工人当日占用
-        // 后端 route /api/schedules/occupations 只接受 date + 可选 teamId，不过滤 workerId
-        // → 前端本地按 workerId 过滤（一般占用列表 < 50 人，开销可接受）
+        // 2026-10-24（E4）：改为服务端按 workerId 过滤。
+        //   原实现是「服务端返回全量 + 前端本地按 workerId 过滤」，但两边 id 口径不同：
+        //   本函数收到的 workerId 是登录账号 id（users.id，commit 2b382ba0 统一后的口径），
+        //   而接口返回的 workers[].workerId 是员工档案 id（employees.id，取自 schedules.staff_id）
+        //   ⇒ `w.workerId === workerId` 永远为 false ⇒ occ 恒为 undefined
+        //   ⇒ 「off_duty / no_schedule 软警告」从未触发过，派工冲突检测形同虚设。
+        //   现由服务端归一后过滤（见 routes/schedule.ts 的 GET /occupations）。
         const response = await enhancedApiClient.get<{
           date: string;
           workers: ScheduleOccupation[];
-        }>(`/schedules/occupations?date=${encodeURIComponent(date)}`);
-        const occ = response?.workers?.find((w) => w.workerId === workerId);
+        }>(
+          `/schedules/occupations?date=${encodeURIComponent(date)}&workerId=${encodeURIComponent(workerId)}`,
+        );
+        const occ = response?.workers?.[0];
 
         // 2. 若是 off_duty / no_schedule → 弹软警告
         if (

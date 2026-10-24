@@ -9,6 +9,7 @@
 import { Router, Request, Response } from 'express';
 import { operationLogService } from '../services/operationLog.service';
 import { getDatabase, saveDatabase } from '../db';
+import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 import { refreshAvailability } from '../services/teamAvailabilityService';
 
 const router = Router();
@@ -231,7 +232,13 @@ function rowsToObjects(result: any[]): any[] {
  * 字段命名：响应走 camelCaseResponse 中间件，前端拿到的会是 camelCase。
  */
 router.get('/occupations', (req: Request, res: Response) => {
-  const { date, teamId } = req.query;
+  // 2026-10-24（E4）：新增可选 workerId 过滤
+  //   调用方（useDispatchScheduleBridge 的派工前冲突检查）传的是登录账号 id（users.id），
+  //   而本接口返回的 workers[].workerId 是员工档案 id（employees.id，取自 schedules.staff_id）
+  //   ⇒ 前端用 `w.workerId === workerId` 本地过滤**永远匹配不上**，
+  //   导致「off_duty / no_schedule 软警告」从未触发过（派工冲突检测形同虚设）。
+  //   改为在服务端接受 workerId 并归一后过滤，两端口径就此一致。
+  const { date, teamId, workerId } = req.query;
   if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ success: false, error: 'date 参数格式错误 (YYYY-MM-DD)' });
   }
@@ -259,6 +266,19 @@ router.get('/occupations', (req: Request, res: Response) => {
         ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
         : [];
 
+      if (workerFilterIds.length === 0) {
+        return res.json({ success: true, data: { date, workers: [] } });
+      }
+    }
+
+    // 2026-10-24（E4）：workerId 入参归一为 employees.id 后收窄到单个工人
+    //   与 teamId 同时传时取交集（两者的 id 都是 employees.id 口径）
+    if (workerId && typeof workerId === 'string') {
+      const emp = resolveEmployeeIdentity(workerId, undefined);
+      const single = emp ? emp.employeeId : workerId;
+      workerFilterIds = workerFilterIds
+        ? workerFilterIds.filter((id) => id === single)
+        : [single];
       if (workerFilterIds.length === 0) {
         return res.json({ success: true, data: { date, workers: [] } });
       }
@@ -413,9 +433,19 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
 
+    // 2026-10-24（E4）：执行人 id 归一
+    //   调用方传的是登录账号 id（users.id，commit 2b382ba0 统一后的口径），
+    //   而 schedules.staff_id 存的是员工档案 id（employees.id）——
+    //   两者不相等 ⇒ 查不到行 ⇒ 一直返回「无排班记录，未写入 dispatched_task_ids」。
+    //   实测该表 17/17 行的 dispatched_task_ids 都是 '[]'，派工占用从未写入过一次，
+    //   导致 GET /occupations 的 scheduleStatus 恒为 no_schedule，冲突软警告形同虚设。
+    //   这里归一后再查，两个 ID 空间就此打通。
+    const employee = resolveEmployeeIdentity(workerId, undefined);
+    const staffId = employee ? employee.employeeId : workerId;
+
     const lookup = db.exec(
       'SELECT id, dispatched_task_ids FROM schedules WHERE staff_id = ? AND date = ? LIMIT 1',
-      [workerId, date]
+      [staffId, date]
     );
     const rows = rowsToObjects(lookup);
 
