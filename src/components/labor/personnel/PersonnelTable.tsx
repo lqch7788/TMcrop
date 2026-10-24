@@ -119,7 +119,12 @@ export function PersonnelTable({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{worker.name}</p>
-                      <p className="text-xs text-gray-500">{worker.gender} {worker.age}岁</p>
+                      {/* 2026-10-24：性别/年龄来自 DB 的可空列（gender 无值、age 由 id_card 推算，
+                          id_card 为空则无年龄）。缺任一项时不再渲染出孤零零的「岁」。
+                          Worker 类型把 gender/age 声明为必填，与实际可空不符，故此处按运行时兜底。 */}
+                      <p className="text-xs text-gray-500">
+                        {[worker.gender, worker.age ? `${worker.age}岁` : ''].filter(Boolean).join(' ')}
+                      </p>
                     </div>
                   </div>
                 </TableCell>

@@ -26,7 +26,8 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">年龄</p>
-            <p className="text-sm font-medium text-gray-900">{worker.age}岁</p>
+            {/* 2026-10-24：年龄由 id_card 推算，id_card 为空则无年龄 —— 不再渲染孤立的「岁」 */}
+            <p className="text-sm font-medium text-gray-900">{worker.age ? `${worker.age}岁` : '-'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">出生日期</p>
