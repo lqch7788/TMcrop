@@ -36,13 +36,13 @@
 |---|---|---|---|
 | `schedules.staff_id` | `employees.id` | 考勤排班的人 | ✅ 已合规（17/17 命中） |
 | `team_members.worker_id` | `employees.id` | 班组成员 | ✅ 已合规（9/9 命中） |
-| `farm_task_schedules.worker_id` | `employees.id` | 任务排班的人（表已声明 FK） | ✅ 已合规（归一后） |
-| `attendance_records.worker_id` | `employees.id` | 考勤记录的人 | ⬜ E2 待归一 |
-| `overtime_records.worker_id` | `employees.id` | 加班的人 | ⬜ E2 待归一 |
-| `leave_records.worker_id` | `employees.id` | 请假的人 | ⬜ E2 待归一 |
+| `farm_task_schedules.worker_id` | `employees.id` | 任务排班的人（表已声明 FK） | ⚠️ 声明已合规，但有 38 行历史孤儿（迁移前遗留），归 E4 两表合并 |
+| `attendance_records.worker_id` | `employees.id` | 考勤记录的人 | ✅ E2 已归一（生效 10/10 命中；13 行 mock 已归档，保留原 ID 不参与业务） |
+| `overtime_records.worker_id` | `employees.id` | 加班的人 | ✅ E2 已归一（生效 3/3；6 行归档） |
+| `leave_records.worker_id` | `employees.id` | 请假的人 | ✅ E2 已归一（生效 3/3；16 行归档） |
 | `farm_tasks.assignee_id` | `users.id` | 任务执行人（能登录的账号） | ✅ 已合规（216/216 命中，commit `2b382ba0`） |
-| `farm_operation_records.operator_id` | `users.id` | 谁做了这个作业操作 | ⬜ E3 待归一 |
-| `labor_records.worker_id` | `users.id` | 谁干的这份工时 | ⬜ E3 待归一 |
+| `farm_operation_records.operator_id` | `employees.id` | 谁做了这个作业操作 | ✅ E3 已归一（68/68 命中，12 行无法归一置 NULL） |
+| `labor_records.worker_id` | `employees.id` | 谁干的这份工时 | ✅ E3 已归一（3/3 命中，1 行置 NULL） |
 
 > **两套 id 并存不是问题，「没声明归属」和「混用」才是问题。**
 > `users.id` 与 `employees.id` 之间的转换走 `users.employee_id`（确定性），不允许靠姓名猜。
@@ -55,9 +55,9 @@
 |---|---|---|
 | 把姓名哈希成 ID（如 `EMP_98404`） | 哈希不可逆、不可校验，且与真实档案冲突 | 过 `resolveEmployeeIdentity` |
 | 人员列存自由文本（如 `USER_ADMIN_001`、`demo_user`、`u`、`EMP-999`、`EMP_VERIFY`） | 无法关联到任何人，统计与追溯全断 | 只允许 `employees.id` 或 `users.id` |
-| 人员列存 `users.username`（如「陆启闯」） | username 可改，不是稳定标识 | 存 `users.id` |
+| 人员列存 `users.username`（如「陆启闯」） | username 可改，不是稳定标识 | 存 `employees.id` 或 `users.id`（按 §3 归属） |
 | 人员列存 `employees.name`（如「张三」） | 姓名不唯一，改名即断链 | 存 `employees.id` |
-| 在写路径里"猜"一个 ID 落库 | 猜错就等于把数据挂到错的人身上 | 归一失败 → **不写库** + 明确报错 |
+| 在写路径里"猜"一个 ID 落库 | 猜错就等于把数据挂到错的人身上 | 归一失败 → 该列置 NULL（人名列保留原显示名）或**不写库** + 明确报错 |
 
 ---
 
@@ -97,16 +97,22 @@ const r = resolveEmployeeIdentity(candidateId, candidateName);
 
 ## 6. 存量脏 ID 归口
 
-| 脏 ID 形态 | 出现位置 | 归口期次 |
-|---|---|---|
-| `W001`~`W008`、`S001`~`S003`、`U001` | `attendance_records` / `overtime_records` / `leave_records` | **E2** |
-| `EMP_63279`、`EMP_81035`、`EMP_98404` | 同上 + 姓名哈希产物 | **E2** |
-| `WORKER_001`~`WORKER_004`（张三/李四/王五） | 同上 | **E2**（按姓名无损归一到 `EMP_001`~`EMP_003`） |
-| `user-admin` | `farm_task_schedules`（38 行）+ `farm_operation_records`（10 行） | **E3** / **E4** |
-| `USER_ADMIN_001`、`u`、`demo_user`、`EMP-999`、`EMP_VERIFY`、`EMP_W5`、`QA`、`null`、空串 | `farm_operation_records` / `labor_records` | **E3** |
-| `USR001`、`USR002` | `labor_records` | **E3** |
+| 脏 ID 形态 | 出现位置 | 归口期次 | 处置 |
+|---|---|---|---|
+| `W001`~`W008`、`S001`~`S003`、`U001` | `attendance_records` / `overtime_records` / `leave_records` | **E2** ✅ | 归档打标（`is_archived=1` + 原因），保留原 ID 不参与业务 |
+| `EMP_63279`、`EMP_81035`、`EMP_98404` | 同上 + 姓名哈希产物 | **E2** ✅ | 同上（`EMP_98404` 在 `attendance_records` 因姓名「陆启闯」成功归一到 `EMP_007`） |
+| `WORKER_001`~`WORKER_004`（张三/李四/王五） | 同上 | **E2** ✅ | 按姓名无损归一到 `EMP_001`~`EMP_003` |
+| `user-admin` | `farm_task_schedules`（38 行）+ `farm_operation_records`（10 行） | **E3** ✅ / **E4** ⬜ | 作业记录已归一到 `EMP_007`；任务排班 38 行待 E4 两表合并 |
+| `USER_ADMIN_001`、`u`、`demo_user`、`EMP-999`、`EMP_VERIFY`、`EMP_W5`、`QA`、`null`、空串 | `farm_operation_records` / `labor_records` | **E3** ✅ | 可归一的按姓名/账号桥归一（51 行）；无法归一的 **operator_id 置 NULL**（12 行），operator_name 保留原显示名 |
+| `USR001`、`USR002` | `labor_records` | **E3** ✅ | 按姓名归一到 `EMP_001`/`EMP_002` |
 
-> 归档一律用**打标**（`is_archived` + 原因），**不物理删除**。
+> **两种"不参与业务"的处置方式**（都保留原数据、不物理删除）：
+> - **归档打标**（E2 的三张考勤/假勤表）：加 `is_archived` + `archived_reason`，查询默认过滤
+> - **置 NULL**（E3 的作业/工时表）：`operator_id` 置 NULL 表示"无归属员工的操作"，`operator_name` 保留原显示名
+>
+> 选置 NULL 而非归档的理由：作业/工时表有 20+ 处读取（批次成本视图 / 合规报告 / 审批联动 / 成本统计），
+> 加归档列需改遍这些点且触及《农产品质量安全法》要求的 ≥2 年生产记录存档；实测那些查询都不按
+> `operator_id` 过滤，置 NULL 无影响。
 
 ---
 
