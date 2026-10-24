@@ -63,6 +63,8 @@ router.get('/employee/:employeeId', async (req: Request, res: Response): Promise
     const workStats = rowsToObjects(workResult)[0] ?? {};
 
     // 2. 出勤统计（从 attendance_records）
+    //    2026-10-24（E8）：修正列名 —— attendance_records 的人员列是 worker_id（employees.id），
+    //      原写 employee_id 导致该端点必然 no such column → 500
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attendResult = db.exec(
       `SELECT
@@ -71,7 +73,7 @@ router.get('/employee/:employeeId', async (req: Request, res: Response): Promise
              THEN (julianday(check_out) - julianday(check_in)) * 24
              ELSE 0 END) AS total_attendance_hours
        FROM attendance_records
-       WHERE employee_id = ?
+       WHERE worker_id = ?
          AND date LIKE ? || '%'`,
       [employeeId, month] as any[]
     );
@@ -189,9 +191,12 @@ router.post('/check-in', async (req: Request, res: Response): Promise<void> => {
 
     db.exec('BEGIN IMMEDIATE');
     try {
-      // 检查今日是否已有记录
+      // 2026-10-24（E8）：修正列名 —— attendance_records 的人员列是 worker_id（employees.id），
+      //   时间列是 create_time / update_time（原写 employee_id / created_at / updated_at，
+      //   这些列在本表不存在 → 该端点必然 500）
+      //   同时 name 是 NOT NULL，插入时必须带上
       const existing = db.exec(
-        'SELECT id, check_in, check_out FROM attendance_records WHERE employee_id = ? AND date = ?',
+        'SELECT id, check_in, check_out FROM attendance_records WHERE worker_id = ? AND date = ?',
         [employee_id, today]
       );
 
@@ -202,18 +207,23 @@ router.post('/check-in', async (req: Request, res: Response): Promise<void> => {
           `UPDATE attendance_records
            SET check_in = COALESCE(?, check_in),
                check_out = COALESCE(?, check_out),
-               updated_at = ?
+               update_time = ?
            WHERE id = ?`,
           [check_in ?? null, check_out ?? null, now, id]
         );
       } else {
-        // 插入
+        // 插入（name 必填；status 用中文口径与本表既有数据一致）
         const id = `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const nameRow = db.exec('SELECT name FROM employees WHERE id = ?', [employee_id]);
+        const empName =
+          nameRow.length > 0 && nameRow[0].values.length > 0
+            ? String(nameRow[0].values[0][0] ?? '')
+            : '';
         db.exec(
           `INSERT INTO attendance_records
-           (id, employee_id, date, check_in, check_out, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'present', ?, ?)`,
-          [id, employee_id, today, check_in ?? null, check_out ?? null, now, now]
+           (id, worker_id, name, date, check_in, check_out, status, status_class, create_time, update_time)
+           VALUES (?, ?, ?, ?, ?, ?, '正常', 'normal', ?, ?)`,
+          [id, employee_id, empName, today, check_in ?? null, check_out ?? null, now, now]
         );
       }
       db.exec('COMMIT');
