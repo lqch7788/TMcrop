@@ -14,6 +14,9 @@ import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 // 2026-07-14：方案 C — 调拨后重算 status
 import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
+// 2026-10-25：种源产物库存行的基地归属
+import { inheritedBase, resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
+import { getContextBaseOid } from '../lib/requestContext';
 // 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
 // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
 // 2026-07-19 P0-8：generateInboundRecordId 改静态 import（避免 require() 运行时错误）
@@ -656,6 +659,14 @@ router.post('/append-from-inventory', async (req, res) => {
               Number(sourceObj.unit_price || 0), now, now,
             ],
           );
+
+          // 2026-10-25：调拨产生的种源库存行继承源行基地归属
+          const seedStockBase =
+            inheritedBase(
+              sourceObj.base_oid ? String(sourceObj.base_oid) : null,
+              sourceObj.base_name ? String(sourceObj.base_name) : null,
+            ) ?? resolveBaseFromRequest(null, getContextBaseOid());
+          if (seedStockBase) applyBaseOwnership('inventory_stock', targetSeedStockId, seedStockBase);
         }
 
         // 6.5. 写目标种源的 transfer_in 流水（2026-10-16 修复）

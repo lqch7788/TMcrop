@@ -6,6 +6,9 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+// 2026-10-25：同步导入的记录也要有基地归属（读过滤收紧后，无归属记录会消失）
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
+import { getContextBaseOid } from '../lib/requestContext';
 
 /**
  * 同步控制器类
@@ -365,6 +368,10 @@ export class SyncController {
         stmt.step();
         stmt.free();
         insertedCount++;
+
+        // 2026-10-25：同步导入的采收记录继承当前基地
+        const syncHarvestBase = resolveBaseFromRequest(null, getContextBaseOid());
+        if (syncHarvestBase) applyBaseOwnership('harvest_records', String(id), syncHarvestBase);
       }
 
       saveDatabase();
@@ -453,6 +460,10 @@ export class SyncController {
         stmt.step();
         stmt.free();
         insertedCount++;
+
+        // 2026-10-25：同步导入的作物实例继承当前基地
+        const syncCiBase = resolveBaseFromRequest(null, getContextBaseOid());
+        if (syncCiBase) applyBaseOwnership('crop_instances', String(id), syncCiBase);
       }
 
       saveDatabase();

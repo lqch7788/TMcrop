@@ -15,6 +15,9 @@ import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmploy
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 // 2026-10-16：补录审批通过需执行真正的回流（executeCirculation 已同步化，可在同步链路直接调用）
 import { executeCirculation, deriveSeedFormSubType } from '../services/circulation.service';
+// 2026-10-25：调拨目标库存行的基地归属（继承源行，其次当前请求基地）
+import { inheritedBase, resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
+import { getContextBaseOid } from '../lib/requestContext';
 
 const router = Router();
 
@@ -914,6 +917,14 @@ export function updateBusinessTable(
             now,                                          // create_time
             now,                                          // update_time
           ]);
+
+          // 2026-10-25：调拨目标库存行继承源行的基地归属（跨基地调入时以源行为准），
+          //   源行无归属时退回当前请求基地，避免写出无归属记录。
+          const transferBase =
+            inheritedBase(srcAttr.base_oid, srcAttr.base_name) ??
+            resolveBaseFromRequest(null, getContextBaseOid());
+          if (transferBase) applyBaseOwnership('inventory_stock', tgtStockId, transferBase);
+
           // 2026-10-09：调拨目标仓的 stock 暂不设 is_supplementary（不是补录）
           // 目标流水（transfer_in）
           db.run(`

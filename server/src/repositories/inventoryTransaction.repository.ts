@@ -34,6 +34,9 @@ export interface TransactionQuery {
   cropName?: string;
   operatorName?: string;
   businessType?: string;
+  // 2026-10-25：基地过滤（流水表本身没有 base_oid，按实例 JOIN inventory_stock 判断）
+  baseOid?: string;
+  baseOids?: string[];
   page?: number;                  // 默认 1
   limit?: number;                 // 默认 50
 }
@@ -106,6 +109,18 @@ export class InventoryTransactionRepository {
     // 且原参数按 where→on 顺序 push，与 SQL 占位符（ON 在前）顺序相反，会造成参数错位。
     if (warehouseId)  { where.push(`s.warehouse_id = ?`);   whereParams.push(warehouseId); }
     if (cropName)     { where.push(`s.crop_name LIKE ?`);   whereParams.push(`%${cropName}%`); }
+    // 2026-10-25：基地过滤。
+    //   inventory_transaction 本身没有 base_oid，按实例 JOIN inventory_stock 判断。
+    //   JOIN 不上的行（物料流水 / 历史孤儿）保留：流水是审计派生数据，
+    //   强行隐藏会让"有出库无记录"，比跨基地可见更难排查。
+    if (query.baseOid) {
+      where.push(`(s.base_oid = ? OR s.base_oid IS NULL)`);
+      whereParams.push(query.baseOid);
+    } else if (query.baseOids && query.baseOids.length > 0) {
+      const ph = query.baseOids.map(() => '?').join(',');
+      where.push(`(s.base_oid IN (${ph}) OR s.base_oid IS NULL)`);
+      whereParams.push(...query.baseOids);
+    }
 
     const onSql = '';
 
@@ -178,6 +193,15 @@ export class InventoryTransactionRepository {
     // 2026-10-18 P0 修复：同 findOutbound —— 仓库/品种放 WHERE，参数顺序与 SQL 一致
     if (warehouseId)  { where.push(`s.warehouse_id = ?`);   whereParams.push(warehouseId); }
     if (cropName)     { where.push(`s.crop_name LIKE ?`);   whereParams.push(`%${cropName}%`); }
+    // 2026-10-25：基地过滤（与 findOutbound 一致，JOIN 不上的行保留）
+    if (query.baseOid) {
+      where.push(`(s.base_oid = ? OR s.base_oid IS NULL)`);
+      whereParams.push(query.baseOid);
+    } else if (query.baseOids && query.baseOids.length > 0) {
+      const ph = query.baseOids.map(() => '?').join(',');
+      where.push(`(s.base_oid IN (${ph}) OR s.base_oid IS NULL)`);
+      whereParams.push(...query.baseOids);
+    }
     const onSql = '';
     const whereSql = where.join(' AND ');
 

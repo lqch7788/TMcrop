@@ -1,12 +1,15 @@
-/**
+﻿/**
  * 库存管理控制器
  */
 
 import { Request, Response } from 'express';
 import { inventoryService } from '../services/inventory.service';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
+// 2026-10-25：库存列表/统计按基地过滤
+import { resolveBaseQuery } from '../lib/baseResolver';
 
 export class InventoryController {
+
   /**
    * POST /api/inventory/inbound
    * 采收入库
@@ -105,6 +108,8 @@ export class InventoryController {
         cropName: crop_name as string,
         status: status as string,
         sourceType: source_type as string,
+        // 2026-10-25：基地过滤
+        ...resolveBaseQuery(req),
         page: Number(page),
         limit: Number(limit),
       });
@@ -210,6 +215,8 @@ export class InventoryController {
       const { stockType } = req.query;
       const data = await inventoryService.getStats({
         stockType: stockType as string | undefined,
+        // 2026-10-25：统计按基地过滤（否则卡片数字是跨基地汇总）
+        ...resolveBaseQuery(req),
       });
       res.json({ success: true, data });
     } catch (error) {
@@ -269,7 +276,11 @@ export class InventoryController {
   async aggregateByCrop(req: Request, res: Response): Promise<void> {
     try {
       const { crop_name } = req.query;
-      const data = await inventoryService.aggregateByCrop(crop_name as string | undefined);
+      const data = await inventoryService.aggregateByCrop(
+        crop_name as string | undefined,
+        // 2026-10-25：按基地过滤
+        resolveBaseQuery(req),
+      );
       res.json({ success: true, data });
     } catch (error) {
       console.error('[InventoryController] aggregateByCrop 错误:', error);

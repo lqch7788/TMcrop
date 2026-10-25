@@ -19,6 +19,9 @@ import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
 import { generateApprovalCode } from '../lib/approvalCode';
 import { authenticate } from '../middleware/auth';
+// 2026-10-25：补录占位库存行的基地归属
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
+import { getContextBaseOid } from '../lib/requestContext';
 
 const router = Router();
 router.use(authenticate);
@@ -253,6 +256,10 @@ router.post('/', (req: Request, res: Response) => {
       `补录申请 ${applicationCode} 审核中`,
       now, now,
     ]);
+
+    // 2026-10-25：补录占位库存行的基地归属（读过滤收紧后，无归属记录会消失）
+    const suppStockBase = resolveBaseFromRequest(input as Record<string, unknown>, getContextBaseOid());
+    if (suppStockBase) applyBaseOwnership('inventory_stock', placeholderStockId, suppStockBase);
 
     db.run('COMMIT');
   } catch (e) {

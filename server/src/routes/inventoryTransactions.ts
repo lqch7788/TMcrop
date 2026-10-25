@@ -19,6 +19,8 @@ import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 import { authenticate } from '../middleware/auth';
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 import { archiveBeforeDelete } from '../services/recycleBin.service';
+// 2026-10-25：出库流水按基地过滤
+import { resolveBaseQuery } from '../lib/baseResolver';
 
 const router = Router();
 router.use(authenticate);
@@ -96,6 +98,8 @@ router.get('/', async (req: Request, res: Response) => {
       cropName: cropName ? String(cropName) : undefined,
       operatorName: operatorName ? String(operatorName) : undefined,
       businessType: businessType ? String(businessType) : undefined,
+      // 2026-10-25：基地过滤
+      ...resolveBaseQuery(req),
       page: pageNum,
       limit: limitNum,
     });
@@ -111,6 +115,8 @@ router.get('/', async (req: Request, res: Response) => {
         cropName: cropName ? String(cropName) : undefined,
         operatorName: operatorName ? String(operatorName) : undefined,
         businessType: businessType ? String(businessType) : undefined,
+        // 2026-10-25：基地过滤（与列表一致）
+        ...resolveBaseQuery(req),
       });
       summary = {
         totalQuantity: Number(stats.totalQuantity) || 0,

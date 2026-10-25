@@ -19,6 +19,9 @@ import { formatLocalDateISO } from '../utils/dateUtil';
 import { writeFlowLog } from './flowLogService';
 import { SeedSourceRepository } from '../repositories/seedSource.repository';
 import { z } from 'zod';
+// 2026-10-25：service 层拿不到 req，用异步上下文取当前基地做写入归属
+import { getContextBaseOid } from '../lib/requestContext';
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 
 // ============================================================
 // Zod Schemas
@@ -565,6 +568,10 @@ function executeQuantityToInventory(input: CirculationInput, circId: string): Ci
     (id, instance_id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
     VALUES (?, ?, 'residue', ?, 'circulation', ?, ?, ?, ?, 'active', datetime('now','localtime'))
   `, [stockId, instanceId, circId, quantity, quantity, input.unit ?? null, input.warehouseId ?? null])
+
+  // 2026-10-25：残株入库继承当前请求基地（读过滤收紧后，无归属记录会消失）
+  const stockBase = resolveBaseFromRequest(null, getContextBaseOid())
+  if (stockBase) applyBaseOwnership('inventory_stock', stockId, stockBase)
 
   saveDatabase()
   return { circulationId: circId, stockId }

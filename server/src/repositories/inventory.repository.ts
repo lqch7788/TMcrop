@@ -5,6 +5,9 @@
 
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// 2026-10-25：仓储层用异步上下文取当前基地做写入归属
+import { getContextBaseOid } from '../lib/requestContext';
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 
 /**
  * 低库存阈值（2026-10-10 常量化：原为散落的魔法数字 10）
@@ -22,6 +25,9 @@ export interface InventoryStockQuery {
   // T11（2026-07-08）：P0 过滤器 bug 修复 — repository 层真正消费 status / sourceType
   status?: string;
   sourceType?: string;
+  // 2026-10-25：基地过滤（当前基地 / 用户可见基地范围），各基地数据不共用
+  baseOid?: string;
+  baseOids?: string[];
   page?: number;
   limit?: number;
 }
@@ -261,6 +267,10 @@ export class InventoryStockRepository {
       now
     ]);
 
+    // 2026-10-25：库存行补基地归属（读过滤收紧后，无归属记录会消失）
+    const stockBase = resolveBaseFromRequest(data as Record<string, unknown>, getContextBaseOid());
+    if (stockBase) applyBaseOwnership('inventory_stock', newId, stockBase);
+
     saveDatabase();
 
     return {
@@ -351,6 +361,16 @@ export class InventoryStockRepository {
       params.push(sourceType);
     }
 
+    // 2026-10-25：基地过滤（当前基地优先，其次用户可见基地范围）
+    if (query.baseOid) {
+      sql += ` AND s.base_oid = ?`;
+      params.push(query.baseOid);
+    } else if (query.baseOids && query.baseOids.length > 0) {
+      const ph = query.baseOids.map(() => '?').join(',');
+      sql += ` AND s.base_oid IN (${ph})`;
+      params.push(...query.baseOids);
+    }
+
     // 获取过滤后的总数（用与主查询相同的 WHERE 条件计数）
     let countSql = `SELECT COUNT(*) as total FROM inventory_stock s WHERE 1=1 AND s.status != 'transferred'`;
     const countSqlParams: any[] = [];
@@ -373,6 +393,15 @@ export class InventoryStockRepository {
     if (sourceType) {
       countSql += ` AND s.source_type = ?`;
       countSqlParams.push(sourceType);
+    }
+    // 2026-10-25：基地过滤（与主查询保持一致，否则分页总数对不上）
+    if (query.baseOid) {
+      countSql += ` AND s.base_oid = ?`;
+      countSqlParams.push(query.baseOid);
+    } else if (query.baseOids && query.baseOids.length > 0) {
+      const ph = query.baseOids.map(() => '?').join(',');
+      countSql += ` AND s.base_oid IN (${ph})`;
+      countSqlParams.push(...query.baseOids);
     }
     const countRows = queryToObjects<{ total: number }>(db, countSql, countSqlParams);
     const total = countRows[0]?.total || 0;
@@ -404,7 +433,7 @@ export class InventoryStockRepository {
   /**
    * 统计库存（按 stockType 分组 + 总览）
    */
-  async getStats(filters?: { stockType?: string }): Promise<{
+  async getStats(filters?: { stockType?: string; baseOid?: string; baseOids?: string[] }): Promise<{
     totalInstances: number;
     totalQuantity: number;
     byStockType: Record<string, { count: number; quantity: number }>;
@@ -417,6 +446,15 @@ export class InventoryStockRepository {
     if (filters?.stockType) {
       whereClause += ' AND stock_type = ?';
       params.push(filters.stockType);
+    }
+    // 2026-10-25：统计同样按基地过滤（否则卡片数字是跨基地汇总）
+    if (filters?.baseOid) {
+      whereClause += ' AND base_oid = ?';
+      params.push(filters.baseOid);
+    } else if (filters?.baseOids && filters.baseOids.length > 0) {
+      const ph = filters.baseOids.map(() => '?').join(',');
+      whereClause += ` AND base_oid IN (${ph})`;
+      params.push(...filters.baseOids);
     }
 
     const totals = queryToObjects<{ totalInstances: number; totalQuantity: number }>(db,

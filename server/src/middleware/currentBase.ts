@@ -18,6 +18,8 @@
  */
 import type { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../db/index';
+// 2026-10-25：把当前基地放进异步上下文，service 层也能读到（写入归属用）
+import { runWithBaseContext } from '../lib/requestContext';
 
 // 扩展 Express Request 类型
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -73,13 +75,13 @@ export function currentBaseContext(req: Request, _res: Response, next: NextFunct
 
   if (!value || typeof value !== 'string' || !value.trim()) {
     req.currentBaseOid = null;
-    next();
+    runWithBaseContext(null, next);
     return;
   }
 
   const oid = value.trim();
   req.currentBaseOid = getValidBases().has(oid) ? oid : null;
-  next();
+  runWithBaseContext(req.currentBaseOid, next);
 }
 
 /**

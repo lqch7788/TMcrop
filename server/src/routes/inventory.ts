@@ -26,6 +26,10 @@ import { authenticate } from '../middleware/auth';
 // 2026-07-22：追溯修复 - 库存 CRUD 写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
 import { archiveBeforeDelete } from '../services/recycleBin.service';
+// 2026-10-25：库存写入的基地归属 + 列表读过滤
+import { resolveBaseFromRequest, applyBaseOwnership, buildBaseScopeFilter, resolveBaseQuery } from '../lib/baseResolver';
+import { getCurrentBaseOid } from '../middleware/currentBase';
+import { execCount } from '../utils/queryHelper';
 
 const router = Router();
 router.use(authenticate);
@@ -304,6 +308,10 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       input.isSupplementary ? (input.operatorName || 'system') : null,
     ])
 
+    // 2026-10-25：库存行基地归属（显式 base_oid > 区域/温室反查 > 当前基地）
+    const inboundBase = resolveBaseFromRequest(req.body as Record<string, unknown>, getCurrentBaseOid(req))
+    if (inboundBase) applyBaseOwnership('inventory_stock', stockId, inboundBase)
+
     // 3. 写 inventory_inbound_records
     // 2026-07-08 T8：插入 crop_id 列（与 inventory_stock 表对齐），保持原有列顺序稳定
     // 2026-07-08 T8.5：6 套字段矩阵补 9 列（supplier_phone/gift_from/consignor/source_warehouse_name/
@@ -414,6 +422,11 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
           input.supplementaryReason || null,
           input.operatorName || 'system', now, now,
         ]);
+
+        // 2026-10-25：补录反填的采收记录同样需要基地归属
+        const suppBase = resolveBaseFromRequest(req.body as Record<string, unknown>, getCurrentBaseOid(req));
+        if (suppBase) applyBaseOwnership('harvest_records', harvestRecordId, suppBase);
+
         console.log(`[补录反填] harvest_records ← ${harvestCode} (sourceModule=${input.sourceModule}, sourceId=${input.sourceId})`);
       } catch (e: any) {
         // harvest_records 写入失败不阻断主流程（库存已正确入库）
@@ -473,6 +486,24 @@ router.get('/inbound-records', (req: Request, res: Response) => {
     if (warehouseId) { conditions.push('ir.warehouse_id = ?'); params.push(warehouseId) }
     if (startDate) { conditions.push('ir.record_date >= ?'); params.push(startDate) }
     if (endDate) { conditions.push('ir.record_date <= ?'); params.push(endDate) }
+    // 2026-10-25：按当前基地过滤。
+    //   inventory_inbound_records 没有 base_oid 列，通过 business_id 关联 inventory_stock 判断；
+    //   关联不上任何库存行的记录（历史数据 / 物料）保留 —— 入库记录是审计链，隐藏会断链。
+    const inboundBaseQuery = resolveBaseQuery(req)
+    if (inboundBaseQuery.baseOid) {
+      conditions.push(
+        `(EXISTS (SELECT 1 FROM inventory_stock st WHERE st.business_id = ir.business_id AND st.base_oid = ?)
+          OR NOT EXISTS (SELECT 1 FROM inventory_stock st WHERE st.business_id = ir.business_id))`
+      )
+      params.push(inboundBaseQuery.baseOid)
+    } else if (inboundBaseQuery.baseOids && inboundBaseQuery.baseOids.length > 0) {
+      const ph = inboundBaseQuery.baseOids.map(() => '?').join(',')
+      conditions.push(
+        `(EXISTS (SELECT 1 FROM inventory_stock st WHERE st.business_id = ir.business_id AND st.base_oid IN (${ph}))
+          OR NOT EXISTS (SELECT 1 FROM inventory_stock st WHERE st.business_id = ir.business_id))`
+      )
+      params.push(...inboundBaseQuery.baseOids)
+    }
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
 
     const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
@@ -555,6 +586,12 @@ router.get('/available-by-crop', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'cropCode 必填' });
     }
     const db = getDatabase();
+    // 2026-10-25：按当前基地过滤 —— 否则调拨弹窗会列出别的基地的仓库和库存
+    const baseFilter = buildBaseScopeFilter(req, 's1.');
+    const baseCond = baseFilter.condition ? ' AND ' + baseFilter.condition : '';
+    const baseCondS2 = baseFilter.condition
+      ? ' AND ' + baseFilter.condition.replace(/\bs1\./g, 's2.')
+      : '';
     const stmt = db.prepare(`
       SELECT warehouse_id, warehouse_name,
              SUM(available_quantity) AS available,
@@ -564,16 +601,18 @@ router.get('/available-by-crop', (req: Request, res: Response) => {
                  AND SUBSTR(s2.crop_code, 1, 9) = SUBSTR(s1.crop_code, 1, 9)
                  AND s2.status IN ('in_stock', 'low_stock')
                  AND s2.available_quantity > 0
-                 AND IFNULL(s2.source_form, '') != ''
+                 AND IFNULL(s2.source_form, '') != ''${baseCondS2}
                ORDER BY s2.available_quantity DESC LIMIT 1) AS form
       FROM inventory_stock s1
       WHERE SUBSTR(crop_code, 1, 9) = SUBSTR(?, 1, 9)
         AND status IN ('in_stock', 'low_stock')
-        AND available_quantity > 0
+        AND available_quantity > 0${baseCond}
       GROUP BY warehouse_id, warehouse_name
       ORDER BY available DESC
     `);
-    stmt.bind([cropCode]);
+    // 参数顺序必须与 SQL 中的占位符出现顺序一致：
+    //   子查询 s2 的条件在 SELECT 子句里（先出现）→ 再是主查询的 cropCode → 再是主查询的基地条件
+    stmt.bind([...baseFilter.params, cropCode, ...baseFilter.params]);
     const data: any[] = [];
     while (stmt.step()) {
       const row = stmt.getAsObject();
@@ -1162,14 +1201,26 @@ router.get('/', (req: Request, res: Response) => {
     if (crop_name) { sql += ` AND s.crop_name LIKE ?`; params.push(`%${crop_name}%`); }
     if (status) { sql += ` AND s.status = ?`; params.push(status); }
 
-    // 总数
-    const countSql = sql.replace('SELECT s.*,', 'SELECT COUNT(*) as total FROM (SELECT s.*')
-      .replace(/LEFT JOIN[\s\S]*?LIMIT 1\)\)\s*$/m, ') sub')
-    // 简化：用独立 COUNT
-    const countResult = db.exec(`SELECT COUNT(*) AS total FROM inventory_stock WHERE 1=1 AND status != 'transferred'`, []);
-    const total = countResult.length > 0 && countResult[0].values.length > 0
-      ? Number(countResult[0].values[0][0]) || 0
-      : 0;
+    // 2026-10-25：按当前基地过滤（各基地数据不共用）
+    const baseFilter = buildBaseScopeFilter(req, 's.');
+    if (baseFilter.condition) {
+      sql += ' AND ' + baseFilter.condition;
+      params.push(...baseFilter.params);
+    }
+
+    // 总数 —— 2026-10-25：改用与实际查询一致的过滤条件。
+    //   原实现是全表 COUNT，完全忽略 stock_type/crop_name/status；
+    //   加基地过滤后会变成「共 101 条、实际只显示 18 条」的分页错乱。
+    const countParams: any[] = [];
+    let countSql = `SELECT COUNT(*) AS total FROM inventory_stock s WHERE 1=1
+      AND s.status != 'transferred'
+      AND s.current_quantity > 0
+      AND s.status NOT IN ('depleted', 'empty')`;
+    if (stock_type) { countSql += ' AND s.stock_type = ?'; countParams.push(stock_type); }
+    if (crop_name) { countSql += ' AND s.crop_name LIKE ?'; countParams.push(`%${crop_name}%`); }
+    if (status) { countSql += ' AND s.status = ?'; countParams.push(status); }
+    if (baseFilter.condition) { countSql += ' AND ' + baseFilter.condition; countParams.push(...baseFilter.params); }
+    const total = execCount(db, countSql, countParams);
 
     sql += ` ORDER BY s.create_time DESC LIMIT ? OFFSET ?`;
     const offset = (Number(page) - 1) * Number(limit);
@@ -1320,6 +1371,11 @@ router.post('/', async (req: Request, res: Response) => {
       production_plan_code || '',
       status, 1, now, now,
     ]);
+
+    // 2026-10-25：手动新增库存的基地归属
+    const manualBase = resolveBaseFromRequest(req.body as Record<string, unknown>, getCurrentBaseOid(req));
+    if (manualBase) applyBaseOwnership('inventory_stock', id, manualBase);
+
     saveDatabase();
     // 2026-07-22：追溯修复 - 必须在 res.json 之前且 saveDatabase 之后（否则 audit log 不落盘）
     writeAuditLog({

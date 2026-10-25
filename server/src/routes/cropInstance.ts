@@ -5,6 +5,9 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// 2026-10-25：作物实例的基地归属 + 列表过滤
+import { resolveBaseFromRequest, applyBaseOwnership, buildBaseScopeFilter } from '../lib/baseResolver';
+import { getCurrentBaseOid } from '../middleware/currentBase';
 
 const router = Router();
 
@@ -25,6 +28,13 @@ router.get('/', (req: Request, res: Response) => {
     if (status) {
       sql += ' AND status = ?';
       params.push(status);
+    }
+
+    // 2026-10-25：按当前基地过滤（各基地数据不共用）
+    const baseFilter = buildBaseScopeFilter(req);
+    if (baseFilter.condition) {
+      sql += ' AND ' + baseFilter.condition;
+      params.push(...baseFilter.params);
     }
 
     // 保存原始SQL用于count查询
@@ -115,6 +125,10 @@ router.post('/', (req: Request, res: Response) => {
         category_code, type_code, sub_code, source_origin, source_description,
         initial_quantity || 0, current_quantity || 0, planted_quantity || 0, harvested_quantity || 0, status || 'seedling',
         seed_entry_date, seedling_start_date, planting_date, harvest_date, source_instance_id, create_by, now, now]);
+
+    // 2026-10-25：作物实例补基地归属（读过滤收紧后，无归属记录会消失）
+    const ciBase = resolveBaseFromRequest(req.body as Record<string, unknown>, getCurrentBaseOid(req));
+    if (ciBase) applyBaseOwnership('crop_instances', newId, ciBase);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });

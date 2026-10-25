@@ -29,7 +29,7 @@ import plantingDailyRecordsRouter from './plantingDailyRecords.route';
 import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 import { asyncHandler } from '../middleware/errorHandler';
 // 2026-10-25：基地归属（数据行级权限）
-import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
+import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership, inheritedBase } from '../lib/baseResolver';
 // 2026-10-25：数据范围（读取过滤）
 import { resolveUserDataScope } from '../lib/dataScope';
 // 2026-10-25：当前基地上下文（顶部基地切换器）
@@ -378,18 +378,19 @@ router.get('/', (req: Request, res: Response) => {
 
     // 2026-10-25：数据行级过滤（按「当前登录基地」）
     //   优先用 X-Base-Oid（顶部基地切换器）；未指定时退回用户数据范围（user_base_permissions）。
-    //   未归属记录（base_oid 为空）放行 —— 兼容历史数据。
+    //   2026-10-25 二次收紧：不再放行未归属记录（原 `base_oid IS NULL OR ''` 分支已去掉）。
+    //   写入路径（创建/采收/入库/调拨/同步）均已补上基地归属，未归属记录不应再出现。
     const currentBaseOid = getCurrentBaseOid(req);
     let scopeFilter = '';
     const scopeParams: any[] = [];
     if (currentBaseOid) {
-      scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid = ?)`;
+      scopeFilter = ` AND p.base_oid = ?`;
       scopeParams.push(currentBaseOid);
     } else {
       const scope = resolveUserDataScope((req as any).user?.userId);
       if (scope.restricted && scope.baseOids.length > 0) {
         const ph = scope.baseOids.map(() => '?').join(',');
-        scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid IN (${ph}))`;
+        scopeFilter = ` AND p.base_oid IN (${ph})`;
         scopeParams.push(...scope.baseOids);
       }
     }
@@ -815,6 +816,17 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         null, null, 0, 0, null,
       ]);
       stockStmt.free();
+
+      // 2026-10-25：重放产生的采收/库存记录继承种植记录的基地归属
+      const replayBase =
+        inheritedBase(
+          old?.base_oid ? String(old.base_oid) : null,
+          old?.base_name ? String(old.base_name) : null,
+        ) ?? resolveBaseFromRequest(null, getCurrentBaseOid(req));
+      if (replayBase) {
+        applyBaseOwnership('harvest_records', String(generatedHarvestId), replayBase);
+        applyBaseOwnership('inventory_stock', String(generatedStockId), replayBase);
+      }
     } else if (destination === 'planting_self_kept') {
       // 2026-06-29: 合并 plant_self_kept 替代旧 circulate / self_seed
       if (!planting.source_id) {
@@ -1418,6 +1430,12 @@ router.post('/', async (req: Request, res: Response) => {
           now,
         ]
       );
+
+      // 2026-10-25：作物实例继承种植记录的基地归属。
+      //   读过滤改为严格匹配后，未归属的实例会从所有基地消失，
+      //   所以派生记录必须在这里就带上基地。
+      const ciBase = resolveBaseFromRequest(body, getCurrentBaseOid(req));
+      if (ciBase) applyBaseOwnership('crop_instances', plantingCiId, ciBase);
 
       // 写入 material_flow_log 流转流水
       // 查询种源来源类别（从 seed_sources.propagation_type 映射）
@@ -2270,6 +2288,18 @@ router.post('/:id/end', async (req, res) => {
           null, null, 0, 0, null,
         ])
         stockStmt.free()
+
+        // 2026-10-25：采收入库记录 + 库存行继承种植记录的基地归属。
+        //   若种植记录本身没有归属（历史数据），退回请求上下文兜底。
+        const harvestBase =
+          inheritedBase(
+            planting.base_oid ? String(planting.base_oid) : null,
+            planting.base_name ? String(planting.base_name) : null,
+          ) ?? resolveBaseFromRequest(null, getCurrentBaseOid(req))
+        if (harvestBase) {
+          applyBaseOwnership('harvest_records', String(harvestId), harvestBase)
+          applyBaseOwnership('inventory_stock', String(stockId), harvestBase)
+        }
 
         // 2026-10-19：同步写采收明细（planting_harvest_records）——
         // 结束种植采收入库此前只写 harvest_records + inventory_stock，

@@ -367,16 +367,17 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // 2026-10-25：数据行级过滤（按「当前登录基地」）
-    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。未归属记录放行。
+    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。
+    //   2026-10-25 二次收紧：不再放行未归属记录（写入路径已全部补上基地归属）。
     const currentBaseOid = getCurrentBaseOid(req);
     if (currentBaseOid) {
-      sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid = ?)`;
+      sql += ` AND base_oid = ?`;
       params.push(currentBaseOid);
     } else {
       const dataScope = resolveUserDataScope((req as any).user?.userId);
       if (dataScope.restricted && dataScope.baseOids.length > 0) {
         const ph = dataScope.baseOids.map(() => '?').join(',');
-        sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid IN (${ph}))`;
+        sql += ` AND base_oid IN (${ph})`;
         params.push(...dataScope.baseOids);
       }
     }

@@ -38,7 +38,10 @@ export interface DataScope {
 
 const ADMIN_ROLE_CODES = ['admin', 'administrators', 'super_admin'];
 
-function isAdminUser(userOid: string): boolean {
+/**
+ * 判断用户是否为管理员角色（2026-10-25 导出：汇总统计的全局口径判定要用）
+ */
+export function isAdminUser(userOid: string): boolean {
   const db = getDatabase();
   const st = db.prepare(`
     SELECT r.role_code FROM user_roles ur

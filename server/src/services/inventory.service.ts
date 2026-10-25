@@ -327,6 +327,9 @@ export class InventoryService {
     cropName?: string;
     status?: string;       // T10 修复：透传 controller 的 status 过滤参数（T11 会在 repository 真正消费）
     sourceType?: string;   // T10 修复：透传 controller 的 sourceType 过滤参数（T11 会在 repository 真正消费）
+    // 2026-10-25：基地过滤（当前基地 / 用户可见范围）
+    baseOid?: string;
+    baseOids?: string[];
     page?: number;
     limit?: number;
   }): Promise<{ data: InventoryStock[]; total: number }> {
@@ -363,7 +366,7 @@ export class InventoryService {
   /**
    * 获取库存统计
    */
-  async getStats(filters?: { stockType?: string }): Promise<{
+  async getStats(filters?: { stockType?: string; baseOid?: string; baseOids?: string[] }): Promise<{
     totalInstances: number;
     totalQuantity: number;
     byStockType: Record<string, { count: number; quantity: number }>;
@@ -603,7 +606,10 @@ export class InventoryService {
   /**
    * 按作物名称聚合查询
    */
-  async aggregateByCrop(cropName?: string): Promise<{
+  async aggregateByCrop(
+    cropName?: string,
+    baseFilter?: { baseOid?: string; baseOids?: string[] },
+  ): Promise<{
     cropName: string;
     seed: InventoryStock[];
     seedling: InventoryStock[];
@@ -617,6 +623,15 @@ export class InventoryService {
     if (cropName) {
       sql += ` AND crop_name LIKE ?`;
       params.push(`%${cropName}%`);
+    }
+    // 2026-10-25：按基地过滤（各基地数据不共用）
+    if (baseFilter?.baseOid) {
+      sql += ` AND base_oid = ?`;
+      params.push(baseFilter.baseOid);
+    } else if (baseFilter?.baseOids && baseFilter.baseOids.length > 0) {
+      const ph = baseFilter.baseOids.map(() => '?').join(',');
+      sql += ` AND base_oid IN (${ph})`;
+      params.push(...baseFilter.baseOids);
     }
 
     const items = queryToObjects<InventoryStock>(db, sql, params);

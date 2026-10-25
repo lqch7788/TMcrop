@@ -587,6 +587,11 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       ]
     );
 
+    // 2026-10-25：作物实例继承育苗记录的基地归属
+    //   （读过滤改为严格匹配后，未归属的实例会从所有基地消失）
+    const seedlingCiBase = resolveBaseFromRequest(seedling, getCurrentBaseOid(req));
+    if (seedlingCiBase) applyBaseOwnership('crop_instances', seedlingCiId, seedlingCiBase);
+
     // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
     try {
       const flowType = isExternalMode ? 'external→seedling' : 'seed_source→seedling';
@@ -1143,18 +1148,19 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // 2026-10-25：数据行级过滤（按「当前登录基地」）
-    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。未归属记录放行。
+    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。
+    //   2026-10-25 二次收紧：不再放行未归属记录（写入路径已全部补上基地归属）。
     const currentBaseOid = getCurrentBaseOid(req);
     let scopeFilter = '';
     const scopeParams: any[] = [];
     if (currentBaseOid) {
-      scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid = ?)`;
+      scopeFilter = ` AND s.base_oid = ?`;
       scopeParams.push(currentBaseOid);
     } else {
       const scope = resolveUserDataScope((req as any).user?.userId);
       if (scope.restricted && scope.baseOids.length > 0) {
         const ph = scope.baseOids.map(() => '?').join(',');
-        scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid IN (${ph}))`;
+        scopeFilter = ` AND s.base_oid IN (${ph})`;
         scopeParams.push(...scope.baseOids);
       }
     }
@@ -1395,6 +1401,10 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
           now, now,
         ]
       );
+
+      // 2026-10-25：作物实例继承育苗记录的基地归属
+      const seedlingCiBase2 = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
+      if (seedlingCiBase2) applyBaseOwnership('crop_instances', seedlingCiId2, seedlingCiBase2);
 
       // 内部种源时扣减种源 remaining_quantity + 写 inventory_transaction
       // 2026-10-17：扣减量改按单位口径 —— 同口径=育苗数量；异口径=用户填写的种源消耗量

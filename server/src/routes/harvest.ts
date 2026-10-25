@@ -17,6 +17,8 @@ import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
+// 2026-10-25：采收记录列表按当前基地过滤
+import { buildBaseScopeFilter } from '../lib/baseResolver';
 import { checkHarvestRecordDeletable } from '../services/inventoryDeleteGuard.service';
 import { archiveBeforeDelete } from '../services/recycleBin.service';
 
@@ -39,6 +41,12 @@ router.get('/', (req: Request, res: Response) => {
     if (sourceModule) { conditions.push('hr.source_module = ?'); params.push(sourceModule); }
     if (sourceId) { conditions.push('hr.source_id = ?'); params.push(sourceId); }
     if (stockType) { conditions.push('hr.stock_type = ?'); params.push(stockType); }
+    // 2026-10-25：按当前基地过滤（各基地数据不共用）
+    const baseFilter = buildBaseScopeFilter(req, 'hr.');
+    if (baseFilter.condition) {
+      conditions.push(baseFilter.condition);
+      params.push(...baseFilter.params);
+    }
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
     // 2026-07-01: LEFT JOIN warehouses 解析仓库名称（harvest_records 表不存 warehouse_name）
     const rows = queryToObjects<any>(db,

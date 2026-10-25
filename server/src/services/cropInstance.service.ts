@@ -3,6 +3,9 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+// 2026-10-25：service 层用异步上下文取当前基地做写入归属
+import { getContextBaseOid } from '../lib/requestContext';
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 
 export interface CropInstance {
   id: string;
@@ -131,6 +134,10 @@ export class CropInstanceService {
       now,
       now,
     ]);
+
+    // 2026-10-25：作物实例补基地归属（读过滤收紧后，无归属记录会消失）
+    const ciBase = resolveBaseFromRequest(instance as Record<string, unknown>, getContextBaseOid());
+    if (ciBase) applyBaseOwnership('crop_instances', id, ciBase);
 
     saveDatabase();
     return id;
