@@ -43,44 +43,47 @@ export default function BusinessAnalysis() {
         description="产量·成本·人工·多维度对比，四位一体把控种植经营"
       />
 
-      {isAdmin && (
-        <div className="flex items-center justify-end gap-2 text-xs text-slate-500">
-          <span>统计范围</span>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
-            {([
-              ['base', '当前基地'],
-              ['global', '全部基地（全局）'],
-            ] as const).map(([value, label]) => (
-              <button
-                key={value}
-                onClick={() => setStatsScope(value)}
-                className={`
-                  px-3 py-1.5 text-xs font-medium rounded-md transition-colors
-                  ${statsScope === value
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }
-                `}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* key={statsScope}：切换统计口径后强制子组件重新挂载并重新取数 */}
       <Tabs key={statsScope} value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100 flex-wrap">
-          {TABS.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key}>
-              <span className="flex items-center gap-2">
-                {tab.icon}
-                {tab.label}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* 2026-10-25：四个 Tab 卡片与「统计范围」切换器同一行 */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <TabsList className="bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100 flex-wrap">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                <span className="flex items-center gap-2">
+                  {tab.icon}
+                  {tab.label}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {isAdmin && (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>统计范围</span>
+              <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+                {([
+                  ['base', '当前基地'],
+                  ['global', '全部基地（全局）'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setStatsScope(value)}
+                    className={`
+                      px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+                      ${statsScope === value
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }
+                    `}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <TabsContent value="yield" className="mt-4">
           <YieldAnalysis hideHeader />

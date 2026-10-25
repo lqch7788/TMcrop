@@ -11,6 +11,19 @@ export interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
   onValueChange?: (value: string) => void
 }
 
+/**
+ * Tabs 上下文（2026-10-25 新增）
+ *
+ * 原实现靠「克隆直接子元素」把 selectedValue / onValueChange 传给 TabsList 和 TabsContent，
+ * 一旦中间包一层布局容器（例如让 Tab 卡片与工具栏同行），克隆就断在容器上 →
+ * Tab 高亮和内容切换全部失效。
+ * 改用 Context 后，TabsList / TabsContent 无论被包几层都能拿到当前值。
+ */
+const TabsContext = React.createContext<{
+  value: string
+  onValueChange: (value: string) => void
+} | null>(null)
+
 const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
   ({ className, defaultValue, value, onValueChange, children, ...props }, ref) => {
     const [selectedValue, setSelectedValue] = React.useState(defaultValue || '')
@@ -22,25 +35,16 @@ const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
       onValueChange?.(newValue)
     }
 
-    // 克隆 children 以传递 value
-    const clonedChildren = React.Children.map(children, (child) => {
-      if (React.isValidElement(child)) {
-        return React.cloneElement(child as React.ReactElement<any>, {
-          selectedValue: currentValue,
-          onValueChange: handleValueChange
-        })
-      }
-      return child
-    })
-
     return (
-      <div
-        ref={ref}
-        className={cn("w-full", className)}
-        {...props}
-      >
-        {clonedChildren}
-      </div>
+      <TabsContext.Provider value={{ value: currentValue, onValueChange: handleValueChange }}>
+        <div
+          ref={ref}
+          className={cn("w-full", className)}
+          {...props}
+        >
+          {children}
+        </div>
+      </TabsContext.Provider>
     )
   }
 )
@@ -53,12 +57,17 @@ export interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, selectedValue, onValueChange, children, ...props }, ref) => {
+    // 显式传入优先，其次取 Context（兼容被布局容器包裹的用法）
+    const ctx = React.useContext(TabsContext)
+    const currentValue = selectedValue ?? ctx?.value ?? ''
+    const handleChange = onValueChange ?? ctx?.onValueChange
+
     // 将 selectedValue 和 onValueChange 传递给每个 TabsTrigger 子元素
     const clonedChildren = React.Children.map(children, (child) => {
       if (React.isValidElement(child)) {
         return React.cloneElement(child as React.ReactElement<any>, {
-          selectedValue,
-          onValueChange
+          selectedValue: currentValue,
+          onValueChange: handleChange
         })
       }
       return child
@@ -122,7 +131,10 @@ export interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps & { onValueChange?: (value: string) => void }>(
   ({ className, value, selectedValue, onValueChange, forceMount: _forceMount, children, ...props }, ref) => {
-    const isSelected = selectedValue === value
+    // 显式传入优先，其次取 Context（兼容被布局容器包裹的用法）
+    const ctx = React.useContext(TabsContext)
+    const currentValue = selectedValue ?? ctx?.value ?? ''
+    const isSelected = currentValue === value
 
     if (!isSelected) return null
 
