@@ -28,6 +28,10 @@ import { isSameUnitDimension } from '../lib/unitCategories';
 import plantingDailyRecordsRouter from './plantingDailyRecords.route';
 import { archiveBeforeDelete, markArchiveFailed } from '../services/recycleBin.service';
 import { asyncHandler } from '../middleware/errorHandler';
+// 2026-10-25：基地归属（数据行级权限）
+import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
+// 2026-10-25：数据范围（读取过滤）
+import { resolveUserDataScope } from '../lib/dataScope';
 
 /**
  * 2026-10-18 P0 修复：以 planting_harvest_records 为唯一真值重算主表采收入库量/采收日期。
@@ -370,11 +374,25 @@ router.get('/', (req: Request, res: Response) => {
       params.push(status);
     }
 
+    // 2026-10-25：数据行级过滤（按基地）
+    //   策略：未归属记录（base_oid 为空）放行 —— 809 条历史数据无法推断归属，
+    //   若强制过滤会让普通用户瞬间看不到数据。管理员逐步归属后自然收紧。
+    const scope = resolveUserDataScope((req as any).user?.userId);
+    let scopeFilter = '';
+    const scopeParams: any[] = [];
+    if (scope.restricted && scope.baseOids.length > 0) {
+      const ph = scope.baseOids.map(() => '?').join(',');
+      scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid IN (${ph}))`;
+      scopeParams.push(...scope.baseOids);
+    }
+    baseSql += scopeFilter;
+    params.push(...scopeParams);
+
     // COUNT 查询用同样的 WHERE 条件
     // 注意：countSql 不能加 LEFT JOIN，否则 1 个 planting + N 条 harvest records 会被算 N 次
     const countSql = `SELECT COUNT(*) FROM plantings p WHERE p.deleted_at IS NULL` +
       (crop_name ? ' AND p.crop_name LIKE ?' : '') +
-      (status ? ' AND p.status = ?' : '');
+      (status ? ' AND p.status = ?' : '') + scopeFilter;
 
     // 2026-06-17: GROUP BY p.id 让每个 planting 只出现一次，且 SUM 聚合能正确计算
     baseSql += ' GROUP BY p.id';
@@ -1459,6 +1477,23 @@ router.post('/', async (req: Request, res: Response) => {
         operatorName: finalCreateBy,
         opinion: `创建种植 ${finalPlantCode}`,
       });
+      // 2026-10-25：基地归属补写 + 数据范围校验
+      //   显式选择 > area_oid 反查 > greenhouse_id 反查；取不到则留空（未归属）
+      try {
+        const resolvedBase = resolveBaseFromRequest(body);
+        const baseCheck = checkBasePermission(req.user?.userId, resolvedBase?.oid);
+        if (!baseCheck.allowed) {
+          throw new Error(baseCheck.reason);
+        }
+        if (resolvedBase) applyBaseOwnership('plantings', String(newId), resolvedBase);
+      } catch (baseErr) {
+        // 基地校验收紧：显式指定了越权基地 / 不存在的基地 → 拒绝写入
+        if (baseErr instanceof Error && /无权操作基地|指定的基地不存在/.test(baseErr.message)) {
+          throw baseErr;
+        }
+        console.warn('[planting] 基地归属解析失败（不影响创建）:', (baseErr as Error)?.message);
+      }
+
       const _newItems = queryToObjects<any>(db, 'SELECT * FROM plantings WHERE id = ?', [newId]);
       res.status(201).json({ success: true, data: _newItems[0] || { id: newId } });
     } catch (txErr) {
@@ -1652,6 +1687,21 @@ router.put('/:id', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `更新种植 ${id}`,
     });
+    // 2026-10-25：基地归属（编辑时也可改基地；仅当当前为空时才补写，避免覆盖已有归属）
+    try {
+      const resolvedBase = resolveBaseFromRequest(updates);
+      const baseCheck = checkBasePermission(req.user?.userId, resolvedBase?.oid);
+      if (!baseCheck.allowed) {
+        throw new Error(baseCheck.reason);
+      }
+      if (resolvedBase) applyBaseOwnership('plantings', String(id), resolvedBase);
+    } catch (baseErr) {
+      if (baseErr instanceof Error && /无权操作基地|指定的基地不存在/.test(baseErr.message)) {
+        throw baseErr;
+      }
+      console.warn('[planting] 基地归属解析失败（不影响更新）:', (baseErr as Error)?.message);
+    }
+
     const _updItems = queryToObjects<any>(db, "SELECT * FROM plantings WHERE id = ?", [id]);
     res.json({ success: true, data: _updItems[0] || { id } });
   } catch (error) {

@@ -21,6 +21,9 @@ import { seedLog } from '../lib/seedLogger';
 import { formatLocalDateISO } from '../utils/dateUtil';
 // 2026-07-22：追溯修复 - 子表操作写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
+// 2026-10-25：数据行级权限（基地维度）
+import { resolveUserDataScope } from '../lib/dataScope';
+import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
 
 import seedlingDailyRecordsRouter from "./seedlingDailyRecords.route";
 import seedlingTransplantRouter from "./seedlingTransplant.route";
@@ -1137,6 +1140,20 @@ router.get('/', (req: Request, res: Response) => {
       countParams.push(status);
     }
 
+    // 2026-10-25：数据行级过滤（按基地）。未归属记录放行（历史数据兼容策略）
+    const scope = resolveUserDataScope((req as any).user?.userId);
+    let scopeFilter = '';
+    const scopeParams: any[] = [];
+    if (scope.restricted && scope.baseOids.length > 0) {
+      const ph = scope.baseOids.map(() => '?').join(',');
+      scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid IN (${ph}))`;
+      scopeParams.push(...scope.baseOids);
+    }
+    sql += scopeFilter;
+    params.push(...scopeParams);
+    countSql += scopeFilter;
+    countParams.push(...scopeParams);
+
     sql += ' ORDER BY s.create_time DESC';
 
     // 获取总数
@@ -1466,6 +1483,18 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       operatorName: create_by || (req as any).user?.name,
       opinion: `创建育苗 ${seedling_code}`,
     });
+    // 2026-10-25：基地归属补写 + 数据范围校验（显式选择 > area_oid > greenhouse_id）
+    try {
+      const resolvedBase = resolveBaseFromRequest(req.body);
+      const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
+      if (!baseCheck.allowed) {
+        throw new BusinessError('BASE_OUT_OF_SCOPE', baseCheck.reason, 403);
+      }
+      if (resolvedBase) applyBaseOwnership('seedlings', String(newId), resolvedBase);
+    } catch (baseErr) {
+      if (baseErr instanceof BusinessError) throw baseErr;
+      console.warn('[seedling] 基地归属解析失败（不影响创建）:', (baseErr as Error)?.message);
+    }
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM seedlings WHERE id = ?', [newId])[0] });
   } catch (error) {
     // 2026-07-01 P0-2 修复：BusinessError 用其 httpStatus（默认 400），非 BusinessError 才 500
@@ -1808,6 +1837,16 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `更新育苗 ${id}`,
     });
+    // 2026-10-25：基地归属（仅当当前为空时补写）
+    try {
+      const resolvedBase = resolveBaseFromRequest(req.body);
+      const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
+      if (!baseCheck.allowed) throw new Error(baseCheck.reason);
+      if (resolvedBase) applyBaseOwnership('seedlings', String(id), resolvedBase);
+    } catch (baseErr) {
+      if (baseErr instanceof Error && /无权操作基地|指定的基地不存在/.test(baseErr.message)) throw baseErr;
+      console.warn('[seedling] 基地归属解析失败（不影响更新）:', (baseErr as Error)?.message);
+    }
     res.json({ success: true, data: queryToObjects(db, "SELECT * FROM seedlings WHERE id = ?", [id])[0] });
   } catch (error) {
     console.error('更新育苗记录失败:', error);

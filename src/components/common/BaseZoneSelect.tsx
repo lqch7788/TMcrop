@@ -21,6 +21,12 @@ interface BaseZoneSelectProps {
   placeholder?: string;
   /** 限定基地 OID；不传则显示全量 zone */
   baseOid?: string;
+  /**
+   * 2026-10-25：允许的基地 OID 列表（数据行级权限）。
+   * 传入时只显示这些基地下的区域；不传或空数组 = 不限制。
+   * 由调用方从 useDataScope() 取 scope.baseOids 传入。
+   */
+  allowedBaseOids?: string[];
   /** 显示时附加 zoneCode，便于同名区域区分（如 "Z001-001 玻璃温室1区"） */
   showCode?: boolean;
   /** 显示时附加所属温室（如 "玻璃温室区 / 玻璃温室1区"），需 greenhouseName 字段 */
@@ -35,6 +41,7 @@ export function BaseZoneSelect({
   onChange,
   placeholder = '选择区域',
   baseOid,
+  allowedBaseOids,
   showCode = false,
   showParent = false,
   allowClear = true,
@@ -65,14 +72,29 @@ export function BaseZoneSelect({
     );
   }, [greenhouses, baseOid]);
 
+  // 2026-10-25：数据范围过滤 —— 只保留 allowedBaseOids 下基地的温室里的区域
+  const allowedGhOids = React.useMemo(() => {
+    if (!allowedBaseOids || allowedBaseOids.length === 0) return null; // null = 不限制
+    const set = new Set(allowedBaseOids);
+    return new Set(
+      greenhouses
+        .filter((gh) => set.has(String(gh.baseOid || '')))
+        .map((gh) => String(gh.oid)),
+    );
+  }, [greenhouses, allowedBaseOids]);
+
   // 过滤：仅取 status !== 'inactive'；可选 baseOid → 温室 OID 集合过滤
   const filtered = React.useMemo(() => {
     let active = zones.filter((z) => (z.status ?? 'active') !== 'inactive');
     if (baseGhOids) {
       active = active.filter((z) => baseGhOids.has(String(z.greenhouseOid || '')));
     }
+    // 数据范围限制（与 baseOid 叠加生效）
+    if (allowedGhOids) {
+      active = active.filter((z) => allowedGhOids.has(String(z.greenhouseOid || '')));
+    }
     return active;
-  }, [zones, baseGhOids]);
+  }, [zones, baseGhOids, allowedGhOids]);
 
   return (
     <select

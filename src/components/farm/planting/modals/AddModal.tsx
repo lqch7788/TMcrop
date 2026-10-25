@@ -10,6 +10,8 @@ import { UnifiedModal } from '@/components/ui';
 import { X, Upload, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource } from '../../../../types/crop';
 import { getSeedSources, searchSeedSources } from '../../../../services/apiSeedSourceService';
+// 2026-10-25：数据行级权限（按基地过滤可选区域）
+import { useDataScope } from '@/hooks/useDataScope';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 // 2026-10-18：改用 API 品种库（原 cropVarietyService 读 localStorage，
 // 默认数据编码为 11 位，与种源 crop_code（9 位）不匹配，品种路径永远为空）
@@ -48,6 +50,8 @@ export function AddModal({
   cropNames,
   areas,
 }: AddModalProps) {
+  // 2026-10-25：数据行级权限 —— 区域选择器只显示有权限基地下的区域
+  const { scope } = useDataScope();
   const [formData, setFormData] = useState({
     // 2026-06-25: 所有种植来源改为从种源选择（种源已支持库存调拨种苗）
     // 移除"经育苗移栽"路径 — 育苗 → 出圃入库 → 调拨入种源 → 种植
@@ -602,11 +606,14 @@ export function AddModal({
             种植区域 <span className="text-red-500">*</span>
           </Label>
           <div className={errors.areaId ? 'border border-red-500 rounded-lg ring-1 ring-red-200' : ''}>
+            {/* 2026-10-25：移除硬编码 baseOid="base_1780023508412"（宁波北仑基地），
+                改为按当前用户的数据范围（user_base_permissions）过滤可选区域。
+                不受限用户 → 显示全部基地的区域；受限用户 → 只显示有权限基地的区域。 */}
             <BaseZoneSelect
               value={formData.areaId}
               onChange={(value) => { clearError('areaId'); handleAreaChange(value); }}
               placeholder="选择种植区域"
-              baseOid="base_1780023508412"
+              allowedBaseOids={scope.restricted ? scope.baseOids : undefined}
             />
           </div>
           {errors.areaId && <p className="mt-1 text-xs text-red-600">{errors.areaId}</p>}

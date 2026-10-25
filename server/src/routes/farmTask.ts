@@ -9,6 +9,9 @@ import { resolveEmployeeIdentity } from '../lib/employeeIdentity';
 // v0.3 前置 3 + 前置 5：租户上下文 + RBAC 权限守卫
 import { tenantContext } from '../middleware/tenantContext';
 import { permissionGuard } from '../middleware/permissionGuard';
+// 2026-10-25：数据行级权限（基地维度）
+import { resolveUserDataScope } from '../lib/dataScope';
+import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
 // 2026-10-12 P2 (IS-NEW-159) 修复：拒绝/撤回原因长度仅前端校验，绕过即 500；后端补 zod min(6)
 import { z } from 'zod';
 // 2026-10-20 P0-10：后端权威状态转移守卫（此前转移表只在前端，后端 17 个流转端点零守卫）
@@ -361,6 +364,14 @@ router.get('/', (req: Request, res: Response) => {
       params.push(kw, kw, kw);
     }
 
+    // 2026-10-25：数据行级过滤（按基地）。未归属记录放行（历史数据兼容策略）
+    const dataScope = resolveUserDataScope((req as any).user?.userId);
+    if (dataScope.restricted && dataScope.baseOids.length > 0) {
+      const ph = dataScope.baseOids.map(() => '?').join(',');
+      sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid IN (${ph}))`;
+      params.push(...dataScope.baseOids);
+    }
+
     // 保存原始SQL用于count查询
     const countSql = sql;
 
@@ -625,6 +636,16 @@ router.post('/', (req: Request, res: Response) => {
       undefined,
       linkedDocs.length > 0 ? JSON.stringify(linkedDocs) : undefined,
     );
+    // 2026-10-25：基地归属补写 + 数据范围校验
+    try {
+      const resolvedBase = resolveBaseFromRequest(req.body);
+      const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
+      if (!baseCheck.allowed) throw new Error(baseCheck.reason);
+      if (resolvedBase) applyBaseOwnership('farm_tasks', String(newId), resolvedBase);
+    } catch (baseErr) {
+      if (baseErr instanceof Error && /无权操作基地|指定的基地不存在/.test(baseErr.message)) throw baseErr;
+      console.warn('[farmTask] 基地归属解析失败（不影响创建）:', (baseErr as Error)?.message);
+    }
     saveDatabase();
 
     // 查询刚创建的完整记录，返回给前端（避免Store乐观更新被空数据覆盖）
@@ -955,6 +976,16 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    // 2026-10-25：基地归属（仅当当前为空时补写）
+    try {
+      const resolvedBase = resolveBaseFromRequest(req.body);
+      const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
+      if (!baseCheck.allowed) throw new Error(baseCheck.reason);
+      if (resolvedBase) applyBaseOwnership('farm_tasks', String(id), resolvedBase);
+    } catch (baseErr) {
+      if (baseErr instanceof Error && /无权操作基地|指定的基地不存在/.test(baseErr.message)) throw baseErr;
+      console.warn('[farmTask] 基地归属解析失败（不影响更新）:', (baseErr as Error)?.message);
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {

@@ -497,6 +497,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS crop_instances (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       instance_code TEXT NOT NULL,
       order_id TEXT,
       order_code TEXT,
@@ -575,6 +578,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS seedlings (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       seedling_code TEXT NOT NULL,
       source_id TEXT,
       source_name TEXT,
@@ -659,6 +665,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS plantings (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       planting_code TEXT NOT NULL,
       source_type TEXT,
       source_id TEXT,
@@ -736,6 +745,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS harvest_records (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       harvest_code TEXT NOT NULL,
       source_id TEXT,
       source_name TEXT,
@@ -811,6 +823,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS farm_tasks (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       task_code TEXT NOT NULL,
       task_title TEXT NOT NULL,
       task_type TEXT,
@@ -3663,6 +3678,9 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS inventory_stock (
       id TEXT PRIMARY KEY,
+      -- 2026-10-25：基地归属（数据行级权限）。空值 = 未归属，读取过滤默认放行
+      base_oid TEXT,
+      base_name TEXT,
       instance_id TEXT UNIQUE NOT NULL,
       stock_type TEXT NOT NULL,
       business_id TEXT,

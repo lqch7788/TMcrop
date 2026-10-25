@@ -26,6 +26,8 @@ import { todayLocal } from '@/lib/dateUtils';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 // 2026-10-17：单位口径判断 —— 种源单位 ≠ 种植单位时，种植数量变化不自动换算种源消耗
 import { isSameUnitDimension } from '@/constants/units';
+// 2026-10-25：数据行级权限
+import { useDataScope } from '@/hooks/useDataScope';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -38,6 +40,8 @@ interface EditModalProps {
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps) {
+  // 2026-10-25：数据行级权限 —— 区域选择器只显示有权限基地下的区域
+  const { scope } = useDataScope();
   const zones = useZoneStore((s) => s.zones);
   // 可编辑字段状态
   const [formData, setFormData] = useState({
@@ -220,6 +224,7 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
                 setFormData({ ...formData, areaId: value, areaName: zone?.zoneName || '', rootName: (zone as any)?.greenhouseName || '' });
               }}
             placeholder="选择种植区域"
+            allowedBaseOids={scope.restricted ? scope.baseOids : undefined}
             baseOid="base_1780023508412"
           />
         </div>
