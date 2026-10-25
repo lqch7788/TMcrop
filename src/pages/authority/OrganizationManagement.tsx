@@ -54,13 +54,35 @@ export default function OrganizationManagement() {
   const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 500, initialHeight: 480 });
   useEffect(() => { if (showModal) resetPosition(); }, [showModal]);
 
+  /**
+   * 递归过滤组织树（2026-10-25 修复）
+   *
+   * 原实现只在顶层数组上 filter，子组织（生产部 / 财务部 …）不参与匹配，
+   * 搜子部门永远显示「暂无组织数据」。命中自身时保留完整子树，否则只保留命中的子分支。
+   */
+  const filterOrgTree = (nodes: Organization[], term: string): Organization[] => {
+    if (!term) return nodes;
+    const lower = term.toLowerCase();
+    return nodes.reduce<Organization[]>((acc, node) => {
+      const selfMatch =
+        (node.name || '').toLowerCase().includes(lower) ||
+        (node.aid || '').toLowerCase().includes(lower) ||
+        (node.description || '').toLowerCase().includes(lower);
+      const matchedChildren = node.children ? filterOrgTree(node.children, term) : [];
+      if (selfMatch || matchedChildren.length > 0) {
+        acc.push({ ...node, children: selfMatch ? node.children : matchedChildren });
+      }
+      return acc;
+    }, []);
+  };
+
   // 过滤组织
-  const filteredOrgs = organizations.filter(
-    (org) =>
-      org.name?.includes(searchTerm) ||
-      org.aid?.includes(searchTerm) ||
-      org.description?.includes(searchTerm)
-  );
+  const filteredOrgs = filterOrgTree(organizations, searchTerm);
+
+  // 2026-10-25：搜索条件变化时重置页码，否则停在第 2 页搜索会因结果不足而空白
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // 分页
   const totalPages = Math.ceil(filteredOrgs.length / pageSize);
@@ -400,8 +422,11 @@ export default function OrganizationManagement() {
                       const dept = departments.find((d) => d.id === deptId || d.oid === deptId);
                       setEditingOrg({
                         ...editingOrg,
-                        departmentId: deptId || undefined,
-                        departmentName: dept?.name || undefined,
+                        // 2026-10-25：用空字符串表示「明确解除关联」。
+                        //   原来传 undefined，JSON 序列化时该字段直接消失，
+                        //   后端按「未提供」处理（COALESCE 保留旧值）→ 解绑无效。
+                        departmentId: deptId || '',
+                        departmentName: dept?.name || '',
                       });
                     }}
                     className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

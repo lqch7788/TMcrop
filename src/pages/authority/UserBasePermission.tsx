@@ -423,7 +423,10 @@ export default function UserBasePermission() {
 
                         {/* 操作 */}
                         <td className="py-2.5 px-3 text-center">
-                          {isGranted && accessLevel !== 'none' && (
+                          {/* 2026-10-25：只要该行有未保存变更就显示保存按钮。
+                              原条件 `isGranted && accessLevel !== 'none'` 在「撤销」后
+                              （accessLevel 变 none）会让保存按钮消失，只能靠顶部「保存全部」。 */}
+                          {(changed || (isGranted && accessLevel !== 'none')) && (
                             <div className="flex items-center justify-center gap-1">
                               {changed && (
                                 <Button

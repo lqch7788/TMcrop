@@ -272,7 +272,9 @@ export default function UserAuthorityConfig() {
           </select>
           {selectedUser && (
             <span className="text-sm text-gray-400 whitespace-nowrap">
-              组织:{selectedUser.org_oid} | {selectedUser.status}
+              {/* 2026-10-25：后端返回的是 orgOid / orgName（camelCase 中间件转过），
+                  原来读 org_oid 恒 undefined，显示成「组织: | active」 */}
+              组织:{(selectedUser as { orgName?: string }).orgName || selectedUser.orgOid || selectedUser.org_oid || '-'} | {selectedUser.status}
             </span>
           )}
         </div>

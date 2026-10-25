@@ -340,12 +340,20 @@ router.post('/organizations', authenticate, requireAdminRole(), (req, res) => {
     // 处理更新
     if (updated && updated.length > 0) {
       for (const org of updated) {
+        // 2026-10-25 修复：区分「未提供」与「明确解除关联」。
+        //   原先用 COALESCE(?, department_id)，前端选「不关联」传的是 undefined，
+        //   JSON 序列化后字段消失 → 后端拿不到 → COALESCE 保留旧部门 → 解绑无效。
+        //   现在：字段未出现 = 不修改；出现（空串转 null）= 明确清空。
+        const deptProvided = org.departmentId !== undefined || org.departmentName !== undefined;
+        const deptFlag = deptProvided ? 1 : 0;
+
         db.run(
           `UPDATE organizations SET
             parent_oid = ?, aid = ?, name = ?, description = ?, address = ?,
             contact_person = ?, contact_phone = ?,
-            org_type = ?, sort_order = ?, department_id = COALESCE(?, department_id),
-            department_name = COALESCE(?, department_name),
+            org_type = ?, sort_order = ?,
+            department_id = CASE WHEN ? = 1 THEN ? ELSE department_id END,
+            department_name = CASE WHEN ? = 1 THEN ? ELSE department_name END,
             updated_at = ?
            WHERE oid = ?`,
           [
@@ -358,7 +366,9 @@ router.post('/organizations', authenticate, requireAdminRole(), (req, res) => {
             org.contactorPhone || org.contactPhone || null,
             org.orgType || 'department',
             org.sortNumber || 0,
+            deptFlag,
             org.departmentId || null,
+            deptFlag,
             org.departmentName || null,
             now,
             org.oid

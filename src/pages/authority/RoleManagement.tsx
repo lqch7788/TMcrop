@@ -27,6 +27,9 @@ export default function RoleManagement() {
   const loading = useOrganizationStore((s) => s.loading);
   const error = useOrganizationStore((s) => s.error);
   const organizations = useOrganizationStore((s) => s.organizations);
+  // 2026-10-25：此前只 loadRoles()，没加载组织 → 直接进 /settings/roles 时
+  //   「所属组织」下拉只有「请选择组织」，列表「所属组织」列也恒空白
+  const loadOrganizations = useOrganizationStore((s) => s.loadOrganizations);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -36,7 +39,14 @@ export default function RoleManagement() {
 
   useEffect(() => {
     loadRoles();
-  }, [loadRoles]);
+    loadOrganizations();
+  }, [loadRoles, loadOrganizations]);
+
+  // 2026-10-25：搜索条件变化时重置到第 1 页，
+  //   否则停在第 2 页再搜索会因结果不足 2 页而显示空白
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // 弹窗拖拽/缩放
   const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 500, initialHeight: 460 });
