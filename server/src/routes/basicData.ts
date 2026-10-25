@@ -2771,7 +2771,9 @@ router.get('/bases', (req, res) => {
   try {
     const db = getDatabase();
     const { company_oid } = req.query;
-    let sql = 'SELECT * FROM bases WHERE deleted_at IS NULL';
+    // 2026-10-26：deleted_at 可能是 NULL 也可能是空串（历史数据）。
+    //   只判 IS NULL 会让 deleted_at='' 的基地凭空消失。
+    let sql = "SELECT * FROM bases WHERE deleted_at IS NULL OR deleted_at = ''";
     const params: any[] = [];
     if (company_oid) {
       sql += ' AND company_oid = ?';
@@ -2815,7 +2817,7 @@ router.get('/default-base', (req, res) => {
     // 可用基地列表（与 /bases 同源，排除已删除和停用）
     const allRows = queryToObjects<{ oid: string; name: string }>(
       db,
-      `SELECT oid, name FROM bases WHERE deleted_at IS NULL AND (status IS NULL OR status = 'active') ORDER BY created_at DESC, id DESC`,
+      `SELECT oid, name FROM bases WHERE (deleted_at IS NULL OR deleted_at = '') AND (status IS NULL OR status = 'active') ORDER BY created_at DESC, id DESC`,
       []
     );
 

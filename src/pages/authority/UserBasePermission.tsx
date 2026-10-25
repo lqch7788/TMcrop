@@ -4,11 +4,15 @@
  * 布局：左侧用户列表，右侧基地权限矩阵
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Building2, Check, CheckSquare, Loader2, Save, Search, Shield, Square, X } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import { Button } from '@/components/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+// 2026-10-26：改用 enhancedApiClient —— 原来的裸 fetch 遇 401 静默跳过，
+//   表现为「共 0 个基地」且无任何提示，用户以为功能坏了。
+import { enhancedApiClient } from '@/lib/apiClient';
+import { showAlert } from '@/lib/dialogService';
 
 // 访问级别配置
 const ACCESS_LEVELS = [
@@ -94,37 +98,43 @@ export default function UserBasePermission() {
   }, [selectedUserOid, users]);
 
   // 加载用户权限
+  // 2026-10-26：加请求序号竞态保护 —— 快速连续切换用户时，
+  //   先发的请求可能后到，把上一个用户的权限写进界面。
+  const loadSeqRef = useRef(0);
   const loadUserPermissions = async (userOid: string) => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/user-base-permissions?userOid=${userOid}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUserPermissions(data || []);
-      }
+      const data = await enhancedApiClient.get<UserBasePermission[]>(
+        `/user-base-permissions?userOid=${encodeURIComponent(userOid)}`
+      );
+      if (seq !== loadSeqRef.current) return; // 已有更新的请求，丢弃本次结果
+      setUserPermissions(Array.isArray(data) ? data : []);
     } catch (error) {
-      // logger.error('加载用户基地权限失败:', error);
+      if (seq !== loadSeqRef.current) return;
+      // 2026-10-26：失败要提示 + 清空，避免显示上一个用户的权限
+      console.error('[UserBasePermission] 加载用户基地权限失败:', error);
+      setUserPermissions([]);
+      showAlert('加载用户基地权限失败：' + ((error as Error)?.message || '未知错误'));
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
   };
 
   // 加载所有可用基地
-  const loadAllBases = async () => {
+  const loadAllBases = useCallback(async () => {
     try {
-      const res = await fetch('/api/user-base-permissions/all-bases', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAllBases(data || []);
-      }
+      const data = await enhancedApiClient.get<Array<{ baseOid: string; baseName: string }>>(
+        '/user-base-permissions/all-bases'
+      );
+      setAllBases(Array.isArray(data) ? data : []);
     } catch (error) {
-      // logger.error('加载基地列表失败:', error);
+      // 2026-10-26：加载失败必须提示。原实现静默 catch，页面显示「共 0 个基地」
+      //   而用户看不到任何原因（401/403/500 全都表现一样）。
+      console.error('[UserBasePermission] 加载基地列表失败:', error);
+      showAlert('加载基地列表失败：' + ((error as Error)?.message || '未知错误'));
     }
-  };
+  }, []);
 
   // 获取某个基地的当前权限级别
   const getAccessLevel = (baseOid: string): string => {

@@ -51,12 +51,14 @@ async function initUserBasePermissions() {
   console.log(`   找到 ${users.length} 个活跃用户`);
 
   // 3. 获取所有基地
+  // 2026-10-25：改从 bases 主数据表取（与 /all-bases 端点同源）。
+  //   原从 greenhouses 派生 DISTINCT(base_oid, base_name)，会带出乱码与重复名。
   console.log('\n3. 查询可用基地...');
   const basesStmt = db.prepare(`
-    SELECT DISTINCT base_oid as baseOid, base_name as baseName
-    FROM greenhouses
-    WHERE base_oid IS NOT NULL AND base_oid != '' AND base_name IS NOT NULL AND base_name != ''
-    ORDER BY base_name ASC
+    SELECT oid as baseOid, name as baseName
+    FROM bases
+    WHERE (deleted_at IS NULL OR deleted_at = '') AND (status IS NULL OR status = 'active')
+    ORDER BY name ASC
   `);
   const bases: { baseOid: string; baseName: string }[] = [];
   while (basesStmt.step()) {

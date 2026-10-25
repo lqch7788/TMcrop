@@ -288,12 +288,18 @@ router.get('/all-bases', (req, res) => {
   const db = getDatabase();
 
   try {
-    // 从 greenhouses 表中获取唯一的 base_oid 和 base_name
+    // 2026-10-25 修复：基地列表改从 bases 主数据表取。
+    //   原来从 greenhouses 派生 DISTINCT(base_oid, base_name)，
+    //   而 greenhouses.base_name 是冗余字段、与 bases.name 不同步：
+    //     - 同一个 base_oid 出现多个名字（宁波北仑 / 宁波北仑基地 / 乱码）
+    //     - 有两条 2026-05 的历史测试记录 name/base_name 都是乱码
+    //   结果权限分配页出现「�������ػ���」这种乱码基地，且同一基地重复。
+    //   bases 是基地唯一真相源，名称天然唯一且与 Header 切换器一致。
     const stmt = db.prepare(`
-      SELECT DISTINCT base_oid as baseOid, base_name as baseName
-      FROM greenhouses
-      WHERE base_oid IS NOT NULL AND base_oid != '' AND base_name IS NOT NULL AND base_name != ''
-      ORDER BY base_name ASC
+      SELECT oid as baseOid, name as baseName
+      FROM bases
+      WHERE (deleted_at IS NULL OR deleted_at = '') AND (status IS NULL OR status = 'active')
+      ORDER BY name ASC
     `);
     const results: Record<string, unknown>[] = [];
     while (stmt.step()) {
