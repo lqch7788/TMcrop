@@ -111,6 +111,31 @@ const farmSubItems = [
   //   不要挪到农事管理菜单（用户明确要求保持原位置）。
 ];
 
+/**
+ * 完整菜单树（2026-10-25）
+ *
+ * 供「用户权限管理 → 权限配置 → 工序与菜单管理」里的「从系统菜单同步」使用。
+ * 与侧边栏渲染同源，避免工序树与实际菜单长期脱节：
+ *   此前 processes 表停在 2026-05 的 12 个顶层工序，
+ *   出库记录 / 流转追溯 / 水肥管理 / 病虫害管理 / 经营分析 / 批次管理
+ *   从未进入权限体系 → 非管理员这些页面直接被判为无权限。
+ */
+export interface NavigationMenuItem {
+  label: string;
+  path: string;
+  children?: Array<{ label: string; path: string }>;
+}
+
+export const NAVIGATION_TREE: NavigationMenuItem[] = [
+  { label: '计划管理', path: '/production', children: productionSubItems },
+  { label: '作物管理', path: '/crop/seed-source', children: cropSubItems },
+  { label: '农事管理', path: '/agriculture-record', children: farmSubItems },
+  { label: '物资管理', path: '/materials', children: materialsSubItems },
+  { label: '人工管理', path: '/labor/attendance', children: laborSubItems },
+  { label: '生产汇总表', path: '/reports', children: summarySubItems },
+  { label: '审批管理', path: '/approvals', children: approvalSubItems },
+];
+
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const [cropExpanded, setCropExpanded] = useState(true);

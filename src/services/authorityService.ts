@@ -247,6 +247,27 @@ export async function saveProcesses(data: {
   return apiClient.post('/authority/processes', data);
 }
 
+/**
+ * 从系统菜单同步工序树（2026-10-25）
+ *
+ * 以侧边栏实际菜单为准，把工序树的名称与父子层级刷新到与菜单一致。
+ * 只更新、不新增：新增工序必须同时进入前后端两套路由映射才会真正生效，
+ * 由菜单自动造出来的工序在权限矩阵里配了也不起作用。
+ * 匹配不到的菜单项通过 `unmatched` 返回，提示人工处理。
+ */
+export async function syncProcessesFromMenu(items: Array<{
+  label: string;
+  path: string;
+  children?: Array<{ label: string; path: string }>;
+}>): Promise<{
+  updatedCount: number;
+  unmatchedCount: number;
+  updated: Array<{ oid: string; name: string; route: string }>;
+  unmatched: Array<{ label: string; path: string }>;
+}> {
+  return apiClient.post('/authority/processes/sync-from-menu', { items });
+}
+
 // ============================================
 // 动作管理
 // ============================================

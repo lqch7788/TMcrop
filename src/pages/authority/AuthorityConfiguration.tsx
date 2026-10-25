@@ -13,6 +13,9 @@ import { useOrganizationStore } from '@/stores';
 import type { Process, Action, Role, RoleAuthorityItem, AuthValue } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
+// 2026-10-25：工序树同步 —— 以侧边栏实际菜单为唯一真相源
+import { NAVIGATION_TREE } from '@/components/layout/Sidebar';
+import { showAlert } from '@/lib/dialogService';
 
 // ==================== 常量 ====================
 
@@ -29,6 +32,24 @@ const ACTION_LIST: { code: string; name: string; color: string }[] = [
   { code: 'export', name: '导出', color: 'bg-purple-100 text-purple-700' },
   { code: 'approve', name: '审批', color: 'bg-indigo-100 text-indigo-700' },
 ];
+
+/**
+ * 动作代码 → 动作 OID（2026-10-25）
+ *
+ * roles_authority.action_oid 已统一为 ACT001~ACT006。本页此前用 code（view/create/...）
+ * 当 actionOid 读写，导致：
+ *   - 读不到库里已有的 ACT 口径记录 → 矩阵全部显示为未授权
+ *   - 保存时写入 code 口径的新行 → 与既有 ACT 行并存，页面刷新后状态对不上
+ * 保存统一写 ACT OID，读取时两种口径都匹配（兼容历史数据）。
+ */
+const ACTION_CODE_TO_OID: Record<string, string> = {
+  view: 'ACT001',
+  create: 'ACT002',
+  edit: 'ACT003',
+  delete: 'ACT004',
+  export: 'ACT005',
+  approve: 'ACT006',
+};
 
 // ==================== 组件 ====================
 
@@ -141,24 +162,26 @@ export default function AuthorityConfiguration() {
 
   // ========== 权限切换 ==========
 
-  const getAuthValue = (processOid: string, actionOid: string): AuthValue => {
-    // 先看本地修改
-    if (authorityChanges.has(processOid) && authorityChanges.get(processOid)!.has(actionOid)) {
-      return authorityChanges.get(processOid)!.get(actionOid)!;
+  const getAuthValue = (processOid: string, actionCode: string): AuthValue => {
+    // 先看本地修改（本地以 actionCode 为 key）
+    if (authorityChanges.has(processOid) && authorityChanges.get(processOid)!.has(actionCode)) {
+      return authorityChanges.get(processOid)!.get(actionCode)!;
     }
-    // 再看服务端数据
-    const sv = authorityMap.get(processOid)?.get(actionOid);
+    // 再看服务端数据：ACT OID 优先，其次兼容旧的 code 口径
+    const procMap = authorityMap.get(processOid);
+    const actOid = ACTION_CODE_TO_OID[actionCode] || actionCode;
+    const sv = procMap?.get(actOid) ?? procMap?.get(actionCode);
     return (sv === 1 ? 1 : 0) as AuthValue;
   };
 
-  const toggleAuthority = (processOid: string, actionOid: string) => {
-    const current = getAuthValue(processOid, actionOid);
+  const toggleAuthority = (processOid: string, actionCode: string) => {
+    const current = getAuthValue(processOid, actionCode);
     const newValue: AuthValue = current === 1 ? 0 : 1;
 
     setAuthorityChanges((prev) => {
       const next = new Map(prev);
       if (!next.has(processOid)) next.set(processOid, new Map());
-      next.get(processOid)!.set(actionOid, newValue);
+      next.get(processOid)!.set(actionCode, newValue);
       return next;
     });
     setHasChanges(true);
@@ -199,8 +222,8 @@ export default function AuthorityConfiguration() {
     const authorities: { processOid: string; actionOid: string; value: number }[] = [];
     for (const [processOid, actions] of authorityChanges) {
       for (const [actionCode, value] of actions) {
-        // 将 actionCode 转换为 actionOid（使用 actions 表中的 oid）
-        const actionOid = actionCode; // 暂时使用 code 作为 key
+        // 2026-10-25：统一写 ACT OID（之前写 code，与库里既有 ACT 行对不上，刷新后状态错乱）
+        const actionOid = ACTION_CODE_TO_OID[actionCode] || actionCode;
         authorities.push({ processOid, actionOid, value });
       }
     }
@@ -256,6 +279,29 @@ export default function AuthorityConfiguration() {
   const handleProcessDelete = async (oid: string) => {
     await deleteProcess(oid);
     loadProcesses({ appType: selectedAppType as any });
+  };
+
+  // 2026-10-25：从侧边栏实际菜单同步工序树
+  const [syncing, setSyncing] = useState(false);
+  const handleSyncFromMenu = async () => {
+    setSyncing(true);
+    try {
+      const result = await authorityService.syncProcessesFromMenu(NAVIGATION_TREE);
+      await loadProcesses({ appType: selectedAppType as any });
+
+      const lines = [`已按系统菜单更新 ${result.updatedCount} 个工序的名称与层级。`];
+      if (result.unmatchedCount > 0) {
+        lines.push('');
+        lines.push(`以下 ${result.unmatchedCount} 个菜单项在工序树中没有独立工序（权限由所属父工序控制）：`);
+        for (const u of result.unmatched.slice(0, 12)) lines.push(`· ${u.label}（${u.path}）`);
+        if (result.unmatchedCount > 12) lines.push(`… 其余 ${result.unmatchedCount - 12} 项`);
+      }
+      showAlert(lines.join('\n'));
+    } catch (err) {
+      showAlert('同步失败：' + ((err as Error)?.message || '未知错误'));
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const toggleExpand = (oid: string) => {
@@ -422,9 +468,15 @@ export default function AuthorityConfiguration() {
                 ))}
               </select>
             </div>
-            <Button size="sm" onClick={() => openProcessAdd('')}>
-              <Plus className="w-3.5 h-3.5" /> 新增根工序
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleSyncFromMenu} disabled={syncing}>
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? '同步中…' : '从系统菜单同步'}
+              </Button>
+              <Button size="sm" onClick={() => openProcessAdd('')}>
+                <Plus className="w-3.5 h-3.5" /> 新增根工序
+              </Button>
+            </div>
           </div>
           <div className="max-h-96 overflow-y-auto border border-gray-100 rounded-lg">
             {filteredProcesses.map((p) => renderProcessTreeNode(p, 0))}

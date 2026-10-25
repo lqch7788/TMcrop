@@ -1220,6 +1220,112 @@ router.post('/processes', authenticate, requireAdminRole(), (req, res) => {
   }
 });
 
+/**
+ * 从系统菜单同步工序树
+ * POST /api/authority/processes/sync-from-menu
+ *
+ * 2026-10-25 新增。背景：
+ *   processes 表停在 2026-05 的工序定义，之后新增的页面
+ *   （出库记录 / 流转追溯 / 水肥管理 / 病虫害管理 / 经营分析 / 批次管理 …）
+ *   从未进入权限体系 → canAccessProcess 查不到工序 → 非管理员被判无权限。
+ *   菜单在前端硬编码、工序树在数据库，两者之间没有同步机制。
+ *
+ * 同步规则：
+ *   - 顶级菜单按「名称 → 既有 oid」映射匹配（工序树顶级节点的 route 与前端菜单不一致，
+ *     例如「物资管理」在库里叫「库存管理」、route 分别是 /materials 和 /warehouse-overview）
+ *   - 子菜单按 route + parent_oid 匹配；匹配到则改名称/父级
+ *   - **只更新、不新增、不删除**。原因：权限判定用的是前后端两套硬编码路由映射
+ *     （`src/lib/processRouteMap.ts`、`server/src/lib/apiRouteProcessMap.ts`），
+ *     自动新增的工序没有进入那两套映射 → 在矩阵里配了权限也不会生效（假功能）。
+ *     匹配不到的菜单项会放进 unmatched 返回给前端提示，需要人工决定是否单独立工序。
+ *   - 不删除、不隐藏（删除工序会连带 roles_authority 记录失效）
+ *
+ * Body: { items: [{ label, path, children: [{ label, path }] }] }
+ */
+router.post('/processes/sync-from-menu', authenticate, requireAdminRole(), (req, res) => {
+  const db = getDatabase();
+  const { items } = req.body as {
+    items?: Array<{ label: string; path: string; children?: Array<{ label: string; path: string }> }>;
+  };
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, error: 'items 不能为空' });
+  }
+
+  /** 顶级菜单 → 既有工序 oid */
+  const PARENT_BY_NAME: Record<string, string> = {
+    计划管理: 'PROC_PRODUCTION',
+    作物管理: 'PROC_CROP',
+    农事管理: 'PROC_FARM',
+    物资管理: 'PROC_MATERIALS',
+    人工管理: 'PROC_LABOR',
+    生产汇总表: 'PROC_SUMMARY',
+    审批管理: 'PROC_WORKFLOW',
+  };
+
+  const now = new Date().toISOString();
+  const created: Array<{ oid: string; name: string; route: string }> = [];
+  const updated: Array<{ oid: string; name: string; route: string }> = [];
+
+  const existsOid = (oid: string): boolean => {
+    const st = db.prepare('SELECT 1 FROM processes WHERE oid = ?');
+    st.bind([oid]);
+    const ok = st.step();
+    st.free();
+    return ok;
+  };
+
+  const findByRoute = (route: string, parentOid: string | null): string | null => {
+    const st = parentOid
+      ? db.prepare('SELECT oid FROM processes WHERE route = ? AND parent_oid = ? AND status = ? LIMIT 1')
+      : db.prepare('SELECT oid FROM processes WHERE route = ? AND parent_oid IS NULL AND status = ? LIMIT 1');
+    st.bind(parentOid ? [route, parentOid, 'active'] : [route, 'active']);
+    const found = st.step() ? String((st.getAsObject() as { oid: string }).oid) : null;
+    st.free();
+    return found;
+  };
+
+  /** 菜单项在工序树里没有对应工序时收集起来，由前端提示（不自动新增，见文件头说明） */
+  const unmatched: Array<{ label: string; path: string }> = [];
+
+  try {
+    for (const parent of items) {
+      const mappedOid = PARENT_BY_NAME[parent.label];
+      const parentOid = mappedOid && existsOid(mappedOid) ? mappedOid : findByRoute(parent.path, null);
+
+      if (!parentOid) {
+        unmatched.push({ label: parent.label, path: parent.path });
+        continue;
+      }
+
+      db.run('UPDATE processes SET process_name = ?, updated_at = ? WHERE oid = ?', [parent.label, now, parentOid]);
+      updated.push({ oid: parentOid, name: parent.label, route: parent.path });
+
+      for (const child of parent.children || []) {
+        const existing = findByRoute(child.path, parentOid);
+        if (!existing) {
+          unmatched.push({ label: child.label, path: child.path });
+          continue;
+        }
+        db.run(
+          'UPDATE processes SET process_name = ?, parent_oid = ?, updated_at = ? WHERE oid = ?',
+          [child.label, parentOid, now, existing]
+        );
+        updated.push({ oid: existing, name: child.label, route: child.path });
+      }
+    }
+
+    saveDatabase();
+    res.json({
+      success: true,
+      data: { created, updated, unmatched, updatedCount: updated.length, unmatchedCount: unmatched.length },
+    });
+  } catch (error) {
+    console.error('从菜单同步工序树失败:', error);
+    res.status(500).json({ success: false, error: '同步失败：' + (error as Error).message });
+  }
+});
+
 // ============================================
 // 动作管理
 // ============================================
