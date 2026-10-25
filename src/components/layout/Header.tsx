@@ -44,25 +44,77 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // 2026-10-25：当前基地（顶部切换器）。切换后全局数据按该基地隔离
   const baseOid = useCurrentBaseStore((s) => s.baseOid);
+  const baseName = useCurrentBaseStore((s) => s.baseName);
   const setBase = useCurrentBaseStore((s) => s.setBase);
   const baseOptions = useCurrentBaseStore((s) => s.options);
   const setBaseOptions = useCurrentBaseStore((s) => s.setOptions);
+  // 基地列表加载状态：加载中/失败时下拉显示占位，避免出现空选项
+  const [baseLoadState, setBaseLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
 
-  // 拉取可选基地列表（仅登录后），并恢复上次选择
+  // 拉取可选基地列表 + 决定当前基地（仅登录后）
+  //
+  // 2026-10-25 变更：不再提供「全部基地」选项。各基地数据互相独立、不共用，
+  //   必须始终有一个当前基地。决定顺序：
+  //     1. localStorage 里记住的上次选择（仍然有效且在数据范围内）
+  //     2. 后端默认基地（system_configs['system.default-base-oid']）
+  //     3. 可见基地列表第一个
+  //   列表本身按用户数据范围裁剪：非管理员看不到无权限的基地，
+  //   避免手动切过去后看到空数据（看似系统坏了）。
+  //   首次落到默认基地时会整页重载一次：首屏请求在基地确定前已发出（不带 X-Base-Oid），
+  //   必须重载才能让所有模块用正确的基地过滤。之后 baseOid 已有效，不会再触发。
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
     (async () => {
       try {
-        const res = await enhancedApiClient.get<Array<{ oid: string; name: string }>>('/basic-data/bases');
-        const list = Array.isArray(res) ? res : ((res as { data?: unknown })?.data as Array<{ oid: string; name: string }>) || [];
+        const [basesRes, defaultRes] = await Promise.all([
+          enhancedApiClient.get<Array<{ oid: string; name: string }>>('/basic-data/bases'),
+          enhancedApiClient
+            .get<{
+              oid: string;
+              name: string;
+              source: string;
+              restricted?: boolean;
+              visibleBaseOids?: string[];
+            }>('/basic-data/default-base')
+            .catch(() => null),
+        ]);
         if (cancelled) return;
-        const opts = list.filter((b) => b?.oid && b?.name).map((b) => ({ oid: b.oid, name: b.name }));
+
+        const list = Array.isArray(basesRes)
+          ? basesRes
+          : ((basesRes as { data?: unknown })?.data as Array<{ oid: string; name: string }>) || [];
+        const allOpts = list.filter((b) => b?.oid && b?.name).map((b) => ({ oid: b.oid, name: b.name }));
+
+        // 按数据范围裁剪（restricted=false 或接口失败时保持全部）
+        const allowedOids =
+          defaultRes?.restricted && Array.isArray(defaultRes.visibleBaseOids)
+            ? new Set(defaultRes.visibleBaseOids)
+            : null;
+        const opts = allowedOids ? allOpts.filter((o) => allowedOids.has(o.oid)) : allOpts;
         setBaseOptions(opts);
-        // 首次进入默认「全部基地」（不过滤）——避免默认选中一个没有数据的基地，
-        // 让用户打开页面就看到空白。需要隔离时由用户主动切换。
+
+        if (opts.length === 0) {
+          // 要么系统里没有基地，要么当前账号一个基地都不可见
+          setBaseLoadState('ready');
+          return;
+        }
+
+        // 本地记住的基地仍然可用 → 保持用户上次的选择
+        const remembered = useCurrentBaseStore.getState().baseOid;
+        if (remembered && opts.some((o) => o.oid === remembered)) {
+          setBaseLoadState('ready');
+          return;
+        }
+
+        // 落到默认基地；默认基地接口失败时退回列表第一个
+        const configured = defaultRes ? opts.find((o) => o.oid === defaultRes.oid) : undefined;
+        const picked = configured ?? opts[0];
+        setBase(picked.oid, picked.name);
+        window.location.reload();
       } catch {
-        /* 拉取失败不阻断页面 */
+        // 拉取失败不阻断页面，下拉显示「基地加载失败」
+        if (!cancelled) setBaseLoadState('error');
       }
     })();
     return () => { cancelled = true; };
@@ -147,6 +199,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 value={baseOid ?? ''}
                 onChange={(e) => {
                   const oid = e.target.value || null;
+                  if (!oid) return; // 没有「全部基地」选项，空值不处理
                   const opt = baseOptions.find((b) => b.oid === oid);
                   setBase(oid, opt?.name ?? null);
                   // 切换基地后重新加载页面数据。
@@ -157,7 +210,19 @@ export function Header({ onMenuClick }: HeaderProps) {
                 className="text-sm font-bold text-blue-600 bg-transparent border-none outline-none cursor-pointer hover:text-blue-800 max-w-[160px]"
                 title="切换当前基地（影响所有模块的数据范围）"
               >
-                <option value="">全部基地</option>
+                {/* 列表未就绪时：显示上次记住的基地名，避免空白；无记录则显示占位 */}
+                {baseOid && !baseOptions.some((b) => b.oid === baseOid) && (
+                  <option value={baseOid}>{baseName || '当前基地'}</option>
+                )}
+                {!baseOid && baseLoadState !== 'ready' && (
+                  <option value="">
+                    {baseLoadState === 'loading' ? '加载中…' : '基地加载失败'}
+                  </option>
+                )}
+                {/* 加载完成但一个可用基地都没有（系统无基地 / 当前账号无任何基地权限） */}
+                {!baseOid && baseLoadState === 'ready' && baseOptions.length === 0 && (
+                  <option value="">无可用基地</option>
+                )}
                 {baseOptions.map((b) => (
                   <option key={b.oid} value={b.oid}>{b.name}</option>
                 ))}

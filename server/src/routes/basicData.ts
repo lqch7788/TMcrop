@@ -7,6 +7,8 @@ import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
 import { exportBasicData } from '../db/seedBasicData';
 import { queryToObjects } from '../utils/queryHelper';
+// 2026-10-25：默认基地需要叠加用户数据范围（非管理员不能落到无权限基地）
+import { resolveUserDataScope } from '../lib/dataScope';
 
 const router = Router();
 
@@ -2781,6 +2783,90 @@ router.get('/bases', (req, res) => {
   } catch (error) {
     console.error('获取基地列表失败:', error);
     res.status(500).json({ success: false, error: '获取基地列表失败' });
+  }
+});
+
+/**
+ * 获取默认登录基地 GET /api/basic-data/default-base
+ *
+ * 2026-10-25 当前基地机制：
+ *   登录后如果本地没有记住的基地，前端用本接口决定默认选中哪个基地。
+ *   取值顺序：
+ *     1. 先按用户数据范围裁剪可选基地（非管理员只能落到有权限的基地）
+ *     2. 在可见基地里匹配 system_configs['system.default-base-oid']
+ *     3. 未配置 / 配置指向的基地不可见 → 可见基地的第一个
+ *   响应里带上 restricted / visibleBaseOids，前端据此过滤顶部下拉，
+ *   避免用户手动切到无权限基地后看到空数据。
+ */
+router.get('/default-base', (req, res) => {
+  try {
+    const db = getDatabase();
+
+    // 读配置（可能不存在，视为空）
+    //   注意：queryToObjects 会把列名转 camelCase，必须用 configValue 取值，
+    //   写成 config_value 会静默拿到 undefined（2026-08-14 同类 bug）。
+    const cfgRows = queryToObjects<{ configValue: string }>(
+      db,
+      `SELECT config_value FROM system_configs WHERE config_key = 'system.default-base-oid' AND is_active = 1 LIMIT 1`,
+      []
+    );
+    const configured = String(cfgRows[0]?.configValue || '').trim();
+
+    // 可用基地列表（与 /bases 同源，排除已删除和停用）
+    const allRows = queryToObjects<{ oid: string; name: string }>(
+      db,
+      `SELECT oid, name FROM bases WHERE deleted_at IS NULL AND (status IS NULL OR status = 'active') ORDER BY created_at DESC, id DESC`,
+      []
+    );
+
+    if (allRows.length === 0) {
+      return res.status(404).json({ success: false, error: '系统中没有可用的基地' });
+    }
+
+    // 叠加用户数据范围（未登录 / admin / 未配置范围 → restricted=false，可见全部）
+    const scope = resolveUserDataScope(req.user?.userId || '');
+    const visible = scope.restricted
+      ? allRows.filter((b) => scope.baseOids.includes(b.oid))
+      : allRows;
+
+    if (visible.length === 0) {
+      // 有基地但当前账号一个都不可见：返回 200 + 空 oid，
+      // 让前端把下拉置为「无可用基地」，而不是把 403 当成接口故障静默降级成不过滤。
+      return res.json({
+        success: true,
+        data: {
+          oid: '',
+          name: '',
+          source: 'no-visible-base',
+          restricted: true,
+          visibleBaseOids: [],
+        },
+      });
+    }
+
+    const hit = configured ? visible.find((r) => r.oid === configured) : undefined;
+    const picked = hit ?? visible[0];
+    res.json({
+      success: true,
+      data: {
+        oid: picked.oid,
+        name: picked.name,
+        // config = 配置命中；scope-fallback = 配置的基地不在数据范围内；
+        // fallback-no-config = 未配置；fallback-not-found = 配置指向的基地已不可用
+        source: hit
+          ? 'config'
+          : (scope.restricted && configured
+              ? 'scope-fallback'
+              : (configured ? 'fallback-not-found' : 'fallback-no-config')),
+        /** 是否受基地范围限制 */
+        restricted: scope.restricted,
+        /** 可见基地 OID（restricted=false 时为空数组，表示全部可见） */
+        visibleBaseOids: scope.restricted ? scope.baseOids : [],
+      },
+    });
+  } catch (error) {
+    console.error('获取默认基地失败:', error);
+    res.status(500).json({ success: false, error: '获取默认基地失败' });
   }
 });
 

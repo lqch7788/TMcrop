@@ -2898,6 +2898,10 @@ function seedSystemConfigs() {
     { id: 'cfg-136', config_key: 'labor.work-hours-per-day', config_value: '8', config_type: 'number', category: 'labor', description: '每日标准工时（小时）' },
     { id: 'cfg-137', config_key: 'labor.work-days-per-month', config_value: '21.75', config_type: 'number', category: 'labor', description: '月标准计薪天数' },
     { id: 'cfg-138', config_key: 'labor.full-attendance-bonus', config_value: '500', config_type: 'number', category: 'labor', description: '全勤奖金额（元）' },
+
+    // 2026-10-25：默认登录基地（当前基地机制）—— 登录后自动选中哪个基地。
+    //   留空或指向不存在的基地时，后端自动降级为「第一个可用基地」。
+    { id: 'cfg-139', config_key: 'system.default-base-oid', config_value: 'base_1780023508412', config_type: 'string', category: 'system', description: '默认登录基地 OID（宁波北仑基地）' },
   ];
 
   for (const config of configs) {
