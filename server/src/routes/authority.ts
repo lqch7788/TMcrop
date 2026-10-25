@@ -1218,7 +1218,7 @@ router.post('/processes', authenticate, requireAdminRole(), (req, res) => {
             proc.appType || proc.app_type || 0,
             proc.hidden || proc.is_hidden ? 1 : 0,
             proc.description || null,
-            proc.sortNumber || proc.sort_order || 0,
+            proc.sortNumber ?? proc.sort_number ?? proc.sortOrder ?? proc.sort_order ?? 0,
             'active',
             now,
             now
@@ -1244,7 +1244,7 @@ router.post('/processes', authenticate, requireAdminRole(), (req, res) => {
             proc.appType || proc.app_type || 0,
             proc.hidden || proc.is_hidden ? 1 : 0,
             proc.description || null,
-            proc.sortNumber || proc.sort_order || 0,
+            proc.sortNumber ?? proc.sort_number ?? proc.sortOrder ?? proc.sort_order ?? 0,
             now,
             proc.oid
           ]

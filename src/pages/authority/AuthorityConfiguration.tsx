@@ -73,7 +73,9 @@ export default function AuthorityConfiguration() {
   // 工序编辑状态
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [editingProcess, setEditingProcess] = useState<Partial<Process> | null>(null);
-  const [processForm, setProcessForm] = useState({ name: '', code: '', route: '', description: '', parentOid: '' });
+  const [processForm, setProcessForm] = useState({
+    name: '', code: '', route: '', description: '', parentOid: '', sortNumber: 0,
+  });
 
   // 弹窗拖拽/缩放
   const { position, size, startDrag, resetPosition, resizeHandles } = useDragResize({ initialWidth: 550, initialHeight: 420 });
@@ -244,7 +246,7 @@ export default function AuthorityConfiguration() {
 
   const openProcessAdd = (parentOid = '') => {
     setEditingProcess(null);
-    setProcessForm({ name: '', code: '', route: '', description: '', parentOid });
+    setProcessForm({ name: '', code: '', route: '', description: '', parentOid, sortNumber: 0 });
     setShowProcessModal(true);
   };
 
@@ -256,12 +258,16 @@ export default function AuthorityConfiguration() {
       route: (proc as Record<string, unknown>).route as string || '',
       description: proc.description || '',
       parentOid: proc.oidParent || '',
+      sortNumber: Number((proc as Record<string, unknown>).sortOrder ?? (proc as Record<string, unknown>).sortNumber ?? 0) || 0,
     });
     setShowProcessModal(true);
   };
 
   const handleProcessSave = async () => {
-    if (!processForm.name) return;
+    if (!processForm.name) {
+      showAlert('工序名称不能为空');
+      return;
+    }
     const payload: Partial<Process> = {
       oid: editingProcess?.oid || `PROC_${Date.now()}`,
       process_name: processForm.name,
@@ -270,10 +276,16 @@ export default function AuthorityConfiguration() {
       description: processForm.description,
       parent_oid: processForm.parentOid || null,
       app_type: selectedAppType,
+      // 2026-10-26：原 payload 没带排序号 → sort_order 恒为 0，工序无法排序
+      sort_number: processForm.sortNumber || 0,
     };
-    await saveProcess(payload);
-    setShowProcessModal(false);
-    loadProcesses({ appType: selectedAppType as any });
+    try {
+      await saveProcess(payload);
+      setShowProcessModal(false);
+      loadProcesses({ appType: selectedAppType as any });
+    } catch (err) {
+      showAlert('保存工序失败：' + ((err as Error)?.message || '未知错误'));
+    }
   };
 
   const handleProcessDelete = async (oid: string) => {
@@ -641,6 +653,36 @@ export default function AuthorityConfiguration() {
                   <label className="block text-xs text-gray-500 mb-1">工序编码 *</label>
                   <input value={processForm.code} onChange={(e) => setProcessForm({ ...processForm, code: e.target.value })}
                     className="w-full h-9 px-2 border border-gray-200 rounded text-sm" placeholder="如：crop-orders" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  {/* 2026-10-26：补父级选择 —— 此前表单没有这一项，
+                      用户点了「新增子工序」也不知道挂在谁下面，也无法调整层级 */}
+                  <label className="block text-xs text-gray-500 mb-1">父级工序</label>
+                  <select
+                    value={processForm.parentOid}
+                    onChange={(e) => setProcessForm({ ...processForm, parentOid: e.target.value })}
+                    className="w-full h-9 px-2 border border-gray-200 rounded text-sm bg-white"
+                  >
+                    <option value="">（作为顶级工序）</option>
+                    {allProcesses.map((p) => (
+                      <option key={p.oid} value={p.oid}>
+                        {p.name}（{p.aid}）
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  {/* 2026-10-26：补排序号 —— 此前 payload 不带 sort_number，恒为 0 */}
+                  <label className="block text-xs text-gray-500 mb-1">排序号</label>
+                  <input
+                    type="number"
+                    value={processForm.sortNumber}
+                    onChange={(e) => setProcessForm({ ...processForm, sortNumber: Number(e.target.value) || 0 })}
+                    className="w-full h-9 px-2 border border-gray-200 rounded text-sm"
+                    placeholder="数字越小越靠前"
+                  />
                 </div>
               </div>
               <div>
