@@ -4,6 +4,7 @@ import {
   Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw, ClipboardList, ListTodo
 } from 'lucide-react';
 import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
+import { useAuthStore } from '../../stores';
 import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
 
 const styles = `
@@ -32,6 +33,20 @@ export function Header({ onMenuClick }: HeaderProps) {
   // 从 Zustand Store 获取公告数据
   const announcements = useAnnouncementStore((s) => s.announcements);
   const fetchAnnouncements = useAnnouncementStore((s) => s.fetchAnnouncements);
+
+  // 当前登录用户（2026-10-24：此前右上角硬编码「LQC / 陆启闯 / 经理·生产部」，
+  //   任何账号登录都显示管理员名字，已改为读取 useAuthStore）
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const userRoles = useAuthStore((s) => s.roles);
+  const displayName = currentUser?.realName || currentUser?.username || '未登录';
+  const avatarText = (displayName.slice(0, 1) || '?').toUpperCase();
+  // 角色名：按 admin > manager > user 优先级取最高，其余角色取第一个
+  const roleLabel = (() => {
+    if (userRoles.length === 0) return '普通用户';
+    const priority = ['admin', 'manager', 'user'];
+    const top = priority.map((p) => userRoles.find((r) => r.code === p)).find(Boolean);
+    return top?.name || userRoles[0]?.name || '普通用户';
+  })();
 
   // 组件挂载时获取公告
   useEffect(() => {
@@ -170,9 +185,9 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-medium">
-                LQC
+                {avatarText}
               </div>
-              <span className="hidden md:block text-sm font-medium text-gray-700">陆启闯</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">{displayName}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
 
@@ -180,8 +195,8 @@ export function Header({ onMenuClick }: HeaderProps) {
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="font-medium text-gray-900">陆启闯</p>
-                  <p className="text-sm text-gray-500">经理 · 生产部 · 宁波帮帮忙公司</p>
+                  <p className="font-medium text-gray-900">{displayName}</p>
+                  <p className="text-sm text-gray-500">{roleLabel}</p>
                 </div>
                 <div className="py-1">
                   <Link

@@ -186,8 +186,16 @@ function DeleteConfirmModal({
   );
 }
 
-export default function DepartmentSettings() {
-  const departments = useDepartmentStore((state) => state.departments);
+/**
+ * 部门管理内容区（不含页面头部与返回按钮）
+ * 2026-10-25：抽取出来供「用户权限管理 → 组织管理」Tab 内嵌复用，
+ * 同时保留原独立页面，避免同一套部门 CRUD 写两份。
+ */
+export function DepartmentSettingsContent() {
+  // 2026-10-25：部门管理页用「全部部门（含停用）」，统计卡与列表才与数据库一致；
+  //   其他业务下拉（DepartmentSelect）仍消费 state.departments（仅 active）
+  const departments = useDepartmentStore((state) => state.allDepartments);
+  const loadAllDepartments = useDepartmentStore((state) => state.loadAllDepartments);
   const loading = useDepartmentStore((state) => state.loading);
   const loadDepartments = useDepartmentStore((state) => state.loadDepartments);
   const addDepartment = useDepartmentStore((state) => state.addDepartment);
@@ -205,9 +213,11 @@ export default function DepartmentSettings() {
 
   useEffect(() => {
     if (departments.length === 0 && !loading) {
+      loadAllDepartments();
+      // 同时刷新 active 列表，保证其它业务下拉与本页数据同源
       loadDepartments();
     }
-  }, [departments.length, loading, loadDepartments]);
+  }, [departments.length, loading, loadAllDepartments, loadDepartments]);
 
   // 搜索过滤
   const filtered = searchText
@@ -225,6 +235,7 @@ export default function DepartmentSettings() {
 
   const handleAdd = async (form: Partial<Department>) => {
     await addDepartment(form);
+    await loadAllDepartments(); // 同步刷新含停用列表，统计卡立即更新
     setCurrentPage(1);
   };
 
@@ -233,12 +244,14 @@ export default function DepartmentSettings() {
     // 使用 oid 或 id 作为标识
     const id = editItem.id || editItem.oid;
     await updateDepartment(id, form);
+    await loadAllDepartments();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const id = deleteTarget.id || deleteTarget.oid;
     await removeDepartment(id);
+    await loadAllDepartments();
     setDeleteModalOpen(false);
     setDeleteTarget(null);
     const newTotal = Math.ceil((filtered.length - 1) / pageSize);
@@ -247,28 +260,6 @@ export default function DepartmentSettings() {
 
   return (
     <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/settings"
-              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-              title="返回系统设置"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">部门设置</h1>
-              <p className="text-gray-500">组织架构与部门信息管理</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -432,7 +423,7 @@ export default function DepartmentSettings() {
         onClose={() => setModalOpen(false)}
         onSave={editItem ? handleEdit : handleAdd}
         editItem={editItem}
-        departmentOptions={departments}
+        departmentOptions={departments.filter((d) => d.status === 'active')}
       />
 
       {/* 删除确认弹窗 */}
@@ -445,6 +436,37 @@ export default function DepartmentSettings() {
         onConfirm={handleDelete}
         itemName={deleteTarget ? `${deleteTarget.code} ${deleteTarget.name}` : ''}
       />
+    </div>
+  );
+}
+
+/**
+ * 独立页面版（保留 /settings/departments 入口）
+ * 2026-10-25：组织管理 Tab 已内嵌同一内容区；本页保留兼容旧书签。
+ */
+export default function DepartmentSettings() {
+  return (
+    <div className="space-y-6">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/settings"
+            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+            title="返回系统设置"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </Link>
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Target className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">部门设置</h1>
+            <p className="text-gray-500">组织架构与部门信息管理</p>
+          </div>
+        </div>
+      </div>
+      <DepartmentSettingsContent />
     </div>
   );
 }

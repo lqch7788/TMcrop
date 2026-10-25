@@ -38,6 +38,7 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 import { ProduceCategoryCode } from '../../../data/produceCodeRule';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
 import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
+import { useAuthStore } from '@/stores';
 
 // 内联新增状态类型
 type InlineAddLevel = 'type' | 'variety' | 'subVariety1';
@@ -76,6 +77,8 @@ interface InlineEditState {
 }
 
 export default function CropVarietyManagement() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const navigate = useNavigate();
 
   // === Zustand Store ===
@@ -83,9 +86,9 @@ export default function CropVarietyManagement() {
   const { items: allVarieties, isLoading } = store;
 
   // 权限检查 - 已取消，所有人可使用所有功能
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
+  const canCreate = hasProcessPermission('PROC_CROP', 'create');
+  const canEdit = hasProcessPermission('PROC_CROP', 'edit');
+  const canDelete = hasProcessPermission('PROC_CROP', 'delete');
   const [selectedVariety, setSelectedVariety] = useState<CropVariety | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [prefillAddData, setPrefillAddData] = useState<{

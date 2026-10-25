@@ -5,12 +5,41 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
-import { Edit2, Key, Plus, RefreshCw, RotateCcw, Save, Search, Shield, Trash2, UserCheck, UserX, Users, X } from 'lucide-react';
+import { Edit2, Eye, EyeOff, Key, Plus, RefreshCw, RotateCcw, Save, Search, Shield, Trash2, UserCheck, UserX, Users, X } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
-import type { User, OrgStatus } from '@/types/authority';
+import type { User, OrgStatus, Organization } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+
+// ==================== 辅助函数 ====================
+
+/** 组织树节点：后端把子组织放在 children 里，store 顶层只存根节点 */
+type OrgNode = Organization & { children?: OrgNode[] };
+
+/**
+ * 递归查找组织（含子组织）
+ * 修复：原来只用 organizations.find 在顶层数组找，子组织（如生产部）
+ * 永远查不到，表格里就会直接显示原始 OID
+ */
+function findOrgDeep(nodes: OrgNode[], oid: string): OrgNode | null {
+  for (const node of nodes) {
+    if (node.oid === oid) return node;
+    const hit = node.children?.length ? findOrgDeep(node.children, oid) : null;
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** 把组织树展平为下拉选项（带层级缩进），保证子组织/部门可选 */
+function flattenOrgs(nodes: OrgNode[], depth = 0): Array<{ oid: string; name: string; depth: number }> {
+  const out: Array<{ oid: string; name: string; depth: number }> = [];
+  for (const node of nodes) {
+    if (node.oid) out.push({ oid: node.oid, name: node.name, depth });
+    if (node.children?.length) out.push(...flattenOrgs(node.children, depth + 1));
+  }
+  return out;
+}
 
 // ==================== 组件 ====================
 
@@ -43,6 +72,8 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
   const [userForm, setUserForm] = useState({
     username: '', realName: '', password: '', orgOid: '',
+    // 2026-10-25：新增可显式指定的部门（此前只能由所属组织自动带出）
+    departmentOid: '',
     email: '', phone: '', status: 'active' as OrgStatus,
   });
   const [userRoleOids, setUserRoleOids] = useState<string[]>([]);
@@ -51,6 +82,8 @@ export default function UserManagement() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  // 2026-10-25：密码框显示/隐藏切换
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // 删除确认
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -71,15 +104,16 @@ export default function UserManagement() {
     loadRoles();
   }, []);
 
-  // 获取组织名称
+  // 获取组织名称（递归查子组织；找不到时不再回退显示原始 OID）
   const getOrgName = (orgOid: string) => {
-    const org = organizations.find((o) => o.oid === orgOid);
-    return org?.name || orgOid;
+    if (!orgOid) return '-';
+    const org = findOrgDeep(organizations as OrgNode[], orgOid);
+    return org?.name || '未知组织';
   };
 
-  // 获取组织关联的部门信息
+  // 获取组织关联的部门信息（递归查子组织）
   const getOrgLinkedDept = (orgOid: string) => {
-    const org = organizations.find((o) => o.oid === orgOid);
+    const org = findOrgDeep(organizations as OrgNode[], orgOid);
     if (org?.departmentId) {
       const dept = departments.find((d) => (d.id || d.oid) === org.departmentId);
       return dept?.name || org.departmentName || org.departmentId;
@@ -87,11 +121,17 @@ export default function UserManagement() {
     return null;
   };
 
-  // 通过部门OID获取部门名称
+  // 获取组织关联的部门 ID（用于「所属组织」切换时预填部门下拉）
+  const getOrgLinkedDeptId = (orgOid: string): string => {
+    const org = findOrgDeep(organizations as OrgNode[], orgOid);
+    return org?.departmentId || '';
+  };
+
+  // 通过部门OID获取部门名称（部门表查不到时返回 null，由表格显示 '-'）
   const getDeptName = (deptOid: string | undefined) => {
     if (!deptOid) return null;
     const dept = departments.find((d) => (d.id || d.oid) === deptOid);
-    return dept?.name || deptOid;
+    return dept?.name || null;
   };
 
   // 筛选
@@ -116,18 +156,26 @@ export default function UserManagement() {
 
   const openAddModal = () => {
     setEditingUser(null);
-    setUserForm({ username: '', realName: '', password: '', orgOid: organizations[0]?.oid || '', email: '', phone: '', status: 'active' });
+    const firstOrgOid = organizations[0]?.oid || '';
+    setUserForm({
+      username: '', realName: '', password: '', orgOid: firstOrgOid,
+      departmentOid: getOrgLinkedDeptId(firstOrgOid),
+      email: '', phone: '', status: 'active',
+    });
     setUserRoleOids([]);
     setShowUserModal(true);
   };
 
   const openEditModal = async (user: User) => {
     setEditingUser(user);
+    const orgOid = user.org_oid || user.orgOid || '';
     setUserForm({
       username: (user.username || user.aid || '') as string,
       realName: (user.real_name || user.name || '') as string,
       password: '',
-      orgOid: user.org_oid || user.orgOid || '',
+      orgOid,
+      // 优先用用户自己的部门；没有则沿用组织的关联部门
+      departmentOid: (user.department_oid || user.departmentOid || '') || getOrgLinkedDeptId(orgOid),
       email: user.email || '',
       phone: user.phone || '',
       status: user.status || 'active',
@@ -150,6 +198,8 @@ export default function UserManagement() {
       username: userForm.username,
       real_name: userForm.realName,
       org_oid: userForm.orgOid,
+      // 空字符串表示"明确不指定部门"，后端据此写 NULL 且不再按组织自动填充
+      department_oid: userForm.departmentOid,
       email: userForm.email,
       phone: userForm.phone,
       status: userForm.status,
@@ -181,6 +231,7 @@ export default function UserManagement() {
   const openPasswordModal = (user: User) => {
     setPasswordUser(user);
     setNewPassword('');
+    setShowNewPassword(false); // 每次打开默认隐藏
     setShowPasswordModal(true);
   };
 
@@ -233,9 +284,11 @@ export default function UserManagement() {
             <option value="active">启用</option>
             <option value="inactive">禁用</option>
           </select>
+          {/* 2026-10-25：原 className 里的 text-gray-500 / hover:text-gray-700
+              覆盖了 warning 变体自带的 text-white，导致橙底灰字看不清 */}
           <Button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
             variant="warning"
-            className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700">
+            className="h-8 px-2 text-xs bg-amber-600 hover:bg-amber-700">
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button onClick={openAddModal}
@@ -270,11 +323,14 @@ export default function UserManagement() {
                     const deptOid = user.department_oid || user.departmentOid;
                     if (deptOid) {
                       const deptName = getDeptName(deptOid);
-                      return (
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded">
-                          {deptName || deptOid}
-                        </span>
-                      );
+                      // 查不到部门名时不再回退显示原始 ID，交由下方组织关联兜底
+                      if (deptName) {
+                        return (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded">
+                            {deptName}
+                          </span>
+                        );
+                      }
                     }
                     // 尝试从组织获取关联部门
                     const orgOid = user.org_oid || user.orgOid;
@@ -305,7 +361,7 @@ export default function UserManagement() {
                     <Button variant="ghost" size="icon" onClick={() => openEditModal(user)} className="p-1 border border-gray-300 rounded text-blue-500 hover:border-blue-500" title="编辑">
                       <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-500 hover:border-amber-500" title="修改密码">
+                    <Button variant="ghost" size="icon" onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-600 hover:border-amber-500" title="修改密码">
                       <Key className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)} className="p-1 border border-gray-300 rounded text-purple-500 hover:border-purple-500" title={user.status === 'active' ? '禁用' : '启用'}>
@@ -379,16 +435,30 @@ export default function UserManagement() {
               )}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">所属组织</label>
-                <select value={userForm.orgOid} onChange={(e) => setUserForm({ ...userForm, orgOid: e.target.value })}
+                {/* 2026-10-25：原来只列顶层组织（公司），选不到生产部/后勤部等子组织；
+                    改为展平整棵组织树，带层级缩进 */}
+                <select value={userForm.orgOid} onChange={(e) => {
+                  const newOrgOid = e.target.value;
+                  // 切换组织时按组织关联部门预填（仍可手工改）
+                  setUserForm({ ...userForm, orgOid: newOrgOid, departmentOid: getOrgLinkedDeptId(newOrgOid) });
+                }}
                   className="w-full h-9 px-2 border border-gray-200 rounded text-sm">
-                  {organizations.map((org) => (
-                    <option key={org.oid} value={org.oid}>{org.name}</option>
+                  {flattenOrgs(organizations as OrgNode[]).map((org) => (
+                    <option key={org.oid} value={org.oid}>{'　'.repeat(org.depth)}{org.name}</option>
                   ))}
                 </select>
-                {userForm.orgOid && getOrgLinkedDept(userForm.orgOid) && (
-                  <p className="text-xs text-emerald-600 mt-1">
-                    自动关联部门：{getOrgLinkedDept(userForm.orgOid)}
-                  </p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">所属部门</label>
+                <select value={userForm.departmentOid} onChange={(e) => setUserForm({ ...userForm, departmentOid: e.target.value })}
+                  className="w-full h-9 px-2 border border-gray-200 rounded text-sm">
+                  <option value="">不指定部门</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id || dept.oid} value={dept.id || dept.oid}>{dept.name}</option>
+                  ))}
+                </select>
+                {userForm.departmentOid && userForm.departmentOid === getOrgLinkedDeptId(userForm.orgOid) && (
+                  <p className="text-xs text-emerald-600 mt-1">已按所属组织自动关联，可手工修改</p>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -421,15 +491,17 @@ export default function UserManagement() {
                         }}
                         className="rounded"
                       />
-                      <span className="text-gray-700">{role.role_name}</span>
-                      <span className="text-xs text-gray-400 font-mono ml-auto">{role.role_code}</span>
+                      {/* 后端 /authority/roles 返回的是驼峰 roleName/roleCode（另有 aid/name 别名），
+                          无 role_name/role_code，原写法导致复选框旁文字恒为空 */}
+                      <span className="text-gray-700">{role.role_name || role.roleName || role.name}</span>
+                      <span className="text-xs text-gray-400 font-mono ml-auto">{role.role_code || role.roleCode || role.aid}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
               <Button onClick={handleUserSave} className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600"><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
@@ -456,12 +528,29 @@ export default function UserManagement() {
             </div>
             <div className="p-5">
               <label className="block text-xs text-gray-500 mb-1">新密码</label>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full h-9 px-2 border border-gray-200 rounded text-sm" placeholder="输入新密码" />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full h-9 pl-2 pr-9 border border-gray-200 rounded text-sm"
+                  placeholder="输入新密码"
+                />
+                {/* 2026-10-25：显示/隐藏密码，避免用户看不到输入内容 */}
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 rounded"
+                  title={showNewPassword ? '隐藏密码' : '显示密码'}
+                  aria-label={showNewPassword ? '隐藏密码' : '显示密码'}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
-              <Button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-500 text-white hover:bg-amber-600"><Edit2 className="w-4 h-4" /> 确认修改</Button>
+              <Button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-600 text-white hover:bg-amber-700"><Edit2 className="w-4 h-4" /> 确认修改</Button>
             </div>
           </div>
         </div>
@@ -488,7 +577,7 @@ export default function UserManagement() {
               <p className="text-sm text-gray-600">删除后用户将无法登录系统，确定要删除吗？</p>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
               <Button onClick={handleDelete} className="h-8 px-4 text-sm bg-red-500 text-white hover:bg-red-600"><Trash2 className="w-4 h-4" /> 确认删除</Button>
             </div>
           </div>

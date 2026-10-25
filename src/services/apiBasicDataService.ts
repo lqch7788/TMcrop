@@ -266,8 +266,12 @@ export interface Device {
  * 获取所有部门
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
-export async function getDepartments(): Promise<Department[]> {
-  const data = await enhancedApiClient.get<Department[]>('/basic-data/departments');
+export async function getDepartments(includeInactive = false): Promise<Department[]> {
+  // 2026-10-25：部门管理页需要含停用部门，才能正确统计「停用」数量
+  const url = includeInactive
+    ? '/basic-data/departments?includeInactive=1'
+    : '/basic-data/departments';
+  const data = await enhancedApiClient.get<Department[]>(url);
   return data || [];
 }
 

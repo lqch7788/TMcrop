@@ -10,6 +10,20 @@ import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
+// 2026-10-25：写端点鉴权守卫（挂载处用的是 optionalAuth，读公开、写必须登录）
+//   此前这 3 个路由的 67 个写端点对匿名请求完全开放。
+router.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    next();
+    return;
+  }
+  if (!req.user) {
+    res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
+    return;
+  }
+  next();
+});
+
 /**
  * 获取所有部门
  * GET /api/basic-data/departments
@@ -17,12 +31,16 @@ const router = Router();
 router.get('/departments', (req, res) => {
   try {
     const db = getDatabase();
+    // 2026-10-25：默认只返回 active（下拉选择用）；
+    //   部门管理页传 includeInactive=1 取全部，统计卡"停用"数才有意义
+    const includeInactive =
+      req.query.includeInactive === '1' || req.query.includeInactive === 'true';
     const result = db.exec(`
       SELECT d.id, d.oid, d.code, d.name, d.manager_id, d.manager_name, d.parent_oid, d.sort_number, d.description, d.status, d.created_at,
              p.name as parent_name
       FROM departments d
       LEFT JOIN departments p ON d.parent_oid = p.oid
-      WHERE d.status = 'active'
+      ${includeInactive ? '' : "WHERE d.status = 'active'"}
       ORDER BY d.sort_number
     `);
 
@@ -95,6 +113,16 @@ router.put('/departments/:id', (req, res) => {
     const { id } = req.params;
     const { name, code, parentOid, managerId, managerName, sortNumber, description, status } = req.body;
 
+    // 2026-10-25：显式校验存在性。此前 WHERE id/oid 匹配不到任何行时仍返回 success，
+    //   调用方（如按部门编码误传 id）会看到"保存成功"但数据没变。
+    const existsStmt = db.prepare('SELECT 1 FROM departments WHERE id = ? OR oid = ?');
+    existsStmt.bind([id, id]);
+    const exists = existsStmt.step();
+    existsStmt.free();
+    if (!exists) {
+      return res.status(404).json({ success: false, error: '部门不存在' });
+    }
+
     const now = new Date().toISOString();
 
     db.run(`
@@ -108,8 +136,8 @@ router.put('/departments/:id', (req, res) => {
           description = COALESCE(?, description),
           status = COALESCE(?, status),
           updated_at = ?
-      WHERE id = ?
-    `, [name, code, parentOid, managerId, managerName, sortNumber, description, status, now, id]);
+      WHERE id = ? OR oid = ?
+    `, [name, code, parentOid, managerId, managerName, sortNumber, description, status, now, id, id]);
 
     // 双向同步：更新关联的组织节点
     if (name || managerName) {
@@ -141,7 +169,16 @@ router.delete('/departments/:id', (req, res) => {
     const { id } = req.params;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE departments SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+    // 2026-10-25：与 PUT 一致，支持按 id 或 oid 定位；找不到时报 404 而不是假成功
+    const existsStmt = db.prepare('SELECT 1 FROM departments WHERE id = ? OR oid = ?');
+    existsStmt.bind([id, id]);
+    const exists = existsStmt.step();
+    existsStmt.free();
+    if (!exists) {
+      return res.status(404).json({ success: false, error: '部门不存在' });
+    }
+
+    db.run(`UPDATE departments SET status = 'inactive', updated_at = ? WHERE id = ? OR oid = ?`, [now, id, id]);
 
     // 双向同步：同步禁用关联的组织节点
     db.run(`UPDATE organizations SET status = 'inactive', updated_at = ? WHERE department_id = ?`, [now, id]);

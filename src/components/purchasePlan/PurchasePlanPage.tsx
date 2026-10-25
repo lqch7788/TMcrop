@@ -26,12 +26,15 @@ import { BatchEditModal } from './BatchEditModal';
 import { AlertStats } from './AlertStats';
 import { usePurchasePlanPageState } from './usePurchasePlanPageState';
 import { buildPlaceholderCode } from './codeGenerator';
+import { useAuthStore } from '@/stores';
 
 export function PurchasePlanPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // 权限控制 - 已取消，所有人可使用所有功能
-  const canCreate = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_PURCHASE', 'create');
+  const canDelete = hasProcessPermission('PROC_PURCHASE', 'delete');
+  const canExport = hasProcessPermission('PROC_PURCHASE', 'export');
 
   // 用户列表（用于编辑时获取申请人姓名）
   const users = useUserStore((state) => state.users);

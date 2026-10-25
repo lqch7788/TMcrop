@@ -70,7 +70,7 @@ export default function UserPermissionHub() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-emerald-500 text-white shadow-md'
+                    ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
                 title={tab.desc}

@@ -9,6 +9,10 @@ import { getDatabase, saveDatabase } from '../db';
 import bcrypt from 'bcryptjs';
 import { generateToken, authenticate } from '../middleware/auth';
 import { operationLogService } from '../services/operationLog.service';
+// 2026-10-25：显式写用户变更审计后，通知中间件跳过，避免一次操作两条日志
+import { bumpAuditWriteCount } from '../lib/auditMeta';
+// 2026-10-25：权限管理端点要求 admin 角色，防止普通用户自我提权/改他人密码
+import { requireAdminRole } from '../middleware/processPermission';
 
 const router = Router();
 
@@ -90,13 +94,6 @@ router.post('/login', (req, res) => {
         return;
       }
 
-      // 生成 JWT token
-      const token = generateToken({
-        userId: user.oid as string,
-        aid: user.username as string,
-        name: (user.real_name || user.username) as string,
-      });
-
       // 去除密码哈希后返回用户信息
       const { password_hash, ...userWithoutPassword } = user;
 
@@ -126,6 +123,16 @@ router.post('/login', (req, res) => {
         // 角色查询失败不阻断登录，退回最低权限
         console.error('[authority/login] 角色查询失败，按 user 处理:', roleError);
       }
+
+      // 生成 JWT token
+      // 2026-10-25：补上 role —— 此前 token 里没有角色，导致后端所有
+      // `req.user?.role !== 'admin'` 之类的判断对真实用户恒为真（恒 403）
+      const token = generateToken({
+        userId: user.oid as string,
+        aid: user.username as string,
+        name: (user.real_name || user.username) as string,
+        role: userRole,
+      });
 
       writeLoginAudit(req, {
         username: (userWithoutPassword.real_name || userWithoutPassword.username) as string,
@@ -191,7 +198,7 @@ router.get('/verify', authenticate, (req, res) => {
 /**
  * 获取组织树
  */
-router.get('/organizations', (req, res) => {
+router.get('/organizations', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { rows = -1, id, sort = 'sort_order', order = 'asc' } = req.query;
 
@@ -254,7 +261,7 @@ router.get('/organizations', (req, res) => {
 /**
  * 保存组织（新增或更新）- 需要认证
  */
-router.post('/organizations', authenticate, (req, res) => {
+router.post('/organizations', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -453,7 +460,7 @@ router.post('/organizations', authenticate, (req, res) => {
 /**
  * 获取角色列表
  */
-router.get('/roles', (req, res) => {
+router.get('/roles', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { sort = 'created_at', order = 'desc' } = req.query;
 
@@ -491,7 +498,7 @@ router.get('/roles', (req, res) => {
 /**
  * 保存角色 - 需要认证
  */
-router.post('/roles', authenticate, (req, res) => {
+router.post('/roles', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -683,10 +690,12 @@ router.post('/auth/login', async (req, res) => {
     }
 
     // 生成 JWT token
+    // 2026-10-25：补上 role（见 POST /authority/login 处的同款说明）
     const token = generateToken({
       userId: user.oid as string,
       aid: user.username as string,
       name: (user.real_name || user.username) as string,
+      role: roleCode,
     });
 
     // 返回用户信息（不包含密码）
@@ -719,7 +728,7 @@ router.post('/auth/login', async (req, res) => {
 /**
  * 获取用户列表
  */
-router.get('/users', (req, res) => {
+router.get('/users', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { orgOid, status } = req.query;
 
@@ -762,7 +771,110 @@ router.get('/users', (req, res) => {
 /**
  * 保存用户 - 需要认证
  */
-router.post('/users', authenticate, (req, res) => {
+/** 按 oid 读取用户完整行（审计用） */
+function selectUserRow(db: ReturnType<typeof getDatabase>, oid: string): Record<string, unknown> | null {
+  const st = db.prepare('SELECT * FROM users WHERE oid = ?');
+  st.bind([oid]);
+  const row = st.step() ? (st.getAsObject() as Record<string, unknown>) : null;
+  st.free();
+  return row;
+}
+
+/**
+ * 用户主数据字段级审计（2026-10-25 新增）
+ *
+ * 背景：auditTrail 中间件对 POST /authority/users 未产生任何日志，
+ *   导致一次「10 个用户的 org_oid/department_oid 被批量改乱」的事件无法追溯。
+ *   这里在业务层显式记录每个用户的 before/after 字段差异，密码字段脱敏。
+ */
+function logUserChange(
+  db: ReturnType<typeof getDatabase>,
+  req: { user?: { userId?: string; name?: string }; ip?: string; headers?: Record<string, unknown> },
+  action: 'create' | 'update' | 'delete',
+  oid: string,
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+): void {
+  try {
+    const SENSITIVE = new Set(['password_hash']);
+    const redact = (row: Record<string, unknown> | null) => {
+      if (!row) return null;
+      const out: Record<string, unknown> = {};
+      for (const k of Object.keys(row)) {
+        out[k] = SENSITIVE.has(k) ? (row[k] ? '[REDACTED]' : null) : row[k];
+      }
+      return out;
+    };
+    const b = redact(before);
+    const a = redact(after);
+
+    let oldValue: unknown = null;
+    let newValue: unknown = null;
+    const changed: string[] = [];
+
+    if (action === 'update') {
+      // updated_at 每次 UPDATE 都会变，不参与差异判定，否则"无实际变更"也会落日志
+      const IGNORED = new Set(['updated_at']);
+      const fields = new Set([...Object.keys(b || {}), ...Object.keys(a || {})]);
+      const beforeDiff: Record<string, unknown> = {};
+      const afterDiff: Record<string, unknown> = {};
+      for (const f of fields) {
+        if (IGNORED.has(f)) continue;
+        const bv = b?.[f] ?? null;
+        const av = a?.[f] ?? null;
+        if (JSON.stringify(bv) !== JSON.stringify(av)) {
+          beforeDiff[f] = bv;
+          afterDiff[f] = av;
+          changed.push(f);
+        }
+      }
+      if (changed.length === 0) return; // 无实际变化不落日志，避免噪音
+      oldValue = beforeDiff;
+      newValue = afterDiff;
+    } else {
+      oldValue = b;
+      newValue = a;
+    }
+
+    const name = String(a?.username || b?.username || oid);
+    const description =
+      action === 'create'
+        ? `创建用户（${name}）`
+        : action === 'delete'
+          ? `删除用户（${name}）`
+          : `修改用户（${name}）：${changed.join('、')}`;
+
+    db.run(
+      `INSERT INTO operation_logs (
+        id, user_id, username, action, module, resource_type, resource_id,
+        description, old_value, new_value, ip_address, user_agent, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        req.user?.userId ?? '',
+        req.user?.name ?? '',
+        action,
+        '系统设置',
+        'users',
+        oid,
+        description,
+        oldValue ? JSON.stringify(oldValue).slice(0, 4000) : null,
+        newValue ? JSON.stringify(newValue).slice(0, 4000) : null,
+        req.ip ?? '',
+        String(req.headers?.['user-agent'] ?? '').slice(0, 300),
+        'success',
+        new Date().toISOString(),
+      ],
+    );
+    // 通知 auditTrail 中间件：本请求已有语义化审计，跳过通用记录
+    bumpAuditWriteCount();
+  } catch (e) {
+    // 审计失败绝不影响主流程
+    console.error('[user-audit] 写入用户变更日志失败:', e);
+  }
+}
+
+router.post('/users', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -784,8 +896,13 @@ router.post('/users', authenticate, (req, res) => {
         const passwordHash = user.passwordHash || user.password_hash || null;
 
         // 双向同步：根据组织自动填充部门OID
-        let departmentOid = user.department_oid || user.departmentOid || null;
-        if (!departmentOid && orgOid) {
+        // 2026-10-25：区分「未提供」和「明确不指定部门（空字符串）」——
+        //   前者按组织自动带出，后者写 NULL 且不做自动填充
+        const deptProvided = user.department_oid !== undefined || user.departmentOid !== undefined;
+        let departmentOid = deptProvided
+          ? (user.department_oid ?? user.departmentOid ?? null) || null
+          : null;
+        if (!deptProvided && orgOid) {
           const orgStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ? AND status = ?');
           orgStmt.bind([orgOid, 'active']);
           if (orgStmt.step()) {
@@ -814,6 +931,8 @@ router.post('/users', authenticate, (req, res) => {
             now
           ]
         );
+        // 字段级审计：记录新用户完整快照
+        logUserChange(db, req, 'create', oid, null, selectUserRow(db, oid));
         results.inserted.push({ oid, ...user });
       }
     }
@@ -822,14 +941,18 @@ router.post('/users', authenticate, (req, res) => {
       for (const user of updated) {
         const updates: string[] = [];
         const bindings: (string | number | null)[] = [];
+        // 字段级审计：更新前快照
+        const beforeRow = selectUserRow(db, String(user.oid));
 
         const newOrgOid = user.org_oid || user.orgOid || null;
+        // 2026-10-25：区分「未提供部门」和「明确不指定部门（空字符串）」
+        const deptProvided = user.department_oid !== undefined || user.departmentOid !== undefined;
         if (newOrgOid) {
           updates.push('org_oid = ?');
           bindings.push(newOrgOid);
 
-          // 双向同步：根据组织自动填充部门OID
-          if (!user.department_oid && !user.departmentOid) {
+          // 双向同步：根据组织自动填充部门OID（仅在调用方未提供部门时）
+          if (!deptProvided) {
             const orgStmt = db.prepare('SELECT department_id FROM organizations WHERE oid = ? AND status = ?');
             orgStmt.bind([newOrgOid, 'active']);
             if (orgStmt.step()) {
@@ -843,7 +966,11 @@ router.post('/users', authenticate, (req, res) => {
             orgStmt.free();
           }
         }
-        if (user.department_oid || user.departmentOid) { updates.push('department_oid = ?'); bindings.push(user.department_oid || user.departmentOid); }
+        if (deptProvided) {
+          // 空字符串 → 写入 NULL（明确清空部门）
+          updates.push('department_oid = ?');
+          bindings.push((user.department_oid ?? user.departmentOid) || null);
+        }
         if (user.username || user.aid) { updates.push('username = ?'); bindings.push(user.username || user.aid); }
         if (user.real_name || user.realName || user.name) { updates.push('real_name = ?'); bindings.push(user.real_name || user.realName || user.name); }
         if (user.passwordHash || user.password_hash) { updates.push('password_hash = ?'); bindings.push(user.passwordHash || user.password_hash); }
@@ -856,6 +983,8 @@ router.post('/users', authenticate, (req, res) => {
         bindings.push(user.oid);
 
         db.run(`UPDATE users SET ${updates.join(', ')} WHERE oid = ?`, bindings);
+        // 字段级审计：仅记录实际发生变化的字段
+        logUserChange(db, req, 'update', String(user.oid), beforeRow, selectUserRow(db, String(user.oid)));
         results.updated.push(user);
       }
     }
@@ -864,7 +993,10 @@ router.post('/users', authenticate, (req, res) => {
       for (const item of deleted) {
         const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
         if (!oid) continue;
+        // 字段级审计：删除前快照（删除后无法回查）
+        const beforeDelete = selectUserRow(db, oid);
         db.run('DELETE FROM users WHERE oid = ?', [oid]);
+        logUserChange(db, req, 'delete', oid, beforeDelete, null);
         results.deleted.push(oid);
       }
     }
@@ -880,7 +1012,7 @@ router.post('/users', authenticate, (req, res) => {
 /**
  * 保存用户角色关联 - 需要认证
  */
-router.post('/users/:userOid/roles', authenticate, (req, res) => {
+router.post('/users/:userOid/roles', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { userOid } = req.params;
   const { roleOids } = req.body;
@@ -908,7 +1040,7 @@ router.post('/users/:userOid/roles', authenticate, (req, res) => {
 /**
  * 获取用户角色
  */
-router.get('/users/:userOid/roles', (req, res) => {
+router.get('/users/:userOid/roles', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { userOid } = req.params;
 
@@ -935,7 +1067,7 @@ router.get('/users/:userOid/roles', (req, res) => {
 /**
  * 获取工序树
  */
-router.get('/processes', (req, res) => {
+router.get('/processes', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { rows = -1, id, appType, sort = 'sort_order', order = 'asc' } = req.query;
 
@@ -1003,7 +1135,7 @@ router.get('/processes', (req, res) => {
 /**
  * 保存工序 - 需要认证
  */
-router.post('/processes', authenticate, (req, res) => {
+router.post('/processes', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { inserted, updated, deleted } = req.body;
 
@@ -1091,7 +1223,7 @@ router.post('/processes', authenticate, (req, res) => {
 /**
  * 获取动作列表
  */
-router.get('/actions', (req, res) => {
+router.get('/actions', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { appType, category } = req.query;
 
@@ -1132,7 +1264,7 @@ router.get('/actions', (req, res) => {
 /**
  * 获取角色权限
  */
-router.get('/roles/:roleOid/authority', (req, res) => {
+router.get('/roles/:roleOid/authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { appType = 0 } = req.query;
@@ -1161,7 +1293,7 @@ router.get('/roles/:roleOid/authority', (req, res) => {
 /**
  * 保存角色权限 - 需要认证
  */
-router.post('/roles/:roleOid/authority', authenticate, (req, res) => {
+router.post('/roles/:roleOid/authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { authorities } = req.body;
@@ -1214,7 +1346,7 @@ router.post('/roles/:roleOid/authority', authenticate, (req, res) => {
 /**
  * 获取角色数据权限
  */
-router.get('/roles/:roleOid/data-authority', (req, res) => {
+router.get('/roles/:roleOid/data-authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
 
@@ -1240,7 +1372,7 @@ router.get('/roles/:roleOid/data-authority', (req, res) => {
 /**
  * 保存角色数据权限 - 需要认证
  */
-router.post('/roles/:roleOid/data-authority', authenticate, (req, res) => {
+router.post('/roles/:roleOid/data-authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { orgOids, isAuthorize } = req.body;
@@ -1286,7 +1418,7 @@ router.post('/roles/:roleOid/data-authority', authenticate, (req, res) => {
  * 授予角色全部工序+动作权限
  * POST /api/authority/roles/:roleOid/authority/all
  */
-router.post('/roles/:roleOid/authority/all', authenticate, (req, res) => {
+router.post('/roles/:roleOid/authority/all', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { appType = 0 } = req.body;
@@ -1335,7 +1467,7 @@ router.post('/roles/:roleOid/authority/all', authenticate, (req, res) => {
  * POST /api/authority/roles/:roleOid/authority/process
  * Body: { processOid, value: 1(授权) | 0(取消) }
  */
-router.post('/roles/:roleOid/authority/process', authenticate, (req, res) => {
+router.post('/roles/:roleOid/authority/process', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
   const { processOid, value } = req.body;
@@ -1380,7 +1512,7 @@ router.post('/roles/:roleOid/authority/process', authenticate, (req, res) => {
  * 授予角色全部组织数据权限
  * POST /api/authority/roles/:roleOid/data-authority/all
  */
-router.post('/roles/:roleOid/data-authority/all', authenticate, (req, res) => {
+router.post('/roles/:roleOid/data-authority/all', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { roleOid } = req.params;
 
@@ -1419,7 +1551,7 @@ router.post('/roles/:roleOid/data-authority/all', authenticate, (req, res) => {
  * 获取用户特殊权限覆盖
  * GET /api/authority/users/:userOid/authority
  */
-router.get('/users/:userOid/authority', (req, res) => {
+router.get('/users/:userOid/authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { userOid } = req.params;
 
@@ -1448,7 +1580,7 @@ router.get('/users/:userOid/authority', (req, res) => {
  * POST /api/authority/users/:userOid/authority
  * Body: { authorities: [{ processOid, actionOid, value }] }
  */
-router.post('/users/:userOid/authority', authenticate, (req, res) => {
+router.post('/users/:userOid/authority', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { userOid } = req.params;
   const { authorities } = req.body;
@@ -1502,7 +1634,7 @@ router.post('/users/:userOid/authority', authenticate, (req, res) => {
  * Body: { oldPassword?, newPassword }
  * 管理员不需要旧密码，普通用户修改自己密码需要验证旧密码
  */
-router.put('/users/:oid/password', authenticate, async (req, res) => {
+router.put('/users/:oid/password', authenticate, requireAdminRole(), async (req, res) => {
   const db = getDatabase();
   const { oid } = req.params;
   const { oldPassword, newPassword } = req.body;
@@ -1549,7 +1681,7 @@ router.put('/users/:oid/password', authenticate, async (req, res) => {
  * PUT /api/authority/users/:oid/status
  * Body: { status: 'active' | 'inactive' }
  */
-router.put('/users/:oid/status', authenticate, (req, res) => {
+router.put('/users/:oid/status', authenticate, requireAdminRole(), (req, res) => {
   const db = getDatabase();
   const { oid } = req.params;
   const { status } = req.body;
@@ -1722,8 +1854,17 @@ router.get('/check-authority', authenticate, (req, res) => {
     }
 
     // 查找工序和动作
-    const procStmt = db.prepare('SELECT oid FROM processes WHERE route = ? AND status = ?');
-    procStmt.bind([processRoute as string, 'active']);
+    // 2026-10-25 修复：processes.route 存在结构性重复（父菜单入口 = 第一个子菜单页面），
+    //   实测 8 组，如 /crop/seed-source 同时对应 PROC_CROP 与 PROC_SEED_SOURCE。
+    //   原查询只取第一行（未排序时命中哪行不确定）→ 子工序权限永远不生效。
+    //   现按「父工序优先」排序：父级路径解析到父工序（与前端 processRouteMap 口径一致），
+    //   父级不存在时才落到子工序。
+    const procStmt = db.prepare(`
+      SELECT oid FROM processes
+      WHERE route = ? AND status = 'active'
+      ORDER BY (parent_oid IS NULL) DESC, sort_order ASC
+    `);
+    procStmt.bind([processRoute as string]);
     const processOid = procStmt.step() ? (procStmt.getAsObject() as { oid: string }).oid : null;
     procStmt.free();
 
@@ -1738,10 +1879,11 @@ router.get('/check-authority', authenticate, (req, res) => {
     }
 
     // 检查用户特殊权限（最高优先级）
+    // 2026-10-25：用户覆盖可能以 action_code（view）或 action_oid（ACT001）存库，两种都匹配
     const userAuthStmt = db.prepare(
-      'SELECT value FROM users_authority WHERE user_oid = ? AND process_oid = ? AND action_oid = ?'
+      'SELECT value FROM users_authority WHERE user_oid = ? AND process_oid = ? AND action_oid IN (?, ?)'
     );
-    userAuthStmt.bind([userOid, processOid, actionOid]);
+    userAuthStmt.bind([userOid, processOid, actionOid, actionCode as string]);
     if (userAuthStmt.step()) {
       const userAuth = userAuthStmt.getAsObject() as { value: number };
       userAuthStmt.free();

@@ -24,6 +24,7 @@ import { usePositionStore } from '@/stores/usePositionStore';
 import type { Position } from '@/services/apiBasicDataService';
 // 2026-10-11 类型清理：职位视图模型提取为共享类型，供页面与职位弹窗共用一份
 import type { PositionItem } from '../position/types';
+import { useAuthStore } from '@/stores';
 
 // 将后端 Position 转换为页面使用的格式
 function adaptPositionToPage(position: Position): PositionItem {
@@ -42,6 +43,8 @@ function adaptPositionToPage(position: Position): PositionItem {
 }
 
 export function PersonnelManagementPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // ========== 数据获取（从 Zustand Store）==========
   const {
     positions,
@@ -76,10 +79,10 @@ export function PersonnelManagementPage() {
   });
 
   // 权限检查
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_LABOR_PERSONNEL', 'create');
+  const canEdit = hasProcessPermission('PROC_LABOR_PERSONNEL', 'edit');
+  const canDelete = hasProcessPermission('PROC_LABOR_PERSONNEL', 'delete');
+  const canExport = hasProcessPermission('PROC_LABOR_PERSONNEL', 'export');
 
   // 批量操作状态
   const [batchEditMode, setBatchEditMode] = useState(false);

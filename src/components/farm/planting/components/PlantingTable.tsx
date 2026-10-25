@@ -803,7 +803,7 @@ export function PlantingTable({
                               className={isEnded ? 'text-blue-400' : ''}
                             />
                           )}
-                          {onLabelManage && (
+                          {onLabelManage && canEdit && (
                             <ActionIconButton
                               variant="tag"
                               icon={<Tag className="w-4 h-4" />}
@@ -813,7 +813,7 @@ export function PlantingTable({
                           )}
 
                           {/* 2026-07-26：行内编辑按钮（工具栏批量编辑已移除） */}
-                          {onEdit && (
+                          {onEdit && canEdit && (
                             <ActionIconButton
                               variant="edit"
                               icon={<Edit2 className="w-4 h-4" />}
@@ -825,7 +825,7 @@ export function PlantingTable({
                           )}
 
                           {/* 写操作 — 结束态灰显+禁用（采收 onEndV2 仅进行中显示） */}
-                          {onEndV2 && !isEnded && (
+                          {onEndV2 && canEdit && !isEnded && (
                             <ActionIconButton
                               variant="harvest"
                               icon={<Package className="w-4 h-4" />}
@@ -844,7 +844,7 @@ export function PlantingTable({
                             />
                           )}
                           {/* 2026-10-18：已采收入库（按入库量口径）不可再移库 */}
-                          {onMove && !((record.harvestToInventoryQty || 0) > 0) && (
+                          {onMove && canEdit && !((record.harvestToInventoryQty || 0) > 0) && (
                             <ActionIconButton
                               variant="transfer"
                               icon={<MoveRight className="w-4 h-4" />}

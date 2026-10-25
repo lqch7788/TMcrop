@@ -97,6 +97,8 @@ interface AuthState {
 
   // 权限检查
   hasPermission: (processRoute: string, actionCode: string) => boolean;
+  /** 按工序 OID 检查动作权限（2026-10-25 新增） */
+  hasProcessPermission: (processOid: string, actionCode: string) => boolean;
   canAccessProcess: (processRoute: string) => boolean;
   getAccessibleMenuRoutes: (allRoutes: string[]) => string[];
 }
@@ -123,6 +125,55 @@ function restorePersistedAuth(): { token: string | null; currentUser: CurrentUse
     // localStorage 不可用或数据损坏 → 视为未登录，交由 App 触发登录
     return { token: null, currentUser: null };
   }
+}
+
+/**
+ * 动作代码 ↔ 动作 OID 映射
+ * 2026-10-25：角色权限与用户覆盖在库里存在两种形态（ACT001~006 与 view/create/...），
+ * 合并覆盖时必须同时处理，否则强制拒绝/允许会因为匹配不上而不生效。
+ */
+const ACTION_CODE_TO_OID: Record<string, string> = {
+  view: 'ACT001',
+  create: 'ACT002',
+  edit: 'ACT003',
+  delete: 'ACT004',
+  export: 'ACT005',
+  approve: 'ACT006',
+};
+const ACTION_OID_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(ACTION_CODE_TO_OID).map(([code, oid]) => [oid, code]),
+);
+
+/**
+ * 把用户级特殊权限合并进角色权限（用户覆盖优先）
+ *
+ * 2026-10-25：无论是否有用户覆盖，都把每条授权同步成 code 与 ACT OID 两种形态。
+ *   原因：后端 roles_authority 已统一为 ACT 口径，但 my-permissions 返回的仍是
+ *   code 形态（'view'），若不双向展开，前端按 'create' 判定会全部落空
+ *   （表现为"按钮该隐藏的没隐藏"）。
+ */
+function mergeUserOverrides(
+  roleAuths: AuthorityEntry[],
+  // my-permissions 返回的 userAuthorities 只含 processOid/actionOid/value，不需要 userOid
+  userAuths: AuthorityEntry[],
+): AuthorityEntry[] {
+  const map = new Map<string, number>();
+  const put = (a: AuthorityEntry) => {
+    map.set(`${a.processOid}|${a.actionOid}`, a.value);
+    // 同步到另一种命名形态（code → OID 或 OID → code）
+    const asOid = ACTION_CODE_TO_OID[a.actionOid];
+    if (asOid) map.set(`${a.processOid}|${asOid}`, a.value);
+    const asCode = ACTION_OID_TO_CODE[a.actionOid];
+    if (asCode) map.set(`${a.processOid}|${asCode}`, a.value);
+  };
+
+  for (const a of roleAuths || []) put(a);
+  for (const a of userAuths || []) put(a);
+
+  return [...map.entries()].map(([key, value]) => {
+    const [processOid, actionOid] = key.split('|');
+    return { processOid, actionOid, value };
+  });
 }
 
 const restoredAuth = restorePersistedAuth();
@@ -231,7 +282,11 @@ export const useAuthStore = create<AuthState>()(
             set({
               roles: response.roles || [],
               isAdmin: response.isAdmin || false,
-              authorities: response.authorities || [],
+              // 用户级覆盖合并进角色权限（覆盖优先），否则"强制允许/拒绝"不会生效
+              authorities: mergeUserOverrides(
+                response.authorities || [],
+                response.userAuthorities || [],
+              ),
               userAuthorities: response.userAuthorities || [],
               dataOrgOids: response.dataOrgOids || [],
               isLoading: false,
@@ -296,10 +351,34 @@ export const useAuthStore = create<AuthState>()(
         const processOid = getProcessOidByRoute(processRoute);
         if (!processOid) return false;
 
+        // 2026-10-25：动作参数可能传 'view' 或 'ACT001'，两种都匹配
+        //   （后端 roles_authority 已统一为 ACT 单一口径，这里兼容 code 形态）
+        const oidForm = ACTION_CODE_TO_OID[actionCode];
         return authorities.some(a => {
           const pOid = a.processOid || (a as unknown as Record<string, string>).process_oid;
           const aOid = a.actionOid || (a as unknown as Record<string, string>).action_oid;
-          return pOid === processOid && aOid === actionCode && a.value >= 1;
+          const matchAction = aOid === actionCode || (!!oidForm && aOid === oidForm);
+          return pOid === processOid && matchAction && a.value >= 1;
+        });
+      },
+
+      /**
+       * 按工序 OID 检查动作权限（2026-10-25 新增）
+       * 页面已知自己属于哪个工序时用这个（比 hasPermission 少一次路由反查）。
+       * @param processOid 工序 OID，如 'PROC_SEEDLING'
+       * @param actionCode  动作代码（view/create/...）或动作 OID（ACT001/...）
+       */
+      hasProcessPermission: (processOid: string, actionCode: string): boolean => {
+        const { isAdmin, authorities } = get();
+        if (isAdmin) return true;
+        if (!processOid) return false;
+
+        const oidForm = ACTION_CODE_TO_OID[actionCode];
+        return authorities.some(a => {
+          const pOid = a.processOid || (a as unknown as Record<string, string>).process_oid;
+          const aOid = a.actionOid || (a as unknown as Record<string, string>).action_oid;
+          const matchAction = aOid === actionCode || (!!oidForm && aOid === oidForm);
+          return pOid === processOid && matchAction && a.value >= 1;
         });
       },
 
@@ -314,9 +393,15 @@ export const useAuthStore = create<AuthState>()(
         const processOid = getProcessOidByRoute(processRoute);
         if (!processOid) return false;
 
+        // 2026-10-25：菜单可见性统一按「查看」权限判断。
+        //   原先只要该工序任一动作 value>=1 就可见，导致"强制拒绝查看"
+        //   因 create/edit 等权限仍为 1 而无法隐藏菜单。
         return authorities.some(a => {
           const pOid = a.processOid || (a as unknown as Record<string, string>).process_oid;
-          return pOid === processOid && a.value >= 1;
+          const aOid = a.actionOid || (a as unknown as Record<string, string>).action_oid;
+          return pOid === processOid
+            && (aOid === 'ACT001' || aOid === 'view')
+            && a.value >= 1;
         });
       },
 

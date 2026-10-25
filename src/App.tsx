@@ -151,7 +151,6 @@ import PesticideLibraryPage from './components/settings/pesticide-library/Pestic
 import PestDiseaseDictPage from './components/settings/pest-disease-dict/PestDiseaseDictPage';
 import FertilizerLibraryPage from './components/settings/fertilizer-library/FertilizerLibraryPage';
 
-import DepartmentSettings from './pages/DepartmentSettings';
 import { StaffManagementPage } from './components/labor/personnel/StaffManagementPage';
 import PersonnelPage from './pages/labor/PersonnelPage';
 import ParkArchive from './pages/ParkArchive';
@@ -495,7 +494,8 @@ function AppContent() {
             <Route path="pest-disease-dict" element={<PestDiseaseDictPage />} />
             <Route path="fertilizer-library" element={<FertilizerLibraryPage />} />
 
-            <Route path="departments" element={<DepartmentSettings />} />
+            {/* 2026-10-25：部门设置并入「用户权限管理 → 组织管理 → 部门列表」，旧链接重定向 */}
+            <Route path="departments" element={<Navigate to="/settings/user-permission" replace />} />
             <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
@@ -644,6 +644,9 @@ function AppContent() {
           <Route path="/summary/batch" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/summary/chain" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/summary/chain-traceability" element={<Navigate to="/summary/batch-management" replace />} />
+          {/* 2026-10-24：侧边栏「审批管理」指向 /approvals，但该路由从未注册
+              （点击菜单是空白页）。按审批中心语义重定向到待办审批聚合页。 */}
+          <Route path="/approvals" element={<Navigate to="/pending-approval" replace />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />
           {/* 2026-10-10：农事审批页下线（对齐 /tasks 先例做重定向，便于旧链接/书签落回审批管理） */}

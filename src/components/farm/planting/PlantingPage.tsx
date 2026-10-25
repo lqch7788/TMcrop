@@ -39,6 +39,7 @@ import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
+import { useAuthStore } from '@/stores';
 
 // 2026-10-19：导出/展示统一中文映射（避免英文枚举直出）
 const BREEDING_METHOD_LABELS: Record<string, string> = {
@@ -52,6 +53,8 @@ const BREEDING_METHOD_LABELS: Record<string, string> = {
 };
 
 export default function PlantingPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage）
   const [searchParams] = useSearchParams();
   // v0.3 P0-1：批次时间线跳转
@@ -59,11 +62,11 @@ export default function PlantingPage() {
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // 2026-07-01 P2-8 修复：原 useAuthPermission hook 是死代码（已 hardcode 全部 true），删除
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canExport = true;
-  const canPrint = true;
+  const canCreate = hasProcessPermission('PROC_PLANTING', 'create');
+  const canEdit = hasProcessPermission('PROC_PLANTING', 'edit');
+  const canDelete = hasProcessPermission('PROC_PLANTING', 'delete');
+  const canExport = hasProcessPermission('PROC_PLANTING', 'export');
+  const canPrint = hasProcessPermission('PROC_PLANTING', 'export');
 
   // 字典数据
   const dictionaries = useDictionaryStore((state) => state.dictionaries);

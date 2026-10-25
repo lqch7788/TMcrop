@@ -12,12 +12,16 @@ import {
 } from '../services/apiBasicDataService';
 
 interface DepartmentStore {
+  /** 启用中的部门（下拉选择、DepartmentSelect 等业务组件消费） */
   departments: Department[];
+  /** 全部部门（含停用），仅部门管理页统计与列表使用 */
+  allDepartments: Department[];
   loading: boolean;
   error: string | null;
   lastFetch: number | null;
 
   loadDepartments: () => Promise<void>;
+  loadAllDepartments: () => Promise<void>;
   addDepartment: (dept: Partial<Department>) => Promise<Department>;
   updateDepartment: (id: string, dept: Partial<Department>) => Promise<void>;
   removeDepartment: (id: string) => Promise<void>;
@@ -27,6 +31,7 @@ interface DepartmentStore {
 export const useDepartmentStore = create<DepartmentStore>()(
   (set, get)=> ({
       departments: [],
+      allDepartments: [],
       loading: false,
       error: null,
       lastFetch: null,
@@ -42,6 +47,17 @@ export const useDepartmentStore = create<DepartmentStore>()(
         try {
           const data = await getDepartments();
           set({ departments: data, loading: false, lastFetch: now });
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : '加载部门失败', loading: false });
+        }
+      },
+
+      /** 加载全部部门（含停用），部门管理页专用 */
+      loadAllDepartments: async () => {
+        set({ loading: true, error: null });
+        try {
+          const data = await getDepartments(true);
+          set({ allDepartments: data, loading: false });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载部门失败', loading: false });
         }

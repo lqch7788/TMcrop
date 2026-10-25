@@ -164,6 +164,8 @@ import iotHistoryRouter from './iotHistory';
 import iotMonitoringConfigsRouter from './iotMonitoringConfigs';
 import iotCamerasRouter from './iotCameras';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
+// 2026-10-25：工序-动作权限校验（此前全站写端点只验登录，不查权限矩阵）
+import { requireProcessPermission, requireProcessView } from '../middleware/processPermission';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
 // JWT 认证中间件 - 要求已登录才能访问
@@ -187,43 +189,43 @@ router.use('/authority/auth/login', loginLimiter);
 router.use('/', apiLimiter);
 
 // 作物品种路由 - 需要认证
-router.use('/crop-varieties', requireAuth, cropVarietyRouter);
+router.use('/crop-varieties', requireAuth, requireProcessView(), requireProcessPermission(), cropVarietyRouter);
 
 // 库存路由 - 需要认证
-router.use('/inventory', requireAuth, inventoryRouter);
+router.use('/inventory', requireAuth, requireProcessView(), requireProcessPermission(), inventoryRouter);
 // 2026-10-09：补录申请单路由（物料审批 → 补录审批 tab 后端通路）
-router.use('/inventory-supplementary-applications', requireAuth, inventorySupplementaryRouter);
+router.use('/inventory-supplementary-applications', requireAuth, requireProcessView(), requireProcessPermission(), inventorySupplementaryRouter);
 // 2026-10-09：调拨申请单路由（物料审批 → 库存调拨 tab 后端通路）
-router.use('/inventory-transfer-applications', requireAuth, inventoryTransferApplicationRouter);
+router.use('/inventory-transfer-applications', requireAuth, requireProcessView(), requireProcessPermission(), inventoryTransferApplicationRouter);
 // 2026-10-09：育苗补录申请单路由（HarvestRecordModal planting_self_kept → 物料审批→补录审批 tab）
-router.use('/seedling-supplementary-applications', requireAuth, seedlingSupplementaryRouter);
+router.use('/seedling-supplementary-applications', requireAuth, requireProcessView(), requireProcessPermission(), seedlingSupplementaryRouter);
 
 // 育苗管理路由 - 需要认证
-router.use('/seedlings', requireAuth, seedlingRouter);
-router.use('/seedlings', requireAuth, seedlingPropagationRecordsRouter);
+router.use('/seedlings', requireAuth, requireProcessView(), requireProcessPermission(), seedlingRouter);
+router.use('/seedlings', requireAuth, requireProcessView(), requireProcessPermission(), seedlingPropagationRecordsRouter);
 
 // 种源管理路由 - 需要认证
-router.use('/seed-sources', requireAuth, seedSourceRouter);
+router.use('/seed-sources', requireAuth, requireProcessView(), requireProcessPermission(), seedSourceRouter);
 // 2026-10-17：作物管理通用回收站（列表/恢复/彻底删除）
-router.use('/recycle-bin', requireAuth, recycleBinRouter);
+router.use('/recycle-bin', requireAuth, requireProcessView(), requireProcessPermission(), recycleBinRouter);
 
 // 种植管理路由 - 需要认证
-router.use('/plantings', requireAuth, plantingRouter);
-router.use('/plantings', requireAuth, plantingRecordsRouter);
+router.use('/plantings', requireAuth, requireProcessView(), requireProcessPermission(), plantingRouter);
+router.use('/plantings', requireAuth, requireProcessView(), requireProcessPermission(), plantingRecordsRouter);
 
 // 采收管理路由 - 需要认证
-router.use('/harvest', requireAuth, harvestRouter);
+router.use('/harvest', requireAuth, requireProcessView(), requireProcessPermission(), harvestRouter);
 
 // 供应商路由 - 需要认证
-router.use('/suppliers', requireAuth, supplierRouter);
+router.use('/suppliers', requireAuth, requireProcessView(), requireProcessPermission(), supplierRouter);
 
 // 作物实例路由 - 需要认证
-router.use('/crop-instances', requireAuth, cropInstanceRouter);
+router.use('/crop-instances', requireAuth, requireProcessView(), requireProcessPermission(), cropInstanceRouter);
 
 // 农事任务路由 - 需要认证
-router.use('/farm-tasks', requireAuth, farmTaskRouter);
+router.use('/farm-tasks', requireAuth, requireProcessView(), requireProcessPermission(), farmTaskRouter);
 // v0.3 P0-1：批次统一时间线
-router.use('/batch-timeline', requireAuth, batchTimelineRouter);
+router.use('/batch-timeline', requireAuth, requireProcessView(), requireProcessPermission(), batchTimelineRouter);
 // v0.3 P0-2：任务进度跟踪
 //
 // 2026-10-22 更正（审核 H5，实测确认）：
@@ -235,69 +237,69 @@ router.use('/batch-timeline', requireAuth, batchTimelineRouter);
 // 处置：不调整挂载顺序（taskProgress 用 progress_pct、farmTask 用 progress，语义不同，
 //   换顺序会让一批调用方读到另一个字段），改为让 farmTask 的 /progress 同时接受 {pct}，
 //   并在两侧都保留巡查记录守卫。taskProgress 独有的 /start /pause /resume 仍由它服务。
-router.use('/farm-tasks', requireAuth, taskProgressRouter);
+router.use('/farm-tasks', requireAuth, requireProcessView(), requireProcessPermission(), taskProgressRouter);
 // v0.3 P0-R + P0-S：监管报告导出 + 合规血缘
-router.use('/compliance-report', requireAuth, complianceReportRouter);
+router.use('/compliance-report', requireAuth, requireProcessView(), requireProcessPermission(), complianceReportRouter);
 // P1-3：承诺达标合格证（按批次开具，留存 ≥6 个月）
-router.use('/compliance-certificates', requireAuth, complianceCertificateRouter);
+router.use('/compliance-certificates', requireAuth, requireProcessView(), requireProcessPermission(), complianceCertificateRouter);
 // 2026-10-21 P2b：巡查计划 CRUD + 实例生成
-router.use('/inspection-plans', requireAuth, inspectionPlanRouter);
+router.use('/inspection-plans', requireAuth, requireProcessView(), requireProcessPermission(), inspectionPlanRouter);
 // v0.3 P0-3：移动端离线队列同步
-router.use('/offline-sync', requireAuth, offlineSyncRouter);
+router.use('/offline-sync', requireAuth, requireProcessView(), requireProcessPermission(), offlineSyncRouter);
 // v0.3 P0-B：纸单兜底（班组长代填）
-router.use('/paper-report', requireAuth, paperReportRouter);
+router.use('/paper-report', requireAuth, requireProcessView(), requireProcessPermission(), paperReportRouter);
 // v0.3 P1-1：SOP 库
-router.use('/sop', requireAuth, sopLibraryRouter);
+router.use('/sop', requireAuth, requireProcessView(), requireProcessPermission(), sopLibraryRouter);
 // v0.3 P1-4：批次成本归集
-router.use('/batch-cost', requireAuth, batchCostRouter);
+router.use('/batch-cost', requireAuth, requireProcessView(), requireProcessPermission(), batchCostRouter);
 // v0.3 P1-2：提醒引擎（注意：必须挂在 /reminders/rules 之前，避免 /rules 被 /:id 拦截）
-router.use('/reminders', requireAuth, remindersRouter);
+router.use('/reminders', requireAuth, requireProcessView(), requireProcessPermission(), remindersRouter);
 // v0.3 P1-5：问题整改追踪
-router.use('/issues', requireAuth, issueTrackingRouter);
+router.use('/issues', requireAuth, requireProcessView(), requireProcessPermission(), issueTrackingRouter);
 // v0.3 P1-A：考勤数据接入
-router.use('/attendance', requireAuth, attendanceIntegrationRouter);
+router.use('/attendance', requireAuth, requireProcessView(), requireProcessPermission(), attendanceIntegrationRouter);
 // 2026-08-22：AI 模块路由（智能任务中心 P0）
-router.use('/ai/workhour', requireAuth, aiWorkhourRouter);
-router.use('/ai/dispatch', requireAuth, aiDispatchRouter);
-router.use('/ai/growth', requireAuth, aiGrowthRouter);
-router.use('/ai/route', requireAuth, aiRouteRouter);
-router.use('/ai/pest', requireAuth, aiPestRouter);
-router.use('/ai/qa', requireAuth, aiQaRouter);
-router.use('/ai/report', requireAuth, aiReportRouter);
-router.use('/ai/schedule', requireAuth, aiScheduleRouter);
-router.use('/ai/resource', requireAuth, aiResourceRouter);
-router.use('/ai/image', requireAuth, aiImageRouter);
-router.use('/ai/growth-state', requireAuth, aiGrowthStateRouter);
-router.use('/ai/voice', requireAuth, aiVoiceRouter);
-router.use('/ai/anomaly', requireAuth, aiAnomalyRouter);
-router.use('/ai/attendance', requireAuth, aiAttendanceRouter);
-router.use('/ai/config', requireAuth, aiConfigRouter);
-router.use('/ai/approval', requireAuth, aiApprovalRouter);
+router.use('/ai/workhour', requireAuth, requireProcessView(), requireProcessPermission(), aiWorkhourRouter);
+router.use('/ai/dispatch', requireAuth, requireProcessView(), requireProcessPermission(), aiDispatchRouter);
+router.use('/ai/growth', requireAuth, requireProcessView(), requireProcessPermission(), aiGrowthRouter);
+router.use('/ai/route', requireAuth, requireProcessView(), requireProcessPermission(), aiRouteRouter);
+router.use('/ai/pest', requireAuth, requireProcessView(), requireProcessPermission(), aiPestRouter);
+router.use('/ai/qa', requireAuth, requireProcessView(), requireProcessPermission(), aiQaRouter);
+router.use('/ai/report', requireAuth, requireProcessView(), requireProcessPermission(), aiReportRouter);
+router.use('/ai/schedule', requireAuth, requireProcessView(), requireProcessPermission(), aiScheduleRouter);
+router.use('/ai/resource', requireAuth, requireProcessView(), requireProcessPermission(), aiResourceRouter);
+router.use('/ai/image', requireAuth, requireProcessView(), requireProcessPermission(), aiImageRouter);
+router.use('/ai/growth-state', requireAuth, requireProcessView(), requireProcessPermission(), aiGrowthStateRouter);
+router.use('/ai/voice', requireAuth, requireProcessView(), requireProcessPermission(), aiVoiceRouter);
+router.use('/ai/anomaly', requireAuth, requireProcessView(), requireProcessPermission(), aiAnomalyRouter);
+router.use('/ai/attendance', requireAuth, requireProcessView(), requireProcessPermission(), aiAttendanceRouter);
+router.use('/ai/config', requireAuth, requireProcessView(), requireProcessPermission(), aiConfigRouter);
+router.use('/ai/approval', requireAuth, requireProcessView(), requireProcessPermission(), aiApprovalRouter);
 
 // 巡查记录路由 - 需要认证
-router.use('/inspections', requireAuth, inspectionRouter);
+router.use('/inspections', requireAuth, requireProcessView(), requireProcessPermission(), inspectionRouter);
 
 // 问题记录路由 - 需要认证
-router.use('/problems', requireAuth, problemRouter);
+router.use('/problems', requireAuth, requireProcessView(), requireProcessPermission(), problemRouter);
 // 2026-06-04 V2.1 铁律：问题附件后端化路由（替代 localStorage）
-router.use('/problem-attachments', requireAuth, problemAttachmentsRouter);
+router.use('/problem-attachments', requireAuth, requireProcessView(), requireProcessPermission(), problemAttachmentsRouter);
 
 // 人工记录路由 - 需要认证
-router.use('/labor', requireAuth, laborRouter);
+router.use('/labor', requireAuth, requireProcessView(), requireProcessPermission(), laborRouter);
 
 // 加班记录路由 - 需要认证
-router.use('/overtime', requireAuth, overtimeRouter);
+router.use('/overtime', requireAuth, requireProcessView(), requireProcessPermission(), overtimeRouter);
 
 // 请假记录路由 - 需要认证
-router.use('/leave', requireAuth, leaveRouter);
+router.use('/leave', requireAuth, requireProcessView(), requireProcessPermission(), leaveRouter);
 
 // 2026-10-21（阶段 3）：临时任务路由已下线，数据并入 /farm-tasks
 
 // 采购计划路由 - 需要认证
-router.use('/purchase-plans', requireAuth, purchasePlanRouter);
+router.use('/purchase-plans', requireAuth, requireProcessView(), requireProcessPermission(), purchasePlanRouter);
 
 // 物料申请路由 - 需要认证
-router.use('/material-requests', requireAuth, materialRequestRouter);
+router.use('/material-requests', requireAuth, requireProcessView(), requireProcessPermission(), materialRequestRouter);
 
 // 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 可选认证（公开数据）
 router.use('/basic-data', optionalAuth, basicDataRouter);
@@ -315,71 +317,71 @@ router.use('/authority', authorityRouter);
 router.use('/notifications', optionalAuth, notificationRouter);
 
 // 审批工作流路由 - 需要认证
-router.use('/approval-workflows', requireAuth, approvalWorkflowRouter);
+router.use('/approval-workflows', requireAuth, requireProcessView(), requireProcessPermission(), approvalWorkflowRouter);
 
 // 审批单路由 - 需要认证
-router.use('/approvals', requireAuth, approvalRouter);
+router.use('/approvals', requireAuth, requireProcessView(), requireProcessPermission(), approvalRouter);
 
 // 审批联动路由 - 需要认证
-router.use('/approval-linkage', requireAuth, approvalLinkageRouter);
+router.use('/approval-linkage', requireAuth, requireProcessView(), requireProcessPermission(), approvalLinkageRouter);
 
 // 操作日志路由 - 需要认证
-router.use('/operation-logs', requireAuth, operationLogRouter);
+router.use('/operation-logs', requireAuth, requireProcessView(), requireProcessPermission(), operationLogRouter);
 
 // 已删除单据归档查询 - 需要认证（2026-09-27 追溯方案）
-router.use('/deleted-documents', requireAuth, deletedDocumentsRouter);
+router.use('/deleted-documents', requireAuth, requireProcessView(), requireProcessPermission(), deletedDocumentsRouter);
 
 // 工作日志路由 - 需要认证
-router.use('/work-logs', requireAuth, workLogRouter);
-router.use('/reminders', requireAuth, reminderRouter);
-router.use('/farm-operation-records', requireAuth, farmOperationRecordsRouter);
-router.use('/inventory-transactions', requireAuth, inventoryTransactionsRouter);
+router.use('/work-logs', requireAuth, requireProcessView(), requireProcessPermission(), workLogRouter);
+router.use('/reminders', requireAuth, requireProcessView(), requireProcessPermission(), reminderRouter);
+router.use('/farm-operation-records', requireAuth, requireProcessView(), requireProcessPermission(), farmOperationRecordsRouter);
+router.use('/inventory-transactions', requireAuth, requireProcessView(), requireProcessPermission(), inventoryTransactionsRouter);
 
 // 订单路由 - 需要认证
-router.use('/crop-orders', requireAuth, cropOrderRouter);
+router.use('/crop-orders', requireAuth, requireProcessView(), requireProcessPermission(), cropOrderRouter);
 
 // 生产计划路由 - 需要认证
-router.use('/production-plans', requireAuth, productionPlanRouter);
+router.use('/production-plans', requireAuth, requireProcessView(), requireProcessPermission(), productionPlanRouter);
 
 // 生产计划路由别名（兼容前端 /production/plans 调用）- 需要认证
-router.use('/production/plans', requireAuth, productionPlanRouter);
+router.use('/production/plans', requireAuth, requireProcessView(), requireProcessPermission(), productionPlanRouter);
 
 // 技术方案路由 - 需要认证
-router.use('/tech-solutions', requireAuth, techSolutionRouter);
+router.use('/tech-solutions', requireAuth, requireProcessView(), requireProcessPermission(), techSolutionRouter);
 
 // 生产汇总统计路由 - 需要认证
-router.use('/summary', requireAuth, summaryRouter);
+router.use('/summary', requireAuth, requireProcessView(), requireProcessPermission(), summaryRouter);
 
 // 成本管理路由（物料成本 + 能源成本）- 需要认证
-router.use('/material-costs', requireAuth, materialCostRouter);
-router.use('/material-returns', requireAuth, materialReturnRouter);
-router.use('/material-executes', requireAuth, materialExecuteRouter);
-router.use('/material-statistics', requireAuth, materialStatisticsRouter);
+router.use('/material-costs', requireAuth, requireProcessView(), requireProcessPermission(), materialCostRouter);
+router.use('/material-returns', requireAuth, requireProcessView(), requireProcessPermission(), materialReturnRouter);
+router.use('/material-executes', requireAuth, requireProcessView(), requireProcessPermission(), materialExecuteRouter);
+router.use('/material-statistics', requireAuth, requireProcessView(), requireProcessPermission(), materialStatisticsRouter);
 
 // 性能监控路由 - 需要认证
 // 2026-07-21 临时禁用: 同上,因 services/performanceMonitor 模块不存在
-// router.use('/monitoring', requireAuth, monitoringRouter);
+// router.use('/monitoring', requireAuth, requireProcessView(), requireProcessPermission(), monitoringRouter);
 
 // 数据同步路由 - 需要认证
-router.use('/sync', requireAuth, syncRouter);
+router.use('/sync', requireAuth, requireProcessView(), requireProcessPermission(), syncRouter);
 
 // 公告路由 - 需要认证
-router.use('/announcements', requireAuth, announcementRouter);
+router.use('/announcements', requireAuth, requireProcessView(), requireProcessPermission(), announcementRouter);
 
 // 指标路由 - 需要认证
-router.use('/indicators', requireAuth, indicatorsRouter);
+router.use('/indicators', requireAuth, requireProcessView(), requireProcessPermission(), indicatorsRouter);
 
 // 指标评估路由 - 需要认证
-router.use('/indicator-evaluations', requireAuth, indicatorEvaluationsRouter);
+router.use('/indicator-evaluations', requireAuth, requireProcessView(), requireProcessPermission(), indicatorEvaluationsRouter);
 
 // 排班管理路由 - 需要认证
-router.use('/schedules', requireAuth, scheduleRouter);
+router.use('/schedules', requireAuth, requireProcessView(), requireProcessPermission(), scheduleRouter);
 
 // 智能派工推荐路由 - 需要认证
-router.use('/dispatch', requireAuth, dispatchRouter);
+router.use('/dispatch', requireAuth, requireProcessView(), requireProcessPermission(), dispatchRouter);
 
 // 农事任务排班路由 - 需要认证
-router.use('/farm-task-schedules', requireAuth, farmTaskSchedulesRouter);
+router.use('/farm-task-schedules', requireAuth, requireProcessView(), requireProcessPermission(), farmTaskSchedulesRouter);
 
 // 换班申请路由 - 需要认证
 //
@@ -398,154 +400,154 @@ router.use('/farm-task-schedules', requireAuth, farmTaskSchedulesRouter);
 // router.use('/farm-task-swap-requests', requireAuth, farmTaskSwapRequestsRouter);
 
 // 考勤管理路由 - 需要认证
-router.use('/attendance', requireAuth, attendanceRouter);
+router.use('/attendance', requireAuth, requireProcessView(), requireProcessPermission(), attendanceRouter);
 
 // 人事管理路由 - 需要认证
-router.use('/personnel', requireAuth, personnelRouter);
+router.use('/personnel', requireAuth, requireProcessView(), requireProcessPermission(), personnelRouter);
 
 // 入职管理路由 - 需要认证
-router.use('/onboarding', requireAuth, onboardingRouter);
+router.use('/onboarding', requireAuth, requireProcessView(), requireProcessPermission(), onboardingRouter);
 
 // IoT设备监控路由 - 需要认证
-router.use('/iot', requireAuth, iotMonitorRouter);
+router.use('/iot', requireAuth, requireProcessView(), requireProcessPermission(), iotMonitorRouter);
 
 // 告警管理路由 - 需要认证
-router.use('/alerts', requireAuth, alertRouter);
+router.use('/alerts', requireAuth, requireProcessView(), requireProcessPermission(), alertRouter);
 
 // 物料管理路由 - 需要认证
-router.use('/materials', requireAuth, materialsRouter);
+router.use('/materials', requireAuth, requireProcessView(), requireProcessPermission(), materialsRouter);
 
 // 物料编码分类路由 - V12.0
-router.use('/material-code-categories', requireAuth, materialCodeCategoriesRouter);
+router.use('/material-code-categories', requireAuth, requireProcessView(), requireProcessPermission(), materialCodeCategoriesRouter);
 
 // 种植季记录路由 - 基地空间架构 V1.0
-router.use('/planting-records', requireAuth, plantingRecordRouter);
+router.use('/planting-records', requireAuth, requireProcessView(), requireProcessPermission(), plantingRecordRouter);
 
 // 离职管理路由 - 需要认证
-router.use('/resignation', requireAuth, resignationRouter);
+router.use('/resignation', requireAuth, requireProcessView(), requireProcessPermission(), resignationRouter);
 
 // 招聘管理路由 - 需要认证
-router.use('/recruitment', requireAuth, recruitmentRouter);
+router.use('/recruitment', requireAuth, requireProcessView(), requireProcessPermission(), recruitmentRouter);
 
 // 团队成员路由 - 需要认证
-router.use('/team-members', requireAuth, teamMembersRouter);
+router.use('/team-members', requireAuth, requireProcessView(), requireProcessPermission(), teamMembersRouter);
 
 // 2026-09-15：班组分配管理完整性 Phase 2 - 新增 5 组路由
-router.use('/teams', requireAuth, teamZonesRouter);
-router.use('/teams', requireAuth, teamCapabilitiesRouter);
-router.use('/workers', requireAuth, workerTeamsRouter);
-router.use('/teams', requireAuth, teamMemberChangesRouter);
-router.use('/teams', requireAuth, teamAvailabilityRouter);
+router.use('/teams', requireAuth, requireProcessView(), requireProcessPermission(), teamZonesRouter);
+router.use('/teams', requireAuth, requireProcessView(), requireProcessPermission(), teamCapabilitiesRouter);
+router.use('/workers', requireAuth, requireProcessView(), requireProcessPermission(), workerTeamsRouter);
+router.use('/teams', requireAuth, requireProcessView(), requireProcessPermission(), teamMemberChangesRouter);
+router.use('/teams', requireAuth, requireProcessView(), requireProcessPermission(), teamAvailabilityRouter);
 
 // 合同续签路由 - 需要认证
-router.use('/contract-renewal', requireAuth, contractRenewalRouter);
-router.use('/contracts', requireAuth, contractRouter);
-router.use('/performance', requireAuth, performanceRouter);
-router.use('/risks', requireAuth, riskRouter);
+router.use('/contract-renewal', requireAuth, requireProcessView(), requireProcessPermission(), contractRenewalRouter);
+router.use('/contracts', requireAuth, requireProcessView(), requireProcessPermission(), contractRouter);
+router.use('/performance', requireAuth, requireProcessView(), requireProcessPermission(), performanceRouter);
+router.use('/risks', requireAuth, requireProcessView(), requireProcessPermission(), riskRouter);
 
 // 工资预算路由 - 需要认证
-router.use('/salary-budget', requireAuth, salaryBudgetRouter);
+router.use('/salary-budget', requireAuth, requireProcessView(), requireProcessPermission(), salaryBudgetRouter);
 
 // 施肥管理路由 - V10.0
-router.use('/fertilizer', requireAuth, fertilizerRouter);
+router.use('/fertilizer', requireAuth, requireProcessView(), requireProcessPermission(), fertilizerRouter);
 
 // 行政区划路由 - V10.0
-router.use('/region', requireAuth, regionRouter);
+router.use('/region', requireAuth, requireProcessView(), requireProcessPermission(), regionRouter);
 
 // 种植标签管理路由 - V10.0 (plant_labels + plant_marks)
-router.use('/plant-labels', requireAuth, plantMarksRouter);
-router.use('/plant-labels', requireAuth, plantLabelsRouter);
-router.use('/plant-labels', requireAuth, plantLabelResumesRouter);
+router.use('/plant-labels', requireAuth, requireProcessView(), requireProcessPermission(), plantMarksRouter);
+router.use('/plant-labels', requireAuth, requireProcessView(), requireProcessPermission(), plantLabelsRouter);
+router.use('/plant-labels', requireAuth, requireProcessView(), requireProcessPermission(), plantLabelResumesRouter);
 
 // 数据备份恢复路由 - 需要认证
-router.use('/backup', requireAuth, backupRouter);
+router.use('/backup', requireAuth, requireProcessView(), requireProcessPermission(), backupRouter);
 
 // 分区管理路由 — iAGS GreenHouseArea 集成
-router.use('/farm-partitions', requireAuth, farmPartitionsRouter);
+router.use('/farm-partitions', requireAuth, requireProcessView(), requireProcessPermission(), farmPartitionsRouter);
 
 // 区域系统路由 — iAGS AreaSystem 集成
-router.use('/area-systems', requireAuth, areaSystemsRouter);
+router.use('/area-systems', requireAuth, requireProcessView(), requireProcessPermission(), areaSystemsRouter);
 
 // 设备系统路由 — iAGS deviceSystem 集成
-router.use('/device-systems', requireAuth, deviceSystemsRouter);
+router.use('/device-systems', requireAuth, requireProcessView(), requireProcessPermission(), deviceSystemsRouter);
 
 // 摄像头路由 — iAGS Camera 集成
-router.use('/cameras', requireAuth, camerasRouter);
+router.use('/cameras', requireAuth, requireProcessView(), requireProcessPermission(), camerasRouter);
 
 // 能耗配置路由 — iAGS AreaEnery 集成
-router.use('/energy-configs', requireAuth, energyConfigsRouter);
+router.use('/energy-configs', requireAuth, requireProcessView(), requireProcessPermission(), energyConfigsRouter);
 
 // 警报配置路由 — iAGS Warning 集成
-router.use('/alarm-configs', requireAuth, alarmConfigsRouter);
+router.use('/alarm-configs', requireAuth, requireProcessView(), requireProcessPermission(), alarmConfigsRouter);
 
 // 水肥一体机路由 — iAGS WaterFertilizer 集成
-router.use('/water-fertilizer', requireAuth, waterFertilizerRouter);
+router.use('/water-fertilizer', requireAuth, requireProcessView(), requireProcessPermission(), waterFertilizerRouter);
 
 // 种植设置路由 — iAGS Plantset 集成
-router.use('/plant-settings', requireAuth, plantSettingsRouter);
+router.use('/plant-settings', requireAuth, requireProcessView(), requireProcessPermission(), plantSettingsRouter);
 
 // 工程调试路由 — iAGS ProjectDebug 集成
-router.use('/debug', requireAuth, projectDebugRouter);
+router.use('/debug', requireAuth, requireProcessView(), requireProcessPermission(), projectDebugRouter);
 
 // 设备分配路由 — iAGS DeviceDistribution 集成
-router.use('/device-distributions', requireAuth, deviceDistributionRouter);
+router.use('/device-distributions', requireAuth, requireProcessView(), requireProcessPermission(), deviceDistributionRouter);
 
 // 病虫害防治管理路由 - V12.0
-router.use('/pest-records', requireAuth, pestRecordsRouter);
-router.use('/pesticide-library', requireAuth, pesticideLibraryRouter);
-router.use('/fertilizer-specs', requireAuth, fertilizerSpecsRouter);
-router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
+router.use('/pest-records', requireAuth, requireProcessView(), requireProcessPermission(), pestRecordsRouter);
+router.use('/pesticide-library', requireAuth, requireProcessView(), requireProcessPermission(), pesticideLibraryRouter);
+router.use('/fertilizer-specs', requireAuth, requireProcessView(), requireProcessPermission(), fertilizerSpecsRouter);
+router.use('/pest-disease-dict', requireAuth, requireProcessView(), requireProcessPermission(), pestDiseaseDictRouter);
 
 // 用户基地权限管理路由
-router.use('/user-base-permissions', requireAuth, userBasePermissionsRouter);
+router.use('/user-base-permissions', requireAuth, requireProcessView(), requireProcessPermission(), userBasePermissionsRouter);
 
 // 每日计划路由
-router.use('/daily-plans', requireAuth, dailyPlansRouter);
+router.use('/daily-plans', requireAuth, requireProcessView(), requireProcessPermission(), dailyPlansRouter);
 
 // 月度计划路由
-router.use('/monthly-plans', requireAuth, monthlyPlansRouter);
+router.use('/monthly-plans', requireAuth, requireProcessView(), requireProcessPermission(), monthlyPlansRouter);
 
 // 客户档案路由
-router.use('/customers', requireAuth, customerRouter);
+router.use('/customers', requireAuth, requireProcessView(), requireProcessPermission(), customerRouter);
 
 // 销售协同系统路由（销售订单/客户/价格/渠道/行情/统计/总览）- 需要认证
-router.use('/market', requireAuth, marketRouter);
+router.use('/market', requireAuth, requireProcessView(), requireProcessPermission(), marketRouter);
 
 // 交付记录路由
-router.use('/delivery-records', requireAuth, deliveryRouter);
+router.use('/delivery-records', requireAuth, requireProcessView(), requireProcessPermission(), deliveryRouter);
 
 // 质检记录路由
-router.use('/quality-checks', requireAuth, qualityRouter);
+router.use('/quality-checks', requireAuth, requireProcessView(), requireProcessPermission(), qualityRouter);
 
 // 验收记录路由
-router.use('/acceptances', requireAuth, acceptanceRouter);
+router.use('/acceptances', requireAuth, requireProcessView(), requireProcessPermission(), acceptanceRouter);
 
 // 物料流转追溯路由
-router.use('/material-flow-log', requireAuth, materialFlowLogRouter);
+router.use('/material-flow-log', requireAuth, requireProcessView(), requireProcessPermission(), materialFlowLogRouter);
 
 // 浇水记录路由 - 2026-07-20 Phase 1
-router.use('/watering', requireAuth, wateringRouter);
+router.use('/watering', requireAuth, requireProcessView(), requireProcessPermission(), wateringRouter);
 
 // 天气路由 — 和风天气代理（环境监测卡片用）
-router.use('/weather', requireAuth, weatherRouter);
+router.use('/weather', requireAuth, requireProcessView(), requireProcessPermission(), weatherRouter);
 
 // 设备监控中心路由（2026-08-29）
-router.use('/monitoring', requireAuth, monitoringDevicesRouter);
+router.use('/monitoring', requireAuth, requireProcessView(), requireProcessPermission(), monitoringDevicesRouter);
 
 // 预警信息中心路由（2026-08-29）— 路径用 iot-alerts 避开与 iot/* 子路由冲突
-router.use('/iot-alerts', requireAuth, iotAlertsRouter);
+router.use('/iot-alerts', requireAuth, requireProcessView(), requireProcessPermission(), iotAlertsRouter);
 
 // 能耗监测路由（2026-08-29）— 实时能耗读数
-router.use('/iot-energy-readings', requireAuth, iotEnergyReadingsRouter);
+router.use('/iot-energy-readings', requireAuth, requireProcessView(), requireProcessPermission(), iotEnergyReadingsRouter);
 
 // 历史数据路由（2026-08-29）
-router.use('/iot-history', requireAuth, iotHistoryRouter);
+router.use('/iot-history', requireAuth, requireProcessView(), requireProcessPermission(), iotHistoryRouter);
 
 // 监测配置路由（2026-08-29）
-router.use('/iot-monitoring-configs', requireAuth, iotMonitoringConfigsRouter);
+router.use('/iot-monitoring-configs', requireAuth, requireProcessView(), requireProcessPermission(), iotMonitoringConfigsRouter);
 
 // 视频监控路由（2026-08-29）
-router.use('/iot-cameras', requireAuth, iotCamerasRouter);
+router.use('/iot-cameras', requireAuth, requireProcessView(), requireProcessPermission(), iotCamerasRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

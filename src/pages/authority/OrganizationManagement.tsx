@@ -21,6 +21,8 @@ import { Pagination } from '@/components/ui';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { Organization } from '@/types/authority';
 import { showConfirm } from '@/lib/dialogService';
+// 2026-10-25：部门管理并入组织管理（二者是同一实体的两个视图，数据双向同步）
+import { DepartmentSettingsContent } from '@/pages/DepartmentSettings';
 
 export default function OrganizationManagement() {
   const organizations = useOrganizationStore((s) => s.organizations);
@@ -34,6 +36,8 @@ export default function OrganizationManagement() {
   const departments = useDepartmentStore((s) => s.departments);
   const loadDepartments = useDepartmentStore((s) => s.loadDepartments);
 
+  // 二级视图：组织架构树 / 部门列表
+  const [subTab, setSubTab] = useState<'tree' | 'departments'>('tree');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOids, setExpandedOids] = useState<Set<string>>(new Set());
   const [showModal, setShowModal] = useState(false);
@@ -91,7 +95,19 @@ export default function OrganizationManagement() {
 
   // 打开编辑弹窗
   const handleEdit = (org: Organization) => {
-    setEditingOrg({ ...org });
+    // 2026-10-25：后端返回驼峰 parentOid / sortOrder，而弹窗读写 oidParent / sortNumber。
+    //   不做归一化会导致保存时把 parent_oid 和 sort_order 静默写空（已造成过一次数据损坏）。
+    const raw = org as Organization & {
+      sortOrder?: number;
+      sortNumber?: number;
+      parentOid?: string | null;
+      oidParent?: string | null;
+    };
+    setEditingOrg({
+      ...org,
+      oidParent: raw.oidParent ?? raw.parentOid ?? null,
+      sortNumber: raw.sortNumber ?? raw.sortOrder ?? 0,
+    });
     setShowModal(true);
   };
 
@@ -199,6 +215,30 @@ export default function OrganizationManagement() {
 
   return (
     <div className="space-y-4">
+      {/* 二级 Tab：组织架构树 / 部门列表（同一实体的两种视图） */}
+      <div className="bg-white rounded-xl shadow-sm p-1.5 inline-flex gap-1">
+        <button
+          onClick={() => setSubTab('tree')}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            subTab === 'tree' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          组织架构树
+        </button>
+        <button
+          onClick={() => setSubTab('departments')}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            subTab === 'departments' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          部门列表
+        </button>
+      </div>
+
+      {subTab === 'departments' ? (
+        <DepartmentSettingsContent />
+      ) : (
+      <>
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{organizations.length} 个组织</span>
@@ -423,6 +463,8 @@ export default function OrganizationManagement() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

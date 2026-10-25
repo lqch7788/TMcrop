@@ -37,6 +37,12 @@ const processRouteMap: Record<string, string> = {
   '/crop/seedling': 'PROC_SEEDLING',
   '/crop/planting': 'PROC_PLANTING',
   '/crop-inventory': 'PROC_CROP_INVENTORY',
+  // 2026-10-24 补齐：以下 5 个菜单路径此前未登记，getProcessOidByRoute 返回 null，
+  //   导致非管理员角色永远看不到这些子菜单（与授权无关，纯映射缺失）。
+  '/crop/outbound-records': 'PROC_CROP_INVENTORY', // 出库记录 → 作物库存工序
+  '/crop/material-flow': 'PROC_CROP',              // 流转追溯 → 作物管理
+  '/crop/fertilizer': 'PROC_CROP',                 // 水肥管理 → 作物管理
+  '/pest-control': 'PROC_CROP',                    // 病虫害管理 → 作物管理
 
   // 农事管理子菜单
   '/task-center': 'PROC_TASK_CENTER',
@@ -67,6 +73,7 @@ const processRouteMap: Record<string, string> = {
   '/summary/cost': 'PROC_SUM_COST',
   '/summary/labor': 'PROC_SUM_LABOR',
   '/summary/batch': 'PROC_SUM_BATCH',
+  '/summary/batch-management': 'PROC_SUM_BATCH', // 2026-10-24 补齐（侧边栏「批次管理」实际路径）
   '/summary/chain': 'PROC_SUM_CHAIN',
   '/summary/problems': 'PROC_SUM_PROBLEMS',
   '/summary/indicators': 'PROC_SUM_INDICATORS',

@@ -19,14 +19,16 @@ import {
 } from '../components/ui';
 import { Button } from '../components/ui/button';
 import { Pagination } from '@/components/ui';
+import { useAuthStore } from '@/stores';
 
 export default function PendingApproval() {
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const { approve, reject } = useApproval();
   const { pendingApprovals } = usePendingApprovals();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
-  const canApprove = true;
+  const canApprove = hasProcessPermission('PROC_APPROVAL_CENTER', 'approve');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');

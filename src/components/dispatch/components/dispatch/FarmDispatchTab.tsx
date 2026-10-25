@@ -14,11 +14,14 @@ import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
 
 import { showConfirm } from '@/lib/dialogService';
 import { Button } from '@/components/ui';
+import { useAuthStore } from '@/stores';
 
 /**
  * 农事任务Tab组件
  */
 export const FarmDispatchTab: React.FC = () => {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // useTasks hook 提供 unifiedTasks / publishTask / getTaskRecordsByTaskId 等
   // unifiedTasks 和 deleteTask 实际是 tasks 的别名（SmartDispatchTab 也这样用）
   const { tasks: unifiedTasks, publishTask, getTaskRecordsByTaskId } = useTasks() as any;
@@ -29,10 +32,10 @@ export const FarmDispatchTab: React.FC = () => {
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canPublish = true;
+  const canCreate = hasProcessPermission('PROC_TASK_CENTER', 'create');
+  const canEdit = hasProcessPermission('PROC_TASK_CENTER', 'edit');
+  const canDelete = hasProcessPermission('PROC_TASK_CENTER', 'delete');
+  const canPublish = hasProcessPermission('PROC_TASK_CENTER', 'approve');
 
   // 搜索和筛选状态
   const [searchText, setSearchText] = useState('');

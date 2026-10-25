@@ -9,6 +9,20 @@ import { getDatabase, saveDatabase } from '../db';
 
 const router = Router();
 
+// 2026-10-25：写端点鉴权守卫（挂载处用的是 optionalAuth，读公开、写必须登录）
+//   此前这 3 个路由的 67 个写端点对匿名请求完全开放。
+router.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    next();
+    return;
+  }
+  if (!req.user) {
+    res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
+    return;
+  }
+  next();
+});
+
 // ============================================
 // 数据字典管理
 // ============================================

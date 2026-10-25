@@ -9,6 +9,7 @@ import { useApproval } from '@/hooks/useApproval';
 import { useApprovalStore } from '@/stores/useApprovalStore';
 import { ApprovalStatus, ApprovalType, Approval } from '@/types/approval';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { useAuthStore } from '@/stores';
 import type {
   MaterialApprovalTab,
   TabConfig,
@@ -23,6 +24,8 @@ import type {
  * 管理库存审批页面的所有状态和业务逻辑
  */
 export function useMaterialApproval(): UseMaterialApprovalReturn {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const { approvals, approve, reject, refreshApprovals, isLoading } = useApproval();
 
   // 2026-08-10 修复：首次进入页面时自动拉取审批数据
@@ -32,8 +35,8 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
   }, [refreshApprovals]);
 
   // 权限检查 - 已取消，所有人可使用所有功能
-  const canApprove = true;
-  const canView = true;
+  const canApprove = hasProcessPermission('PROC_APPROVAL_MAT', 'approve');
+  const canView = hasProcessPermission('PROC_APPROVAL_MAT', 'approve');
 
   // Tab状态
   const [activeTab, setActiveTab] = useState<MaterialApprovalTab>('material');

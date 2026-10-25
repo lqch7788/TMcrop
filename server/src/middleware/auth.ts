@@ -46,6 +46,14 @@ export interface JwtPayload {
   aid: string;
   name: string;
   role?: string;
+  /**
+   * 2026-10-25：演示模式旁路标记。
+   *   DEMO_MODE 下无 token 请求会被注入一个默认用户（demo_user / role=admin），
+   *   此前该身份对**所有**端点等同管理员，权限体系完全失效。
+   *   加上此标记后：认证仍放行（保持演示便利），
+   *   但 requireAdminRole / requireProcessPermission 会按「无角色」处理 → 拒绝。
+   */
+  isDemo?: boolean;
   iat?: number;
   exp?: number;
 }
@@ -97,7 +105,9 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         userId: 'demo_user',
         aid: 'demo_aid',
         name: '陆启闯',
-        role: 'admin'
+        role: 'admin',
+        // 2026-10-25：标记为演示身份 —— 认证放行，但权限判定按「无角色」处理
+        isDemo: true,
       };
       next();
       return;
@@ -123,7 +133,9 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         userId: 'demo_user',
         aid: 'demo_aid',
         name: '陆启闯',
-        role: 'admin'
+        role: 'admin',
+        // 2026-10-25：标记为演示身份 —— 认证放行，但权限判定按「无角色」处理
+        isDemo: true,
       };
       next();
       return;

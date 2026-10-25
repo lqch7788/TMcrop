@@ -16,6 +16,29 @@ import {
 } from '../types/authority';
 import * as authorityService from '../services/authorityService';
 
+/** 组织树节点（后端把子组织放在 children 里，store 顶层只存根节点） */
+type OrgTreeNode = Organization & { children?: OrgTreeNode[] };
+/** 工序树节点（同上） */
+type ProcTreeNode = Process & { children?: ProcTreeNode[] };
+
+/**
+ * 递归查找树节点
+ * 2026-10-25 修复：saveOrganization / saveProcess 原来只用数组 find 在顶层查，
+ * 子节点（部门、子工序）永远查不到 → 被判为"新增" → INSERT 撞 oid 唯一约束 → 500。
+ */
+function findNodeDeep<T extends { oid?: string; children?: T[] }>(
+  nodes: T[],
+  oid?: string,
+): T | undefined {
+  if (!oid) return undefined;
+  for (const node of nodes) {
+    if (node.oid === oid) return node;
+    const hit = node.children?.length ? findNodeDeep(node.children, oid) : undefined;
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 interface OrganizationStore {
   // 组织相关
   organizations: Organization[];
@@ -92,7 +115,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveOrganization: async (org) => {
     try {
       set({ loading: true, error: null });
-      const orgExists = get().organizations.find((o) => o.oid === org.oid);
+      const orgExists = findNodeDeep(get().organizations as OrgTreeNode[], org.oid);
       await authorityService.saveOrganizations({
         inserted: orgExists ? [] : [org],
         updated: orgExists ? [org] : [],
@@ -244,14 +267,18 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       set({ loading: true, error: null });
       const data = await authorityService.getProcesses(params);
       // 字段映射：后端 parent_oid → oidParent, process_code → aid, process_name → name
+      // 2026-10-24 修复：后端经 camelCaseResponseMiddleware 返回的是驼峰
+      //   （processCode/processName/parentOid/isHidden/sortOrder），原写法只读
+      //   snake_case，导致工序树 name/aid 全为空串、oidParent 全 null，
+      //   「权限配置」工序树与「用户权限覆盖」工序列整列空白。
       const normalize = (p: any): Process => ({
         oid: p.oid,
-        oidParent: p.parent_oid || null,
-        aid: p.process_code || p.aid || '',
-        name: p.process_name || p.name || '',
-        appType: p.app_type || p.appType,
-        hidden: p.is_hidden === 1 || p.hidden,
-        sortNumber: p.sort_order || p.sortNumber,
+        oidParent: p.parentOid ?? p.parent_oid ?? null,
+        aid: p.processCode || p.process_code || p.aid || '',
+        name: p.processName || p.process_name || p.name || '',
+        appType: p.appType ?? p.app_type,
+        hidden: p.isHidden === 1 || p.is_hidden === 1 || p.hidden,
+        sortNumber: p.sortOrder ?? p.sort_order ?? p.sortNumber,
         status: p.status,
         children: p.children?.map(normalize),
       });
@@ -266,7 +293,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   saveProcess: async (process) => {
     try {
       set({ loading: true, error: null });
-      const procExists = get().processes.find((p) => p.oid === process.oid);
+      const procExists = findNodeDeep(get().processes as ProcTreeNode[], process.oid);
       await authorityService.saveProcesses({
         inserted: procExists ? [] : [process],
         updated: procExists ? [process] : [],

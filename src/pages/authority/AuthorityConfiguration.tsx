@@ -388,7 +388,7 @@ export default function AuthorityConfiguration() {
             size="sm"
             onClick={() => setActiveTab('authority')}
             className={`px-3 py-1 rounded-md text-sm font-semibold ${
-              activeTab === 'authority' ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600' : 'text-gray-600 hover:text-gray-900'
+              activeTab === 'authority' ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <Key className="w-4 h-4 mr-1 inline" /> 角色权限配置
@@ -398,7 +398,7 @@ export default function AuthorityConfiguration() {
             size="sm"
             onClick={() => setActiveTab('processes')}
             className={`px-3 py-1 rounded-md text-sm font-semibold ${
-              activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600' : 'text-gray-600 hover:text-gray-900'
+              activeTab === 'processes' ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <FolderTree className="w-4 h-4 mr-1 inline" /> <Settings className="w-4 h-4" /> 工序与菜单管理
@@ -447,7 +447,7 @@ export default function AuthorityConfiguration() {
               >
                 <option value="">-- 请选择角色 --</option>
                 {roles.map((r) => (
-                  <option key={r.oid} value={r.oid}>{r.role_name}</option>
+                  <option key={r.oid} value={r.oid}>{r.role_name || r.roleName || r.name}</option>
                 ))}
               </select>
               <div className="flex items-center gap-1 mt-2">
@@ -541,8 +541,10 @@ export default function AuthorityConfiguration() {
                     <Save className="w-4 h-4" /> 保存
                   </Button>
                 )}
+                {/* 2026-10-25：原 className 的 text-gray-500 覆盖了默认变体的白字，
+                    绿底灰字对比度仅 1.28（看不清），移除颜色覆盖 */}
                 <Button onClick={() => { loadProcesses({ appType: selectedAppType as any }); setHasChanges(false); setAuthorityChanges(new Map()); }}
-                  className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                  className="h-7 px-3 text-xs flex items-center gap-1"
                 >
                   <RefreshCw className="w-4 h-4" /> 刷新
                 </Button>
@@ -603,7 +605,7 @@ export default function AuthorityConfiguration() {
             {/* 按钮 */}
             <div className="flex justify-end gap-2 px-5 pb-4">
               <Button onClick={() => setShowProcessModal(false)}
-                className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">
+                className="h-8 px-4 text-sm border border-gray-200 rounded">
                 <X className="w-4 h-4" /> 取消
               </Button>
               <Button onClick={handleProcessSave}

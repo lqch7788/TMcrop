@@ -3,7 +3,7 @@
  * 在角色权限基础上对单用户做增强(+1)或限制(0)
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Shield, Search, RefreshCw, Save, Check, X, UserCog,
 } from 'lucide-react';
@@ -20,6 +20,21 @@ const ACTION_LIST = [
   { code: 'export', name: '导出', color: 'bg-purple-100 text-purple-700' },
   { code: 'approve', name: '审批', color: 'bg-indigo-100 text-indigo-700' },
 ];
+
+/**
+ * 动作代码 → 动作 OID
+ * 2026-10-25：后端 check-authority 与权限判定都按 action_oid（ACT001~ACT006）查询，
+ *   而本页原先把 `view/create/...` 当 actionOid 写库，导致用户覆盖永远匹配不上。
+ *   统一改为写 ACT OID；读取时两种形态都兼容（历史数据可能已是 code）。
+ */
+const ACTION_CODE_TO_OID: Record<string, string> = {
+  view: 'ACT001',
+  create: 'ACT002',
+  edit: 'ACT003',
+  delete: 'ACT004',
+  export: 'ACT005',
+  approve: 'ACT006',
+};
 
 export default function UserAuthorityConfig() {
   // Store
@@ -46,6 +61,9 @@ export default function UserAuthorityConfig() {
     Map<string, Map<string, number>>
   >(new Map());
   const [hasChanges, setHasChanges] = useState(false);
+  // 选中用户实际拥有的角色（用于显示角色名，2026-10-24 修复：原来按 org_oid
+  // 匹配角色且读 role_name 蛇形字段，两个条件都不成立 → 永远显示空）
+  const [userRoleOids, setUserRoleOids] = useState<string[]>([]);
 
   // 初始加载
   useEffect(() => {
@@ -61,53 +79,69 @@ export default function UserAuthorityConfig() {
     }
   }, [users, selectedUserOid]);
 
+  // 切换用户时的竞态保护：快速切换时，先发的慢请求不得覆盖后发的结果
+  const loadSeqRef = useRef(0);
+
   // 选择用户后加载权限
   useEffect(() => {
     if (!selectedUserOid) { setSelectedUser(null); return; }
     const user = users.find((u) => u.oid === selectedUserOid) || null;
     setSelectedUser(user);
+    const seq = ++loadSeqRef.current;
 
     // 加载用户特殊权限
     authorityService.getUserAuthority?.(selectedUserOid)
-      ?.then((data: { processOid: string; actionOid: string; value: number }[]) =>
-        setUserAuthorities(data || [])
-      )
-      .catch(() => setUserAuthorities([]));
+      ?.then((data: { processOid: string; actionOid: string; value: number }[]) => {
+        if (loadSeqRef.current !== seq) return;
+        setUserAuthorities(data || []);
+      })
+      .catch(() => { if (loadSeqRef.current === seq) setUserAuthorities([]); });
 
-    // 加载用户角色权限(用于对比展示)
+    // 加载用户角色权限（用户继承的权限基线）
     authorityService.getUserRoles?.(selectedUserOid)
       ?.then(async (roleOids: string[]) => {
+        if (loadSeqRef.current !== seq) return;
+        setUserRoleOids(roleOids || []);
         const allAuths: { processOid: string; actionOid: string; value: number }[] = [];
         for (const roleOid of roleOids) {
           const auths = await authorityService.getRoleAuthority(roleOid, 0);
           allAuths.push(...auths.map((a: { processOid: string; actionOid: string; value: number }) => ({ ...a })));
         }
+        if (loadSeqRef.current !== seq) return;
         setRoleAuthorities(allAuths);
       })
-      .catch(() => setRoleAuthorities([]));
+      .catch(() => { if (loadSeqRef.current === seq) setRoleAuthorities([]); });
 
     setAuthorityChanges(new Map());
     setHasChanges(false);
   }, [selectedUserOid, users]);
 
-  // 获取用户角色名称
+  // 获取用户角色名称（按用户实际拥有的角色 OID 映射，兼容驼峰/蛇形两种返回）
   const userRoleNames = useMemo(() => {
-    // 简单地显示用户信息中的组织
-    if (!selectedUser) return '';
-    return roles.filter((r) => r.org_oid === selectedUser.org_oid).map((r) => r.role_name).join('、');
-  }, [selectedUser, roles]);
+    if (!selectedUser || userRoleOids.length === 0) return '无角色';
+    const names = userRoleOids
+      .map((oid) => roles.find((r) => r.oid === oid))
+      .filter(Boolean)
+      .map((r) => r!.role_name || r!.roleName || r!.name);
+    return names.filter(Boolean).join('、') || '无角色';
+  }, [selectedUser, userRoleOids, roles]);
 
   // 获取权限值 (0=拒绝, 1=允许, source=继承来源)
   const getAuthValue = (processOid: string, actionCode: string): { val: number; source: string } => {
+    const actOid = ACTION_CODE_TO_OID[actionCode];
+    // 同一动作可能以 code 或 ACT OID 存库，两种都匹配
+    const matches = (a: { processOid: string; actionOid: string }) =>
+      a.processOid === processOid && (a.actionOid === actionCode || a.actionOid === actOid);
+
     // 先看本地修改
     if (authorityChanges.has(processOid) && authorityChanges.get(processOid)!.has(actionCode)) {
       return { val: authorityChanges.get(processOid)!.get(actionCode)!, source: 'local' };
     }
-    // 用户特殊权限
-    const ua = userAuthorities.find((a) => a.processOid === processOid && a.actionOid === actionCode);
+    // 用户特殊权限（优先于角色）
+    const ua = userAuthorities.find(matches);
     if (ua) return { val: ua.value, source: 'user_override' };
     // 角色权限
-    const ra = roleAuthorities.find((a) => a.processOid === processOid && a.actionOid === actionCode);
+    const ra = roleAuthorities.find(matches);
     if (ra && ra.value >= 1) return { val: 1, source: 'role' };
     return { val: 0, source: 'none' };
   };
@@ -136,7 +170,8 @@ export default function UserAuthorityConfig() {
     const authorities: { processOid: string; actionOid: string; value: number }[] = [];
     for (const [processOid, actions] of authorityChanges) {
       for (const [actionCode, value] of actions) {
-        authorities.push({ processOid, actionOid: actionCode, value });
+        // 统一写动作 OID，与后端 check-authority / 权限判定口径一致
+        authorities.push({ processOid, actionOid: ACTION_CODE_TO_OID[actionCode] || actionCode, value });
       }
     }
     try {
@@ -250,22 +285,22 @@ export default function UserAuthorityConfig() {
                     </td>
                     {ACTION_LIST.map((act) => {
                       const { val, source } = getAuthValue(proc.oid ?? '', act.code);
-                      // 计算当前值和颜色
-                      let currentValue = 'inherit';
-                      let textColor = 'text-blue-600';
-                      let bgStyle = 'bg-blue-50';
-                      if (source === 'role' || source === 'none') {
-                        currentValue = 'inherit';
-                        textColor = 'text-blue-600';
-                        bgStyle = 'bg-blue-50';
-                      } else if (val === 1) {
-                        currentValue = 'allow';
+                      // 2026-10-25 修复：原来把「角色已授权」和「角色无权限」都显示成
+                      //   同一个"继承角色权限"，而 users_authority 通常为空，
+                      //   导致切换任何用户看到的都是同一片继承，看起来像"角色没关联用户"。
+                      //   现在明确区分：继承（允许）/ 继承（无权限）/ 强制允许 / 强制拒绝。
+                      const isOverride = source === 'user_override' || source === 'local';
+                      const inheritedAllowed = source === 'role';
+                      const currentValue = isOverride ? (val === 1 ? 'allow' : 'deny') : 'inherit';
+                      const inheritLabel = inheritedAllowed ? '继承（允许）' : '继承（无权限）';
+                      let textColor = 'text-gray-400';
+                      let bgStyle = 'bg-gray-50';
+                      if (isOverride) {
+                        textColor = val === 1 ? 'text-emerald-700' : 'text-red-600';
+                        bgStyle = val === 1 ? 'bg-emerald-100' : 'bg-red-100';
+                      } else if (inheritedAllowed) {
                         textColor = 'text-emerald-600';
                         bgStyle = 'bg-emerald-50';
-                      } else if (val === 0) {
-                        currentValue = 'deny';
-                        textColor = 'text-red-500';
-                        bgStyle = 'bg-red-50';
                       }
                       return (
                         <td key={act.code} className="text-center py-1.5 px-1">
@@ -279,7 +314,7 @@ export default function UserAuthorityConfig() {
                             }}
                             className={`h-7 px-1 text-xs border border-gray-300 rounded cursor-pointer ${bgStyle} ${textColor} font-medium`}
                           >
-                            <option value="inherit" className="text-blue-600 bg-white">继承角色权限</option>
+                            <option value="inherit" className="text-blue-600 bg-white">{inheritLabel}</option>
                             <option value="allow" className="text-emerald-600 bg-white">强制允许</option>
                             <option value="deny" className="text-red-500 bg-white">强制拒绝</option>
                           </select>

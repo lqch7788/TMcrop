@@ -43,17 +43,20 @@ import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
+import { useAuthStore } from '@/stores';
 
 export default function SeedlingPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // 2026-07-01 P2-8 修复：原 useAuthPermission hook 是死代码（已 hardcode 全部 true），删除
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canExport = true;
-  const canPrint = true;
+  const canCreate = hasProcessPermission('PROC_SEEDLING', 'create');
+  const canEdit = hasProcessPermission('PROC_SEEDLING', 'edit');
+  const canDelete = hasProcessPermission('PROC_SEEDLING', 'delete');
+  const canExport = hasProcessPermission('PROC_SEEDLING', 'export');
+  const canPrint = hasProcessPermission('PROC_SEEDLING', 'export');
 
   // 字典数据
   const dictionaries = useDictionaryStore((state) => state.dictionaries);

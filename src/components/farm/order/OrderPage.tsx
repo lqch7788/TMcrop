@@ -24,16 +24,19 @@ import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
+import { useAuthStore } from '@/stores';
 
 export default function OrderPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const navigate = useNavigate();
 
   // 权限检查 - 已取消，所有人可使用所有功能
-  const canCreate = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_ORDER', 'create');
+  const canDelete = hasProcessPermission('PROC_ORDER', 'delete');
+  const canExport = hasProcessPermission('PROC_ORDER', 'export');
   // IS-NEW-152：批量编辑过去硬编码 canEdit={canEdit} 与"所有人可使用"的策略不一致 —— 改为 true
-  const canEdit = true;
+  const canEdit = hasProcessPermission('PROC_ORDER', 'edit');
 
   // 从 Zustand Store 获取订单数据和操作方法
   const {

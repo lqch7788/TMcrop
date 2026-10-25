@@ -71,14 +71,16 @@ function isAlertSeedSource(s: SeedSource): boolean {
 }
 
 export default function SeedSourcePage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   // 种源模块权限 - 已取消，直接设置为 true
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canExport = true;
-  const canPrint = true;
+  const canCreate = hasProcessPermission('PROC_SEED_SOURCE', 'create');
+  const canEdit = hasProcessPermission('PROC_SEED_SOURCE', 'edit');
+  const canDelete = hasProcessPermission('PROC_SEED_SOURCE', 'delete');
+  const canExport = hasProcessPermission('PROC_SEED_SOURCE', 'export');
+  const canPrint = hasProcessPermission('PROC_SEED_SOURCE', 'export');
 
   // 从 Zustand Store 获取种源数据和操作方法
   const {

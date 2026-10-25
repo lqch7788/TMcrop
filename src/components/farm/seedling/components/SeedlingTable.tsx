@@ -829,8 +829,10 @@ export function SeedlingTable({
                             />
                           )}
 
-                          {/* 写操作 — 结束态灰显+禁用 */}
-                          {onEdit && (
+                          {/* 写操作 — 结束态灰显+禁用
+                              2026-10-25：补 canEdit 判断 —— 原先只判 onEdit 是否传入，
+                              父组件即使无编辑权限也照样渲染行内编辑按钮 */}
+                          {onEdit && canEdit && (
                             <ActionIconButton
                               variant="edit"
                               icon={<Edit2 className="w-4 h-4" />}

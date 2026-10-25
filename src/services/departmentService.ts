@@ -54,11 +54,16 @@ export function initDepartments(): Department[] {
 
 /**
  * 获取所有部门（API模式优先）
+ * @param includeInactive 为 true 时一并返回已停用的部门（部门管理页统计用）
  */
-export async function getDepartments(): Promise<Department[]> {
+export async function getDepartments(includeInactive = false): Promise<Department[]> {
   try {
     // 2026-10-11：统一使用 enhancedApiClient（V2.1 标准客户端，原 apiClient 未导入 → 运行时 ReferenceError）
-    const data = await enhancedApiClient.get<Department[]>('/basic-data/departments');
+    // 2026-10-25：enhancedApiClient.get 不支持 params 对象，查询串需自行拼接
+    const url = includeInactive
+      ? '/basic-data/departments?includeInactive=1'
+      : '/basic-data/departments';
+    const data = await enhancedApiClient.get<Department[]>(url);
     saveDepartmentsToStorage(data);
     return data;
   } catch (error) {

@@ -35,11 +35,13 @@ import { DEFAULT_OPERATOR_OPTIONS } from './constants/defaultOperators';
 export type { TechSolution };
 
 export function TechSolutionPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
-  const canCreate = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_TECH', 'create');
+  const canDelete = hasProcessPermission('PROC_TECH', 'delete');
+  const canExport = hasProcessPermission('PROC_TECH', 'export');
 
   // 审批相关
   const { refreshApprovals } = useApproval();

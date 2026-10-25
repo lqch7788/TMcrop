@@ -16,13 +16,16 @@ import {
   DeleteWarningModal,
 } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
+import { useAuthStore } from '@/stores';
 
 export default function ProductionPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const hook = useProductionPage();
 
-  const canCreate = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_PLAN', 'create');
+  const canDelete = hasProcessPermission('PROC_PLAN', 'delete');
+  const canExport = hasProcessPermission('PROC_PLAN', 'export');
 
   return (
     <div className="space-y-6">

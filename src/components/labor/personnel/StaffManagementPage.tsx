@@ -13,13 +13,16 @@ import { todayLocal } from '@/lib/dateUtils';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
+import { useAuthStore } from '@/stores';
 
 export function StaffManagementPage() {
+  // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   // 权限检查 - 已取消，所有人可使用所有功能
-  const canCreate = true;
-  const canEdit = true;
-  const canDelete = true;
-  const canExport = true;
+  const canCreate = hasProcessPermission('PROC_LABOR_PERSONNEL', 'create');
+  const canEdit = hasProcessPermission('PROC_LABOR_PERSONNEL', 'edit');
+  const canDelete = hasProcessPermission('PROC_LABOR_PERSONNEL', 'delete');
+  const canExport = hasProcessPermission('PROC_LABOR_PERSONNEL', 'export');
 
   const { workers: storeWorkers, loadWorkers } = useWorkerStore();
 

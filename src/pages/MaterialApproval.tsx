@@ -19,8 +19,10 @@ import {
   RejectModal
 } from './components/MaterialApproval';
 import { KpiCard, KpiCardGrid } from '@/components/summary';
+import { useAuthStore } from '@/stores';
 
 export default function MaterialApproval() {
+  const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
   const {
     stats,
     tabs,
@@ -73,7 +75,7 @@ export default function MaterialApproval() {
   } = useMaterialApproval();
 
   // 权限检查
-  const canApprove = true;
+  const canApprove = hasProcessPermission('PROC_APPROVAL_MAT', 'approve');
 
   // 批量选择状态
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
