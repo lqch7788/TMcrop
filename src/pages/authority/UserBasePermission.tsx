@@ -17,15 +17,32 @@ const ACCESS_LEVELS = [
   { code: 'admin', name: '管理', color: 'bg-purple-100 text-purple-700 border-purple-300' },
 ];
 
+/**
+ * 用户基地权限记录
+ *
+ * 2026-10-25 修复：后端 `GET /api/user-base-permissions` 返回的键会被全局
+ * camelCaseResponse 中间件转成 baseOid / accessLevel，本页此前按 snake_case 取值，
+ * `find()` 恒 miss → 所有基地都显示「授权」按钮，保存刷新后又变回未授权。
+ * 两种写法都兼容，取值统一走文件末尾的 permBaseOid / permLevel。
+ */
 interface UserBasePermission {
   id: string;
-  user_oid: string;
-  base_oid: string;
-  base_name: string;
-  access_level: string;
+  user_oid?: string;
+  userOid?: string;
+  base_oid?: string;
+  baseOid?: string;
+  base_name?: string;
+  baseName?: string;
+  access_level?: string;
+  accessLevel?: string;
   created_at?: string;
   updated_at?: string;
 }
+
+/** 取基地 OID（兼容 camelCase / snake_case） */
+const permBaseOid = (p: UserBasePermission): string => p.baseOid ?? p.base_oid ?? '';
+/** 取授权级别（兼容 camelCase / snake_case） */
+const permLevel = (p: UserBasePermission): string => p.accessLevel ?? p.access_level ?? 'none';
 
 interface Base {
   baseOid: string;
@@ -114,15 +131,15 @@ export default function UserBasePermission() {
     if (permissionChanges.has(baseOid)) {
       return permissionChanges.get(baseOid)!;
     }
-    const perm = userPermissions.find(p => p.base_oid === baseOid);
-    return perm?.access_level || 'none';
+    const perm = userPermissions.find(p => permBaseOid(p) === baseOid);
+    return perm ? permLevel(perm) : 'none';
   };
 
   // 检查是否有变更
   const hasChanges = (baseOid: string): boolean => {
     const currentLevel = getAccessLevel(baseOid);
-    const originalPerm = userPermissions.find(p => p.base_oid === baseOid);
-    const originalLevel = originalPerm?.access_level || 'none';
+    const originalPerm = userPermissions.find(p => permBaseOid(p) === baseOid);
+    const originalLevel = originalPerm ? permLevel(originalPerm) : 'none';
     return currentLevel !== originalLevel;
   };
 
@@ -131,7 +148,7 @@ export default function UserBasePermission() {
     const newChanges = new Map(permissionChanges);
     if (accessLevel === 'none') {
       // 如果是取消权限，从userPermissions中移除
-      if (!userPermissions.find(p => p.base_oid === baseOid)) {
+      if (!userPermissions.find(p => permBaseOid(p) === baseOid)) {
         // 该基地原本就没有权限，直接删除pending
         newChanges.delete(baseOid);
       } else {
@@ -330,7 +347,7 @@ export default function UserBasePermission() {
                 <tbody>
                   {allBases.map((base) => {
                     const accessLevel = getAccessLevel(base.baseOid);
-                    const currentPerm = userPermissions.find(p => p.base_oid === base.baseOid);
+                    const currentPerm = userPermissions.find(p => permBaseOid(p) === base.baseOid);
                     const isGranted = !!currentPerm || permissionChanges.has(base.baseOid);
                     const changed = hasChanges(base.baseOid);
                     const isSaving = saving && changed;

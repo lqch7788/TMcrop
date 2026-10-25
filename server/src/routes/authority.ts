@@ -518,16 +518,21 @@ router.post('/roles', authenticate, requireAdminRole(), (req, res) => {
       for (const role of inserted) {
         const oid = role.oid || `ROLE_${Date.now()}`;
         const id = `ROLE_ID_${Date.now()}`;
-        // roles 表字段: id, oid, role_code, role_name, description, is_system, status, created_at, updated_at
+        // roles 表字段: id, oid, role_code, role_name, description, org_oid, sort_order, is_system, status, created_at, updated_at
+        // 2026-10-25 修复：原来 INSERT 里没有 org_oid / sort_order，
+        //   前端选了「所属组织」、填了「排序号」，保存后静默丢失，
+        //   列表这两列恒空白。
         db.run(
-          `INSERT INTO roles (id, oid, role_code, role_name, description, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO roles (id, oid, role_code, role_name, description, org_oid, sort_order, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             oid,
             role.aid || oid,  // role_code 使用 aid 或 oid
             role.name,       // role_name
             role.description || null,
+            role.orgOid || role.org_oid || null,
+            Number(role.sortNumber ?? role.sort_order ?? 0),
             'active',
             now,
             now
@@ -539,13 +544,17 @@ router.post('/roles', authenticate, requireAdminRole(), (req, res) => {
 
     if (updated && updated.length > 0) {
       for (const role of updated) {
+        // 2026-10-25：同 INSERT —— 补 org_oid / sort_order，否则编辑时选的组织和排序不生效
         db.run(
-          `UPDATE roles SET role_code = ?, role_name = ?, description = ?, updated_at = ?
+          `UPDATE roles SET role_code = ?, role_name = ?, description = ?,
+             org_oid = ?, sort_order = ?, updated_at = ?
            WHERE oid = ?`,
           [
             role.aid || role.oid,
             role.name,
             role.description || null,
+            role.orgOid || role.org_oid || null,
+            Number(role.sortNumber ?? role.sort_order ?? 0),
             now,
             role.oid
           ]
@@ -558,6 +567,24 @@ router.post('/roles', authenticate, requireAdminRole(), (req, res) => {
       for (const item of deleted) {
         const oid = typeof item === 'string' ? item : (item as Record<string, unknown>).oid as string;
         if (!oid) continue;
+
+        // 2026-10-25：系统内置角色禁止删除。
+        //   删掉 ROLE_ADMIN 会让 user_roles 留下脏关联，相关用户登录后角色回落，
+        //   权限静默失效且很难排查。
+        const chk = db.prepare('SELECT is_system, role_name FROM roles WHERE oid = ?');
+        chk.bind([oid]);
+        let isSystem = false;
+        let roleName = oid;
+        if (chk.step()) {
+          const row = chk.getAsObject() as { is_system?: number; role_name?: string };
+          isSystem = Number(row.is_system) === 1;
+          roleName = row.role_name || oid;
+        }
+        chk.free();
+        if (isSystem) {
+          return res.status(400).json({ success: false, error: `系统内置角色不可删除：${roleName}` });
+        }
+
         db.run('DELETE FROM roles WHERE oid = ?', [oid]);
         results.deleted.push(oid);
       }
@@ -897,7 +924,15 @@ router.post('/users', authenticate, requireAdminRole(), (req, res) => {
         const username = user.username || user.aid || '';
         const realName = user.real_name || user.realName || user.name || '';
         const orgOid = user.org_oid || user.orgOid || null;
-        const passwordHash = user.passwordHash || user.password_hash || null;
+        // 2026-10-25 修复：前端字段名叫 passwordHash，但传的其实是明文初始密码。
+        //   原样入库 → 登录走 bcrypt.compare 永远失败 → 新建的用户永远登不上。
+        //   已是 bcrypt 格式（$2a$/$2b$）则原样保存，否则哈希后保存。
+        const rawPassword = user.passwordHash || user.password_hash || null;
+        const passwordHash = rawPassword
+          ? (String(rawPassword).startsWith('$2')
+              ? String(rawPassword)
+              : bcrypt.hashSync(String(rawPassword), 10))
+          : null;
 
         // 双向同步：根据组织自动填充部门OID
         // 2026-10-25：区分「未提供」和「明确不指定部门（空字符串）」——
@@ -977,7 +1012,12 @@ router.post('/users', authenticate, requireAdminRole(), (req, res) => {
         }
         if (user.username || user.aid) { updates.push('username = ?'); bindings.push(user.username || user.aid); }
         if (user.real_name || user.realName || user.name) { updates.push('real_name = ?'); bindings.push(user.real_name || user.realName || user.name); }
-        if (user.passwordHash || user.password_hash) { updates.push('password_hash = ?'); bindings.push(user.passwordHash || user.password_hash); }
+        if (user.passwordHash || user.password_hash) {
+          // 2026-10-25：同 INSERT —— 明文密码必须哈希后入库
+          const rawPwd = String(user.passwordHash || user.password_hash);
+          updates.push('password_hash = ?');
+          bindings.push(rawPwd.startsWith('$2') ? rawPwd : bcrypt.hashSync(rawPwd, 10));
+        }
         if (user.email !== undefined) { updates.push('email = ?'); bindings.push(user.email); }
         if (user.phone !== undefined) { updates.push('phone = ?'); bindings.push(user.phone); }
         if (user.status) { updates.push('status = ?'); bindings.push(user.status); }

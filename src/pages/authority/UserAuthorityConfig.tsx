@@ -61,6 +61,14 @@ export default function UserAuthorityConfig() {
     Map<string, Map<string, number>>
   >(new Map());
   const [hasChanges, setHasChanges] = useState(false);
+  /**
+   * 2026-10-25 新增：待删除的用户覆盖项（key = `processOid|actionCode`）
+   *
+   * 把某格从「强制允许/拒绝」改回「继承」时，原来只删本地 Map，
+   * 保存时只发本地改动 → 后端那条覆盖记录永远留着，重新加载又变回强制值。
+   * 后端支持 `value: -1` 表示删除，这里记录下来随保存一起发。
+   */
+  const [removedOverrides, setRemovedOverrides] = useState<Set<string>>(new Set());
   // 选中用户实际拥有的角色（用于显示角色名，2026-10-24 修复：原来按 org_oid
   // 匹配角色且读 role_name 蛇形字段，两个条件都不成立 → 永远显示空）
   const [userRoleOids, setUserRoleOids] = useState<string[]>([]);
@@ -162,6 +170,24 @@ export default function UserAuthorityConfig() {
       }
       return next;
     });
+
+    // 2026-10-25：改回「继承」时，若该格原本存在覆盖记录，标记为待删除（保存时发 value=-1）
+    const key = `${processOid}|${actionCode}`;
+    if (value === null) {
+      const actOid = ACTION_CODE_TO_OID[actionCode];
+      const hadOverride = userAuthorities.some(
+        (a) => a.processOid === processOid && (a.actionOid === actionCode || a.actionOid === actOid)
+      );
+      if (hadOverride) setRemovedOverrides((prev) => new Set(prev).add(key));
+    } else {
+      setRemovedOverrides((prev) => {
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+
     setHasChanges(true);
   };
 
@@ -174,10 +200,20 @@ export default function UserAuthorityConfig() {
         authorities.push({ processOid, actionOid: ACTION_CODE_TO_OID[actionCode] || actionCode, value });
       }
     }
+    // 2026-10-25：改回「继承」的格子用 value=-1 显式删除后端覆盖记录
+    for (const key of removedOverrides) {
+      const [processOid, actionCode] = key.split('|');
+      authorities.push({
+        processOid,
+        actionOid: ACTION_CODE_TO_OID[actionCode] || actionCode,
+        value: -1,
+      });
+    }
     try {
       await authorityService.saveUserAuthority?.(selectedUserOid, authorities);
       setHasChanges(false);
       setAuthorityChanges(new Map());
+      setRemovedOverrides(new Set());
       // 重新加载
       const data = await authorityService.getUserAuthority?.(selectedUserOid) || [];
       setUserAuthorities(data);

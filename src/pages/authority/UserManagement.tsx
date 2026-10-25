@@ -10,6 +10,8 @@ import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User, OrgStatus, Organization } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
+// 2026-10-25：保存/删除/改密码失败必须给用户提示（原实现失败时静默）
+import { showAlert } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 
 // ==================== 辅助函数 ====================
@@ -191,7 +193,10 @@ export default function UserManagement() {
   };
 
   const handleUserSave = async () => {
-    if (!userForm.username || !userForm.realName) return;
+    if (!userForm.username || !userForm.realName) {
+      showAlert('用户名和姓名不能为空');
+      return;
+    }
 
     const payload: Partial<User> = {
       oid: editingUser?.oid || `USER_${Date.now()}`,
@@ -206,26 +211,29 @@ export default function UserManagement() {
       passwordHash: userForm.password || undefined,
     };
 
-    await saveUser(payload);
+    try {
+      await saveUser(payload);
 
-    // 保存用户角色
-    if (userRoleOids.length > 0) {
-      try {
-        await authorityService.assignUserRoles(payload.oid!, userRoleOids);
-      } catch (err) {
-        // logger.error('保存用户角色失败:', err);
-      }
+      // 2026-10-25：角色可能被清空为 []，必须无条件调用（后端先删后插，[] 即清空全部角色）。
+      //   原 `if (userRoleOids.length > 0)` 会让「取消勾选全部角色」静默失效。
+      await authorityService.assignUserRoles(payload.oid!, userRoleOids);
+
+      setShowUserModal(false);
+      loadUsers();
+    } catch (err) {
+      showAlert('保存用户失败：' + ((err as Error)?.message || '未知错误'));
     }
-
-    setShowUserModal(false);
-    loadUsers();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await deleteUser(deleteTarget);
-    setDeleteTarget(null);
-    loadUsers();
+    try {
+      await deleteUser(deleteTarget);
+      setDeleteTarget(null);
+      loadUsers();
+    } catch (err) {
+      showAlert('删除用户失败：' + ((err as Error)?.message || '未知错误'));
+    }
   };
 
   const openPasswordModal = (user: User) => {
@@ -236,30 +244,43 @@ export default function UserManagement() {
   };
 
   const handlePasswordChange = async () => {
-    if (!passwordUser || !newPassword) return;
+    if (!passwordUser || !newPassword) {
+      showAlert('请输入新密码');
+      return;
+    }
     try {
-      await fetch(`/api/authority/users/${passwordUser.oid}/password`, {
+      // 2026-10-25：裸 fetch 不检查 res.ok，400/403/500 也会当成成功并关闭弹窗
+      const res = await fetch(`/api/authority/users/${passwordUser.oid}/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ newPassword }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
       setShowPasswordModal(false);
+      showAlert('密码修改成功');
     } catch (err) {
-      // logger.error('修改密码失败:', err);
+      showAlert('修改密码失败：' + ((err as Error)?.message || '未知错误'));
     }
   };
 
   const handleToggleStatus = async (user: User) => {
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
     try {
-      await fetch(`/api/authority/users/${user.oid}/status`, {
+      const res = await fetch(`/api/authority/users/${user.oid}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
       loadUsers();
     } catch (err) {
-      // logger.error('启停用户失败:', err);
+      showAlert('启用/停用失败：' + ((err as Error)?.message || '未知错误'));
     }
   };
 
