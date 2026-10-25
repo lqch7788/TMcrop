@@ -15,6 +15,8 @@ import { bumpAuditWriteCount } from '../lib/auditMeta';
 import { requireAdminRole } from '../middleware/processPermission';
 // 2026-10-25：页面路由 → 工序映射（不再按 processes.route 反查）
 import { resolveProcessOidByPageRoute } from '../lib/processRouteMap';
+// 2026-10-25：数据行级权限（基地维度）
+import { resolveUserDataScope } from '../lib/dataScope';
 
 const router = Router();
 
@@ -1712,6 +1714,29 @@ router.put('/users/:oid/status', authenticate, requireAdminRole(), (req, res) =>
  * 获取当前登录用户的完整权限摘要
  * GET /api/authority/my-permissions
  */
+/**
+ * 获取当前用户的数据范围（行级权限）— 2026-10-25 新增
+ * GET /api/authority/my-data-scope
+ *
+ * 返回用户可见的基地列表。前端可用它过滤基地选择器、置灰越权数据。
+ * 注意：当前不改变任何业务查询的过滤行为（见 lib/dataScope.ts 的边界说明）。
+ */
+router.get('/my-data-scope', authenticate, (req, res) => {
+  const userOid = req.user?.userId;
+  // 演示模式旁路身份（demo_user）没有真实档案，不返回数据范围
+  if (!userOid || req.user?.isDemo === true || userOid === 'demo_user') {
+    res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
+    return;
+  }
+  try {
+    const scope = resolveUserDataScope(userOid);
+    res.json({ success: true, data: scope });
+  } catch (error) {
+    console.error('获取数据范围失败:', error);
+    res.status(500).json({ success: false, error: '获取数据范围失败' });
+  }
+});
+
 router.get('/my-permissions', authenticate, (req, res) => {
   const db = getDatabase();
   const userOid = req.user?.userId;

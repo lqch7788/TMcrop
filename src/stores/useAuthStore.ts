@@ -10,6 +10,8 @@
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 import { getProcessOidByRoute } from '../lib/processRouteMap';
+// 2026-10-25：数据范围缓存（登出时清空）
+import { clearDataScopeCache } from '../hooks/useDataScope';
 
 // ==================== 类型定义 ====================
 
@@ -251,6 +253,8 @@ export const useAuthStore = create<AuthState>()(
 
       // ---------- 登出 ----------
       logout: () => {
+        // 2026-10-25：清空数据范围缓存，避免切换账号后沿用上一个用户的范围
+        try { clearDataScopeCache(); } catch { /* 忽略 */ }
         set({
           token: null,
           currentUser: null,
