@@ -127,20 +127,22 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const payload = verifyToken(token);
 
   if (!payload) {
-    // 2026-07-16：演示模式旁路也仅在非生产环境生效
-    if (DEMO_BYPASS_ALLOWED) {
-      req.user = {
-        userId: 'demo_user',
-        aid: 'demo_aid',
-        name: '陆启闯',
-        role: 'admin',
-        // 2026-10-25：标记为演示身份 —— 认证放行，但权限判定按「无角色」处理
-        isDemo: true,
-      };
-      next();
-      return;
-    }
-    res.status(401).json({ error: '认证令牌无效或已过期' });
+    // 2026-10-25 修复（真实故障）：带「无效 token」的请求不再静默降级为 demo_user。
+    //
+    //   故障现象：用 admin 账号登录后点开种源/种植/育苗页面，一直弹
+    //   「权限不足：无该模块的查看权限」，但页面数据其实正常显示。
+    //   根因：DEMO_MODE 下 JWT 密钥每次重启随机生成，旧 token 全部失效；
+    //   原实现在 token 无效时仍注入 demo_user（isDemo=true），
+    //   requireProcessView 判定演示身份不走 admin 快通 → 403；
+    //   而走 optionalAuth 的接口（基础数据等）读操作照常 200，
+    //   于是表现为「页面有数据 + 一直弹权限不足」，让人误以为是管理员权限配错了。
+    //
+    //   正确做法：无效 token 明确返回 401，让前端清 token 并回到登录页。
+    //   演示旁路只保留给「完全没带 token」的请求（见上面的 !authHeader 分支）。
+    res.status(401).json({
+      error: '认证令牌无效或已过期，请重新登录',
+      code: 'TOKEN_INVALID',
+    });
     return;
   }
 

@@ -205,6 +205,13 @@ class EnhancedApiClient {
         if (response.status === 401) {
           try {
             storageRemove('token');
+            // 2026-10-25：token 失效必须回到登录页。
+            //   否则后续请求会以匿名身份发出，后端按演示身份拒绝 → 用户看到
+            //   「权限不足：无该模块的查看权限」而不是「请重新登录」。
+            //   真实故障：后端重启后 JWT 密钥随机化，旧 token 全部失效。
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+              window.location.href = '/login';
+            }
           } catch {
             // 忽略清理错误，避免遮蔽真正的 401 错误信息
           }

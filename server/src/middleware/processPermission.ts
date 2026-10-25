@@ -158,8 +158,15 @@ export function requireProcessPermission(actionOid?: string) {
       return;
     }
 
-    // admin 快速通道（演示身份不走此快通，见 isDemoUser 说明）
-    if (!isDemoUser(req) && isAdminUser(userOid)) {
+    // 2026-10-25：演示身份（无 token 或 token 失效降级而来）没有角色，
+    //   直接要求登录 —— 返回 403「权限不足」会让管理员误以为权限配置错了。
+    if (isDemoUser(req)) {
+      res.status(401).json({ success: false, error: '请先登录后再操作', code: 'UNAUTHENTICATED' });
+      return;
+    }
+
+    // admin 快速通道
+    if (isAdminUser(userOid)) {
       next();
       return;
     }
@@ -193,7 +200,14 @@ export function requireProcessView() {
     const pathname = req.originalUrl.split('?')[0];
     const processOid = resolveProcessOidByApiPath(pathname);
     if (!processOid) { next(); return; }
-    if (!isDemoUser(req) && isAdminUser(userOid)) { next(); return; }
+
+    // 2026-10-25：演示身份要求登录（原因见 requireProcessPermission 注释）
+    if (isDemoUser(req)) {
+      res.status(401).json({ success: false, error: '请先登录后再访问', code: 'UNAUTHENTICATED' });
+      return;
+    }
+
+    if (isAdminUser(userOid)) { next(); return; }
 
     const { allowed } = checkProcessPermission(userOid, processOid, ACTION.VIEW);
     if (!allowed) {
@@ -219,7 +233,12 @@ export function requireAdminRole() {
       res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
       return;
     }
-    if (isDemoUser(req) || !isAdminUser(userOid)) {
+    // 2026-10-25：演示身份要求登录（原因见 requireProcessPermission 注释）
+    if (isDemoUser(req)) {
+      res.status(401).json({ success: false, error: '请先登录后再操作', code: 'UNAUTHENTICATED' });
+      return;
+    }
+    if (!isAdminUser(userOid)) {
       res.status(403).json({
         success: false,
         error: '权限不足：仅管理员可操作',
