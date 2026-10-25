@@ -21,7 +21,7 @@ export interface ResolvedBase {
   oid: string;
   name: string;
   /** 来源，便于排障 */
-  from: 'payload' | 'area_oid' | 'greenhouse_id';
+  from: 'payload' | 'area_oid' | 'greenhouse_id' | 'current_base';
 }
 
 /** 按 area_oid（zones.oid）反查基地 */
@@ -89,8 +89,15 @@ export function getBaseName(baseOid?: string | null): string {
  */
 export function resolveBaseFromRequest(
   body: Record<string, unknown> | null | undefined,
+  /** 当前登录基地（X-Base-Oid）；作为兜底归属 */
+  currentBaseOid?: string | null,
 ): ResolvedBase | null {
-  if (!body) return null;
+  if (!body) {
+    if (currentBaseOid && isValidBase(currentBaseOid)) {
+      return { oid: currentBaseOid, name: getBaseName(currentBaseOid), from: 'current_base' };
+    }
+    return null;
+  }
 
   const explicit = (body.base_oid ?? body.baseOid) as string | undefined;
   if (explicit) {
@@ -107,6 +114,11 @@ export function resolveBaseFromRequest(
   const ghOid = (body.greenhouse_id ?? body.greenhouseId) as string | undefined;
   const byGh = resolveBaseByGreenhouseOid(ghOid);
   if (byGh) return byGh;
+
+  // 3) 兜底：当前登录基地（顶部基地切换器选中的那个）
+  if (currentBaseOid && isValidBase(currentBaseOid)) {
+    return { oid: currentBaseOid, name: getBaseName(currentBaseOid), from: 'current_base' };
+  }
 
   return null;
 }

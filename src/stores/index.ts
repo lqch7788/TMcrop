@@ -375,3 +375,5 @@ export type { IotCamera } from '@/services/apiIotCamerasService';
 // 2026-06-18: 库存入库审计 Store（按模块下沉入库）
 export { useInventoryInboundStore } from './useInventoryInboundStore';
 export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord } from '../types/inventoryInbound';
+// 2026-10-25：当前登录基地（数据行级隔离）
+export { useCurrentBaseStore, getCurrentBaseOid } from './useCurrentBaseStore';

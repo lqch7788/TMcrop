@@ -40,6 +40,8 @@ import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
 import { useAuthStore } from '@/stores';
+import { useCurrentBaseStore } from '@/stores/useCurrentBaseStore';
+import { useDataScope } from '@/hooks/useDataScope';
 
 // 2026-10-19：导出/展示统一中文映射（避免英文枚举直出）
 const BREEDING_METHOD_LABELS: Record<string, string> = {
@@ -55,6 +57,9 @@ const BREEDING_METHOD_LABELS: Record<string, string> = {
 export default function PlantingPage() {
   // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
   const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
+  // 2026-10-25：当前基地 + 数据范围（区域筛选器按此过滤）
+  const currentBaseOid = useCurrentBaseStore((s) => s.baseOid);
+  const { scope } = useDataScope();
   // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage）
   const [searchParams] = useSearchParams();
   // v0.3 P0-1：批次时间线跳转
@@ -149,14 +154,23 @@ export default function PlantingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2026-07-26：注册基地温室 OID 集合（baseOid=base_1780023508412）
+  // 2026-10-25：原硬编码 baseOid='base_1780023508412'（宁波北仑）→ 只显示该基地的区域，
+  //   导致其他基地的用户在筛选器里看不到自己的区域。
+  //   现改为：优先按「当前登录基地」过滤；未指定基地时按用户数据范围过滤。
   const baseGhOids = useMemo(() => {
+    const allowedBaseSet = scope.restricted && scope.baseOids.length > 0 ? new Set(scope.baseOids) : null;
     return new Set(
       greenhouses
-        .filter(gh => gh.baseOid === 'base_1780023508412')
-        .map(gh => String(gh.oid))
+        .filter((gh) => {
+          const ghBase = String(gh.baseOid || '');
+          if (currentBaseOid) return ghBase === currentBaseOid;
+          if (allowedBaseSet) return allowedBaseSet.has(ghBase);
+          return true; // 全部基地
+        })
+        .map((gh) => String(gh.oid))
     );
-  }, [greenhouses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [greenhouses, currentBaseOid, scope.restricted, scope.baseOids.join(',')]);
 
   // 种植区域选项（只显示当前基地的子级区块）
   const areas = useMemo(() => {

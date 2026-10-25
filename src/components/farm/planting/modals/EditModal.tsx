@@ -225,7 +225,6 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
               }}
             placeholder="选择种植区域"
             allowedBaseOids={scope.restricted ? scope.baseOids : undefined}
-            baseOid="base_1780023508412"
           />
         </div>
 

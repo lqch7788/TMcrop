@@ -174,6 +174,12 @@ class EnhancedApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    // 2026-10-25：当前登录基地（数据行级隔离）。后端按 X-Base-Oid 过滤列表 / 归属新数据
+    try {
+      const { getCurrentBaseOid } = await import('../stores/useCurrentBaseStore');
+      const baseOid = getCurrentBaseOid();
+      if (baseOid) headers['X-Base-Oid'] = baseOid;
+    } catch { /* 忽略 */ }
 
     const options: RequestInit = {
       method,
@@ -285,6 +291,12 @@ class EnhancedApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    // 2026-10-25：当前登录基地（数据行级隔离）。后端按 X-Base-Oid 过滤列表 / 归属新数据
+    try {
+      const { getCurrentBaseOid } = await import('../stores/useCurrentBaseStore');
+      const baseOid = getCurrentBaseOid();
+      if (baseOid) headers['X-Base-Oid'] = baseOid;
+    } catch { /* 忽略 */ }
 
     const options: RequestInit = {
       method,

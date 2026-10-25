@@ -11,6 +11,8 @@ import { tenantContext } from '../middleware/tenantContext';
 import { permissionGuard } from '../middleware/permissionGuard';
 // 2026-10-25：数据行级权限（基地维度）
 import { resolveUserDataScope } from '../lib/dataScope';
+// 2026-10-25：当前基地上下文（顶部基地切换器）
+import { getCurrentBaseOid } from '../middleware/currentBase';
 import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
 // 2026-10-12 P2 (IS-NEW-159) 修复：拒绝/撤回原因长度仅前端校验，绕过即 500；后端补 zod min(6)
 import { z } from 'zod';
@@ -364,12 +366,19 @@ router.get('/', (req: Request, res: Response) => {
       params.push(kw, kw, kw);
     }
 
-    // 2026-10-25：数据行级过滤（按基地）。未归属记录放行（历史数据兼容策略）
-    const dataScope = resolveUserDataScope((req as any).user?.userId);
-    if (dataScope.restricted && dataScope.baseOids.length > 0) {
-      const ph = dataScope.baseOids.map(() => '?').join(',');
-      sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid IN (${ph}))`;
-      params.push(...dataScope.baseOids);
+    // 2026-10-25：数据行级过滤（按「当前登录基地」）
+    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。未归属记录放行。
+    const currentBaseOid = getCurrentBaseOid(req);
+    if (currentBaseOid) {
+      sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid = ?)`;
+      params.push(currentBaseOid);
+    } else {
+      const dataScope = resolveUserDataScope((req as any).user?.userId);
+      if (dataScope.restricted && dataScope.baseOids.length > 0) {
+        const ph = dataScope.baseOids.map(() => '?').join(',');
+        sql += ` AND (base_oid IS NULL OR base_oid = '' OR base_oid IN (${ph}))`;
+        params.push(...dataScope.baseOids);
+      }
     }
 
     // 保存原始SQL用于count查询
@@ -638,7 +647,7 @@ router.post('/', (req: Request, res: Response) => {
     );
     // 2026-10-25：基地归属补写 + 数据范围校验
     try {
-      const resolvedBase = resolveBaseFromRequest(req.body);
+      const resolvedBase = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
       const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
       if (!baseCheck.allowed) throw new Error(baseCheck.reason);
       if (resolvedBase) applyBaseOwnership('farm_tasks', String(newId), resolvedBase);
@@ -978,7 +987,7 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
 
     // 2026-10-25：基地归属（仅当当前为空时补写）
     try {
-      const resolvedBase = resolveBaseFromRequest(req.body);
+      const resolvedBase = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
       const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
       if (!baseCheck.allowed) throw new Error(baseCheck.reason);
       if (resolvedBase) applyBaseOwnership('farm_tasks', String(id), resolvedBase);

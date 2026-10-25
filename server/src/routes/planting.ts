@@ -32,6 +32,8 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
 // 2026-10-25：数据范围（读取过滤）
 import { resolveUserDataScope } from '../lib/dataScope';
+// 2026-10-25：当前基地上下文（顶部基地切换器）
+import { getCurrentBaseOid } from '../middleware/currentBase';
 
 /**
  * 2026-10-18 P0 修复：以 planting_harvest_records 为唯一真值重算主表采收入库量/采收日期。
@@ -374,16 +376,22 @@ router.get('/', (req: Request, res: Response) => {
       params.push(status);
     }
 
-    // 2026-10-25：数据行级过滤（按基地）
-    //   策略：未归属记录（base_oid 为空）放行 —— 809 条历史数据无法推断归属，
-    //   若强制过滤会让普通用户瞬间看不到数据。管理员逐步归属后自然收紧。
-    const scope = resolveUserDataScope((req as any).user?.userId);
+    // 2026-10-25：数据行级过滤（按「当前登录基地」）
+    //   优先用 X-Base-Oid（顶部基地切换器）；未指定时退回用户数据范围（user_base_permissions）。
+    //   未归属记录（base_oid 为空）放行 —— 兼容历史数据。
+    const currentBaseOid = getCurrentBaseOid(req);
     let scopeFilter = '';
     const scopeParams: any[] = [];
-    if (scope.restricted && scope.baseOids.length > 0) {
-      const ph = scope.baseOids.map(() => '?').join(',');
-      scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid IN (${ph}))`;
-      scopeParams.push(...scope.baseOids);
+    if (currentBaseOid) {
+      scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid = ?)`;
+      scopeParams.push(currentBaseOid);
+    } else {
+      const scope = resolveUserDataScope((req as any).user?.userId);
+      if (scope.restricted && scope.baseOids.length > 0) {
+        const ph = scope.baseOids.map(() => '?').join(',');
+        scopeFilter = ` AND (p.base_oid IS NULL OR p.base_oid = '' OR p.base_oid IN (${ph}))`;
+        scopeParams.push(...scope.baseOids);
+      }
     }
     baseSql += scopeFilter;
     params.push(...scopeParams);
@@ -1480,7 +1488,7 @@ router.post('/', async (req: Request, res: Response) => {
       // 2026-10-25：基地归属补写 + 数据范围校验
       //   显式选择 > area_oid 反查 > greenhouse_id 反查；取不到则留空（未归属）
       try {
-        const resolvedBase = resolveBaseFromRequest(body);
+        const resolvedBase = resolveBaseFromRequest(body, getCurrentBaseOid(req));
         const baseCheck = checkBasePermission(req.user?.userId, resolvedBase?.oid);
         if (!baseCheck.allowed) {
           throw new Error(baseCheck.reason);
@@ -1689,7 +1697,7 @@ router.put('/:id', (req: Request, res: Response) => {
     });
     // 2026-10-25：基地归属（编辑时也可改基地；仅当当前为空时才补写，避免覆盖已有归属）
     try {
-      const resolvedBase = resolveBaseFromRequest(updates);
+      const resolvedBase = resolveBaseFromRequest(updates, getCurrentBaseOid(req));
       const baseCheck = checkBasePermission(req.user?.userId, resolvedBase?.oid);
       if (!baseCheck.allowed) {
         throw new Error(baseCheck.reason);

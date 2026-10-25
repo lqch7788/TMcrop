@@ -5,6 +5,9 @@ import {
 } from 'lucide-react';
 import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
 import { useAuthStore } from '../../stores';
+// 2026-10-25：当前基地切换器（数据行级隔离）
+import { useCurrentBaseStore } from '../../stores/useCurrentBaseStore';
+import { enhancedApiClient } from '../../lib/apiClient';
 import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
 
 const styles = `
@@ -38,6 +41,33 @@ export function Header({ onMenuClick }: HeaderProps) {
   //   任何账号登录都显示管理员名字，已改为读取 useAuthStore）
   const currentUser = useAuthStore((s) => s.currentUser);
   const userRoles = useAuthStore((s) => s.roles);
+
+  // 2026-10-25：当前基地（顶部切换器）。切换后全局数据按该基地隔离
+  const baseOid = useCurrentBaseStore((s) => s.baseOid);
+  const setBase = useCurrentBaseStore((s) => s.setBase);
+  const baseOptions = useCurrentBaseStore((s) => s.options);
+  const setBaseOptions = useCurrentBaseStore((s) => s.setOptions);
+
+  // 拉取可选基地列表（仅登录后），并恢复上次选择
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await enhancedApiClient.get<Array<{ oid: string; name: string }>>('/basic-data/bases');
+        const list = Array.isArray(res) ? res : ((res as { data?: unknown })?.data as Array<{ oid: string; name: string }>) || [];
+        if (cancelled) return;
+        const opts = list.filter((b) => b?.oid && b?.name).map((b) => ({ oid: b.oid, name: b.name }));
+        setBaseOptions(opts);
+        // 首次进入默认「全部基地」（不过滤）——避免默认选中一个没有数据的基地，
+        // 让用户打开页面就看到空白。需要隔离时由用户主动切换。
+      } catch {
+        /* 拉取失败不阻断页面 */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser, setBase, setBaseOptions]);
+
   const displayName = currentUser?.realName || currentUser?.username || '未登录';
   const avatarText = (displayName.slice(0, 1) || '?').toUpperCase();
   // 角色名：按 admin > manager > user 优先级取最高，其余角色取第一个
@@ -109,14 +139,31 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Home className="w-5 h-5 text-emerald-600" />
             </button>
-            {/* 当前基地名称 */}
-            <button
-              onClick={() => navigate('/park-archive')}
-              className="ml-2 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline"
-              title="返回园区总览"
-            >
-              宁波北仑基地 &gt;&gt;
-            </button>
+            {/* 当前基地 —— 2026-10-25：原为硬编码「宁波北仑基地 >>」纯文本，
+                改为下拉选择器。切换后全局生效（所有列表按新基地过滤，
+                新建记录自动归属该基地，见 useCurrentBaseStore + X-Base-Oid） */}
+            <div className="relative ml-2 flex items-center gap-1">
+              <select
+                value={baseOid ?? ''}
+                onChange={(e) => {
+                  const oid = e.target.value || null;
+                  const opt = baseOptions.find((b) => b.oid === oid);
+                  setBase(oid, opt?.name ?? null);
+                  // 切换基地后重新加载页面数据。
+                  //   用整页刷新最可靠：各页面数据散落在 80+ 个 store，
+                  //   逐个接事件监听成本远高于一次 reload，且能避免"半个页面还是旧基地数据"。
+                  window.location.reload();
+                }}
+                className="text-sm font-bold text-blue-600 bg-transparent border-none outline-none cursor-pointer hover:text-blue-800 max-w-[160px]"
+                title="切换当前基地（影响所有模块的数据范围）"
+              >
+                <option value="">全部基地</option>
+                {baseOptions.map((b) => (
+                  <option key={b.oid} value={b.oid}>{b.name}</option>
+                ))}
+              </select>
+              <span className="text-sm font-bold text-blue-600 select-none">&gt;&gt;</span>
+            </div>
           </div>
         </div>
 

@@ -23,6 +23,8 @@ import { formatLocalDateISO } from '../utils/dateUtil';
 import { writeAuditLog } from '../services/auditLog.service';
 // 2026-10-25：数据行级权限（基地维度）
 import { resolveUserDataScope } from '../lib/dataScope';
+// 2026-10-25：当前基地上下文（顶部基地切换器）
+import { getCurrentBaseOid } from '../middleware/currentBase';
 import { resolveBaseFromRequest, checkBasePermission, applyBaseOwnership } from '../lib/baseResolver';
 
 import seedlingDailyRecordsRouter from "./seedlingDailyRecords.route";
@@ -1140,14 +1142,21 @@ router.get('/', (req: Request, res: Response) => {
       countParams.push(status);
     }
 
-    // 2026-10-25：数据行级过滤（按基地）。未归属记录放行（历史数据兼容策略）
-    const scope = resolveUserDataScope((req as any).user?.userId);
+    // 2026-10-25：数据行级过滤（按「当前登录基地」）
+    //   优先 X-Base-Oid；未指定时退回 user_base_permissions 范围。未归属记录放行。
+    const currentBaseOid = getCurrentBaseOid(req);
     let scopeFilter = '';
     const scopeParams: any[] = [];
-    if (scope.restricted && scope.baseOids.length > 0) {
-      const ph = scope.baseOids.map(() => '?').join(',');
-      scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid IN (${ph}))`;
-      scopeParams.push(...scope.baseOids);
+    if (currentBaseOid) {
+      scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid = ?)`;
+      scopeParams.push(currentBaseOid);
+    } else {
+      const scope = resolveUserDataScope((req as any).user?.userId);
+      if (scope.restricted && scope.baseOids.length > 0) {
+        const ph = scope.baseOids.map(() => '?').join(',');
+        scopeFilter = ` AND (s.base_oid IS NULL OR s.base_oid = '' OR s.base_oid IN (${ph}))`;
+        scopeParams.push(...scope.baseOids);
+      }
     }
     sql += scopeFilter;
     params.push(...scopeParams);
@@ -1485,7 +1494,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     });
     // 2026-10-25：基地归属补写 + 数据范围校验（显式选择 > area_oid > greenhouse_id）
     try {
-      const resolvedBase = resolveBaseFromRequest(req.body);
+      const resolvedBase = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
       const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
       if (!baseCheck.allowed) {
         throw new BusinessError('BASE_OUT_OF_SCOPE', baseCheck.reason, 403);
@@ -1839,7 +1848,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
     });
     // 2026-10-25：基地归属（仅当当前为空时补写）
     try {
-      const resolvedBase = resolveBaseFromRequest(req.body);
+      const resolvedBase = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
       const baseCheck = checkBasePermission((req as any).user?.userId, resolvedBase?.oid);
       if (!baseCheck.allowed) throw new Error(baseCheck.reason);
       if (resolvedBase) applyBaseOwnership('seedlings', String(id), resolvedBase);

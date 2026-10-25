@@ -3,6 +3,8 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useCurrentBaseStore } from '@/stores/useCurrentBaseStore';
+import { useDataScope } from '@/hooks/useDataScope';
 import { useSearchParams } from 'react-router-dom';
 import { Edit2, Trash2, Printer, Image, X, Sprout, Download, AlertTriangle } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
@@ -48,6 +50,9 @@ import { useAuthStore } from '@/stores';
 export default function SeedlingPage() {
   // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
   const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
+  // 2026-10-25：当前基地 + 数据范围（区域筛选器按此过滤）
+  const currentBaseOid = useCurrentBaseStore((s) => s.baseOid);
+  const { scope } = useDataScope();
   const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -144,14 +149,21 @@ export default function SeedlingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2026-07-26：当前基地温室 OID 集合
+  // 2026-10-25：原硬编码 baseOid（宁波北仑）→ 改为按「当前登录基地」或用户数据范围过滤
   const baseGhOids = useMemo(() => {
+    const allowedBaseSet = scope.restricted && scope.baseOids.length > 0 ? new Set(scope.baseOids) : null;
     return new Set(
       greenhouses
-        .filter(gh => gh.baseOid === 'base_1780023508412')
-        .map(gh => String(gh.oid))
+        .filter((gh) => {
+          const ghBase = String(gh.baseOid || '');
+          if (currentBaseOid) return ghBase === currentBaseOid;
+          if (allowedBaseSet) return allowedBaseSet.has(ghBase);
+          return true;
+        })
+        .map((gh) => String(gh.oid))
     );
-  }, [greenhouses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [greenhouses, currentBaseOid, scope.restricted, scope.baseOids.join(',')]);
 
   const sites = useMemo(() => {
     const items = zones
