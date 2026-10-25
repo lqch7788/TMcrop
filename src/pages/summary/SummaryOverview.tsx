@@ -49,6 +49,8 @@ import type {
   DenseKpiItem, AlertTickerItem,
 } from '../../components/summary';
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
+// 2026-10-25：统计口径切换（全局汇总仅 admin 可用）
+import { useAuthStore } from '../../stores';
 import { getTaskStatus } from '../../components/summary/constants';
 import { currentYearRange, rangeByMode } from '../../lib/dateUtils';
 
@@ -313,6 +315,15 @@ export default function SummaryOverview() {
   const [range, setRange] = useState(currentYearRange);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  // 2026-10-25：统计口径 —— 当前基地（默认）/ 全局（仅 admin 可选）
+  //   口径存在 Store 里，经营分析页共用同一个选择。
+  const userRoles = useAuthStore((s) => s.roles);
+  const isAdmin = userRoles.some((r) =>
+    ['admin', 'administrators', 'super_admin'].includes((r.code || '').toLowerCase())
+  );
+  const statsScope = useSummaryDataStore((s) => s.statsScope);
+  const setStatsScope = useSummaryDataStore((s) => s.setStatsScope);
+
   // 下钻明细弹窗（点击待办项查看具体是哪些记录）
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownType, setDrilldownType] = useState<string | null>(null);
@@ -322,11 +333,11 @@ export default function SummaryOverview() {
     const stamp = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     setLastUpdated(stamp);
 
-    fetchOverview({ startDate: range.startDate, endDate: range.endDate });
-    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate });
-    fetchCostStats({ startDate: range.startDate, endDate: range.endDate });
-    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate });
-  }, [range]);
+    fetchOverview({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchCostStats({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+  }, [range, statsScope]);
 
   // 存量快照（模块体检、批次）与时间无关，挂载时取一次
   useEffect(() => {
@@ -705,10 +716,10 @@ export default function SummaryOverview() {
   };
 
   const handleRefresh = () => {
-    fetchOverview({ startDate: range.startDate, endDate: range.endDate });
-    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate });
-    fetchCostStats({ startDate: range.startDate, endDate: range.endDate });
-    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate });
+    fetchOverview({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchCostStats({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
+    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate, scope: statsScope });
     fetchModuleHealth();
     fetchBatchStats({});
   };
@@ -860,6 +871,33 @@ export default function SummaryOverview() {
             </div>
           )}
         </div>
+
+        {/* 2026-10-25：统计口径切换 —— 全局汇总仅 admin 可见 */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>统计范围</span>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+              {([
+                ['base', '当前基地'],
+                ['global', '全部基地（全局）'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setStatsScope(value)}
+                  className={`
+                    px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+                    ${statsScope === value
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }
+                  `}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ① HERO 全息看板（浅色基底 — 与系统其他汇总页面统一） */}

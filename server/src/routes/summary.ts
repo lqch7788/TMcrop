@@ -8,6 +8,8 @@ import { getDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 // 2026-07-22：追溯修复 - 链时间线端点
 import { queryEntityHistory, queryInventoryHistory, queryBatchTimeline } from '../services/entityHistory.service';
+// 2026-10-25：统计口径（当前基地 vs 全局，全局仅 admin 可用）
+import { resolveStatsScope } from '../lib/baseResolver';
 
 const router = Router();
 
@@ -286,6 +288,13 @@ router.get('/yield-stats', (req: Request, res: Response) => {
     if (greenhouse_name) {
       sql += ' AND hr.greenhouse_name LIKE ?';
       params.push(`%${greenhouse_name}%`);
+    }
+    // 2026-10-25：统计口径 —— 当前基地（默认）/ 全局（仅 admin）。
+    //   harvest_records 有 base_oid，可以按基地统计。
+    const statsScope = resolveStatsScope(req);
+    if (statsScope.scope === 'base' && statsScope.baseOid) {
+      sql += ' AND hr.base_oid = ?';
+      params.push(statsScope.baseOid);
     }
 
     if (validGroupBy === 'crop') {
@@ -663,6 +672,15 @@ router.get('/overview', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
+    // 2026-10-25：统计口径 —— 当前基地（默认）/ 全局（仅 admin）
+    //   注意：只有 harvest_records / farm_tasks / plantings / seedlings /
+    //   inventory_stock / crop_instances 这 6 张表有 base_oid。
+    //   人工/问题/批次/成本表还没有基地归属，单基地口径下这些数字仍是全局值，
+    //   响应里用 scopeCoverage 显式标注，避免"产量是北仑、成本是全局"却看不出来。
+    const statsScope = resolveStatsScope(req);
+    const baseCond = statsScope.scope === 'base' && statsScope.baseOid ? ' AND base_oid = ?' : '';
+    const baseParams: string[] = baseCond ? [statsScope.baseOid as string] : [];
+
     // 获取本月产量
     const monthStart = new Date();
     monthStart.setDate(1);
@@ -677,9 +695,9 @@ router.get('/overview', (req: Request, res: Response) => {
         COALESCE(SUM(harvest_quantity), 0) as total_yield,
         COALESCE(SUM(total_amount), 0) as total_amount
       FROM harvest_records
-      WHERE status = 'completed' AND harvest_date >= ? AND harvest_date <= ?
+      WHERE status = 'completed' AND harvest_date >= ? AND harvest_date <= ?${baseCond}
     `;
-    const monthHarvest = queryToObjects(db, monthHarvestSql, [monthStartStr, monthEndStr]);
+    const monthHarvest = queryToObjects(db, monthHarvestSql, [monthStartStr, monthEndStr, ...baseParams]);
 
     // 本月任务统计
     const monthTaskSql = `
@@ -689,9 +707,9 @@ router.get('/overview', (req: Request, res: Response) => {
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tasks
       FROM farm_tasks
-      WHERE plan_date >= ? AND plan_date <= ?
+      WHERE plan_date >= ? AND plan_date <= ?${baseCond}
     `;
-    const monthTask = queryToObjects(db, monthTaskSql, [monthStartStr, monthEndStr]);
+    const monthTask = queryToObjects(db, monthTaskSql, [monthStartStr, monthEndStr, ...baseParams]);
 
     // 本月人工工时
     const monthLaborSql = `
@@ -743,6 +761,14 @@ router.get('/overview', (req: Request, res: Response) => {
     // 同时响应中间件 camelCaseResponse 会把输出键名再转一次驼峰，
     // 故此处直接构造驼峰键，避免"蛇形→驼峰"二次转换带来的歧义。
     const data = {
+      // 2026-10-25：统计口径说明。前端据此显示「当前基地 / 全局」标识与覆盖范围提示。
+      scope: {
+        mode: statsScope.scope,             // 'base' | 'global'
+        baseOid: statsScope.baseOid,
+        downgraded: statsScope.downgraded,  // 请求了 global 但无权限 → 已降级
+        byBase: ['yield', 'task'],          // 已按基地过滤的指标组
+        globalOnly: ['labor', 'problem', 'batch', 'cost'], // 仍是全局口径（这些表暂无 base_oid）
+      },
       yield: {
         monthHarvestCount: monthHarvest[0]?.harvestCount || 0,
         monthTotalYield: monthHarvest[0]?.totalYield || 0,
@@ -919,6 +945,13 @@ router.get('/indicator-board', (req: Request, res: Response) => {
     const end = (end_date as string)
       || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+    // 2026-10-25：统计口径（当前基地 / 全局）。
+    //   只有 harvest_records / farm_tasks / seedlings 等有 base_oid 的表能按基地统计，
+    //   production_plans / problems / labor_records / *_costs / approvals 暂无基地归属。
+    const statsScope = resolveStatsScope(req);
+    const baseCond = statsScope.scope === 'base' && statsScope.baseOid ? ' AND base_oid = ?' : '';
+    const bp = (): string[] => (baseCond ? [statsScope.baseOid as string] : []);
+
     /** 取单行聚合结果（queryToObjects 转驼峰，别名统一用无下划线的单词以免被转换破坏） */
     const row = (sql: string, params: (string | number)[] = []): Record<string, unknown> => {
       const r = queryToObjects<Record<string, unknown>>(db, sql, params);
@@ -940,20 +973,20 @@ router.get('/indicator-board', (req: Request, res: Response) => {
         [from, to]
       ).v);
       const harvestQty = num(row(
-        "SELECT COALESCE(SUM(harvest_quantity), 0) AS v FROM harvest_records WHERE status IN ('completed', 'harvested') AND harvest_date >= ? AND harvest_date <= ?",
-        [from, to]
+        `SELECT COALESCE(SUM(harvest_quantity), 0) AS v FROM harvest_records WHERE status IN ('completed', 'harvested') AND harvest_date >= ? AND harvest_date <= ?${baseCond}`,
+        [from, to, ...bp()]
       ).v);
       const taskRow = row(
-        "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM farm_tasks WHERE plan_date >= ? AND plan_date <= ?",
-        [from, to]
+        `SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM farm_tasks WHERE plan_date >= ? AND plan_date <= ?${baseCond}`,
+        [from, to, ...bp()]
       );
       const problemRow = row(
         "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM problems WHERE create_time >= ? AND create_time <= ?",
         [`${from} 00:00:00`, `${to} 23:59:59`]
       );
       const survivalRate = num(row(
-        'SELECT ROUND(AVG(survival_rate), 1) AS v FROM seedlings WHERE survival_rate > 0 AND deleted_at IS NULL AND seedling_date >= ? AND seedling_date <= ?',
-        [from, to]
+        `SELECT ROUND(AVG(survival_rate), 1) AS v FROM seedlings WHERE survival_rate > 0 AND deleted_at IS NULL AND seedling_date >= ? AND seedling_date <= ?${baseCond}`,
+        [from, to, ...bp()]
       ).v);
       const laborCost = num(row(
         "SELECT COALESCE(SUM(total_amount), 0) AS v FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
@@ -1828,6 +1861,12 @@ router.get('/comparison-stats', (req: Request, res: Response) => {
       start_date, end_date, sampling = 'month',
     } = req.query as Record<string, string>;
 
+    // 2026-10-25：统计口径（当前基地 / 全局，全局仅 admin）
+    //   目前只有 yield（harvest_records）有 base_oid；
+    //   fertilizer_records / labor_records 还没有基地归属，单基地口径下仍是全局值。
+    const statsScope = resolveStatsScope(req);
+    const BASE_SCOPED_TABLES = new Set(['harvest_records']);
+
     // 参数到表的映射
     const paramTableMap: Record<string, { table: string; field: string; dateField: string; groupField: string }> = {
       yield: { table: 'harvest_records', field: 'harvest_quantity', dateField: 'harvest_date', groupField: "strftime('%Y-%m', harvest_date)" },
@@ -1856,6 +1895,15 @@ router.get('/comparison-stats', (req: Request, res: Response) => {
       const params: any[] = [];
       if (start_date) { conditions.push(`${config.dateField} >= ?`); params.push(start_date); }
       if (end_date) { conditions.push(`${config.dateField} <= ?`); params.push(`${end_date} 23:59:59`); }
+      // 2026-10-25：仅对有 base_oid 的表按基地过滤
+      if (
+        statsScope.scope === 'base' &&
+        statsScope.baseOid &&
+        BASE_SCOPED_TABLES.has(config.table)
+      ) {
+        conditions.push('base_oid = ?');
+        params.push(statsScope.baseOid);
+      }
 
       // 根据采样粒度动态生成 groupField
       const groupField = getGroupField(config, sampling);
@@ -1874,12 +1922,21 @@ router.get('/comparison-stats', (req: Request, res: Response) => {
         key: paramKey,
         label,
         data,
+        // 该参数是否按基地过滤（前端可据此标注）
+        scopedByBase: statsScope.scope === 'base' && BASE_SCOPED_TABLES.has(config.table),
       };
     };
 
     if (main_param) results.main = fetchParam(main_param, '主参数');
     if (compare_param1) results.compare1 = fetchParam(compare_param1, '对比参数1');
     if (compare_param2) results.compare2 = fetchParam(compare_param2, '对比参数2');
+
+    // 2026-10-25：统计口径说明
+    results.scope = {
+      mode: statsScope.scope,
+      baseOid: statsScope.baseOid,
+      downgraded: statsScope.downgraded,
+    };
 
     res.json({ success: true, data: results });
   } catch (error) {

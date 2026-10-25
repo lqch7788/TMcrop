@@ -563,12 +563,19 @@ interface SummaryDataState {
   lastFetchTimestamps: Record<string, number>;
   schemaVersion: number;
 
-  fetchOverview: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
+  /**
+   * 2026-10-25：统计口径（汇总看板 / 经营分析共用）
+   * 'base' = 当前登录基地（默认）；'global' = 跨基地全局（仅 admin）
+   */
+  statsScope: 'base' | 'global';
+  setStatsScope: (scope: 'base' | 'global') => void;
+
+  fetchOverview: (params?: { startDate?: string; endDate?: string; scope?: 'base' | 'global' }) => Promise<void>;
   fetchModuleHealth: () => Promise<void>;
-  fetchIndicatorBoard: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
+  fetchIndicatorBoard: (params?: { startDate?: string; endDate?: string; scope?: 'base' | 'global' }) => Promise<void>;
   fetchDrilldown: (type: string) => Promise<void>;
-  fetchYieldStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
-  fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string }) => Promise<void>;
+  fetchYieldStats: (params?: { groupBy?: string; startDate?: string; endDate?: string; scope?: 'base' | 'global' }) => Promise<void>;
+  fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string; scope?: 'base' | 'global' }) => Promise<void>;
   fetchLaborStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchBatchStats: (params?: { cropName?: string; status?: string; greenhouse?: string }) => Promise<void>;
   fetchChainOverview: () => Promise<void>;
@@ -582,7 +589,18 @@ interface SummaryDataState {
   fetchComparisonStats: (params: {
     mainParam?: string; compareParam1?: string; compareParam2?: string;
     startDate?: string; endDate?: string; sampling?: string;
+    scope?: 'base' | 'global';
   }) => Promise<void>;
+}
+
+/**
+ * 2026-10-25：统计口径参数
+ *
+ * `base`（当前基地）是后端默认值，只有请求全局汇总时才需要显式传 `scope=global`。
+ * 后端会校验权限：非 admin 传 global 会被降级为 base，并在响应 scope.downgraded 标注。
+ */
+function appendStatsScope(q: URLSearchParams, scope?: 'base' | 'global'): void {
+  if (scope === 'global') q.set('scope', 'global');
 }
 
 // ========== Store 实现 ==========
@@ -609,6 +627,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       lastFetchTimestamps: {},
       schemaVersion: 1,
       comparisonData: null,
+      statsScope: 'base',
+      setStatsScope: (scope) => set({ statsScope: scope }),
 
       /**
        * 获取生产报表概览
@@ -623,6 +643,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           const queryParams = new URLSearchParams();
           if (params?.startDate) queryParams.set('start_date', params.startDate);
           if (params?.endDate) queryParams.set('end_date', params.endDate);
+          // 2026-10-25：统计口径（global 才传）；未显式传时用 store 里的全局口径
+          appendStatsScope(queryParams, params?.scope ?? get().statsScope);
           const query = queryParams.toString();
 
           const data = await enhancedApiClient.get<Record<string, unknown>>(
@@ -674,6 +696,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           const queryParams = new URLSearchParams();
           if (params?.startDate) queryParams.set('start_date', params.startDate);
           if (params?.endDate) queryParams.set('end_date', params.endDate);
+          // 2026-10-25：统计口径（global 才传）；未显式传时用 store 里的全局口径
+          appendStatsScope(queryParams, params?.scope ?? get().statsScope);
           const query = queryParams.toString();
 
           const data = await enhancedApiClient.get<IndicatorBoard>(
@@ -726,6 +750,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           queryParams.set('group_by', groupBy);
           if (params?.startDate) queryParams.set('start_date', params.startDate);
           if (params?.endDate) queryParams.set('end_date', params.endDate);
+          // 2026-10-25：统计口径（global 才传）；未显式传时用 store 里的全局口径
+          appendStatsScope(queryParams, params?.scope ?? get().statsScope);
 
           const url = `/summary/yield-stats?${queryParams.toString()}`;
           const data = await enhancedApiClient.get<YieldStatItem[]>(url);
@@ -757,6 +783,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           if (params?.batchCode) queryParams.set('batch_code', params.batchCode);
           if (params?.startDate) queryParams.set('start_date', params.startDate);
           if (params?.endDate) queryParams.set('end_date', params.endDate);
+          // 2026-10-25：统计口径（global 才传）；未显式传时用 store 里的全局口径
+          appendStatsScope(queryParams, params?.scope ?? get().statsScope);
 
           const url = `/summary/cost-stats?${queryParams.toString()}`;
           const data = await enhancedApiClient.get<{
@@ -996,6 +1024,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           if (params.startDate) query.set('start_date', params.startDate);
           if (params.endDate) query.set('end_date', params.endDate);
           if (params.sampling) query.set('sampling', params.sampling);
+          // 2026-10-25：统计口径（global 才传）；未显式传时用 store 里的全局口径
+          appendStatsScope(query, params.scope ?? get().statsScope);
           const response = await enhancedApiClient.get<any>(`/summary/comparison-stats?${query.toString()}`);
           // 2026-07-28 审核 LOW：enhancedApiClient 已解包 .data，删除冗余 `response.data ?? response`
           set({ comparisonData: response, isLoading: false });
