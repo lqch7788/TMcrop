@@ -13,6 +13,8 @@ import { operationLogService } from '../services/operationLog.service';
 import { bumpAuditWriteCount } from '../lib/auditMeta';
 // 2026-10-25：权限管理端点要求 admin 角色，防止普通用户自我提权/改他人密码
 import { requireAdminRole } from '../middleware/processPermission';
+// 2026-10-25：页面路由 → 工序映射（不再按 processes.route 反查）
+import { resolveProcessOidByPageRoute } from '../lib/processRouteMap';
 
 const router = Router();
 
@@ -1854,19 +1856,11 @@ router.get('/check-authority', authenticate, (req, res) => {
     }
 
     // 查找工序和动作
-    // 2026-10-25 修复：processes.route 存在结构性重复（父菜单入口 = 第一个子菜单页面），
-    //   实测 8 组，如 /crop/seed-source 同时对应 PROC_CROP 与 PROC_SEED_SOURCE。
-    //   原查询只取第一行（未排序时命中哪行不确定）→ 子工序权限永远不生效。
-    //   现按「父工序优先」排序：父级路径解析到父工序（与前端 processRouteMap 口径一致），
-    //   父级不存在时才落到子工序。
-    const procStmt = db.prepare(`
-      SELECT oid FROM processes
-      WHERE route = ? AND status = 'active'
-      ORDER BY (parent_oid IS NULL) DESC, sort_order ASC
-    `);
-    procStmt.bind([processRoute as string]);
-    const processOid = procStmt.step() ? (procStmt.getAsObject() as { oid: string }).oid : null;
-    procStmt.free();
+    // 2026-10-25 修复：改用显式页面路由映射表（lib/processRouteMap.ts），
+    //   不再按 processes.route 反查 —— route 存在结构性重复（父菜单入口 = 第一个子菜单页面，
+    //   实测 8 组），反查只取第一行会让子工序权限静默失效。
+    //   新表与前端 src/lib/processRouteMap.ts 同源，两端口径一致。
+    const processOid = resolveProcessOidByPageRoute(processRoute as string);
 
     const actionStmt = db.prepare('SELECT oid FROM actions WHERE action_code = ? AND status = ?');
     actionStmt.bind([actionCode as string, 'active']);

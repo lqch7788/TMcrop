@@ -192,6 +192,17 @@ async function start() {
       console.warn('[seedMarkStatus] 启动种子失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-10-25：工序 route / API 映射一致性校验（只读）
+    //   processes.route 存在结构性重复（父菜单入口 = 第一个子菜单页面），
+    //   父子关系的重复是合法的；非父子关系的重复会导致按 route 反查命中错误行，
+    //   使子工序权限静默失效。此处启动即校验，防止将来新增工序时引入该缺陷。
+    try {
+      const { logProcessRouteValidation } = await import('./db/validateProcessRoutes');
+      logProcessRouteValidation();
+    } catch (e: any) {
+      console.warn('[processRoutes] 校验失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-10-10：GREEN 级对齐修复（幂等）——农事 5 类审批类型规则 forced_level 为 NULL 时对齐为 quick。
     // 防 amount=0 回落到"金额免审批"档自动通过（曾致提交即批准），同时消除误配二级链导致"点两次才通过"。
     try {

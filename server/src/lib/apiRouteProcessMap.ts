@@ -75,7 +75,7 @@ export const PROC = {
   SUM_INDICATORS: 'PROC_SUM_INDICATORS',
 
   // 审批
-  APPROVAL_CENTER: 'PROC_APPROVAL_CENTER',
+  APPROVAL_CENTER: 'PROC_WORKFLOW',  // 2026-10-25：原 PROC_APPROVAL_CENTER 已删除（与 WORKFLOW 重复）
   APPROVAL_MAT: 'PROC_APPROVAL_MAT',
   APPROVAL_PROD: 'PROC_APPROVAL_PROD',
   APPROVAL_FARM: 'PROC_APPROVAL_FARM',
@@ -93,7 +93,6 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/seedlings': PROC.SEEDLING,
   '/seed-sources': PROC.SEED_SOURCE,
   '/seedling-supplementary-applications': PROC.SEEDLING,
-  '/seedling-propagation-records': PROC.SEEDLING,
   '/plantings': PROC.PLANTING,
   '/planting-records': PROC.PLANTING,
   '/harvest': PROC.CROP_HARVEST,
@@ -101,7 +100,6 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/crop-varieties': PROC.CROP,
   '/crop-orders': PROC.ORDER,
   '/plant-labels': PROC.CROP,
-  '/plant-marks': PROC.CROP,
   '/plant-settings': PROC.CROP,
   '/pest-records': PROC.CROP,
   '/pesticide-library': PROC.CROP,
@@ -111,7 +109,10 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/water-fertilizer': PROC.CROP,
 
   // ---- 农事管理 ----
-  '/farm-tasks': PROC.TASK_CENTER,
+  // 2026-10-25：/farm-tasks 是农事任务中心(/farm-hub)与智能任务中心(/task-center)共用的 API。
+  //   两工序的授权数据完全一致（实测每角色均相同），故映射到主入口 PROC_FARM_HUB；
+  //   PROC_TASK_CENTER 保持页面级权限（前端 canAccessProcess 判定）。
+  '/farm-tasks': PROC.FARM_HUB,
   '/farm-task-schedules': PROC.SCHEDULE,
   '/farm-task-swap-requests': PROC.SCHEDULE,
   '/farm-operation-records': PROC.FARM,
@@ -119,21 +120,15 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/dispatch': PROC.TASK_CENTER,
   '/team-members': PROC.TEAM,
   '/teams': PROC.TEAM,
-  '/team-availability': PROC.TEAM,
-  '/team-capabilities': PROC.TEAM,
-  '/team-zones': PROC.TEAM,
-  '/worker-teams': PROC.TEAM,
   '/daily-plans': PROC.DAILY_SUMMARY,
   '/monthly-plans': PROC.DAILY_SUMMARY,
   '/work-logs': PROC.DAILY_SUMMARY,
   '/reminders': PROC.FARM,
-  '/reminder': PROC.FARM,
   '/issues': PROC.FARM,
   '/inspections': PROC.FARM,
   '/inspection-plans': PROC.FARM,
   '/problems': PROC.FARM,
   '/problem-attachments': PROC.FARM,
-  '/task-progress': PROC.TASK_CENTER,
   '/batch-timeline': PROC.FARM,
   '/batch-cost': PROC.FARM,
   '/sop': PROC.FARM,
@@ -150,7 +145,6 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   // ---- 库存管理 ----
   '/inventory': PROC.WH_OVERVIEW,
   '/inventory-transactions': PROC.WH_OVERVIEW,
-  '/inventory-inbound-from-source': PROC.WH_INBOUND,
   '/inventory-supplementary-applications': PROC.MAT_RECEIVING,
   '/inventory-transfer-applications': PROC.MAT_RECEIVING,
   '/materials': PROC.WH_OVERVIEW,
@@ -207,7 +201,6 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/approvals': PROC.APPROVAL_CENTER,
   '/approval-workflows': PROC.APPROVAL_CENTER,
   '/approval-linkage': PROC.APPROVAL_CENTER,
-  '/acceptance': PROC.APPROVAL_CENTER,
   '/acceptances': PROC.APPROVAL_CENTER,
   '/quality-checks': PROC.APPROVAL_CENTER,
 
@@ -222,6 +215,7 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/backup': PROC.SETTINGS,
   '/region': PROC.SETTINGS,
   '/debug': PROC.SETTINGS,
+  '/code-generator': PROC.SETTINGS,
 
   // ---- 人工管理（其余）----
 
@@ -251,23 +245,27 @@ export const API_ROUTE_PROCESS_MAP: Record<string, string> = {
   '/monitoring': PROC.SETTINGS,
   '/alerts': PROC.FARM,
 
-  // ---- AI 辅助（归入农事任务中心）----
-  '/ai/workhour': PROC.TASK_CENTER,
-  '/ai/dispatch': PROC.TASK_CENTER,
-  '/ai/growth': PROC.TASK_CENTER,
-  '/ai/route': PROC.TASK_CENTER,
-  '/ai/pest': PROC.TASK_CENTER,
-  '/ai/qa': PROC.TASK_CENTER,
-  '/ai/report': PROC.TASK_CENTER,
-  '/ai/schedule': PROC.SCHEDULE,
-  '/ai/resource': PROC.TASK_CENTER,
-  '/ai/image': PROC.TASK_CENTER,
-  '/ai/growth-state': PROC.TASK_CENTER,
-  '/ai/voice': PROC.TASK_CENTER,
-  '/ai/anomaly': PROC.TASK_CENTER,
-  '/ai/attendance': PROC.LABOR_ATTEND,
-  '/ai/config': PROC.SETTINGS,
-  '/ai/approval': PROC.APPROVAL_CENTER,
+  // ---- AI 辅助 ----
+  // 2026-10-25：原先 16 个 /ai/* 全部归到 PROC_TASK_CENTER，粒度过粗 ——
+  //   懂作物的人被挡在 AI 病虫害识别之外，懂考勤的人被挡在 AI 考勤之外。
+  //   AI 是**辅助手段**而非独立业务模块，故按业务域归入已有工序：
+  //   有该业务域权限的人即可使用对应 AI 能力。
+  '/ai/pest': PROC.CROP,              // AI 病虫害识别
+  '/ai/growth': PROC.CROP,            // AI 长势分析
+  '/ai/growth-state': PROC.CROP,      // AI 长势状态
+  '/ai/qa': PROC.CROP,                // AI 品质检测
+  '/ai/image': PROC.CROP,             // AI 图像识别
+  '/ai/attendance': PROC.LABOR_ATTEND, // AI 考勤
+  '/ai/schedule': PROC.SCHEDULE,      // AI 排班
+  '/ai/dispatch': PROC.TASK_CENTER,   // AI 派工
+  '/ai/route': PROC.TASK_CENTER,      // AI 路线
+  '/ai/resource': PROC.TASK_CENTER,   // AI 资源
+  '/ai/workhour': PROC.TASK_CENTER,   // AI 工时
+  '/ai/voice': PROC.TASK_CENTER,      // AI 语音
+  '/ai/report': PROC.TASK_CENTER,     // AI 报告
+  '/ai/anomaly': PROC.TASK_CENTER,    // AI 异常检测
+  '/ai/config': PROC.SETTINGS,        // AI 配置
+  '/ai/approval': PROC.APPROVAL_CENTER, // AI 审批
 };
 
 /**
