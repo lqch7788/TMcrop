@@ -263,7 +263,8 @@ export default function OrganizationManagement() {
       <>
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{organizations.length} 个组织</span>
+        {/* 2026-10-25：显示过滤后的数量，否则搜索时数字不变、看着像没生效 */}
+        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{filteredOrgs.length} 个组织</span>
         <div className="flex items-center gap-2 ml-auto">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -307,9 +308,10 @@ export default function OrganizationManagement() {
 
         {loading && organizations.length === 0 ? (
           <div className="p-8 text-center text-gray-500">加载中...</div>
-        ) : organizations.length === 0 ? (
+        ) : filteredOrgs.length === 0 ? (
+          // 2026-10-25：用过滤后的数量判断，否则搜索无结果时渲染空白区（既无数据也无提示）
           <div className="p-8 text-center text-gray-500">
-            暂无组织数据，点击"新增组织"创建
+            {organizations.length === 0 ? '暂无组织数据，点击"新增组织"创建' : '没有匹配的组织'}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
