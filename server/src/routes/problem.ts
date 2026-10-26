@@ -8,6 +8,9 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 // 2026-10-22（审核 L12）：派生任务改用统一日序取号，避免 NS 编号撞主键
 import { nextTaskCode } from '../services/inspectionPlanService';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+// 2026-10-26：派生任务补基地归属（读过滤已严格化，未归属记录会从所有基地消失）
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
+import { getCurrentBaseOid } from '../middleware/currentBase';
 
 const router = Router();
 
@@ -718,6 +721,10 @@ router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
       0, now, now,
       'problem', 'farm', problemId, 1,
     ]);
+
+    // 2026-10-26：派生任务补基地归属（读过滤严格化后，无归属任务会从所有基地消失）
+    const derivedBase = resolveBaseFromRequest(req.body, getCurrentBaseOid(req));
+    if (derivedBase) applyBaseOwnership('farm_tasks', String(newId), derivedBase);
 
     // 4. 问题 status 自动从 pending → in_progress（如果当前是 pending）
     db.run(`UPDATE problems SET status = ?, update_time = ? WHERE id = ? AND status = ?`,

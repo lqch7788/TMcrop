@@ -29,6 +29,9 @@ import {
   type PlanFrequencyInput,
 } from '../lib/inspectionPlanFrequency';
 import { autoAssignSchedule, resolveEmployeeId } from './farmTaskScheduleService';
+// 2026-10-26：service 层用异步上下文取当前基地做写入归属
+import { getContextBaseOid } from '../lib/requestContext';
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 
 // ========== 类型 ==========
 
@@ -870,6 +873,11 @@ export async function generateOccurrences(
           plan.id, date,
           now, now,
         ]);
+
+        // 2026-10-26：巡查派生任务补基地归属
+        //   （读过滤严格化后，base_oid 为空的任务会从所有基地消失）
+        const inspBase = resolveBaseFromRequest(null, getContextBaseOid());
+        if (inspBase) applyBaseOwnership('farm_tasks', String(taskCode), inspBase);
       } catch (err: any) {
         // 并发生成撞唯一索引 → 跳过，不 500（方案 §7.4）
         const msg = String(err?.message || '');

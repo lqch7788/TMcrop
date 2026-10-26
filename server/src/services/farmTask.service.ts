@@ -3,6 +3,9 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+// 2026-10-26：service 层用异步上下文取当前基地做写入归属
+import { getContextBaseOid } from '../lib/requestContext';
+import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 
 export interface FarmTask {
   id: string;
@@ -136,6 +139,10 @@ export class FarmTaskService {
       now,
       now,
     ]);
+
+    // 2026-10-26：补基地归属（读过滤严格化后，无归属任务会从所有基地消失）
+    const svcBase = resolveBaseFromRequest(task as Record<string, unknown>, getContextBaseOid());
+    if (svcBase) applyBaseOwnership('farm_tasks', id, svcBase);
 
     saveDatabase();
     return id;

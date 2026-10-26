@@ -10,6 +10,8 @@ import { getDatabase, saveDatabase } from '../db';
 import { resolveBaseFromRequest, applyBaseOwnership } from '../lib/baseResolver';
 import { getContextBaseOid } from '../lib/requestContext';
 
+
+
 /**
  * 同步控制器类
  */
@@ -1104,6 +1106,11 @@ export class SyncController {
         stmt.step();
         stmt.free();
         insertedCount++;
+
+        // 2026-10-26：同步导入的农事任务补基地归属
+        //   （读过滤严格化后，base_oid 为空的任务会从所有基地消失）
+        const syncTaskBase = resolveBaseFromRequest(null, getContextBaseOid());
+        if (syncTaskBase) applyBaseOwnership('farm_tasks', String(id), syncTaskBase);
       }
 
       saveDatabase();
