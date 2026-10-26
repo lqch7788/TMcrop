@@ -227,6 +227,19 @@ class EnhancedApiClient {
           if (errorData?.detail) {
             errorMessage = `${errorMessage}：${errorData.detail}`;
           }
+          // 2026-10-26：403 统一提示。
+          //   只读用户点保存/删除时，后端返回 PERMISSION_DENIED；
+          //   此前各页面 catch 行为不一致（有的 showAlert、有的静默），
+          //   用户可能完全不知道发生了什么。这里做一次全局兜底提示，
+          //   页面自己的 catch 仍可再覆盖成更精确的文案。
+          if (response.status === 403 && errorData?.code === 'PERMISSION_DENIED') {
+            try {
+              const { showToast } = await import('@/lib/dialogService');
+              showToast(errorData.error || '权限不足：该操作未被授权', 'error');
+            } catch {
+              // 提示组件不可用时不影响错误继续抛出
+            }
+          }
         } catch {
           // 忽略解析错误
         }

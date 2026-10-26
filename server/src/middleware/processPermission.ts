@@ -213,6 +213,62 @@ export function requireProcessView() {
 }
 
 /**
+ * 对**指定工序**要求动作权限（不走 API 路径映射）
+ *
+ * 2026-10-26 新增。用于「一个 router 下的多种资源同属一个工序」的场景：
+ *   /basic-data 下有部门、基地、仓库、温室、区域、班组、岗位…… 共 53 个写端点，
+ *   全部属于「系统设置」的维护动作。逐个补 API 路径映射既啰嗦又容易漏。
+ *
+ * 语义与 requireProcessPermission 一致：
+ *   - 无 user / 演示身份 → 401
+ *   - GET/HEAD/OPTIONS → 不做动作校验（读权限由 requireProcessView 负责）
+ *   - admin → 放行
+ *   - 否则按工序-动作矩阵判定，不通过 → 403
+ *
+ * @param processOid 工序 OID，如 'PROC_SETTINGS'
+ * @param actionOid  固定动作；不传则按 HTTP 方法自动映射
+ */
+export function requirePermissionOnProcess(processOid: string, actionOid?: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const userOid = req.user?.userId;
+    if (!userOid) {
+      res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
+      return;
+    }
+
+    const effectiveAction = actionOid || METHOD_TO_ACTION[req.method];
+    if (!effectiveAction) {
+      // 读请求不在这里做动作校验
+      next();
+      return;
+    }
+
+    if (isDemoUser(req)) {
+      res.status(401).json({ success: false, error: '请先登录后再操作', code: 'UNAUTHENTICATED' });
+      return;
+    }
+
+    if (isAdminUser(userOid)) {
+      next();
+      return;
+    }
+
+    const { allowed, source } = checkProcessPermission(userOid, processOid, effectiveAction);
+    if (allowed) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      success: false,
+      error: '权限不足：该操作未被授权',
+      code: 'PERMISSION_DENIED',
+      meta: { processOid, actionOid: effectiveAction, source },
+    });
+  };
+}
+
+/**
  * 要求 admin 角色（用于权限管理等高危端点）
  */
 export function requireAdminRole() {

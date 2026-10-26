@@ -10,6 +10,8 @@ import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import GlobalDialog from './components/common/GlobalDialog';
+// 2026-10-26：store 版 Toast 宿主（showToast 走 useToastStore，此前从未被渲染）
+import { GlobalToastHost } from './components/ui/GlobalToastHost';
 import { useAuthStore, useSystemConfigStore, useCropVarietyStore } from './stores';
 import { useThemeConfig } from './hooks/useThemeConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -724,6 +726,10 @@ function App() {
                 <ApprovalProvider>
                   <AppContent />
                   <GlobalDialog />
+                  {/* 2026-10-26：挂载 store 版 Toast。
+                      ToastProvider 用的是组件私有 state，与 showToast()（走 useToastStore）
+                      是两套东西 → 全站 50 处 showToast 调用此前都渲染不出来。 */}
+                  <GlobalToastHost />
                 </ApprovalProvider>
               </ToastProvider>
             </SettingsProvider>

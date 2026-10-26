@@ -6,21 +6,22 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+// 2026-10-26：字典/配置/仓库/基地/温室的写操作要求系统设置工序权限
+import { requirePermissionOnProcess } from '../middleware/processPermission';
 
 const router = Router();
 
-// 2026-10-25：写端点鉴权守卫（挂载处用的是 optionalAuth，读公开、写必须登录）
-//   此前这 3 个路由的 67 个写端点对匿名请求完全开放。
+// 写端点守卫（挂载处用的是 optionalAuth，读公开、写必须有权限）
+//
+// 2026-10-25：此前对匿名请求完全开放，先补了「必须登录」。
+// 2026-10-26：登录还不够 —— 字典、系统配置、仓库、基地、温室的增改都属于
+//   基础主数据维护，要求「系统设置」工序的对应动作权限。
 router.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
     next();
     return;
   }
-  if (!req.user) {
-    res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
-    return;
-  }
-  next();
+  requirePermissionOnProcess('PROC_SETTINGS')(req, res, next);
 });
 
 // ============================================

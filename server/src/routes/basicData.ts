@@ -9,21 +9,28 @@ import { exportBasicData } from '../db/seedBasicData';
 import { queryToObjects } from '../utils/queryHelper';
 // 2026-10-25：默认基地需要叠加用户数据范围（非管理员不能落到无权限基地）
 import { resolveUserDataScope } from '../lib/dataScope';
+// 2026-10-26：基础数据的写操作要求「系统设置」工序权限
+import { requirePermissionOnProcess } from '../middleware/processPermission';
 
 const router = Router();
 
-// 2026-10-25：写端点鉴权守卫（挂载处用的是 optionalAuth，读公开、写必须登录）
-//   此前这 3 个路由的 67 个写端点对匿名请求完全开放。
+// 写端点守卫（挂载处用的是 optionalAuth，读公开、写必须有权限）
+//
+// 2026-10-25：此前这 53 个写端点对匿名请求完全开放，先补了「必须登录」。
+// 2026-10-26：登录还不够 —— 任何登录账号都能改部门/基地/仓库/温室/区域/班组/岗位/
+//   系统配置，权限矩阵里怎么配都拦不住。现要求「系统设置」工序的对应动作权限：
+//     POST → ACT002 新增 / PUT|PATCH → ACT003 编辑 / DELETE → ACT004 删除
+//
+//   为什么统一归到 PROC_SETTINGS：这些全是基础主数据维护，只有 admin/manager
+//   在权限矩阵里配了完整写权限；其它角色（仓储主管/人事专员等）本来就没有，
+//   加上校验后行为变化仅限于「普通账号不能再改基础数据」，不影响现有业务流程
+//   （基地运营页 /base-operations 没有工序映射，非 admin 本来就进不去）。
 router.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
     next();
     return;
   }
-  if (!req.user) {
-    res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
-    return;
-  }
-  next();
+  requirePermissionOnProcess('PROC_SETTINGS')(req, res, next);
 });
 
 /**

@@ -5,11 +5,18 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+// 2026-10-26：写操作按资源细分校验（渠道/规则要求系统设置工序权限）
+import { requirePermissionOnProcess } from '../middleware/processPermission';
+import { isAdminRoleCode } from '../lib/adminRole';
 
 const router = Router();
 
-// 2026-10-25：写端点鉴权守卫（挂载处用的是 optionalAuth，读公开、写必须登录）
-//   此前这 3 个路由的 67 个写端点对匿名请求完全开放。
+// 写端点守卫（挂载处用的是 optionalAuth，读公开、写必须有权限）
+//
+// 2026-10-25：此前对匿名请求完全开放，先补了「必须登录」。
+// 2026-10-26：按资源细分 ——
+//   - /preferences/:userOid  用户改自己的通知偏好，任何登录用户都该能做（admin 可改任意人）
+//   - /channels/*、/rules/*  通知渠道与规则配置，属「系统设置」维护动作，要求 PROC_SETTINGS 权限
 router.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
     next();
@@ -19,7 +26,22 @@ router.use((req, res, next) => {
     res.status(401).json({ success: false, error: '未认证', code: 'UNAUTHENTICATED' });
     return;
   }
-  next();
+
+  // 通知偏好：只能改自己的（admin 例外）
+  const prefMatch = req.path.match(/^\/preferences\/([^/]+)$/);
+  if (prefMatch) {
+    const targetOid = decodeURIComponent(prefMatch[1]);
+    const requesterOid = req.user.userId;
+    if (requesterOid === targetOid || isAdminRoleCode(requesterOid)) {
+      next();
+      return;
+    }
+    res.status(403).json({ success: false, error: '只能修改自己的通知偏好', code: 'PERMISSION_DENIED' });
+    return;
+  }
+
+  // 渠道 / 规则配置 → 系统设置工序
+  requirePermissionOnProcess('PROC_SETTINGS')(req, res, next);
 });
 
 // ============================================
