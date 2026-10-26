@@ -25,6 +25,8 @@ import type { Position } from '@/services/apiBasicDataService';
 // 2026-10-11 类型清理：职位视图模型提取为共享类型，供页面与职位弹窗共用一份
 import type { PositionItem } from '../position/types';
 import { useAuthStore } from '@/stores';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 // 将后端 Position 转换为页面使用的格式
 function adaptPositionToPage(position: Position): PositionItem {
@@ -541,30 +543,31 @@ export function PersonnelManagementPage() {
               </>
             ) : (
               <>
-                {canCreate && (
-                  <Button size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增
-                  </Button>
-                )}
-                {canEdit && (
-                  <Button variant="blue" size="sm" onClick={handleBatchEditClick}>
-                    <Edit2 className="w-4 h-4" />
-                    编辑
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button variant="destructive" size="sm" onClick={handleBatchDeleteClick}>
-                    <Trash2 className="w-4 h-4" />
-                    删除
-                  </Button>
-                )}
-                {canExport && (
-                  <Button size="sm" onClick={handleBatchExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                )}
+                {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+                <Button size="sm" onClick={guardByPermission(canCreate, '新增', handleAdd)}
+                  className={!canCreate ? DENIED : undefined}
+                  title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+                  <Plus className="w-4 h-4" />
+                  新增
+                </Button>
+                <Button variant="blue" size="sm" onClick={guardByPermission(canEdit, '编辑', handleBatchEditClick)}
+                  className={!canEdit ? DENIED : undefined}
+                  title={!canEdit ? '权限不足：需要「编辑」权限' : undefined}>
+                  <Edit2 className="w-4 h-4" />
+                  编辑
+                </Button>
+                <Button variant="destructive" size="sm" onClick={guardByPermission(canDelete, '删除', handleBatchDeleteClick)}
+                  className={!canDelete ? DENIED : undefined}
+                  title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
+                  <Trash2 className="w-4 h-4" />
+                  删除
+                </Button>
+                <Button size="sm" onClick={guardByPermission(canExport, '导出', handleBatchExportClick)}
+                  className={!canExport ? DENIED : undefined}
+                  title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+                  <Download className="w-4 h-4" />
+                  导出
+                </Button>
               </>
             )}
           </div>

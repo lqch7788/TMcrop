@@ -5,6 +5,8 @@ import React from 'react';
 import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface ActionBarProps {
   // 模式状态
@@ -122,30 +124,31 @@ export function ActionBar({
         </div>
       ) : (
         <div className="flex gap-2">
-          {canCreate && (
-            <Button size="sm" onClick={onCreate}>
-              <Plus className="w-4 h-4" />
-              新增
-            </Button>
-          )}
-          {canEdit && (
-            <Button size="sm" variant="blue" onClick={onBatchEdit}>
-              <Edit2 className="w-4 h-4" />
-              编辑
-            </Button>
-          )}
-          {canDelete && (
-            <Button size="sm" variant="destructive" onClick={onBatchDelete}>
-              <Trash2 className="w-4 h-4" />
-              删除
-            </Button>
-          )}
-          {canExport && (
-            <Button size="sm" onClick={onExport}>
-              <Download className="w-4 h-4" />
-              导出
-            </Button>
-          )}
+          {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+          <Button size="sm" onClick={guardByPermission(canCreate, '新增', onCreate)}
+            className={!canCreate ? DENIED : undefined}
+            title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+            <Plus className="w-4 h-4" />
+            新增
+          </Button>
+          <Button size="sm" variant="blue" onClick={guardByPermission(canEdit, '编辑', onBatchEdit)}
+            className={!canEdit ? DENIED : undefined}
+            title={!canEdit ? '权限不足：需要「编辑」权限' : undefined}>
+            <Edit2 className="w-4 h-4" />
+            编辑
+          </Button>
+          <Button size="sm" variant="destructive" onClick={guardByPermission(canDelete, '删除', onBatchDelete)}
+            className={!canDelete ? DENIED : undefined}
+            title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
+            <Trash2 className="w-4 h-4" />
+            删除
+          </Button>
+          <Button size="sm" onClick={guardByPermission(canExport, '导出', onExport)}
+            className={!canExport ? DENIED : undefined}
+            title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+            <Download className="w-4 h-4" />
+            导出
+          </Button>
         </div>
       )}
     </div>

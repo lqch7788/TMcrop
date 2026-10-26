@@ -13,6 +13,8 @@ import { Button } from '@/components/ui';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
 // 2026-09-28：审批操作失败时给用户可见反馈（此前忽略 approve 返回值 → 点了没反应）
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 import { useApprovalStore } from '@/stores/useApprovalStore';
 // 2026-09-28：退料单数据（明细字段权威来源，用于补全历史审批单的简化明细）
 import { useMaterialReturnStore } from '@/stores/useMaterialReturnStore';
@@ -172,10 +174,10 @@ export function MaterialApprovalTable({
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.description || '-'}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-1">
-                    {item.status === ApprovalStatus.PENDING && canApprove && (
+                    {item.status === ApprovalStatus.PENDING && (
                       <>
                         <button
-                          onClick={async () => {
+                          onClick={guardByPermission(canApprove, '审批', async () => {
                             const ok = await approve(item.id);
                             if (ok) {
                               showAlert('审批已通过');
@@ -184,13 +186,13 @@ export function MaterialApprovalTable({
                               const err = useApprovalStore.getState().error || '未知错误';
                               showAlert(`审批未生效：${err}`);
                             }
-                          }}
-                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="通过"
+                          })}
+                          className={`p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors ${!canApprove ? DENIED : ''}`}
+                          title={!canApprove ? '权限不足：需要「审批」权限' : '通过'}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleRejectClick(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
+                        <button onClick={guardByPermission(canApprove, '审批', () => handleRejectClick(item))} className={`p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors ${!canApprove ? DENIED : ''}`} title={!canApprove ? '权限不足：需要「审批」权限' : '拒绝'}>
                           <XCircle className="w-4 h-4" />
                         </button>
                       </>
@@ -322,10 +324,10 @@ export function MaterialApprovalTable({
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.description || '-'}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-1">
-                    {item.status === ApprovalStatus.PENDING && canApprove && (
+                    {item.status === ApprovalStatus.PENDING && (
                       <>
                         <button
-                          onClick={async () => {
+                          onClick={guardByPermission(canApprove, '审批', async () => {
                             const ok = await approve(item.id);
                             if (ok) {
                               showAlert('审批已通过');
@@ -334,13 +336,13 @@ export function MaterialApprovalTable({
                               const err = useApprovalStore.getState().error || '未知错误';
                               showAlert(`审批未生效：${err}`);
                             }
-                          }}
-                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                          title="通过"
+                          })}
+                          className={`p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors ${!canApprove ? DENIED : ''}`}
+                          title={!canApprove ? '权限不足：需要「审批」权限' : '通过'}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleRejectClick(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
+                        <button onClick={guardByPermission(canApprove, '审批', () => handleRejectClick(item))} className={`p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors ${!canApprove ? DENIED : ''}`} title={!canApprove ? '权限不足：需要「审批」权限' : '拒绝'}>
                           <XCircle className="w-4 h-4" />
                         </button>
                       </>
@@ -471,10 +473,10 @@ export function MaterialApprovalTable({
             <TableCell>{getStatusBadge(item.status)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-1">
-                {item.status === ApprovalStatus.PENDING && canApprove && (
+                {item.status === ApprovalStatus.PENDING && (
                   <>
                     <button
-                      onClick={async () => {
+                      onClick={guardByPermission(canApprove, '审批', async () => {
                         const ok = await approve(item.id);
                         if (ok) {
                           showAlert('审批已通过');
@@ -482,13 +484,13 @@ export function MaterialApprovalTable({
                           const err = useApprovalStore.getState().error || '未知错误';
                           showAlert(`审批未生效：${err}`);
                         }
-                      }}
-                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                      title="通过"
+                      })}
+                      className={`p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors ${!canApprove ? DENIED : ''}`}
+                      title={!canApprove ? '权限不足：需要「审批」权限' : '通过'}
                     >
                       <CheckCircle className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleRejectClick(item)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
+                    <button onClick={guardByPermission(canApprove, '审批', () => handleRejectClick(item))} className={`p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors ${!canApprove ? DENIED : ''}`} title={!canApprove ? '权限不足：需要「审批」权限' : '拒绝'}>
                       <XCircle className="w-4 h-4" />
                     </button>
                   </>
@@ -544,14 +546,14 @@ export function MaterialApprovalTable({
               <TableCell>{getStatusBadge(item.status)}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
-                  {item.status === ApprovalStatus.PENDING && canApprove && (
+                  {item.status === ApprovalStatus.PENDING && (
                     <>
                       {/* 2026-09-28 审计修复：此前直接 approve(item.id)——不 await、不看结果，
                           store 内部吞错 → 失败无提示。改为走审批意见弹窗流程（有结果提示） */}
-                      <button onClick={() => (onApproveClick ? onApproveClick(item) : approve(item.id))} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                      <button onClick={guardByPermission(canApprove, '审批', () => (onApproveClick ? onApproveClick(item) : approve(item.id)))} className={`p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors ${!canApprove ? DENIED : ''}`} title={!canApprove ? '权限不足：需要「审批」权限' : '通过'}>
                         <CheckCircle className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleRejectClick(item)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
+                      <button onClick={guardByPermission(canApprove, '审批', () => handleRejectClick(item))} className={`p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors ${!canApprove ? DENIED : ''}`} title={!canApprove ? '权限不足：需要「审批」权限' : '拒绝'}>
                         <XCircle className="w-4 h-4" />
                       </button>
                     </>

@@ -9,6 +9,8 @@ import { Input } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { useTeamStore } from '@/stores';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface ScheduleTableProps {
   scheduleList: ScheduleRecord[];
@@ -203,23 +205,29 @@ export function ScheduleTable({
             </>
           ) : (
             <>
-              {canCreate && onAddClick && (
-                <Button size="sm" onClick={onAddClick}>
+              {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+              {onAddClick && (
+                <Button size="sm" onClick={guardByPermission(canCreate, '新增', onAddClick)}
+                  className={!canCreate ? DENIED : undefined}
+                  title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
-              {canDelete && onBatchDeleteClick && (
-                <Button size="sm" variant="destructive" onClick={onBatchDeleteClick}>
+              {onBatchDeleteClick && (
+                <Button size="sm" variant="destructive" onClick={guardByPermission(canDelete, '删除', onBatchDeleteClick)}
+                  className={!canDelete ? DENIED : undefined}
+                  title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
                   <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
               )}
-              {canExport && onExport && (
+              {onExport && (
                 <Button
                   size="sm"
-                  onClick={onExport}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                  onClick={guardByPermission(canExport, '导出', onExport)}
+                  className={`bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 ${!canExport ? DENIED : ''}`}
+                  title={!canExport ? '权限不足：需要「导出」权限' : undefined}
                 >
                   <Download className="w-4 h-4" />
                   导出
@@ -476,14 +484,14 @@ export function ScheduleTable({
                                     <FileText className="w-4 h-4" />
                                   </button>
                                 )}
-                                {/* 编辑：已取消时置灰 */}
-                                {canEdit && onScheduleClick && (
+                                {/* 编辑：已取消时置灰；2026-10-26 无权限也显示（灰化 + 点击提示） */}
+                                {onScheduleClick && (
                                   <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); onScheduleClick(record); }}
+                                    onClick={guardByPermission(canEdit, '编辑', (e: React.MouseEvent) => { e.stopPropagation(); onScheduleClick(record); })}
                                     disabled={isCancelled}
-                                    title={isCancelled ? '已取消，不可编辑' : '编辑排班'}
-                                    className="p-1.5 rounded text-blue-600 transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                    title={!canEdit ? '权限不足：需要「编辑」权限' : (isCancelled ? '已取消，不可编辑' : '编辑排班')}
+                                    className={`p-1.5 rounded text-blue-600 transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent ${!canEdit ? DENIED : ''}`}
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
