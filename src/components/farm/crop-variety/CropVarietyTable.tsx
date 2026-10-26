@@ -267,26 +267,25 @@ export function CropVarietyTable({
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); onEdit(variety); }}
-                          title="编辑品种"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleDelete(variety, e)}
-                          title="删除品种"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={guardByPermission(canEdit, '编辑', (e: React.MouseEvent) => { e.stopPropagation(); onEdit(variety); })}
+                        className={!canEdit ? DENIED : undefined}
+                        title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑品种'}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={guardByPermission(canDelete, '删除', (e: React.MouseEvent) => handleDelete(variety, e))}
+                        className={!canDelete ? DENIED : undefined}
+                        title={!canDelete ? '权限不足：需要「删除」权限' : '删除品种'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

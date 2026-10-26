@@ -9,6 +9,8 @@ import { Button, Label } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants_taskDispatch';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface FilterToolbarProps {
   // 筛选值
@@ -163,17 +165,17 @@ export function FilterToolbar({
           >
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
-          {canImport && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onImport}
-              className="shadow-sm"
-            >
-              <Upload className="w-4 h-4" />
-              批量导入
-            </Button>
-          )}
+          {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={guardByPermission(canImport, '新增', onImport)}
+            className={`shadow-sm ${!canImport ? DENIED : ''}`}
+            title={!canImport ? '权限不足：需要「新增」权限' : undefined}
+          >
+            <Upload className="w-4 h-4" />
+            批量导入
+          </Button>
           {canSmartRecommend && (
             <Button
               variant="ghost"
