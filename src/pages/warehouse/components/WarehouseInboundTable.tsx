@@ -12,6 +12,8 @@ import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, RowPair } from '@/components/ui';
 
 import { getStatusText, getStatusClassName } from '../utils/warehouseInbound.utils';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface WarehouseInboundTableProps {
   // 数据
@@ -197,12 +199,14 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                   {/* 行内操作列：编辑 + 冲销 + 删除按钮（2026-08-10 下沉自工具栏；冲销 2026-09-27 新增） */}
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      {canEdit && onEditRecord && (
+                      {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+                      {onEditRecord && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="编辑"
-                          onClick={() => onEditRecord(record)}
+                          title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                          onClick={guardByPermission(canEdit, '编辑', () => onEditRecord(record))}
+                          className={!canEdit ? DENIED : undefined}
                         >
                           <Edit2 className="w-4 h-4 text-blue-600" />
                         </Button>
@@ -218,12 +222,13 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                           <RotateCcw className="w-4 h-4 text-amber-600" />
                         </Button>
                       )}
-                      {canDelete && onDeleteRecord && (
+                      {onDeleteRecord && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="删除"
-                          onClick={() => onDeleteRecord(record)}
+                          title={!canDelete ? '权限不足：需要「删除」权限' : '删除'}
+                          onClick={guardByPermission(canDelete, '删除', () => onDeleteRecord(record))}
+                          className={!canDelete ? DENIED : undefined}
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>

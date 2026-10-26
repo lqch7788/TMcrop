@@ -5,6 +5,8 @@ import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface MaterialsTableProps {
   materials: Material[];
@@ -224,26 +226,25 @@ export function MaterialsTable({
                 {/* 操作列：行内编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1">
-                    {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="编辑"
-                        onClick={() => onEdit(item)}
-                      >
-                        <Edit className="w-4 h-4 text-emerald-600" />
-                      </Button>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="删除"
-                        onClick={() => onDelete(item)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    )}
+                    {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                      onClick={guardByPermission(canEdit, '编辑', () => onEdit(item))}
+                      className={!canEdit ? DENIED : undefined}
+                    >
+                      <Edit className="w-4 h-4 text-emerald-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title={!canDelete ? '权限不足：需要「删除」权限' : '删除'}
+                      onClick={guardByPermission(canDelete, '删除', () => onDelete(item))}
+                      className={!canDelete ? DENIED : undefined}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

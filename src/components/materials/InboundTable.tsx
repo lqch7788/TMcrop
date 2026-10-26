@@ -4,6 +4,8 @@ import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 // 2026-10-11：改用权威类型 —— 原本地 interface 是"单物料"旧模型，与数据源（一单多物料 materials[]）不匹配
 import type { InboundRecord } from '@/types/warehouseInbound.types';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 /** 展开后的展示行（单头字段 + 单个物料明细） */
 interface InboundDisplayRow {
@@ -73,11 +75,12 @@ export default function InboundTable({
       {/* 表格头部 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
-        {canCreate && (
-          <Button size="sm" onClick={onAddClick}>
-            <Plus className="w-4 h-4" /> 新增入库
-          </Button>
-        )}
+        {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+        <Button size="sm" onClick={guardByPermission(canCreate, '新增', onAddClick)}
+          className={!canCreate ? DENIED : undefined}
+          title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+          <Plus className="w-4 h-4" /> 新增入库
+        </Button>
       </div>
 
       {/* 表格内容 */}
@@ -127,11 +130,12 @@ export default function InboundTable({
                         <Eye className="w-4 h-4" />
                       </Button>
                     )}
-                    {canEdit && (
-                      <Button variant="ghost" size="icon" title="编辑">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="icon"
+                      title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                      className={!canEdit ? DENIED : undefined}
+                      onClick={guardByPermission(canEdit, '编辑', () => {})}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
                   </div>
                 </td>
               </tr>
