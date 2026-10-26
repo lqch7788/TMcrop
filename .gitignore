@@ -1,8 +1,13 @@
 # 临时文件和缓存
 hongzhiyun/
 
-# 公共资源文件夹（不提交到Git）
-public/
+# 公共资源文件夹（2026-10-26 调整）
+#   public/ 下混着系统运行必需的静态资源（LOGO、Electron 图标）
+#   和大量与运行无关的设计稿/迁移方案压缩包（历史里曾占 104MB）。
+#   改为：默认不跟踪，只白名单两个运行必需的图标。
+public/*
+!public/弘智耘LOGO.png
+!public/app-icon.ico
 
 # Claude Code 工作目录
 .omc/
@@ -112,6 +117,13 @@ server/data/yuanxingtu.db.before-*.db
 # 替代方案：提交【基线库】server/data/yuanxingtu-seed.db，运行时库由启动引导自动复制生成；
 #          需要共享当前业务数据时用 server/scripts/export-db-baseline.cjs 导出基线后再提交。
 server/data/yuanxingtu.db
+#
+# 2026-10-26 追加：基线库也停止跟踪。
+#   原因：基线库是 23MB 二进制全量快照，每同步一次就多一份完整副本 ——
+#   58 个提交里它变了 9 次，光这一项就让仓库 pack 涨到 191MB，推送 5 分钟超时。
+#   基线库改为「发布/换机时单独分发」，不再进版本控制。
+#   本地文件保留，不会被删除。
+server/data/yuanxingtu-seed.db
 
 # 后端脚本（不提交）
 server/src/scripts/
