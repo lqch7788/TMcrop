@@ -3244,6 +3244,28 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• 2026-08-21 种源编码 ZZ→ZY:', e.message);
   }
 
+  // 2026-10-26：6 张核心业务表补 base_oid / base_name 列
+  //   背景：这 6 张表在 schema.ts 的 CREATE TABLE 里加了列，但 CREATE TABLE IF NOT EXISTS
+  //   不会给已存在的表加列 → 用 2026-10-25 之前的库启动时，
+  //   baseResolver 的 `UPDATE ... SET base_oid` 和读过滤的 `WHERE base_oid = ?`
+  //   会直接报「no such column: base_oid」，列表接口 500。
+  //   幂等：duplicate column 错误被吞掉。
+  for (const table of ['crop_instances', 'seedlings', 'plantings', 'harvest_records', 'farm_tasks', 'inventory_stock']) {
+    for (const col of [
+      { name: 'base_oid', sql: `ALTER TABLE ${table} ADD COLUMN base_oid TEXT` },
+      { name: 'base_name', sql: `ALTER TABLE ${table} ADD COLUMN base_name TEXT` },
+    ]) {
+      try {
+        db.run(col.sql);
+        seedLog.info(`✓ ${table} 表添加 ${col.name} 列`);
+      } catch (addErr: any) {
+        if (!addErr.message.includes('duplicate column')) {
+          seedLog.skip(`• ${table}.${col.name}:`, addErr.message);
+        }
+      }
+    }
+  }
+
   saveDatabase();
 }
 

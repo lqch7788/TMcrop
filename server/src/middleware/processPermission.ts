@@ -25,6 +25,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../db/index';
 import { resolveProcessOidByApiPath } from '../lib/apiRouteProcessMap';
+// 2026-10-26：管理员判定统一走 lib/adminRole.ts
+import { isAdminUserByRoleCode } from '../lib/adminRole';
 
 /** 动作 OID 常量 */
 export const ACTION = {
@@ -46,25 +48,12 @@ const OID_TO_CODE: Record<string, string> = {
   ACT006: 'approve',
 };
 
-/** 允许通过的角色码（与 roles 表实际 role_code 一致） */
-const ADMIN_ROLE_CODES = ['admin', 'administrators', 'super_admin'];
-
-/** 判断用户是否 admin（查 user_roles JOIN roles） */
+/**
+ * 判断用户是否 admin（查 user_roles JOIN roles）
+ * 2026-10-26：改用 lib/adminRole.ts 的统一实现（此前此处与 dataScope.ts 各写一份）
+ */
 function isAdminUser(userOid: string): boolean {
-  const db = getDatabase();
-  const st = db.prepare(`
-    SELECT r.role_code FROM user_roles ur
-    JOIN roles r ON r.oid = ur.role_oid
-    WHERE ur.user_oid = ? AND (r.status IS NULL OR r.status = 'active')
-  `);
-  st.bind([userOid]);
-  let admin = false;
-  while (st.step()) {
-    const code = String((st.getAsObject() as { role_code: string }).role_code || '').toLowerCase();
-    if (ADMIN_ROLE_CODES.includes(code)) { admin = true; break; }
-  }
-  st.free();
-  return admin;
+  return isAdminUserByRoleCode(userOid);
 }
 
 /**

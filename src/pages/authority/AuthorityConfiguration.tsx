@@ -237,8 +237,11 @@ export default function AuthorityConfiguration() {
       setRoleAuthorities(data);
       setAuthorityChanges(new Map());
       setHasChanges(false);
+      showAlert('权限已保存');
     } catch (err) {
-      // logger.error('保存角色权限失败:', err);
+      // 2026-10-26：原来 catch 是空的，保存失败时界面毫无反应，用户以为保存成功
+      console.error('[AuthorityConfiguration] 保存角色权限失败:', err);
+      showAlert('保存角色权限失败：' + ((err as Error)?.message || '未知错误'));
     }
   };
 
@@ -557,13 +560,17 @@ export default function AuthorityConfiguration() {
                             const newList = isAuth
                               ? dataAuthorities.filter((o) => o !== (org.oid || ''))
                               : [...dataAuthorities, org.oid || ''];
-                            setDataAuthorities(newList);
                             try {
+                              // 2026-10-26：先保存成功再改本地状态。
+                              //   原来先 setDataAuthorities 再 await，失败时复选框显示已勾选、
+                              //   刷新后勾选消失，且无任何提示（乐观更新失败不回滚）。
                               await authorityService.saveRoleDataAuthority(
                                 selectedRoleOid || '', [org.oid || ''], !isAuth
                               );
+                              setDataAuthorities(newList);
                             } catch (err) {
-                              // logger.error('保存数据权限失败:', err);
+                              console.error('[AuthorityConfiguration] 保存数据权限失败:', err);
+                              showAlert('保存数据权限失败：' + ((err as Error)?.message || '未知错误'));
                             }
                           }}
                           className="rounded"

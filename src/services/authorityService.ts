@@ -4,7 +4,7 @@
  * 本地模式回退数据
  */
 
-import { apiClient } from './apiClient';
+import { enhancedApiClient } from '@/lib/apiClient';
 import {
   Organization,
   Role,
@@ -17,6 +17,28 @@ import {
   AppType,
   AuthValue,
 } from '../types/authority';
+
+/**
+ * 把 query 参数拼到 URL 上（2026-10-26）
+ *
+ * 此前本文件用的是自研 apiClient（src/services/apiClient.ts），
+ * 它的 baseUrl 硬编码 `http://localhost:3001/api`，忽略 VITE_API_BASE_URL、
+ * 绕过 Vite 代理、不带 X-Base-Oid、401 处理被整段注释。
+ * 结果：部署到后端不在 localhost:3001 的环境时，整个权限模块连不上后端；
+ * 后端重启导致 token 失效时，权限页面抛 401 卡在加载失败，
+ * 而其它模块已跳回登录页，行为不一致。
+ *
+ * 现统一改用 enhancedApiClient（全站标准客户端）。
+ * 差异：enhancedApiClient.get 的第二参是重试选项而非 query，
+ * 所以 query 必须拼进 URL。
+ */
+function withQuery(path: string, params?: Record<string, string>): string {
+  if (!params) return path;
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (entries.length === 0) return path;
+  const qs = new URLSearchParams(entries).toString();
+  return path + (path.includes('?') ? '&' : '?') + qs;
+}
 
 // ============================================
 // 本地模式默认数据
@@ -118,7 +140,7 @@ export async function getOrganizations(params?: {
   if (params?.id) queryParams.id = params.id;
   if (params?.sort) queryParams.sort = params.sort;
   if (params?.order) queryParams.order = params.order;
-  return apiClient.get<Organization[]>('/authority/organizations', queryParams);
+  return enhancedApiClient.get<Organization[]>(withQuery('/authority/organizations', queryParams));
 }
 
 /**
@@ -133,7 +155,7 @@ export async function saveOrganizations(data: {
   updated: Organization[];
   deleted: string[];
 }> {
-  return apiClient.post('/authority/organizations', data);
+  return enhancedApiClient.post('/authority/organizations', data);
 }
 
 // ============================================
@@ -152,7 +174,7 @@ export async function getRoles(params?: {
   if (params?.orgOid) queryParams.orgOid = params.orgOid;
   if (params?.sort) queryParams.sort = params.sort;
   if (params?.order) queryParams.order = params.order;
-  return apiClient.get<Role[]>('/authority/roles', queryParams);
+  return enhancedApiClient.get<Role[]>(withQuery('/authority/roles', queryParams));
 }
 
 /**
@@ -167,7 +189,7 @@ export async function saveRoles(data: {
   updated: Role[];
   deleted: string[];
 }> {
-  return apiClient.post('/authority/roles', data);
+  return enhancedApiClient.post('/authority/roles', data);
 }
 
 // ============================================
@@ -184,7 +206,7 @@ export async function getUsers(params?: {
   const queryParams: Record<string, string> = {};
   if (params?.orgOid) queryParams.orgOid = params.orgOid;
   if (params?.status) queryParams.status = params.status;
-  return apiClient.get<User[]>('/authority/users', queryParams);
+  return enhancedApiClient.get<User[]>(withQuery('/authority/users', queryParams));
 }
 
 /**
@@ -199,7 +221,7 @@ export async function saveUsers(data: {
   updated: User[];
   deleted: string[];
 }> {
-  return apiClient.post('/authority/users', data);
+  return enhancedApiClient.post('/authority/users', data);
 }
 
 /**
@@ -209,14 +231,14 @@ export async function saveUserRoles(
   userOid: string,
   roleOids: string[]
 ): Promise<{ success: boolean }> {
-  return apiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
+  return enhancedApiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
 }
 
 /**
  * 获取用户角色
  */
 export async function getUserRoles(userOid: string): Promise<string[]> {
-  return apiClient.get<string[]>('/authority/users/' + userOid + '/roles');;
+  return enhancedApiClient.get<string[]>('/authority/users/' + userOid + '/roles');
 }
 
 /**
@@ -229,7 +251,7 @@ export async function getProcesses(params?: {
   const queryParams: Record<string, string> = {};
   if (params?.appType !== undefined) queryParams.appType = String(params.appType);
   if (params?.id) queryParams.id = params.id;
-  return apiClient.get<Process[]>('/authority/processes', queryParams);
+  return enhancedApiClient.get<Process[]>(withQuery('/authority/processes', queryParams));
 }
 
 /**
@@ -244,7 +266,7 @@ export async function saveProcesses(data: {
   updated: Process[];
   deleted: string[];
 }> {
-  return apiClient.post('/authority/processes', data);
+  return enhancedApiClient.post('/authority/processes', data);
 }
 
 /**
@@ -265,7 +287,7 @@ export async function syncProcessesFromMenu(items: Array<{
   updated: Array<{ oid: string; name: string; route: string }>;
   unmatched: Array<{ label: string; path: string }>;
 }> {
-  return apiClient.post('/authority/processes/sync-from-menu', { items });
+  return enhancedApiClient.post('/authority/processes/sync-from-menu', { items });
 }
 
 // ============================================
@@ -282,7 +304,7 @@ export async function getActions(params?: {
   const queryParams: Record<string, string> = {};
   if (params?.appType !== undefined) queryParams.appType = String(params.appType);
   if (params?.category) queryParams.category = params.category;
-  return apiClient.get<Action[]>('/authority/actions', queryParams);
+  return enhancedApiClient.get<Action[]>(withQuery('/authority/actions', queryParams));
 }
 
 // ============================================
@@ -296,9 +318,8 @@ export async function getRoleAuthority(
   roleOid: string,
   appType: AppType = 0
 ): Promise<RoleAuthorityItem[]> {
-  return apiClient.get<RoleAuthorityItem[]>(
-    '/authority/roles/' + roleOid + '/authority',
-    { appType: String(appType) }
+  return enhancedApiClient.get<RoleAuthorityItem[]>(
+    withQuery('/authority/roles/' + roleOid + '/authority', { appType: String(appType) })
   );
 }
 
@@ -313,7 +334,7 @@ export async function saveRoleAuthority(
     value: AuthValue;
   }[]
 ): Promise<{ success: boolean }> {
-  return apiClient.post('/authority/roles/' + roleOid + '/authority', { authorities });
+  return enhancedApiClient.post('/authority/roles/' + roleOid + '/authority', { authorities });
 }
 
 // ============================================
@@ -326,7 +347,7 @@ export async function saveRoleAuthority(
 export async function getRoleDataAuthority(
   roleOid: string
 ): Promise<RoleDataAuthorityItem[]> {
-  return apiClient.get<RoleDataAuthorityItem[]>(
+  return enhancedApiClient.get<RoleDataAuthorityItem[]>(
     '/authority/roles/' + roleOid + '/data-authority'
   );
 }
@@ -339,7 +360,7 @@ export async function saveRoleDataAuthority(
   orgOids: string[],
   isAuthorize: boolean
 ): Promise<{ success: boolean }> {
-  return apiClient.post('/authority/roles/' + roleOid + '/data-authority', {
+  return enhancedApiClient.post('/authority/roles/' + roleOid + '/data-authority', {
     orgOids,
     isAuthorize,
   });
@@ -355,7 +376,7 @@ export async function saveRoleDataAuthority(
 export async function getUserAuthority(
   userOid: string
 ): Promise<{ processOid: string; actionOid: string; value: number }[]> {
-  return apiClient.get<{ processOid: string; actionOid: string; value: number }[]>(
+  return enhancedApiClient.get<{ processOid: string; actionOid: string; value: number }[]>(
     '/authority/users/' + userOid + '/authority'
   );
 }
@@ -367,7 +388,7 @@ export async function saveUserAuthority(
   userOid: string,
   authorities: { processOid: string; actionOid: string; value: number }[]
 ): Promise<{ success: boolean }> {
-  return apiClient.post('/authority/users/' + userOid + '/authority', { authorities });
+  return enhancedApiClient.post('/authority/users/' + userOid + '/authority', { authorities });
 }
 
 /**
@@ -377,5 +398,5 @@ export async function assignUserRoles(
   userOid: string,
   roleOids: string[]
 ): Promise<{ success: boolean }> {
-  return apiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
+  return enhancedApiClient.post('/authority/users/' + userOid + '/roles', { roleOids });
 }

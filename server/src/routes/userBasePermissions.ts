@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { authenticate } from '../middleware/auth';
+// 2026-10-26：管理员角色码统一判定
+import { isAdminRoleCode } from '../lib/adminRole';
 
 const router = Router();
 
@@ -108,8 +110,8 @@ router.get('/check', (req, res) => {
     adminStmt.bind([userOid as string]);
     let isAdmin = false;
     while (adminStmt.step()) {
-      const roleCode = (adminStmt.getAsObject() as { role_code: string }).role_code;
-      if (roleCode.toLowerCase() === 'admin' || roleCode.toLowerCase() === 'administrators') {
+      // 2026-10-26：改用统一判定（此前漏了 super_admin）
+      if (isAdminRoleCode((adminStmt.getAsObject() as { role_code: string }).role_code)) {
         isAdmin = true;
         break;
       }

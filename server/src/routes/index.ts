@@ -305,7 +305,9 @@ router.use('/material-requests', requireAuth, requireProcessView(), requireProce
 router.use('/basic-data', optionalAuth, basicDataRouter);
 
 // 编码生成器路由
-router.use('/code-generator', codeGeneratorRouter);
+// 2026-10-26：补权限中间件 —— 此前是全站唯一漏挂的路由，匿名请求可拿到内部编码规则。
+//   apiRouteProcessMap 已把 /code-generator 映射到 PROC.SETTINGS，说明设计意图是纳入权限体系。
+router.use('/code-generator', requireAuth, requireProcessView(), requireProcessPermission(), codeGeneratorRouter);
 
 // 数据字典路由 - 可选认证（演示模式免登录；字典本身是公共数据）
 router.use('/dictionary', optionalAuth, dictionaryRouter);

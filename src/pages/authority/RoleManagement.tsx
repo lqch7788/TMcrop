@@ -16,8 +16,34 @@ import {
 } from 'lucide-react';
 import { Pagination } from '@/components/ui';
 import { useOrganizationStore } from '@/stores';
-import { Role } from '../../types/authority';
+import { Role, Organization } from '../../types/authority';
 import { showConfirm } from '@/lib/dialogService';
+
+/**
+ * 递归查找组织（2026-10-26）
+ *
+ * store 里的 organizations 只存根节点、子节点挂在 children 上，
+ * 顶层 find 找不到子组织 → 角色列表「所属组织」列显示原始 OID。
+ * 同一问题在 UserManagement 已修过（findOrgDeep / flattenOrgs），这里对齐。
+ */
+function findOrgDeep(nodes: Organization[], oid: string): Organization | null {
+  for (const node of nodes) {
+    if (node.oid === oid) return node;
+    const hit = node.children?.length ? findOrgDeep(node.children, oid) : null;
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** 把组织树展平为下拉选项（带层级缩进），保证子组织/部门可选 */
+function flattenOrgs(nodes: Organization[], depth = 0): Array<{ oid: string; name: string; depth: number }> {
+  const out: Array<{ oid: string; name: string; depth: number }> = [];
+  for (const node of nodes) {
+    if (node.oid) out.push({ oid: node.oid, name: node.name, depth });
+    if (node.children?.length) out.push(...flattenOrgs(node.children, depth + 1));
+  }
+  return out;
+}
 
 export default function RoleManagement() {
   const roles = useOrganizationStore((s) => s.roles);
@@ -107,11 +133,14 @@ export default function RoleManagement() {
     }
   };
 
-  // 获取组织名称
+  // 获取组织名称（递归查找，支持子组织）
   const getOrgName = (orgOid: string) => {
-    const org = organizations.find((o) => o.oid === orgOid);
+    const org = findOrgDeep(organizations, orgOid);
     return org?.name || orgOid;
   };
+
+  // 组织下拉选项（展平，含子组织）
+  const orgOptions = flattenOrgs(organizations);
 
   return (
     <div className="space-y-4">
@@ -304,9 +333,10 @@ export default function RoleManagement() {
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">请选择组织</option>
-                  {organizations.map((org) => (
+                  {/* 2026-10-26：展平后含子组织/部门，原来只列顶层公司，选不到任何部门 */}
+                  {orgOptions.map((org) => (
                     <option key={org.oid} value={org.oid}>
-                      {org.name}
+                      {org.depth > 0 ? '　'.repeat(org.depth) + '└ ' : ''}{org.name}
                     </option>
                   ))}
                 </select>

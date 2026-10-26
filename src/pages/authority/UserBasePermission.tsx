@@ -179,30 +179,24 @@ export default function UserBasePermission() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/user-base-permissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          userOid: selectedUserOid,
-          baseOid,
-          baseName: base?.baseName || baseOid,
-          accessLevel,
-        }),
+      // 2026-10-26：改用 enhancedApiClient + 检查响应。
+      //   原来裸 fetch 只 `if (res.ok)` 刷新，没有 else 分支 →
+      //   403/500 被当成「什么也没发生」，界面无变化无提示，用户以为按钮坏了。
+      await enhancedApiClient.post('/user-base-permissions', {
+        userOid: selectedUserOid,
+        baseOid,
+        baseName: base?.baseName || baseOid,
+        accessLevel,
       });
-
-      if (res.ok) {
-        await loadUserPermissions(selectedUserOid);
-        setPermissionChanges(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(baseOid);
-          return newMap;
-        });
-      }
+      await loadUserPermissions(selectedUserOid);
+      setPermissionChanges(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(baseOid);
+        return newMap;
+      });
     } catch (error) {
-      // logger.error('保存权限失败:', error);
+      console.error('[UserBasePermission] 保存权限失败:', error);
+      showAlert('保存权限失败：' + ((error as Error)?.message || '未知错误'));
     } finally {
       setSaving(false);
     }
@@ -219,24 +213,15 @@ export default function UserBasePermission() {
         return { baseOid, baseName: base?.baseName || baseOid, accessLevel };
       });
 
-      const res = await fetch('/api/user-base-permissions/batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          userOid: selectedUserOid,
-          permissions,
-        }),
+      await enhancedApiClient.post('/user-base-permissions/batch', {
+        userOid: selectedUserOid,
+        permissions,
       });
-
-      if (res.ok) {
-        await loadUserPermissions(selectedUserOid);
-        setPermissionChanges(new Map());
-      }
+      await loadUserPermissions(selectedUserOid);
+      setPermissionChanges(new Map());
     } catch (error) {
-      // logger.error('批量保存权限失败:', error);
+      console.error('[UserBasePermission] 批量保存权限失败:', error);
+      showAlert('批量保存失败：' + ((error as Error)?.message || '未知错误'));
     } finally {
       setSaving(false);
     }

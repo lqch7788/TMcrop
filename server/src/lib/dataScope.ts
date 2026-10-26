@@ -22,6 +22,8 @@
  *   if (scope.restricted) { ...按 scope.baseOids 过滤... }
  */
 import { getDatabase } from '../db/index';
+// 2026-10-26：管理员判定统一走 lib/adminRole.ts
+import { isAdminUserByRoleCode } from './adminRole';
 
 export interface DataScope {
   /** 是否受基地维度限制（false = 不限，可见全部） */
@@ -36,26 +38,12 @@ export interface DataScope {
   unsupported: Array<{ source: string; detail: string }>;
 }
 
-const ADMIN_ROLE_CODES = ['admin', 'administrators', 'super_admin'];
-
 /**
- * 判断用户是否为管理员角色（2026-10-25 导出：汇总统计的全局口径判定要用）
+ * 判断用户是否为管理员角色
+ * 2026-10-26：改用 lib/adminRole.ts 的统一实现（此前此处与 processPermission.ts 各写一份）
  */
 export function isAdminUser(userOid: string): boolean {
-  const db = getDatabase();
-  const st = db.prepare(`
-    SELECT r.role_code FROM user_roles ur
-    JOIN roles r ON r.oid = ur.role_oid
-    WHERE ur.user_oid = ? AND (r.status IS NULL OR r.status = 'active')
-  `);
-  st.bind([userOid]);
-  let admin = false;
-  while (st.step()) {
-    const code = String((st.getAsObject() as { role_code: string }).role_code || '').toLowerCase();
-    if (ADMIN_ROLE_CODES.includes(code)) { admin = true; break; }
-  }
-  st.free();
-  return admin;
+  return isAdminUserByRoleCode(userOid);
 }
 
 /**

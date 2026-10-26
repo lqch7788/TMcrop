@@ -1,9 +1,15 @@
 /**
  * API 客户端
  * 封装 HTTP 请求，支持切换 LocalStorage 和 API 模式
+ *
+ * 2026-10-26：baseUrl 改为读 VITE_API_BASE_URL（与 enhancedApiClient 同源）。
+ *   此前硬编码 `http://localhost:3001/api`：
+ *     - 部署到后端不在 localhost:3001 的环境时连不上（跨域 + 404）
+ *     - 开发环境绕过了 Vite 代理，与其它模块行为不一致
+ *   .env 里 VITE_API_BASE_URL=/api，走 Vite 代理转发到后端。
  */
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // 是否使用 API 模式
 export const USE_API = import.meta.env.VITE_USE_API === 'true';
@@ -76,11 +82,20 @@ class ApiClient {
       const response = await fetch(url, options);
       clearTimeout(timeoutId);
 
-      // 原型阶段：不处理401错误，直接返回响应
-      // if (response.status === 401) {
-      //   localStorage.removeItem('token');
-      //   throw new Error('未授权，请重新登录');
-      // }
+      // 2026-10-26：恢复 401 处理（此前整段被注释）。
+      //   token 失效时不清 token、不跳登录页 → 权限模块一直卡在「加载失败」，
+      //   而其它模块（enhancedApiClient）会跳登录页，同一系统两套行为。
+      if (response.status === 401) {
+        try {
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentUser');
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login';
+          }
+        } catch {
+          // 忽略存储清理异常，不遮蔽真正的 401 信息
+        }
+      }
 
       if (!response.ok) {
         // 尝试解析错误响应体

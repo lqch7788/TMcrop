@@ -276,9 +276,18 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
         oidParent: p.parentOid ?? p.parent_oid ?? null,
         aid: p.processCode || p.process_code || p.aid || '',
         name: p.processName || p.process_name || p.name || '',
+        // 2026-10-26：补 route / description / icon / category。
+        //   原归一化只保留上面几个字段，把这四个丢掉了 → 编辑弹窗读不到初值，
+        //   保存时回传 ''，后端把库里的 route/description 写成 NULL。
+        //   连带后果：sync-from-menu 靠 processes.route 匹配子菜单，
+        //   route 被清空后该菜单项永远 unmatched。
+        route: p.route ?? '',
+        description: p.description ?? '',
+        icon: p.icon ?? null,
+        category: p.category ?? null,
         appType: p.appType ?? p.app_type,
         hidden: p.isHidden === 1 || p.is_hidden === 1 || p.hidden,
-        sortNumber: p.sortOrder ?? p.sort_order ?? p.sortNumber,
+        sortNumber: p.sortOrder ?? p.sort_order ?? p.sortNumber ?? 0,
         status: p.status,
         children: p.children?.map(normalize),
       });

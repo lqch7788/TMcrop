@@ -17,6 +17,8 @@ import { requireAdminRole } from '../middleware/processPermission';
 import { resolveProcessOidByPageRoute } from '../lib/processRouteMap';
 // 2026-10-25：数据行级权限（基地维度）
 import { resolveUserDataScope } from '../lib/dataScope';
+// 2026-10-26：管理员角色码统一判定（此前 4 处各写一份，口径不一致）
+import { isAdminRoleCode, isAdminUserByRoleCode } from '../lib/adminRole';
 
 const router = Router();
 
@@ -497,8 +499,13 @@ router.get('/roles', authenticate, requireAdminRole(), (req, res) => {
       // 字段映射：数据库字段 -> 前端期望字段
       // 数据库: role_code -> 前端: aid
       // 数据库: role_name -> 前端: name
+      // 2026-10-26：sort_order -> 前端: sortNumber。
+      //   前端 RoleManagement 读 role.sortNumber，而 camelCaseResponse 中间件
+      //   会把 sort_order 转成 sortOrder → sortNumber 恒 undefined，
+      //   列表「排序」列空白、编辑弹窗排序号恒 0，保存后把库里的排序号写成 0。
       (role as Record<string, unknown>).aid = role.role_code;
       (role as Record<string, unknown>).name = role.role_name;
+      (role as Record<string, unknown>).sortNumber = role.sort_order;
       results.push(role);
     }
     stmt.free();
@@ -1792,9 +1799,13 @@ router.post('/users/:userOid/authority', authenticate, requireAdminRole(), (req,
  * 修改用户密码
  * PUT /api/authority/users/:oid/password
  * Body: { oldPassword?, newPassword }
- * 管理员不需要旧密码，普通用户修改自己密码需要验证旧密码
+ *
+ * 2026-10-26：权限放开为「管理员改任意用户 / 普通用户改自己」。
+ *   此前挂 requireAdminRole()，普通用户根本进不来，
+ *   端点注释里写的「非管理员需要验证旧密码」分支是死代码，
+ *   且全站没有别的地方能改自己的密码。
  */
-router.put('/users/:oid/password', authenticate, requireAdminRole(), async (req, res) => {
+router.put('/users/:oid/password', authenticate, async (req, res) => {
   const db = getDatabase();
   const { oid } = req.params;
   const { oldPassword, newPassword } = req.body;
@@ -1805,6 +1816,14 @@ router.put('/users/:oid/password', authenticate, requireAdminRole(), async (req,
   }
 
   try {
+    // 权限判定：管理员可改任意人；非管理员只能改自己
+    const requesterOid = req.user?.userId || '';
+    const isAdmin = isAdminUserByRoleCode(requesterOid);
+    if (!isAdmin && requesterOid !== oid) {
+      res.status(403).json({ error: '无权修改其他用户的密码', code: 'PERMISSION_DENIED' });
+      return;
+    }
+
     const stmt = db.prepare('SELECT * FROM users WHERE oid = ?');
     stmt.bind([oid]);
     if (!stmt.step()) {
@@ -1815,8 +1834,19 @@ router.put('/users/:oid/password', authenticate, requireAdminRole(), async (req,
     const user = stmt.getAsObject() as Record<string, unknown>;
     stmt.free();
 
-    // 非管理员需要验证旧密码
-    if (oldPassword) {
+    // 非管理员改自己的密码必须验证旧密码
+    if (!isAdmin) {
+      if (!oldPassword) {
+        res.status(400).json({ error: '修改自己的密码需要提供旧密码' });
+        return;
+      }
+      const isValid = await bcrypt.compare(oldPassword, user.password_hash as string);
+      if (!isValid) {
+        res.status(401).json({ error: '旧密码错误' });
+        return;
+      }
+    } else if (oldPassword) {
+      // 管理员若传了旧密码也校验（避免误操作）
       const isValid = await bcrypt.compare(oldPassword, user.password_hash as string);
       if (!isValid) {
         res.status(401).json({ error: '旧密码错误' });
@@ -1915,10 +1945,14 @@ router.get('/my-permissions', authenticate, (req, res) => {
     userStmt.free();
 
     // 获取用户角色
+    // 2026-10-26：与 processPermission.ts 统一为 `status IS NULL OR status = 'active'`。
+    //   此前这里用 `r.status = 'active'`，与权限中间件口径不一致 →
+    //   status 为 NULL 的角色在中间件里算有效角色（放行），
+    //   但在这里查不到 → my-permissions 拿不到该角色，前端菜单全空。
     const roleStmt = db.prepare(`
       SELECT r.* FROM roles r
       JOIN user_roles ur ON r.oid = ur.role_oid
-      WHERE ur.user_oid = ? AND r.status = 'active'
+      WHERE ur.user_oid = ? AND (r.status IS NULL OR r.status = 'active')
     `);
     roleStmt.bind([userOid]);
     const roles: Record<string, unknown>[] = [];
@@ -1927,12 +1961,11 @@ router.get('/my-permissions', authenticate, (req, res) => {
     }
     roleStmt.free();
 
-    // 判断是否 Admin（用户名admin、角色code为admin或administrators）
+    // 判断是否 Admin
+    // 2026-10-26：改用统一判定（lib/adminRole.ts），此前这里只认 admin/administrators，
+    //   漏了 super_admin → 后端放行但前端 isAdmin=false，菜单全空。
     const isAdmin = user.username === 'admin' ||
-      roles.some(r => {
-        const code = (r.role_code as string)?.toLowerCase();
-        return code === 'admin' || code === 'administrators';
-      });
+      roles.some(r => isAdminRoleCode(r.role_code as string));
 
     // 获取角色权限汇总（工序-动作）
     const roleOids = roles.map(r => r.oid as string);
@@ -2030,7 +2063,7 @@ router.get('/check-authority', authenticate, (req, res) => {
     }
     userRoleStmt.free();
 
-    const isAdmin = roleCodes.some(c => c.toLowerCase() === 'admin' || c.toLowerCase() === 'administrators');
+    const isAdmin = roleCodes.some(isAdminRoleCode);
     if (isAdmin) {
       res.json({ success: true, data: { authorized: true, isAdmin: true } });
       return;
@@ -2068,11 +2101,12 @@ router.get('/check-authority', authenticate, (req, res) => {
     userAuthStmt.free();
 
     // 检查角色权限
+    // 2026-10-26：同 my-permissions，角色有效性口径与 processPermission.ts 对齐
     const roleAuthStmt = db.prepare(`
       SELECT MAX(ra.value) as maxValue
       FROM roles_authority ra
       JOIN user_roles ur ON ra.role_oid = ur.role_oid
-      JOIN roles r ON ur.role_oid = r.oid AND r.status = 'active'
+      JOIN roles r ON ur.role_oid = r.oid AND (r.status IS NULL OR r.status = 'active')
       WHERE ur.user_oid = ? AND ra.process_oid = ? AND ra.action_oid = ?
     `);
     roleAuthStmt.bind([userOid, processOid, actionOid]);

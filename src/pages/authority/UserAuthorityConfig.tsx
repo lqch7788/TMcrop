@@ -11,6 +11,8 @@ import { useOrganizationStore } from '@/stores';
 import type { User, Process } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
+// 2026-10-26：保存失败必须提示
+import { showAlert } from '@/lib/dialogService';
 
 const ACTION_LIST = [
   { code: 'view', name: '查看', color: 'bg-blue-100 text-blue-700' },
@@ -218,7 +220,10 @@ export default function UserAuthorityConfig() {
       const data = await authorityService.getUserAuthority?.(selectedUserOid) || [];
       setUserAuthorities(data);
     } catch (err) {
-      // logger.error('保存失败:', err);
+      // 2026-10-26：原来 catch 是空的，保存失败时「保存更改」按钮不消失、无任何提示，
+      //   用户无法判断是否生效
+      console.error('[UserAuthorityConfig] 保存用户权限覆盖失败:', err);
+      showAlert('保存失败：' + ((err as Error)?.message || '未知错误'));
     }
   };
 
