@@ -9,6 +9,8 @@ import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
 import { SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../production/constants';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 export interface TechSolutionTableHandlers {
   onViewClick: (tech: TechSolution) => void;
@@ -117,24 +119,25 @@ export function TechSolutionTable({
             </div>
           ) : (
             <div className="flex gap-2">
-              {canCreate && (
-                <Button variant="default" size="sm" onClick={handlers.onOpenCreate}>
-                  <Plus className="w-4 h-4" />
-                  新增
-                </Button>
-              )}
-              {canDelete && (
-                <Button variant="destructive" size="sm" onClick={handlers.onEnterBatchDelete}>
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              )}
-              {canExport && (
-                <Button variant="default" size="sm" onClick={handlers.onEnterExport}>
-                  <Download className="w-4 h-4" />
-                  导出
-                </Button>
-              )}
+              {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+              <Button variant="default" size="sm" onClick={guardByPermission(canCreate, '新增', handlers.onOpenCreate)}
+                className={!canCreate ? DENIED : undefined}
+                title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+                <Plus className="w-4 h-4" />
+                新增
+              </Button>
+              <Button variant="destructive" size="sm" onClick={guardByPermission(canDelete, '删除', handlers.onEnterBatchDelete)}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+              <Button variant="default" size="sm" onClick={guardByPermission(canExport, '导出', handlers.onEnterExport)}
+                className={!canExport ? DENIED : undefined}
+                title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
             </div>
           )}
         </div>

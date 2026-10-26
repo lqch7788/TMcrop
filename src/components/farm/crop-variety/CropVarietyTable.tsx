@@ -16,6 +16,8 @@ import {
   generateCropCode
 } from '../../../services/cropVarietyService';
 import { useCropVarietyStore } from '../../../stores/useCropVarietyStore';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 type ViewMode = 'table' | 'tree';
 
@@ -189,15 +191,16 @@ export function CropVarietyTable({
       <div className="px-6 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">作物编码列表</h3>
         {/* 2026-07-27：新增作物按钮从第一行筛选区移到与标题同一行（靠右） */}
-        {canCreate && (
-          <Button
-            size="sm"
-            onClick={onAdd}
-          >
-            <Plus className="w-4 h-4" />
-            新增作物
-          </Button>
-        )}
+        {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+        <Button
+          size="sm"
+          onClick={guardByPermission(canCreate, '新增', onAdd)}
+          className={!canCreate ? DENIED : undefined}
+          title={!canCreate ? '权限不足：需要「新增」权限' : undefined}
+        >
+          <Plus className="w-4 h-4" />
+          新增作物
+        </Button>
       </div>
       <div className="flex-1 overflow-auto">
           <table className="w-full" style={{ tableLayout: 'fixed' }}>

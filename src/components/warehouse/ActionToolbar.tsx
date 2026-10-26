@@ -1,5 +1,7 @@
 import { Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface ActionToolbarProps {
   title: React.ReactNode;
@@ -90,25 +92,28 @@ export default function ActionToolbar({
         {/* 默认模式：新增、删除、导出（2026-08-10 移除"编辑"按钮，编辑仅在每行操作列） */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
-            {canCreate && onAdd && (
-              <Button size="sm" onClick={onAdd}>
+            {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+            {onAdd && (
+              <Button size="sm" onClick={guardByPermission(canCreate, '新增', onAdd)}
+                className={!canCreate ? DENIED : undefined}
+                title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
                 <Plus className="w-4 h-4" />
                 新增
               </Button>
             )}
             {/* 编辑按钮已下沉到行内操作列，工具栏不再提供批量编辑入口 */}
-            {canDelete && (
-              <Button size="sm" variant="destructive" onClick={onDelete}>
-                <Trash2 className="w-4 h-4" />
-                删除
-              </Button>
-            )}
-            {canExport && (
-              <Button size="sm" onClick={onExport}>
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-            )}
+            <Button size="sm" variant="destructive" onClick={guardByPermission(canDelete, '删除', onDelete)}
+              className={!canDelete ? DENIED : undefined}
+              title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
+              <Trash2 className="w-4 h-4" />
+              删除
+            </Button>
+            <Button size="sm" onClick={guardByPermission(canExport, '导出', onExport)}
+              className={!canExport ? DENIED : undefined}
+              title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+              <Download className="w-4 h-4" />
+              导出
+            </Button>
             {showCustomerButton && onCustomer && (
               <Button size="sm" variant="blue" onClick={onCustomer}>
                 <Users className="w-4 h-4" />

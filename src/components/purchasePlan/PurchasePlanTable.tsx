@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { showAlert } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 import { MaterialItemsTable } from './MaterialItemsTable';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -218,20 +220,27 @@ export function PurchasePlanTable({
           </div>
         ) : (
           <div className="flex gap-2">
-            {canCreate && onCreate && (
-              <Button size="sm" onClick={onCreate}>
+            {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+            {onCreate && (
+              <Button size="sm" onClick={guardByPermission(canCreate, '新增', onCreate)}
+                className={!canCreate ? DENIED : undefined}
+                title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
                 <Plus className="w-4 h-4" />
                 新增
               </Button>
             )}
-            {canDelete && onBatchDelete && (
-              <Button size="sm" variant="destructive" onClick={onBatchDelete}>
+            {onBatchDelete && (
+              <Button size="sm" variant="destructive" onClick={guardByPermission(canDelete, '删除', onBatchDelete)}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
                 <Trash2 className="w-4 h-4" />
                 删除
               </Button>
             )}
-            {canExport && onExport && (
-              <Button size="sm" onClick={onExport}>
+            {onExport && (
+              <Button size="sm" onClick={guardByPermission(canExport, '导出', onExport)}
+                className={!canExport ? DENIED : undefined}
+                title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
                 <Download className="w-4 h-4" />
                 导出
               </Button>

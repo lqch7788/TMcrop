@@ -17,6 +17,8 @@ import {
 } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import { useAuthStore } from '@/stores';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 export default function ProductionPage() {
   // 2026-10-25：按钮级权限改为真实判定（此前硬编码 true，任何人可增删改）
@@ -101,27 +103,28 @@ export default function ProductionPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              {canCreate && (
-                <Button size="sm" onClick={() => hook.setShowCreateModal(true)}>
-                  <Plus className="w-4 h-4" />
-                  新增
-                </Button>
-              )}
-              {canDelete && (
-                <Button size="sm" variant="destructive" onClick={() => {
-                  hook.setBatchDeleteMode(true);
-                  hook.setSelectedRows([]);
-                }}>
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              )}
-              {canExport && (
-                <Button size="sm" onClick={hook.handleExportClick}>
-                  <Download className="w-4 h-4" />
-                  导出
-                </Button>
-              )}
+              {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+              <Button size="sm" onClick={guardByPermission(canCreate, '新增', () => hook.setShowCreateModal(true))}
+                className={!canCreate ? DENIED : undefined}
+                title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+                <Plus className="w-4 h-4" />
+                新增
+              </Button>
+              <Button size="sm" variant="destructive" onClick={guardByPermission(canDelete, '删除', () => {
+                hook.setBatchDeleteMode(true);
+                hook.setSelectedRows([]);
+              })}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}>
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+              <Button size="sm" onClick={guardByPermission(canExport, '导出', hook.handleExportClick)}
+                className={!canExport ? DENIED : undefined}
+                title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
             </div>
           )}
         </div>
