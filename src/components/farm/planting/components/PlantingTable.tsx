@@ -17,6 +17,11 @@ import { Pagination } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮的「可见但禁用 + 点击提示」
+import {
+  guardByPermission,
+  PERMISSION_DENIED_CLASS as DENIED,
+} from '@/hooks/usePermissionAction';
 
 /**
  * 表头列说明（参照育苗列表 SeedlingTable）
@@ -504,47 +509,57 @@ export function PlantingTable({
           ) : (
             /* 正常模式 */
             <>
-              {canCreate && onAdd && (
+              {/* 2026-10-26：按钮始终可见，无权限时灰化 + 点击弹权限提示
+                  （原来 canXxx && 直接把按钮藏掉，用户不知道有这个功能） */}
+              {onAdd && (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={onAdd}
+                  onClick={guardByPermission(canCreate, '新增', onAdd)}
+                  className={!canCreate ? DENIED : undefined}
+                  title={!canCreate ? '权限不足：需要「新增」权限' : undefined}
                 >
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
               {/* 2026-07-26：工具栏"编辑"按钮移除，保留行内编辑 */}
-              {canDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => { if (onOperationModeChange) onOperationModeChange('delete'); }}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              )}
-              {canExport && onExportClick && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={guardByPermission(canDelete, '删除', () => {
+                  if (onOperationModeChange) onOperationModeChange('delete');
+                })}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+              {onExportClick && (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={onExportClick}
+                  onClick={guardByPermission(canExport, '导出', onExportClick)}
+                  className={!canExport ? DENIED : undefined}
+                  title={!canExport ? '权限不足：需要「导出」权限' : undefined}
                 >
                   <Download className="w-4 h-4" />
                   导出
                 </Button>
               )}
-              {canPrint && (
-                <Button
-                  variant="purple"
-                  size="sm"
-                  onClick={() => { if (onPrintModeChange) onPrintModeChange(true); }}
-                >
-                  <Printer className="w-4 h-4" />
-                  标签打印
-                </Button>
-              )}
+              <Button
+                variant="purple"
+                size="sm"
+                onClick={guardByPermission(canPrint, '导出', () => {
+                  if (onPrintModeChange) onPrintModeChange(true);
+                })}
+                className={!canPrint ? DENIED : undefined}
+                title={!canPrint ? '权限不足：需要「导出」权限' : undefined}
+              >
+                <Printer className="w-4 h-4" />
+                标签打印
+              </Button>
             </>
           )}
         </div>
@@ -803,34 +818,39 @@ export function PlantingTable({
                               className={isEnded ? 'text-blue-400' : ''}
                             />
                           )}
-                          {onLabelManage && canEdit && (
+                          {onLabelManage && (
                             <ActionIconButton
                               variant="tag"
                               icon={<Tag className="w-4 h-4" />}
-                              onClick={() => onLabelManage(record)}
-                              title={`标签管理${isEnded ? '（只读）' : ''}`}
+                              onClick={guardByPermission(canEdit, '编辑', () => onLabelManage(record))}
+                              className={!canEdit ? DENIED : undefined}
+                              title={!canEdit ? '权限不足：需要「编辑」权限' : `标签管理${isEnded ? '（只读）' : ''}`}
                             />
                           )}
 
                           {/* 2026-07-26：行内编辑按钮（工具栏批量编辑已移除） */}
-                          {onEdit && canEdit && (
+                          {/* 2026-10-26：无编辑权限时按钮仍显示，灰化 + 点击提示 */}
+                          {onEdit && (
                             <ActionIconButton
                               variant="edit"
                               icon={<Edit2 className="w-4 h-4" />}
-                              onClick={() => guardClick(lockReason, () => onEdit(record))}
+                              onClick={guardByPermission(canEdit, '编辑', () => {
+                                guardClick(lockReason, () => onEdit(record));
+                              })}
                               disabled={isEnded}
-                              className={isEnded ? writeClass : ''}
-                              title={isEnded ? lockReason : '编辑'}
+                              className={[isEnded ? writeClass : '', !canEdit ? DENIED : ''].filter(Boolean).join(' ') || undefined}
+                              title={!canEdit ? '权限不足：需要「编辑」权限' : (isEnded ? lockReason : '编辑')}
                             />
                           )}
 
                           {/* 写操作 — 结束态灰显+禁用（采收 onEndV2 仅进行中显示） */}
-                          {onEndV2 && canEdit && !isEnded && (
+                          {onEndV2 && !isEnded && (
                             <ActionIconButton
                               variant="harvest"
                               icon={<Package className="w-4 h-4" />}
-                              onClick={() => onEndV2(record)}
-                              title="采收"
+                              onClick={guardByPermission(canEdit, '编辑', () => onEndV2(record))}
+                              className={!canEdit ? DENIED : undefined}
+                              title={!canEdit ? '权限不足：需要「编辑」权限' : '采收'}
                             />
                           )}
                           {/* 2026-07-13：已结束/已取消行显示"采收记录"按钮（只读），用于查看历史采收记录和导出。 */}
@@ -844,14 +864,16 @@ export function PlantingTable({
                             />
                           )}
                           {/* 2026-10-18：已采收入库（按入库量口径）不可再移库 */}
-                          {onMove && canEdit && !((record.harvestToInventoryQty || 0) > 0) && (
+                          {onMove && !((record.harvestToInventoryQty || 0) > 0) && (
                             <ActionIconButton
                               variant="transfer"
                               icon={<MoveRight className="w-4 h-4" />}
-                              onClick={() => guardClick(lockReason, () => onMove(record))}
+                              onClick={guardByPermission(canEdit, '编辑', () => {
+                                guardClick(lockReason, () => onMove(record));
+                              })}
                               disabled={isEnded}
-                              className={isEnded ? writeClass : ''}
-                              title={isEnded ? lockReason : '移入/移出'}
+                              className={[isEnded ? writeClass : '', !canEdit ? DENIED : ''].filter(Boolean).join(' ') || undefined}
+                              title={!canEdit ? '权限不足：需要「编辑」权限' : (isEnded ? lockReason : '移入/移出')}
                             />
                           )}
                           {/* 育种/留种：读操作（查看历史+导出），所有状态均可用，结束态只读 */}
