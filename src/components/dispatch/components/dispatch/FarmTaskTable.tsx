@@ -8,6 +8,8 @@ import { Edit2, Trash2, Send, Eye } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { showConfirm } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 // ★ 排班联动：派发后同步 schedule 行
 import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 
@@ -206,48 +208,43 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {canEdit && (
-                      <button
-                        onClick={() => onEdit(task)}
-                        disabled={!EDITABLE_STATUSES.includes(task.status)}
-                        className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="编辑"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    )}
-                    {canPublish && (
-                      <button
-                        onClick={() => {
-                          onPublish(task.id);
-                          // ★ 排班联动：派发成功后副作用（workerId 来自 task.assigneeId，patch 失败由 toast 兜底）
-                          void syncAfterDispatch(
-                            { source: 'farm', sourceId: task.id },
-                            task.assigneeId || '',
-                            { taskPlanDate: task.planStart || task.dueDate }
-                          );
-                        }}
-                        disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
-                        className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="派发"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={async () => {
-                          if (await showConfirm('确定要删除吗？')) {
-                            onDelete(task.id);
-                          }
-                        }}
-                        disabled={!DELETABLE_STATUSES.includes(task.status)}
-                        className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    {/* 2026-10-26：无编辑权限时仍显示，灰化 + 点击提示 */}
+                    <button
+                      onClick={guardByPermission(canEdit, '编辑', () => onEdit(task))}
+                      disabled={!EDITABLE_STATUSES.includes(task.status)}
+                      className={`p-1 text-gray-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed ${!canEdit ? DENIED : ''}`}
+                      title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={guardByPermission(canPublish, '审批', () => {
+                        onPublish(task.id);
+                        // ★ 排班联动：派发成功后副作用（workerId 来自 task.assigneeId，patch 失败由 toast 兜底）
+                        void syncAfterDispatch(
+                          { source: 'farm', sourceId: task.id },
+                          task.assigneeId || '',
+                          { taskPlanDate: task.planStart || task.dueDate }
+                        );
+                      })}
+                      disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
+                      className={`p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed ${!canPublish ? DENIED : ''}`}
+                      title={!canPublish ? '权限不足：需要「审批」权限' : '派发'}
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={guardByPermission(canDelete, '删除', async () => {
+                        if (await showConfirm('确定要删除吗？')) {
+                          onDelete(task.id);
+                        }
+                      })}
+                      disabled={!DELETABLE_STATUSES.includes(task.status)}
+                      className={`p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed ${!canDelete ? DENIED : ''}`}
+                      title={!canDelete ? '权限不足：需要「删除」权限' : '删除'}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
