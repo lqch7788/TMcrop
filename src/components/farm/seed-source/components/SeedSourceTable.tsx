@@ -29,6 +29,8 @@ import { Tooltip } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 // 2026-07-21：共享品种路径 hook（列表/详情/编辑统一来源）
 import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
 
@@ -332,47 +334,50 @@ export function SeedSourceTable({
             </>
           ) : (
             /* 正常模式 - 显示所有操作按钮 */
+            /* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */
             <>
-              {canCreate && onAdd && (
+              {onAdd && (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={onAdd}
+                  onClick={guardByPermission(canCreate, '新增', onAdd)}
+                  className={!canCreate ? DENIED : undefined}
+                  title={!canCreate ? '权限不足：需要「新增」权限' : undefined}
                 >
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
-              {canDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onOperationModeChange('delete')}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              )}
-              {canExport && (
-                <Button
-                  variant="blue"
-                  size="sm"
-                  onClick={() => { onOperationModeChange('export'); }}
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </Button>
-              )}
-              {canPrint && (
-                <Button
-                  variant="purple"
-                  size="sm"
-                  onClick={() => { onPrintModeChange(true); }}
-                >
-                  <Printer className="w-4 h-4" />
-                  标签打印
-                </Button>
-              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={guardByPermission(canDelete, '删除', () => onOperationModeChange('delete'))}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+              <Button
+                variant="blue"
+                size="sm"
+                onClick={guardByPermission(canExport, '导出', () => { onOperationModeChange('export'); })}
+                className={!canExport ? DENIED : undefined}
+                title={!canExport ? '权限不足：需要「导出」权限' : undefined}
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
+              <Button
+                variant="purple"
+                size="sm"
+                onClick={guardByPermission(canPrint, '导出', () => { onPrintModeChange(true); })}
+                className={!canPrint ? DENIED : undefined}
+                title={!canPrint ? '权限不足：需要「导出」权限' : undefined}
+              >
+                <Printer className="w-4 h-4" />
+                标签打印
+              </Button>
             </>
           )}
         </div>
@@ -599,14 +604,14 @@ export function SeedSourceTable({
                         />
                       )}
                       {/* 2026-07-05: 编辑下放到行级 — 种源数据只有外购+调拨两种来源，无批量修改语义；行级按钮一步到位，与育苗/种植保持一致 */}
-                      {canEdit && (
-                        <ActionIconButton
-                          variant="edit"
-                          icon={<Edit2 className="w-4 h-4" />}
-                          onClick={() => onEdit(record)}
-                          title="编辑"
-                        />
-                      )}
+                      {/* 2026-10-26：无编辑权限时仍显示，灰化 + 点击提示 */}
+                      <ActionIconButton
+                        variant="edit"
+                        icon={<Edit2 className="w-4 h-4" />}
+                        onClick={guardByPermission(canEdit, '编辑', () => onEdit(record))}
+                        className={!canEdit ? DENIED : undefined}
+                        title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                      />
                       {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留：调拨 / 退库 / 编辑 / 标签 */}
                       {/* 2026-07-07 V3.4：取消「商品种源入库（外购）」入口 */}
                       {/* 调拨：从作物库存调入种源（追加模式 append_existing） */}

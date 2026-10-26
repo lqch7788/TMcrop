@@ -16,6 +16,8 @@ import { SEEDLING_STATUS_BADGE_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 import {
   getMotherAliveCount,
   getSeedlingRemainingCount,
@@ -408,49 +410,54 @@ export function SeedlingTable({
           ) : (
             /* 正常模式 - 显示所有操作按钮 */
             <>
-              {canCreate && onAdd && (
+              {/* 2026-10-26：按钮始终可见，无权限灰化 + 点击提示 */}
+              {onAdd && (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={onAdd}
+                  onClick={guardByPermission(canCreate, '新增', onAdd)}
+                  className={!canCreate ? DENIED : undefined}
+                  title={!canCreate ? '权限不足：需要「新增」权限' : undefined}
                 >
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
               {/* 2026-07-26：工具栏"编辑"按钮移除，保留行内编辑 */}
-              {canDelete && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onOperationModeChange('delete')}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </Button>
-              )}
-              {canExport && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  // 2026-07-19 P2-fix：调 onExportClick（SeedlingPage.handleExportClick 同时设 exportMode + operationMode）
-                  // 旧版只 setOperationMode('export') → exportMode 保持 false → "确认导出"按钮不显示
-                  onClick={() => onExportClick ? onExportClick() : onOperationModeChange('export')}
-                >
-                  <Download className="w-4 h-4" />
-                  导出
-                </Button>
-              )}
-              {canPrint && (
-                <Button
-                  variant="purple"
-                  size="sm"
-                  onClick={() => { onPrintModeChange(true); }}
-                >
-                  <Printer className="w-4 h-4" />
-                  标签打印
-                </Button>
-              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={guardByPermission(canDelete, '删除', () => onOperationModeChange('delete'))}
+                className={!canDelete ? DENIED : undefined}
+                title={!canDelete ? '权限不足：需要「删除」权限' : undefined}
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                // 2026-07-19 P2-fix：调 onExportClick（SeedlingPage.handleExportClick 同时设 exportMode + operationMode）
+                // 旧版只 setOperationMode('export') → exportMode 保持 false → "确认导出"按钮不显示
+                onClick={guardByPermission(canExport, '导出', () =>
+                  onExportClick ? onExportClick() : onOperationModeChange('export')
+                )}
+                className={!canExport ? DENIED : undefined}
+                title={!canExport ? '权限不足：需要「导出」权限' : undefined}
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
+              <Button
+                variant="purple"
+                size="sm"
+                onClick={guardByPermission(canPrint, '导出', () => { onPrintModeChange(true); })}
+                className={!canPrint ? DENIED : undefined}
+                title={!canPrint ? '权限不足：需要「导出」权限' : undefined}
+              >
+                <Printer className="w-4 h-4" />
+                标签打印
+              </Button>
             </>
           )}
         </div>
@@ -830,16 +837,18 @@ export function SeedlingTable({
                           )}
 
                           {/* 写操作 — 结束态灰显+禁用
-                              2026-10-25：补 canEdit 判断 —— 原先只判 onEdit 是否传入，
-                              父组件即使无编辑权限也照样渲染行内编辑按钮 */}
-                          {onEdit && canEdit && (
+                              2026-10-25：补 canEdit 判断 —— 原先只判 onEdit 是否传入
+                              2026-10-26：改为「始终可见 + 无权限灰化 + 点击提示」 */}
+                          {onEdit && (
                             <ActionIconButton
                               variant="edit"
                               icon={<Edit2 className="w-4 h-4" />}
-                              onClick={() => guardClick(lockReason, () => onEdit(record))}
+                              onClick={guardByPermission(canEdit, '编辑', () => {
+                                guardClick(lockReason, () => onEdit(record));
+                              })}
                               disabled={isEnded}
-                              className={isEnded ? writeClass : ''}
-                              title={isEnded ? lockReason : '编辑'}
+                              className={[isEnded ? writeClass : '', !canEdit ? DENIED : ''].filter(Boolean).join(' ') || undefined}
+                              title={!canEdit ? '权限不足：需要「编辑」权限' : (isEnded ? lockReason : '编辑')}
                             />
                           )}
                           {/* 出圃入库（onInbound）：进行中+异常结束可用+已取消可查看
