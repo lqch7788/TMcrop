@@ -25,6 +25,8 @@ import { Checkbox } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface TeamTableProps {
   // 权限控制props
@@ -447,28 +449,27 @@ export function TeamTable({
                         >
                           <UserPlus className="w-4 h-4" />
                         </Button>
-                        {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditModal(team)}
-                            title="编辑"
-                            aria-label="编辑班组"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(team)}
-                            title="删除"
-                            aria-label="删除班组"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={guardByPermission(canEdit, '编辑', () => openEditModal(team))}
+                          className={!canEdit ? DENIED : undefined}
+                          title={!canEdit ? '权限不足：需要「编辑」权限' : '编辑'}
+                          aria-label="编辑班组"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={guardByPermission(canDelete, '删除', () => handleDelete(team))}
+                          className={!canDelete ? DENIED : undefined}
+                          title={!canDelete ? '权限不足：需要「删除」权限' : '删除'}
+                          aria-label="删除班组"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                         {/* ★ Task 15：为该班组批量排班（2026-10-20 起跳到「农事管理 → 排班调度」并预填班组/日期） */}
                         <Button
                           variant="ghost"
