@@ -7,6 +7,8 @@ import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ExportFormat, EXPORT_FORMAT_OPTIONS } from './types';
 import { Label } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface WorkerAttendanceExportProps {
   show: boolean;
@@ -68,11 +70,13 @@ export function WorkerAttendanceExport({
         <Button size="sm" variant="secondary" onClick={onCancel}>
           <X className="w-4 h-4" /> 取消
         </Button>
-        {canExport && (
-          <Button size="sm" variant="default" onClick={onConfirm}>
-            <Download className="w-4 h-4" /> 导出
-          </Button>
-        )}
+        {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+        <Button size="sm" variant="default"
+          onClick={guardByPermission(canExport, '导出', onConfirm)}
+          className={!canExport ? DENIED : undefined}
+          title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+          <Download className="w-4 h-4" /> 导出
+        </Button>
       </div>
     </UnifiedModal>
   );

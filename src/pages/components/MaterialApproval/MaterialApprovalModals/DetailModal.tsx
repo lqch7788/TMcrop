@@ -7,6 +7,8 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface DetailModalProps {
   // 弹窗状态
@@ -60,22 +62,23 @@ export function DetailModal({
           <Button variant="secondary" onClick={onClose}>
             <X className="w-4 h-4" /> 关闭
           </Button>
-          {canApprove && (
-            <>
-              <Button
-                variant="default"
-                onClick={() => item && onApprove(item)}
-              >
-                <Check className="w-4 h-4" /> 通过
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => item && onRejectClick(item)}
-              >
-                <XCircle className="w-4 h-4" /> 拒绝
-              </Button>
-            </>
-          )}
+          {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+          <Button
+            variant="default"
+            onClick={guardByPermission(canApprove, '审批', () => { if (item) onApprove(item); })}
+            className={!canApprove ? DENIED : undefined}
+            title={!canApprove ? '权限不足：需要「审批」权限' : undefined}
+          >
+            <Check className="w-4 h-4" /> 通过
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={guardByPermission(canApprove, '审批', () => { if (item) onRejectClick(item); })}
+            className={!canApprove ? DENIED : undefined}
+            title={!canApprove ? '权限不足：需要「审批」权限' : undefined}
+          >
+            <XCircle className="w-4 h-4" /> 拒绝
+          </Button>
         </div>
       }
     >

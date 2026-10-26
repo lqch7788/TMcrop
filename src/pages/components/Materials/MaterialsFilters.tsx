@@ -7,6 +7,8 @@ import { Button } from '../../../components/ui/button';
 import { Download, RotateCcw, X } from 'lucide-react';
 
 import type { Material } from '../../types/materials.types';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 interface MaterialsFiltersProps {
   code: string;
@@ -150,9 +152,13 @@ export default function MaterialsFilters({
               />
             </div>
             <Button variant="warning" onClick={onReset} size="sm"><RotateCcw className="w-4 h-4" /> 重置</Button>
-            {canExport && (
-              <Button variant="blue" onClick={onExportClick} size="sm"><Download className="w-4 h-4" /> 导出</Button>
-            )}
+            {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+            <Button variant="blue" size="sm"
+              onClick={guardByPermission(canExport, '导出', onExportClick)}
+              className={!canExport ? DENIED : undefined}
+              title={!canExport ? '权限不足：需要「导出」权限' : undefined}>
+              <Download className="w-4 h-4" /> 导出
+            </Button>
           </div>
 
           {/* 第二行：三级分类筛选 */}

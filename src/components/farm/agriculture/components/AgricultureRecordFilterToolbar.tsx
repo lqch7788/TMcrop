@@ -11,6 +11,8 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 // 来源类型选项
 const SOURCE_OPTIONS = Object.entries(SOURCE_CONFIG).map(([value, config]) => ({
@@ -194,12 +196,14 @@ export function AgricultureRecordFilterToolbar({
             <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          {canCreate && (
-            <Button variant="default" size="sm" onClick={onAdd}>
-              <Plus className="w-4 h-4" />
-              新增
-            </Button>
-          )}
+          {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+          <Button variant="default" size="sm"
+            onClick={guardByPermission(canCreate, '新增', onAdd)}
+            className={!canCreate ? DENIED : undefined}
+            title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+            <Plus className="w-4 h-4" />
+            新增
+          </Button>
         </div>
       </div>
     </div>

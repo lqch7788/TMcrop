@@ -20,6 +20,8 @@ import {
 import { Button } from '../components/ui/button';
 import { Pagination } from '@/components/ui';
 import { useAuthStore } from '@/stores';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 export default function PendingApproval() {
   const hasProcessPermission = useAuthStore((s) => s.hasProcessPermission);
@@ -162,16 +164,19 @@ export default function PendingApproval() {
                 </TableCell>
                 <TableCell className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    {canApprove && (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => approve(approval.id)} title="通过">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => reject(approval.id, '审批拒绝')} title="拒绝">
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
+                    {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+                    <Button variant="ghost" size="icon"
+                      onClick={guardByPermission(canApprove, '审批', () => approve(approval.id))}
+                      className={!canApprove ? DENIED : undefined}
+                      title={!canApprove ? '权限不足：需要「审批」权限' : '通过'}>
+                      <CheckCircle className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon"
+                      onClick={guardByPermission(canApprove, '审批', () => reject(approval.id, '审批拒绝'))}
+                      className={!canApprove ? DENIED : undefined}
+                      title={!canApprove ? '权限不足：需要「审批」权限' : '拒绝'}>
+                      <XCircle className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" title="查看" onClick={() => setDetailApproval(approval)}>
                       <Eye className="w-4 h-4" />
                     </Button>

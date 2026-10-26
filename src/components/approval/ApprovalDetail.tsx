@@ -7,6 +7,8 @@
 import React from 'react';
 import { Calendar, Check, CheckCircle, Clock, FileText, MessageSquare, User, XCircle } from 'lucide-react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 import type { Approval, ApprovalAction } from '../../types/approval';
 import * as ApprovalNS from '../../types/approval';
 const { ApprovalStatus } = ApprovalNS as any;
@@ -256,11 +258,14 @@ export function ApprovalDetail({
               <XCircle className="w-4 h-4" /> 拒绝
             </Button>
           )}
-          {onApprove && canApprove && (
+          {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+          {onApprove && (
             <Button
               variant="default"
               size="default"
-              onClick={() => onApprove(approval.id)}
+              onClick={guardByPermission(canApprove, '审批', () => onApprove(approval.id))}
+              className={!canApprove ? DENIED : undefined}
+              title={!canApprove ? '权限不足：需要「审批」权限' : undefined}
             >
               <Check className="w-4 h-4" /> 通过
             </Button>

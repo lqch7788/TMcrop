@@ -15,6 +15,8 @@ import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
 import { showConfirm } from '@/lib/dialogService';
 import { Button } from '@/components/ui';
 import { useAuthStore } from '@/stores';
+// 2026-10-26：无权限按钮「可见但灰化 + 点击提示」
+import { guardByPermission, PERMISSION_DENIED_CLASS as DENIED } from '@/hooks/usePermissionAction';
 
 /**
  * 农事任务Tab组件
@@ -239,12 +241,14 @@ export const FarmDispatchTab: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {canCreate && (
-                <Button variant="blue" onClick={handleCreate}>
-                  <Plus className="w-4 h-4" />
-                  新建任务
-                </Button>
-              )}
+              {/* 2026-10-26：无权限也显示，灰化 + 点击提示 */}
+              <Button variant="blue"
+                onClick={guardByPermission(canCreate, '新增', handleCreate)}
+                className={!canCreate ? DENIED : undefined}
+                title={!canCreate ? '权限不足：需要「新增」权限' : undefined}>
+                <Plus className="w-4 h-4" />
+                新建任务
+              </Button>
             </div>
           </div>
 
